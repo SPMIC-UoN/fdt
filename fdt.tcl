@@ -1004,7 +1004,7 @@ proc fdt:apply { w dialog } {
 	    }
 
 	    #	    check output!=input
-	    set canwrite 1
+	    set canwite 1
 	    if { $eddy(input) == $eddy(ouput) } {
 		set canwrite [ YesNoWidget "Output and input images have the same name. Overwrite input?" Yes No ]
 	    }
@@ -1409,7 +1409,8 @@ proc fdt:apply { w dialog } {
 		fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
 	    }
 	    puts "Done!"
-	    set canwrite 1		# Fudge to make the logic work
+	    # Fudge to make the logic work
+	    set canwrite 1
 	}
     }
 
