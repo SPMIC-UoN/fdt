@@ -14,18 +14,22 @@ PT=probtrack
 FTB=find_the_biggest
 PJ=proj_thresh
 MED=medianfilter
+ROM=reord_OM
+SAUS=sausages
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 PTOBJS=probtrack.o probtrackOptions.o
 FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
+ROMOBJS=reord_OM.o
+SAUSOBJS=sausages.o
 
 SCRIPTS = eddy_correct
 XFILES = dtifit probtrack find_the_biggest medianfilter
 RUNTCLS = Fdt
 
-all: ${XFILES}
+all: ${XFILES} reord_OM sausages
 
 ${PT}:		   ${PTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS} 
@@ -41,6 +45,13 @@ ${MED}:    	${MEDOBJS}
 
 ${DTIFIT}:    	${DTIFITOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIFITOBJS} ${DLIBS}
+
+${ROM}:    	${ROMOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ROMOBJS} ${DLIBS}
+
+${SAUS}:    	${SAUSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SAUSOBJS} ${DLIBS}
+
 
 
 

@@ -182,18 +182,104 @@ void rem_zrowcol(const Matrix& myOMmat,const Matrix& coordmat,const Matrix& trac
    }
  }
 
-  
 }
 
 
 
 
+
+
+
+
+
+void rem_cols(Matrix& myOMmat,Matrix& tractcoordmat,const bool tractcoordbool,const vector<int>& excl_cols)
+{
+ 
+
+ Matrix newOMmat,newtractcoordmat;
+ newOMmat.ReSize(myOMmat.Nrows(),myOMmat.Ncols()-excl_cols.size());
+
+ if(tractcoordbool){
+   newtractcoordmat.ReSize(tractcoordmat.Nrows()-excl_cols.size(),3);
+ }
+
+ int zrowcounter=0,zcolcounter=0,nzcolcounter=1,nzrowcounter=1;
+ vector<int> zerorows;
+
+ for(int j=1;j<=myOMmat.Ncols();j++){
+   zrowcounter=0;
+   nzrowcounter=1;   
+
+   if(excl_cols.size()>0){ //Are there any excl Columns
+     if(excl_cols[zcolcounter]!=j){  // Only add a col if it's not the next zcol
+       for(int i=1;i<=myOMmat.Nrows();i++){
+	 if(zerorows.size()>0){ //Are there any excl rows?
+	   if(zerorows[zrowcounter]!=i){ //Only add a row if it's not the next zrow
+	     newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);
+	     nzrowcounter++;
+	   }
+	   else{zrowcounter++;}
+	 }
+	 else{newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);nzrowcounter++;}//No Zero Rows
+       }
+       nzcolcounter++;
+     }
+     else{zcolcounter++;} //move onto next z col
+   }
+   else{  //No zero Columns
+     for(int i=1;i<=myOMmat.Nrows();i++){
+       if(zerorows.size()>0){
+	 if(zerorows[zrowcounter]!=i){ //Only add a row if it's not the next zrow
+	   newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);
+	   nzrowcounter++;
+	 }
+	 else{zrowcounter++;}
+       }
+       else{newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);nzrowcounter++;}
+     }
+     nzcolcounter++;
+   }
+}
+
+ 
+ if(tractcoordbool){
+   cerr<<"Updating Tract Coordinates"<<endl;
+   zcolcounter=0;nzcolcounter=1;
+   if(excl_cols.size()>0){//Are there any zero cols?
+     for(int i=1;i<=tractcoordmat.Nrows();i++){
+       if(excl_cols[zcolcounter]!=i){
+	 newtractcoordmat(nzcolcounter,1)=tractcoordmat(i,1);
+	 newtractcoordmat(nzcolcounter,2)=tractcoordmat(i,2);
+	 newtractcoordmat(nzcolcounter,3)=tractcoordmat(i,3);
+	 nzcolcounter++;
+       }
+       else{zcolcounter++;}
+     }
+   }
+   else{//No zero Cols 
+     newtractcoordmat=tractcoordmat;
+   }
+ }
+
+ myOMmat = newOMmat;
+ tractcoordmat = newtractcoordmat;
+  
+}
+
+
+
 int main ( int argc, char **argv ){
  if(argc<4){
-    cerr<<"usage: reord_OM <matrix> <output base> <bin>"<<endl;
+    cerr<<"usage: reord_OM <matrix> <output base> <bin> [excl_mask]"<<endl;
     cerr<<" matrix in 2D analyze format"<<endl;
     cerr<<" bin=0 gives no binarising at all"<<endl;
     cerr<<" any other <bin> binarises above that number "<<endl;
+    cerr<<""<<endl;
+    cerr<<"Optional"<<endl;
+    cerr<<" excl_mask - exclude contribution from "<<endl;
+    cerr<<" voxels in this mask - this needs to be in the same low res"<<endl;
+    cerr<<" space as the initial tract space analysis"<<endl;
+
     exit(0);
   }
  string ip=argv[1];
@@ -268,18 +354,53 @@ int main ( int argc, char **argv ){
  else{
    cerr<<"Tract Space Coordinate File Not present - Ignoring"<<endl;
  }
+ 
 
+
+ // If user specifies an exclusion mask in tract space. 
+ // work out which columns in the matrix to remove 
+ // This only works if there is a lookup matrix available
+
+ if(argc==5){
+   volume<int> lookup_tract;
+   volume<int> excl;
+   read_volume(lookup_tract,"lookup_tractspace_"+ip);
+   string exname=argv[4];
+   make_basename(exname);
+   read_volume(excl,exname);
+   if(!samesize(excl,lookup_tract)){
+     cerr<<"Whoops - your exlusion mask does not appear to be in the same space as your original low resolution mask - sorry"<<endl;
+     return(-1);
+   }
+   vector<int> excl_cols;
+   for(int k=0;k<=excl.zsize();k++){
+     for(int j=0;j<=excl.ysize();j++){
+       for(int i=0;i<=excl.xsize();i++){
+	 if(excl(i,j,k)==1){
+	   excl_cols.push_back(lookup_tract(i,j,k)+1);
+	 }
+       }
+     }
+   }
+
+   rem_cols(myOMmat,mytractcoordmat,tractcoordbool,excl_cols);
+ }
+
+ 
  rem_zrowcol(myOMmat,mycoordmat,mytractcoordmat,coordbool,tractcoordbool,newOMmat,newcoordmat,newtractcoordmat);
 //   cerr<<"NOW"<<endl;
 //   cerr<<myOMmat.MaximumAbsoluteValue()<<endl;
 //   cerr<<newOMmat.MaximumAbsoluteValue()<<endl;
  
- //write_ascii_matrix("ncm",newcoordmat);
- // write_ascii_matrix("nctm",newtractcoordmat);
+//write_ascii_matrix("ncm",newcoordmat);
+// write_ascii_matrix("nctm",newtractcoordmat);
 
 
 
-
+ string base=argv[2];
+ make_basename(base);
+ volume<float> outCCvol(newOMmat.Nrows(),newOMmat.Nrows(),1);
+ volume<int> outcoords(newcoordmat.Nrows(),3,1);
 
 cerr<<"Starting first Reordering"<<endl;
  SymmetricMatrix CtCt;
@@ -287,23 +408,45 @@ cerr<<"Starting first Reordering"<<endl;
  CtCt << CtCt+1;
 
  spect_reord(CtCt,r1,y1);
+
+
+ cerr<<"Permuting seed CC matrix"<<endl;
+ for(int j=0;j<outCCvol.ysize();j++){
+   for(int i=0;i<outCCvol.xsize();i++){
+     outCCvol(i,j,0)=CtCt((int)r1(i+1),(int)r1(j+1));
+   }
+ }
+
+ 
+  if(coordbool){
+   cerr<<"Permuting Seed Coordinates"<<endl;
+   for(int i=0;i<outcoords.xsize();i++){
+     outcoords(i,0,0)=(int)newcoordmat(int(r1(i+1)),1);
+     outcoords(i,1,0)=(int)newcoordmat(int(r1(i+1)),2);
+     outcoords(i,2,0)=(int)newcoordmat(int(r1(i+1)),3);
+   } 
+ }
+ 
+ write_ascii_matrix(r1,base+"r1");
+ write_ascii_matrix(y1,base+"y1");
+ save_volume(outCCvol,"reord_CC_"+base);
+ save_volume(outcoords,"coords_for_reord_"+base);
+
+
+
+
  cerr<<"Starting Second Reordering"<<endl;
  SymmetricMatrix CC;
  CC << corrcoef(newOMmat);
  CC<<CC+1;
  spect_reord(CC,r2,y2);
  
-
- string base=argv[2];
- make_basename(base);
- write_ascii_matrix(r1,base+"r1");
- write_ascii_matrix(y1,base+"y1");
  write_ascii_matrix(r2,base+"r2");
  write_ascii_matrix(y2,base+"y2");
+
  volume<int> outvol(newOMmat.Nrows(),newOMmat.Ncols(),1);
- volume<float> outCCvol(newOMmat.Nrows(),newOMmat.Nrows(),1);
- volume<int> outcoords(newcoordmat.Nrows(),3,1);
  volume<int> outtractcoords(newtractcoordmat.Nrows(),3,1);
+
 
  cerr<<"Permuting Matrix"<<endl;
  for(int j=0;j<outvol.ysize();j++){
@@ -312,33 +455,15 @@ cerr<<"Starting first Reordering"<<endl;
    }
  }
 
- cerr<<"Seed CC"<<endl;
- for(int j=0;j<outCCvol.ysize();j++){
-   for(int i=0;i<outCCvol.xsize();i++){
-     outCCvol(i,j,0)=CtCt((int)r1(i+1),(int)r1(j+1));
-   }
- }
- 
- 
-  if(coordbool){
-   cerr<<"Permuting Seed Coordinates"<<endl;
-   for(int i=0;i<outcoords.xsize();i++){
-     outcoords(i,0,0)=(int)newcoordmat(r1(i+1),1);
-     outcoords(i,1,0)=(int)newcoordmat(r1(i+1),2);
-     outcoords(i,2,0)=(int)newcoordmat(r1(i+1),3);
-   } 
- }
  if(tractcoordbool){
    cerr<<"Permuting Tract Coordinates"<<endl;
    for(int i=0;i<outtractcoords.xsize();i++){
-     outtractcoords(i,0,0)=(int)newtractcoordmat(r2(i+1),1);
-     outtractcoords(i,1,0)=(int)newtractcoordmat(r2(i+1),2);
-     outtractcoords(i,2,0)=(int)newtractcoordmat(r2(i+1),3);
+     outtractcoords(i,0,0)=(int)newtractcoordmat(int(r2(i+1)),1);
+     outtractcoords(i,1,0)=(int)newtractcoordmat(int(r2(i+1)),2);
+     outtractcoords(i,2,0)=(int)newtractcoordmat(int(r2(i+1)),3);
    } 
  }
  save_volume(outvol,"reord_"+base);
- save_volume(outCCvol,"reord_CC_"+base);
- save_volume(outcoords,"coords_for_reord_"+base);
  save_volume(outtractcoords,"tract_space_coords_for_reord_"+base);
 
  return 0;
