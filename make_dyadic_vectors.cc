@@ -16,6 +16,7 @@ int main ( int argc, char **argv ){
   read_volume4D(phs,argv[2]);
   volume4D<float> dyadic_vecs(ths.xsize(),ths.ysize(),ths.zsize(),3);
   dyadic_vecs=0;
+  copybasicproperties(ths,dyadic_vecs);
   SymmetricMatrix dyad(3);dyad=0;
   ColumnVector dir(3);
   
