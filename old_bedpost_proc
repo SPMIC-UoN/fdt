@@ -15,15 +15,17 @@ Usage() {
 subjdir=$1
 nslices=$2
 
+## Do the zeropadding tim
 
 slice=0
 while [ $slice -lt $nslices ];do
-    if [ ! -e ${subjdir}.bedpost/logs/.$slice ] ; then
-	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slice
+    slicezp=`zeropad $slice 4`
+    if [ ! -e ${subjdir}.bedpost/logs/.$slicezp ] ; then
+	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slicezp
 	sleep 10
-	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slice | sed -n '1p'` ] ; then
-	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slice --mask=${subjdir}/nodif_brain_mask_slice_$slice -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slice --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slice
-	    touch ${subjdir}.bedpost/logs/.${slice}_finished
+	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slicezp | sed -n '1p'` ] ; then
+	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slicezp --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slicezp
+	    touch ${subjdir}.bedpost/logs/.${slicezp}_finished
 	fi
     fi
     slice=`echo "$slice + 1" | bc`
