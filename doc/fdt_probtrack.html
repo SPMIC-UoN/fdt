@@ -17,7 +17,7 @@ streamline location or the <em>connectivity distribution</em>.
 using ProbTrack.
 
 Probtrack can be run in several different modes:
-<ul><li><a href="#path">Path Distribution Estimation</a></li>
+<ul><li><a href="#path">Path distribution estimation</a></li>
 <ul><li><a href="#single">Single seed voxel</a></li>
 <li><a href="#seedmask">Seed mask</a></li>
 <li><a href="#seedwaypoint">Seed mask and waypoint masks</a></li>
@@ -36,7 +36,7 @@ specify a bedpost directory.  For all modes, the bedpost directory must contain 
 <p>Results from probtrack can be binned in any available space -e.g.,
 diffusion space, structural space or standard space.  Note, however,
 that tractography itself ALWAYS takes place in diffusion space - it is
-simply the <em>results></em> of probtrack that are stored in the
+simply the <em>results</em> of probtrack that are stored in the
 required space.  If probtrack results are to be stored in a space
 other than diffusion space then you will need transformations from
 this space back into the space of thediffusion data. The <a
@@ -53,34 +53,33 @@ bedpost directory.
 <li><b>xfms/standard2diff.mat</b></li>
 <li><b>xfms/diff2standard.mat</b></li>
 
-<h4><a href="#options">Options Tab</a></h4>
-
 <hr>
 <a name="path"></a>
 <h3>Path Distribution Estimation - basics</h3>
 The first four modes of ProbTrack involve generating connectivity
 distributions from user-specified seed voxel(s).  The output will be a single
-image in the space of the specified seed like <a href="fdt_images/fdt_simple_tract3.gif"> this </a>.  All
+image in the space of the specified seed like <a href="fdt_images/fdt_simple_tract3.gif">this</a>.  All
 brain voxels will have a value (though many of these will be zero)
 representing the connectivity value between that voxel and the seed voxel
 (i.e., the number of samples that pass through that voxel). Note that when
-connectivity distributions are generated from multiple seed voxel within a
+connectivity distributions are generated from multiple seed voxels within a
 region of interest then the time required for the analysis to run will be
 approximately the number of seed voxels multiplied by the time taken to
-generate a distrubiton from a single voxel.
+generate a distribution from a single voxel.
 
 <p><h4>Setting up the GUI for Path Distribution Estimation - settings common
 to all modes:</h4>
 
 <p><b>Seeds space:</b> specification of seeds is different for each mode - see below.
 
-<p>If <b>seed space is not diffusion</b>, then check the button and
-use the browse buttons to locate a reference image (e.g.,
-subject1.bedpost/struct.hdr if seed space is structral space or
-subject1.bedpost/standard.hdr if seed space is standard space) and the
-transformation matrix from seed space to diffusion space (e.g.,
-subject1.bedpost/xfms/str2diff.mat if seed space is structural space
-or subject1.bedpost/xfms/standard2diff.mat if seed space is standard
+<p>If <b>seed space is not diffusion</b>, then check this button. If
+you are in <b>Single seed voxel</b> mode use the browse buttons to
+locate a reference image (e.g., subject1.bedpost/struct.hdr if seed
+space is structral space or subject1.bedpost/standard.hdr if seed
+space is standard space). Next set the transformation matrix from seed
+space to diffusion space (e.g., subject1.bedpost/xfms/str2diff.mat if
+seed space is structural space or
+subject1.bedpost/xfms/standard2diff.mat if seed space is standard
 space). Note that, in all cases, the smaller the voxel size in your
 seed space image, the lower will be the resulting connectivity values
 to these voxels (This is intuitive - the smaller a voxel is, the less

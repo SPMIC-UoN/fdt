@@ -2,8 +2,8 @@
 <p><h3>Parallelising bedpost</h3> Bedpost runs Markov Chain Monte
 Carlo sampling to build up distributions on diffusion parameters at
 each voxel. This is a very slow process, so bedpost is very processor
-hungry ( a typical bedpost run might take around 20hrs for 60
-direction 2.5mm isotropic data)! However, fortunately bedpost
+hungry (a typical bedpost run might take around 20hrs for 60
+direction 2.5mm isotropic data!). However, fortunately bedpost
 processes every voxel independently, so it is very easy to
 parallelise.  
 
@@ -27,10 +27,11 @@ e.g. for a <code>bash </code> user:<br>
 
 This will enable <code>bedpost</code> to use <code>ssh</code> to send jobs to two processors on <code>machine1</code>, and one each on <code>machine2 machine3 machine5</code>.<br><br>
 
-You also need to make a file called <code>fsl.sh</code> in one of the following places.<br>
+You also need to make a file called <code>fsl.sh</code>, on each
+machine listed, in one of the following places.<br>
 <code>/usr/local/etc/fslconf/fsl.sh</code><br>
 <code>/etc/fslconf/fsl.sh</code><br>
-<code>/${HOME}/.fslconf/fsl.sh</code><br><br>
+<code>${HOME}/.fslconf/fsl.sh</code><br><br>
 
 in this file you need to set your <code>FSLDIR</code> in <code>sh</code> language. e.g.:<br>
 <code>FSLDIR=/usr/local/fsl</code><br>
@@ -52,7 +53,7 @@ stands in the case of conflicts.
 only one person can use bedpost at any one time (thus keeping the
 system load down). In order to do this, set the
 <code>FSLLOCKDIR</code> environment variable to a directory which is
-writeable by the users.  Every time a bedpost starts, it will write
+writeable by all users.  Every time a bedpost starts, it will write
 <code>${FSLLOCKDIR}/.bedpost.lock</code> which will be removed when
 bedpost completes. If this file is present, new bedpost processes will
 not start.
@@ -62,8 +63,8 @@ behaved in most circumstances. e.g. If bedpost is cancelled from the
 keyboard, then it first logs onto all machines in the list and kills
 its child processes, leaving no trace. However, there are some
 circumstances where bedpost might not behave so well - e.g. if the
-master machine (from where bedpost is called) crashes, I don't think
-the processes on the other machines will crash. If this situation
+master machine (from where bedpost is called) crashes, the processes
+on the other machines will probably not be stopped. If this situation
 occurs, there is a program called <code>bedpost_cleanup</code>, which
 will kill all <code>bedpost</code> related processes owned by the user
 on all machines in <code>$FSLMACHINELIST</code>.

@@ -42,7 +42,7 @@ The order of <b>bvals</b> must match the order of <b>data.</b></li>
 </ul>
 <p><h4>Outputs of Bedpost</h4>
 Bedpost creates a new directory at the same level as the input directory
-called <indir>.bedpost which contains all the files you need for probabilistic
+called &lt;indir&gt;.bedpost which contains all the files you need for probabilistic
 tractography.  Highlights are:
 
 <ul>
@@ -50,7 +50,10 @@ tractography.  Highlights are:
 <li><b>merged_phsamples</b> - Samples from the distribution on phi
 </li><ul><li>theta and phi together represent the principal diffusion
 direction in <a href="fdt_images/fdt_spherical_polars.gif">spherical polar co-ordinates</a></li></ul>
-<li><b>merged_fsamples</b> - 4D volume - Samples from the distribution on anisotropic volume fraction (see <a href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">here</a>).</li>
+<li><b>merged_fsamples</b> - 4D volume - Samples from the distribution
+on anisotropic volume fraction (see <a
+href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">technical
+report</a>).</li>
 <li><b>mean_thsamples</b> - 3D Volume - Mean of distribution on theta  </li>
 <li><b>mean_phsamples</b> - 3D Volume - Mean of distribution on phi  </li>
 <li><b>mean_fsamples</b> -  3D Volume - Mean of distribution on <i>f</i>
@@ -64,6 +67,7 @@ from input directory</li>
 <li><b>nodif_brain_mask</b> - binary mask created from nodif_brain -
 copied from input directory
 </li>
+</ul>
 
-<p><b>command line utility</b><br>
+<p><h4>command line utility</h4>
 <verb>bedpost &#60;indir&#62; </verb>

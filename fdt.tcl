@@ -402,6 +402,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Main structural image" \
 	-labelwidth $LWIDTH \
 	-filterhist VARS(history)
+    set registration(struct_costfn) mutualinfo
     set registration(struct_dof) 12
     set registration(struct_search) 90
 
@@ -1010,13 +1011,12 @@ proc fdt:apply { w dialog } {
 	    }
 
 	    #	    check output!=input
-	    set canwite 1
-	    if { $eddy(input) == $eddy(ouput) } {
+	    set canwrite 1
+	    if { $eddy(input) == $eddy(output) } {
 		set canwrite [ YesNoWidget "Output and input images have the same name. Overwrite input?" Yes No ]
 	    }
 	    if { $canwrite } {
-		puts "eddy_correct $eddy(input) $eddy(output) $eddy(refnum)"
-		catch { exec sh -c "eddy_correct $eddy(input) $eddy(output) $eddy(refnum)" } junk
+		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum)"
 	    }
 	}
 	dtifit {
@@ -1047,7 +1047,7 @@ proc fdt:apply { w dialog } {
 		set canwrite [ YesNoWidget "Overwrite $dtifit(output)?" Yes No ]
 	    }
 	    if { $canwrite } {
-		fdt_monitor $w "dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
+		fdt_monitor $w "${FSLDIR}/bin/dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
 	    }
 	}
 	bedpost {
@@ -1065,12 +1065,12 @@ proc fdt:apply { w dialog } {
 		set canwrite [ YesNoWidget "Overwrite ${bedpost(directory)}.bedpost?" Yes No ]
 		if { $canwrite } {
 		    puts "rm -rf $bedpost(directory)"
-		    exec rm -rf $bedpost(directory)
+		    catch { exec rm -rf $bedpost(directory) } errmsg
 		}
 	    }
 	    if { $canwrite } {
 		puts "bedpost $bedpost(directory)"
-		fdt_monitor $w "bedpost $bedpost(directory)"
+		fdt_monitor $w "${FSLDIR}/bin/bedpost $bedpost(directory)"
 	    }
 	}
 	probtrack {
@@ -1394,25 +1394,25 @@ proc fdt:apply { w dialog } {
 		set searchry  "-searchry -$registration(struct_search) $registration(struct_search)"
 		set searchrz  "-searchrz -$registration(struct_search) $registration(struct_search)"
 		set options   "$searchrx $searchry $searchrz -dof $registration(struct_dof)"
-		fdt_monitor $w "flirt -in $diff -ref $registration(struct_image) -omat $diff2str $options -cost $registration(struct_costfn)"
-		fdt_monitor $w "convert_xfm -omat $str2diff -inverse $diff2str"
+		fdt_monitor $w "${FSLDIR}/bin/flirt -in $diff -ref $registration(struct_image) -omat $diff2str $options -cost $registration(struct_costfn)"
+		fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $str2diff -inverse $diff2str"
 		if { $registration(standard_yn) } {
 		    set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
 		    set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
 		    set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		    set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
-		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options -cost $registration(standard_costfn)"
-		    fdt_monitor $w "convert_xfm -omat $stand2str -inverse $str2stand"
-		    fdt_monitor $w "convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
-		    fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
+		    fdt_monitor $w "${FSLDIR}/bin/flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options -cost $registration(standard_costfn)"
+		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2str -inverse $str2stand"
+		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
+		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2diff -inverse $diff2stand"
 		}
 	    } elseif { $registration(standard_yn) } {
 		set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
 		set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
 		set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
-		fdt_monitor $w "flirt -in $diff -ref $registration(standard_image) -omat $diff2stand $options"
-		fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
+		fdt_monitor $w "${FSLDIR}/bin/flirt -in $diff -ref $registration(standard_image) -omat $diff2stand $options"
+		fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2diff -inverse $diff2stand"
 	    }
 	    puts "Done!"
 	    # Fudge to make the logic work

@@ -3,23 +3,23 @@
 <p>If tractography results are to be stored in any space other than diffusion
 space then registration must be run.
 
-<p>Registration within Fdt uses <a href="http://www.fmrib.ox.ac.uk/fsl/flirt">flirt</a>. Registration can only be
+<p>Registration within Fdt uses <a href="../flirt/index.html" target="_top">flirt</a>. Registration can only be
 applied after Bedpost has been run.  Typically, registration will be run
 between three spaces:
-<ul><li>Diffusion space (using the nodif_brain.{hdr,img} file stored in the Bedpost directory)</li>
-<li>Structural space (using the struct.{hdr,img} file stored in the Bedpost
+<ul><li>Diffusion space (using the nodif_brain image in the Bedpost directory)</li>
+<li>Structural space (using the struct image in the Bedpost
 directory, e.g., the space of a high resolution T1-weighted image of
 the same subject)</li>
-<li>Standard space (by default, the MNI152 brain stored within the fsldirectory).</li></ul>
+<li>Standard space (by default, the MNI152 brain stored within $FSLDIR/etc/standard)</li></ul>
 
-<p>Note that struct must have had bet applied.  The nodif_brain image should be
+<p>Note that struct must have had <a href="../bet/index.html" target="_top">bet</a> applied.  The nodif_brain image should be
 the brain extracted version of the nodif image that is automatically stored in
 the Bedpost directory.  The user will
 have to manually apply bet to this image after running bedpost and before
-running registration.  (it is important that the user check the qualtiy of bet
-results on these images and adjust the settings in bet where appropriate)
+running registration.  (it is important that the user check the quality of bet
+results on these images and adjust the settings in bet where appropriate).
 
-<p>Transformation matrices, and their inverses, will be dervied from diffusion to structural space and
+<p>Transformation matrices, and their inverses, will be derived from diffusion to structural space and
 from structural to standard space.  Relevant matrices will be concatenated to
 produce transformation matrices between diffusion and standard space.  The resulting matrices are stored within
 the 'xfms' subdirectory of the bedpost directory and named as follows:  
