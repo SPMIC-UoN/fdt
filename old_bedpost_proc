@@ -24,7 +24,7 @@ nslices=$2
 slice=0
 while [ $slice -lt $nslices ];do
     slicezp=`${FSLDIR}/bin/zeropad $slice 4`
-    if [ ! -e ${subjdir}.bedpost/logs/.$slicezp ] ; then
+    if [ ! -f ${subjdir}.bedpost/logs/.$slicezp ] ; then
 	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slicezp
 	sleep 10
 	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slicezp | sed -n '1p'` ] ; then
