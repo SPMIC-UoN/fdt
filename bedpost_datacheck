@@ -1,8 +1,8 @@
 #!/bin/sh
 
-if [ "$1" = "" ]; then 
+if [ $# -lt 1 ]; then 
     echo "Usage: $0 data_dir"
-    exit;
+    exit 1;
 fi
 
 DIR=$1;
@@ -18,7 +18,7 @@ done
 
 for bv in ${DIR}/bvals ${DIR}/bvecs;do
     echo " num lines in $bv "
-    cat $bv |grep -v "^ *$"|wc -l
+    cat $bv |grep -v "^[ 	]*$"|wc -l
     echo " num words in $bv "
     cat $bv|wc -w
 done
@@ -39,9 +39,9 @@ if [ `${FSLDIR}/bin/imtest ${DIR}/data` -eq 1 -a `${FSLDIR}/bin/imtest ${DIR}/no
 	echo "data dimensions do not match mask dimensions"
     fi
     
-    bvallen=`cat ${DIR}/bvals|grep -v "^ *$"|wc -w`
+    bvallen=`cat ${DIR}/bvals|grep -v "^[ 	]*$"|wc -w`
     bveclenw=`cat ${DIR}/bvecs|wc -w`
-    bveclenl=`cat ${DIR}/bvecs|grep -v "^ *$"|wc -l`
+    bveclenl=`cat ${DIR}/bvecs|grep -v "^[ 	]*$"|wc -l`
     bveclen=`echo "$bveclenw / $bveclenl"|bc`
 
     
