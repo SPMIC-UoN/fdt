@@ -159,11 +159,10 @@ from two different analyses which use the same seed mask (orange) but
 different waypoint masks (red).
 
 <p>GUI Options:
-<br>Options common to all path distribution estimation modes are explained <a href="#path">here</a>
-<br><b>Seed Image:</b> Use the browse buttons to locate binary masks of the seed mask.
+<br><b>Seed Image:</b> Use the browse button to locate the binary seed mask.
 
 <br><b>Waypoint Masks:</b> Use the add and remove buttons to make a
-list of waypoint masks. These maust be in the same space as the seed image.
+list of waypoint masks. These must be in the same space as the seed image.
 
 <BR>
 <br>The output directory will contain:<br>
@@ -173,7 +172,7 @@ was run.  To recover this GUI setup, type <code>Fdt fdt.log</code>
 <br>The output file - will be a single image in the space of the
 specified seed mask.  All brain voxels will have a value (though many
 of these may be zero) representing the number of samples that pass
-through that voxel from the seed mask which have passed through all of
+through that voxel starting the seed mask and which have also passed through all of
 the waypoint masks.  Connectivity distributions from multiple seed
 voxels are summed to produce this output.  Therefore the connectivity
 values will depend on the number of voxels in the seed mask.
@@ -187,7 +186,6 @@ generates a connectivity distribution from all voxels in <b>mask image 2</b> and
 pathways that pass through <b>mask image 1</b>.  Ouput is the sum of these connectivity
 distributions.  
 <p>GUI Options:
-<br>Options common to all path distribution estimation modes are explained <a href="#path">here</a>
 <br><b>Mask image 1</b> and <b>Mask image 2</b>: Use the browse buttons to locate your binary
 mask of area one and area two.  These must be in the same space.
 
@@ -226,7 +224,7 @@ then you can load it with the load list button.
 <br>The output directory will contatin:
 <IMG ALIGN=RIGHT height=150 SRC="fdt_images/fdt_seeds2targets_thal.gif"
 ALT="connectivity-based classification of thalamus">
-<b>probtrack.log</b> - a text record of the command that was run.<br>
+<br><b>probtrack.log</b> - a text record of the command that was run.<br>
 <b>fdt.log</b> - a log of the setup of the FDT GUI when the analysis
 was run.  To recover this GUI setup, type <code>Fdt fdt.log</code>
 <br>A single volume for each target mask, named <b>seeds_to_{target}</b> where
@@ -250,7 +248,7 @@ For all modes in probtrack, the user is able to change the setting of certain
 parameters by clicking the <b>options</b> tab.
 
 <p><b>Number of samples</b> (default 5000): This determines the number of individual
-pathways (or samples) that are drawn through the probability distrubutions on
+pathways (or samples) that are drawn through the probability distributions on
 principle fibre direction (see <a href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/"> appendix </a>for more details on the modelling and
 tractography methods).  By default this is set to 5000 as we are confident
 that convergence is reached with this number of samples. However, reducing
@@ -271,10 +269,9 @@ information to screen while it is running.
 -i.e paths that travel to a point where they have already been.
 
 <p><h4>Advanced options:</h4>
-Clicking the triangle reveals some further options:
 
-<p><b>Use modified Euler streamlining:</b> Use modified euler
-integration as opposed to simple euler for computing probabilistic
+<p><b>Use modified Euler streamlining:</b> Use modified Euler
+integration as opposed to simple Euler for computing probabilistic
 streamlines. More accurate but slower.
 
 <p><b>Maximum number of steps</b> (default 2000): By default, samples are terminated
@@ -284,4 +281,4 @@ corresponds to a distance of 1m.  These values can be adjusted if required.
 <p><b>Step length</b> (default 0.5mm): This determines the length of each step.  This
 setting may be adjusted from default e.g., depending on the voxel size being
 used, or if tracking is being performed on different sized brains
-(e.g,. infants of non-human animals).
+(e.g., infants or animals).
