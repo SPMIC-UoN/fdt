@@ -985,27 +985,29 @@ proc fdt_monitor { w cmd } {
 
     if { $OSFLAVOUR != "cygwin" } {
 	set oldcursor [ $w configure -cursor { watch red white } ]
-    }
 
-    catch {
-	update idletasks
-	if { ! $debugging } {
-	    set fd [ open "|$cmd" r ]
-	    while { ( [ gets $fd line ] >= 0 ) } {
-		update idletasks
-		puts $line
+	catch {
+	    update idletasks
+	    if { ! $debugging } {
+		set fd [ open "|$cmd" r ]
+		while { ( [ gets $fd line ] >= 0 ) } {
+		    update idletasks
+		    puts $line
+		}
+		close $fd
 	    }
-	    close $fd
-	}
-    } junk
+	} junk
 
-    if { $OSFLAVOUR != "cygwin" } {
 	$w configure -cursor $oldcursor
+
+    } else {
+	catch { exec sh -c $cmd } junk
     }
 
     if { $junk != "" } {
 	MxPause "Errors: $junk"
     } 
+
     puts "Done!"
 }
 
