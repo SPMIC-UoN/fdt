@@ -14,19 +14,23 @@ trap Clean_Exit 2
 
 
 Clean_Exit(){
-    
-    if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
-	i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
-	for j in ${i};do 
-	    host=`echo $j | awk -F _fdt_ '{print $1}'`
-	    pid=`echo $j | awk -F _fdt_ '{print $2}'`
-#	    ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
-	    $FSL_REMOTE_CALL $host  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
-	    rm ${subjdir}.bedpost/logs/pid_${$}/${j}
-	done
-    fi
-    
-    ExitUnlock;
+
+	if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
+	    i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
+	    for j in ${i};do 
+		host=`echo $j | awk -F _fdt_ '{print $1}'`
+		pid=`echo $j | awk -F _fdt_ '{print $2}'`
+		echo ${pid}
+		if [ x${FSL_MACHINE_LIST} != "x" ]; then
+#	            ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+		    $FSL_REMOTE_CALL $host  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
+		else
+		    ${FSLDIR}/bin/bedpost_kill_pid ${pid}
+		fi
+		rm ${subjdir}.bedpost/logs/pid_${$}/${j}
+	    done
+	fi
+	ExitUnlock;
 }
 
 Lock(){
@@ -39,6 +43,18 @@ ExitUnlock(){
     if [ -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
 	rm ${FSL_LOCK_DIR}/.bedpost.lock
     fi
+
+    #clean up slices
+    ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
+    nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
+    if [ $ndat_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/data_slice_*
+    fi
+    
+    if [ $nnodif_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/nodif_brain_mask_slice_*
+    fi
+    
     exit
 }
 
@@ -74,7 +90,7 @@ if [ `LockTest` -eq 0 ]; then
     exit
 fi
 
-Lock();
+Lock;
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
@@ -132,13 +148,13 @@ nslices=`avwval ${subjdir}/data dim3`
 ${FSLDIR}/bin/avwslice ${subjdir}/data
 ${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 
-#following need to be setup elsewhere
-#FSL_MACHINE_LIST="list of machines (can be duplicated for two processors etc. )"
+#for parallel processing, the following need to be setup elsewhere
+#FSL_MACHINE_LIST="list of machines (can be duplicated for two processors etc.)"
 #FSL_REMOTE_CALL="ssh (or rsh or whatever you want to use)"
 
-if [ "$FSL_MACHINE_LIST" = "" ] ; then
+if [ x$FSL_MACHINE_LIST = "x" ] ; then
     echo "processing data on local host"
-    ${FSLDIR}/bin/bedpost_proc $subjdir $nslices
+    ${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$} &
 else
     echo "processing data on hosts: $FSL_MACHINE_LIST"
     for machine in $FSL_MACHINE_LIST; do
