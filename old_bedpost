@@ -152,7 +152,7 @@ ${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjd
 mkdir -p ${subjdir}.bedpost/logs
 mkdir -p ${subjdir}.bedpost/logs/pid_${$}
 
-nslices=`avwval ${subjdir}/data dim3`
+nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
 
 ${FSLDIR}/bin/avwslice ${subjdir}/data
 ${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
