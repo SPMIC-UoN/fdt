@@ -964,20 +964,20 @@ proc fdt:select_tool { w tool } {
 
 proc fdt_monitor { w cmd } {
     puts "$cmd"
-#     set oldcursor [ $w configure -cursor { watch red white } ]
-#     catch {
-# 	update idletasks
-# 	set fd [ open "|$cmd" r ]
-# 	while { ( [ gets $fd line ] >= 0 ) } {
-# 	    update idletasks
-# 	    puts $line
-# 	}
-# 	close $fd
-#     } junk
-#     $w configure -cursor $oldcursor
-#     if { $junk != "" } {
-# 	MxPause "Errors: $junk"
-#     } 
+    set oldcursor [ $w configure -cursor { watch red white } ]
+    catch {
+	update idletasks
+	set fd [ open "|$cmd" r ]
+	while { ( [ gets $fd line ] >= 0 ) } {
+	    update idletasks
+	    puts $line
+	}
+	close $fd
+    } junk
+    $w configure -cursor $oldcursor
+    if { $junk != "" } {
+	MxPause "Errors: $junk"
+    } 
     puts "Done!"
 }
 
