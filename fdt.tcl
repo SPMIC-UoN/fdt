@@ -30,7 +30,7 @@ tixWidgetClass registrationImageSelect {
 	{-filename filename Filename {}}
 	{-search search Search N}
 	{-dof dof DOF N}
-	{-pattern pattern Pattern "*.{hdr,hdr.gz}"}
+	{-pattern pattern Pattern "*.{hdr,hdr.gz,nii,nii.gz}"}
     }
 }
 
@@ -109,7 +109,7 @@ tixWidgetClass multiFileSelect {
 	{-label label Label "File"}
 	{-directory directory Directory {}}
 	{-filterhist filterhist Filterhist {}}
-	{-pattern pattern Pattern "*.{hdr,hdr.gz}"}
+	{-pattern pattern Pattern "*.{hdr,hdr.gz,nii,nii.gz}"}
 	{-title title Title "Select a file"}
     }
 }
@@ -371,10 +371,8 @@ proc fdt:dialog { w tclstartupfile } {
 
 	set struct [ file join $dirname struct_brain ]
 
-	if { [ file exists ${struct}.gz] } {
-	    set registration(struct_image) ${struct}.hdr.gz
-	} elseif { [ file exists $struct] } {
-	    set registration(struct_image) ${struct}.hdr
+	if { [ imtest $struct ] } {
+	    set registration(struct_image) $struct
 	} else {
 	    set registration(struct_image) ""
 	}
@@ -433,7 +431,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Diffusion weighted data:" \
 	-labelwidth $LWIDTH \
 	-title "Choose diffusion weighted image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-command "ecc_update_files $w" \
 	-filterhist VARS(history)
@@ -444,7 +442,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Corrected output data:" \
 	-labelwidth $LWIDTH \
 	-title "Choose output image name" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-filterhist VARS(history)
     tixControl $w.ecc.refnum -label "Reference volume" \
@@ -505,7 +503,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Diffusion weighted data:" \
 	-labelwidth $LWIDTH \
 	-title "Choose diffusion weighted image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-command "dtifit_update_files $w" \
 	-filterhist VARS(history)
@@ -516,7 +514,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "BET binary brain mask:" \
 	-labelwidth $LWIDTH \
 	-title "Choose BET brain mask file" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-command "set_working_directory dtifit(cwd)" \
 	-width 35 \
 	-filterhist VARS(history)
@@ -646,7 +644,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Seed image:" \
 	-labelwidth $LWIDTH \
 	-title "Choose seed image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-command "probtrack_update_files $w" \
 	-filterhist VARS(history)
@@ -657,7 +655,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Target image:" \
 	-labelwidth $LWIDTH \
 	-title "Choose target image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-command "probtrack_update_files $w" \
 	-filterhist VARS(history)
@@ -700,7 +698,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Seed space reference image:" \
 	-labelwidth $LWIDTH \
 	-title "Choose reference image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-filterhist VARS(history)
 
@@ -734,7 +732,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Exclusion mask:" \
 	-labelwidth $LWIDTH \
 	-title "Select exclusion mask image" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-filterhist VARS(history)
 
@@ -750,7 +748,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Low resolution mask:" \
 	-labelwidth $LWIDTH \
 	-title "Choose low resolution mask" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-filterhist VARS(history)
 
@@ -775,7 +773,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-label "Output:" \
 	-labelwidth $LWIDTH \
 	-title "Choose output file name" \
-	-pattern "*.{hdr,hdr.gz}" \
+	-pattern "IMAGE" \
 	-width 35 \
 	-filterhist VARS(history)
 
