@@ -977,6 +977,39 @@ proc fdt:select_tool { w tool } {
 	pack $w.registration -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     }
 }
+proc fdt_monitor_short { w cmd } {
+    global debugging OSFLAVOUR
+
+    puts "$cmd"
+
+    if { $OSFLAVOUR != "cygwin" } {
+	set oldcursor [ $w configure -cursor { watch red white } ]
+
+	catch {
+	    update idletasks
+	    if { ! $debugging } {
+		set fd [ open "|$cmd" r ]
+#		set fd [ open "|qrsh -V -now n -q short.q $cmd" r ]
+		while { ( [ gets $fd line ] >= 0 ) } {
+		    update idletasks
+		    puts $line
+		}
+		close $fd
+	    }
+	} junk
+
+	$w configure -cursor $oldcursor
+
+    } else {
+	catch { exec sh -c $cmd } junk
+    }
+
+    if { $junk != "" } {
+	MxPause "Errors: $junk"
+    } 
+
+    puts "Done!"
+}
 
 proc fdt_monitor { w cmd } {
     global debugging OSFLAVOUR
@@ -1067,7 +1100,7 @@ proc fdt:apply { w dialog } {
 		set canwrite [ YesNoWidget "Overwrite $dtifit(output)?" Yes No ]
 	    }
 	    if { $canwrite } {
-		fdt_monitor $w "${FSLDIR}/bin/dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
+		fdt_monitor_short $w "${FSLDIR}/bin/dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
 	    }
 	}
 	bedpost {
@@ -1184,7 +1217,7 @@ proc fdt:apply { w dialog } {
 		    }
 		    if { $canwrite } {
 			set copylog "fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=simple -x ${filebase}_coordinates.txt $basics $ssopts $flags -o $probtrack(output)"
+			fdt_monitor_short $w "$FSLDIR/bin/probtrack --mode=simple -x ${filebase}_coordinates.txt $basics $ssopts $flags -o $probtrack(output)"
 		    }
 		    puts "rm ${filebase}_coordinates.txt"
 		    exec rm ${filebase}_coordinates.txt
