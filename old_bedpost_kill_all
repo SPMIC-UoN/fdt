@@ -1,0 +1,9 @@
+#!/bin/sh
+j=`ps -U $USER |grep -v grep | grep bedpost|grep -v bedpost_kill | awk '{print $1}'`
+if [ "x${j}" != "x" ];then 
+    kill -KILL $j
+fi
+i=`ps -U $USER |grep -v grep | grep diff_pvm| awk '{print $1}'`
+if [ "x${i}" != "x" ];then 
+   kill -KILL $i
+fi

@@ -18,9 +18,11 @@ Clean_Exit(){
     if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
 	i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
 	for j in ${i};do 
-	    host=`echo $j | awk --field-separator=_fdt_ '{print $1}'`
-	    pid=`echo $j | awk --field-separator=_fdt_ '{print $2}'`
-	    ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+	    host=`echo $j | awk -F _fdt_ '{print $1}'`
+	    pid=`echo $j | awk -F _fdt_ '{print $2}'`
+#	    ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+	    $FSL_REMOTE_CALL $host  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
+	    rm ${subjdir}.bedpost/logs/pid_${$}/${j}
 	done
     fi
     
@@ -127,29 +129,38 @@ mkdir -p ${subjdir}.bedpost/logs/pid_${$}
 
 nslices=`avwval ${subjdir}/data dim3`
 
-#${FSLDIR}/bin/avwslice ${subjdir}/data
-#${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+${FSLDIR}/bin/avwslice ${subjdir}/data
+${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 
 #following need to be setup elsewhere
-#FSL_MACHINE_LIST="cayenne0 cayenne0 cayenne2 cayenne3"
-#FSL_REMOTE_CALL="ssh"
+#FSL_MACHINE_LIST="list of machines (can be duplicated for two processors etc. )"
+#FSL_REMOTE_CALL="ssh (or rsh or whatever you want to use)"
 
 if [ "$FSL_MACHINE_LIST" = "" ] ; then
+    echo "processing data on local host"
     ${FSLDIR}/bin/bedpost_proc $subjdir $nslices
 else
+    echo "processing data on hosts: $FSL_MACHINE_LIST"
     for machine in $FSL_MACHINE_LIST; do
 	$FSL_REMOTE_CALL $machine  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
     done
 fi
 
 
+
+b=0
 finished=0;
 while [ $finished -eq 0 ];do
+    b=`expr $b + 1 `
     sleep 60;
-    nfin=`ls ${subjdir}.bedpost/logs/.*_finished |wc -w` #fix this (see Bedpost)
+    nfin=`echo ${subjdir}.bedpost/logs/.*_finished | grep -v ".\*" |wc -w` 
     if [ $nfin -eq $nslices ];then
 	finished=1;
     fi
+    if [ $b -eq 10 ]; then 
+	echo "$nfin slices processed"
+	b=0
+    fi	
 done
 
 #postprocessing

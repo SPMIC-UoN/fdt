@@ -13,7 +13,7 @@ input=`${FSLDIR}/bin/remove_ext ${1}`
 output=`${FSLDIR}/bin/remove_ext ${2}`
 ref=${3}
 
-if [ ! `${FSLDIR}/bin/imtest $input` ];then
+if [ `${FSLDIR}/bin/imtest $input` -eq 0 ];then
     echo "Input does not exist or is not in analyze format"
     exit
 fi
