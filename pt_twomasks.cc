@@ -245,7 +245,7 @@ void twomasks_asymm(){
     loopcheck=0;
   }
 
-
+  
   volume<int> Seeds,mask2;
   read_volume(Seeds,opts.seedfile.value());
   

@@ -36,7 +36,6 @@ const float maxfloat=1e10;
 const float minfloat=1e-10;
 const float maxlogfloat=23;
 const float minlogfloat=-23;
-const int maxint=1000000000; 
 
 
 inline float min(float a,float b){
@@ -81,7 +80,7 @@ inline Matrix Cross(const Matrix& A,const Matrix& B)
 
 float mod(float a, float b){
   while(a>b){a=a-b;}
-  while(a<0){a=a+b;}
+  while(a<0){a=a+b;} 
   return a;
 }
 
@@ -179,7 +178,7 @@ class Diff_pvmModel : public ForwardModel
     
     ~Diff_pvmModel(){}
   
-    virtual void setparams(float pstd);
+    virtual void setparams();
     ReturnMatrix nonlinearfunc(const ColumnVector& paramvalues) const; 
     void initialise(const ColumnVector& S);
     
@@ -194,7 +193,7 @@ class Diff_pvmModel : public ForwardModel
     int debuglevel;
 };  
 
-void Diff_pvmModel::setparams(float pstd)
+void Diff_pvmModel::setparams()
   {
     Tracer_Plus tr("Diff_pvmModel::setdata");
     if(debuglevel>2){
@@ -203,15 +202,15 @@ void Diff_pvmModel::setparams(float pstd)
     clear_params();
   
     SinPrior thtmp(1);
-    add_param("th",0.2,thtmp,true);    
+    add_param("th",0.2,0.02,thtmp,true);    
     UnifPrior phtmp(0.2,2000*M_PI);
-    add_param("ph",0,phtmp,true);
+    add_param("ph",0, 0.02,phtmp,true);
     UnifPrior ftmp(0,1);
-    add_param("f",0.5,ftmp,true);
+    add_param("f",0.5,0.02,ftmp,true);
     GammaPrior dtmp(4,1.0/0.0003); //test this out,
-    add_param("d",0.005,dtmp,true);
+    add_param("d",0.005,0.00005,dtmp,true);
     UnifPrior S0tmp(0,100000);
-    add_param("S0",10000,S0tmp,true);//false);
+    add_param("S0",10000,100,S0tmp,true);//false);
     
   }
 
@@ -360,7 +359,7 @@ int main(int argc, char *argv[])
     Diff_pvmModel model(bvecs,bvals,Diff_pvmOptions::getInstance().debuglevel.value());
 
     LSMCMCManager lsmcmc(Diff_pvmOptions::getInstance(),model,data,mask);
-    LSLaplaceManager lslaplace(Diff_pvmOptions::getInstance(),model,data,mask,(Diff_pvmOptions::getInstance().inference.value()=="full"));
+    LSLaplaceManager lslaplace(Diff_pvmOptions::getInstance(),model,data,mask);
 
 
     if(Diff_pvmOptions::getInstance().inference.value()=="mcmc")
