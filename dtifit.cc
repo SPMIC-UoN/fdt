@@ -170,17 +170,17 @@ int main(int argc, char** argv)
   int success=opts.parse_command_line(argc,argv);
   if(!success) return 0;
    if(opts.verbose.value()){
-    cerr<<"data file "<<opts.dtidatafile.value()<<endl;
-    cerr<<"mask file "<<opts.maskfile.value()<<endl;
-    cerr<<"bvecs     "<<opts.bvecsfile.value()<<endl;
-    cerr<<"bvals     "<<opts.bvalsfile.value()<<endl;
+    cout<<"data file "<<opts.dtidatafile.value()<<endl;
+    cout<<"mask file "<<opts.maskfile.value()<<endl;
+    cout<<"bvecs     "<<opts.bvecsfile.value()<<endl;
+    cout<<"bvals     "<<opts.bvalsfile.value()<<endl;
     if(opts.littlebit.value()){
-      cerr<<"min z     "<<opts.z_min.value()<<endl;
-      cerr<<"max z     "<<opts.z_max.value()<<endl;
-      cerr<<"min y     "<<opts.y_min.value()<<endl;
-      cerr<<"max y     "<<opts.y_max.value()<<endl;
-      cerr<<"min x     "<<opts.x_min.value()<<endl;
-      cerr<<"max x     "<<opts.x_max.value()<<endl;
+      cout<<"min z     "<<opts.z_min.value()<<endl;
+      cout<<"max z     "<<opts.z_max.value()<<endl;
+      cout<<"min y     "<<opts.y_min.value()<<endl;
+      cout<<"max y     "<<opts.y_max.value()<<endl;
+      cout<<"min x     "<<opts.x_min.value()<<endl;
+      cout<<"max x     "<<opts.x_max.value()<<endl;
     }
   }
   
@@ -190,19 +190,19 @@ int main(int argc, char** argv)
   volume4D<float> data;
   volume<int> mask;
   volumeinfo tempinfo;
-  if(opts.verbose.value()) cerr<<"reading data"<<endl;
+  if(opts.verbose.value()) cout<<"reading data"<<endl;
   read_volume4D(data,opts.dtidatafile.value(),tempinfo);
-  if(opts.verbose.value()) cerr<<"reading mask"<<endl;
+  if(opts.verbose.value()) cout<<"reading mask"<<endl;
   read_volume(mask,opts.maskfile.value());
-  if(opts.verbose.value()) cerr<<"ok"<<endl;
+  if(opts.verbose.value()) cout<<"ok"<<endl;
   int minx=opts.littlebit.value() ? opts.x_min.value():0;
   int maxx=opts.littlebit.value() ? opts.x_max.value():mask.xsize();
   int miny=opts.littlebit.value() ? opts.y_min.value():0;
   int maxy=opts.littlebit.value() ? opts.y_max.value():mask.ysize();
   int minz=opts.littlebit.value() ? opts.z_min.value():0;
   int maxz=opts.littlebit.value() ? opts.z_max.value():mask.zsize();
-  cerr<<minx<<" "<<maxx<<" "<<miny<<" "<<maxy<<" "<<minz<<" "<<maxz<<endl;
-  if(opts.verbose.value()) cerr<<"setting up vols"<<endl;
+  cout<<minx<<" "<<maxx<<" "<<miny<<" "<<maxy<<" "<<minz<<" "<<maxz<<endl;
+  if(opts.verbose.value()) cout<<"setting up vols"<<endl;
   volume<float> l1(maxx-minx,maxy-miny,maxz-minz);
   volume<float> l2(maxx-minx,maxy-miny,maxz-minz);
   volume<float> l3(maxx-minx,maxy-miny,maxz-minz);
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
   volume4D<float> V1(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
-  if(opts.verbose.value()) cerr<<"copying input properties to output volumes"<<endl;
+  if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
   copybasicproperties(data[0],l2);
   copybasicproperties(data[0],l3);
@@ -220,18 +220,18 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],V1[0]);
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
-  if(opts.verbose.value()) cerr<<"zeroing output volumes"<<endl;
+  if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
   l1=0;l2=0;l3=0;FA=0;S0=0;V1=0;V2=0;V3=0;
-  if(opts.verbose.value()) cerr<<"ok"<<endl;
+  if(opts.verbose.value()) cout<<"ok"<<endl;
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
   float fa,s0;
-  if(opts.verbose.value()) cerr<<"Forming A matrix"<<endl;
+  if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   Matrix Amat = form_Amat(r,b);
-  if(opts.verbose.value()) cerr<<"starting the fits"<<endl;
+  if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   for(int k = minz; k < maxz; k++){
-    cerr<<k<<" slices processed"<<endl;
+    cout<<k<<" slices processed"<<endl;
       for(int j=miny; j < maxy; j++){
 	for(int i =minx; i< maxx; i++){
 	
