@@ -13,12 +13,6 @@ regsub tcl $TCLPATH doc/fdt HTMLPATH
 
 set VERSION "1.0a"
 
-# FMRIB TCL functions
-source $TCLPATH/FidFolderBox.tcl
-source $TCLPATH/FidFolderDlg.tcl
-source $TCLPATH/FidFolderInfoBox.tcl
-source $TCLPATH/FidFolderInfoDlg.tcl
-
 tixWidgetClass registrationImageSelect {
     -superclass tixPrimitive
     -classname RegistrationImageSelect
