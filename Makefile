@@ -2,8 +2,8 @@ include $(FSLCONFDIR)/default.mk
 
 PROJNAME = fdt
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB}  
-USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} 
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
+USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
  
 DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
