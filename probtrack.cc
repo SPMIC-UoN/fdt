@@ -2028,6 +2028,7 @@ void meshtrack(){
       // save_volume(prob,thisout);
     }
   } //Close Seed number Loop
+  mseeds.save(opts.outfile.value(),ftype);
 }
 
 
