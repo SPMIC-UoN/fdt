@@ -300,20 +300,29 @@ proc mm_to_voxels { X Y Z mask } {
     upvar $Y cY
     upvar $Z cZ
 
-    set o1 [ exec sh -c "$FSLDIR/bin/avwval $mask origin1" ]
-    set o2 [ exec sh -c "$FSLDIR/bin/avwval $mask origin2" ]
-    set o3 [ exec sh -c "$FSLDIR/bin/avwval $mask origin3" ]
 
-    if { $o1 != 0 && $o2 != 0 && $o3 != 0 } {
-	set o1 [ expr $o1 - 0.5 ]
-	set o2 [ expr $o2 - 1.5 ]
-	set o3 [ expr $o3 - 0.5 ]
-    }
+    set vcX [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/tal2imgcoord -img $mask -vox - | awk '{print $1}'" ]    
+    set vcY [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/tal2imgcoord -img $mask -vox - | awk '{print $2}'" ] 
+    set vcZ [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/tal2imgcoord -img $mask -vox - | awk '{print $3}'" ] 	
+    set cX $vcX
+    set cY $vcY
+    set cZ $vcZ
+
+
+    #set o1 [ exec sh -c "$FSLDIR/bin/avwval $mask origin1" ]
+    #set o2 [ exec sh -c "$FSLDIR/bin/avwval $mask origin2" ]
+    #set o3 [ exec sh -c "$FSLDIR/bin/avwval $mask origin3" ]
+
+    #if { $o1 != 0 && $o2 != 0 && $o3 != 0 } {
+#	set o1 [ expr $o1 - 0.5 ]
+#	set o2 [ expr $o2 - 1.5 ]
+#	set o3 [ expr $o3 - 0.5 ]
+    #}
 #    puts "Using origin $o1 $o2 $o3"
 
-    set cX [ expr int( ( double($cX) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim1" ] ) + $o1 ) ]
-    set cY [ expr int( ( double($cY) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim2" ] ) + $o2 ) ]
-    set cZ [ expr int( ( double($cZ) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim3" ] ) + $o3 ) ]
+    #set cX [ expr int( ( double($cX) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim1" ] ) + $o1 ) ]
+    #set cY [ expr int( ( double($cY) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim2" ] ) + $o2 ) ]
+    #set cZ [ expr int( ( double($cZ) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim3" ] ) + $o3 ) ]
 
 #    puts "Setting co-ordinates $cX $cY $cZ"
 }
