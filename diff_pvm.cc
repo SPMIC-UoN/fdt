@@ -307,10 +307,10 @@ void Diff_pvmModel::initialise(const ColumnVector& S){
   else fsquared=0;
   if(fsquared>0){f=sqrt(fsquared);}
   else{f=0;}
-   if(f>=0.95) f=0.95;
-   if(f<=0.001) f=0.001;
-   cout<<"S0 "<<S0<<endl;
-  cout<<"S1 "<<S(1)<<endl;
+  if(f>=0.95) f=0.95;
+  if(f<=0.001) f=0.001;
+  //cout<<"S0 "<<S0<<endl;
+  //cout<<"S1 "<<S(1)<<endl;
   getparam(0).setinitvalue(th);
   getparam(1).setinitvalue(ph);
   getparam(2).setinitvalue(f);
@@ -339,8 +339,12 @@ int main(int argc, char *argv[])
       Tracer_Plus::settimingon();
     
     // read data
+
     VolumeSeries data;
     data.read(opts.datafile.value());   
+    data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
+    cout<<"done"<<endl;
+    return 0;
     int ntpts = data.tsize();
     Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
     Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
