@@ -154,18 +154,6 @@ proc multiFileSelect:ConstructWidget { w } {
 	    -pattern $data(-pattern)
     ]
 
-#     set data(w:file) [ FSLFileEntry $w.frame.f \
-# 			   -variable $data(filename) \
-# 			   -directory $data(-directory) \
-# 			   -label $data(-label) \
-# 			   -title "Select file" \
-# 			   -width 35 \
-# 			   -filterhist VARS(history) ]
-
-#     if {$data(-labelwidth) != ""} {
-# 	$w.frame.f configure -width $data(-labelwidth)
-#     }
-
     frame $w.frame.b
 
     button $w.frame.b.add -text "Add..."  -command "$w.browser popup"
