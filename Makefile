@@ -20,7 +20,7 @@ DIFF_PVM=diff_pvm
 RV=replacevols
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
-PTOBJS=probtrack.o probtrackOptions.o
+PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o
 FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
