@@ -18,6 +18,7 @@ ROM=reord_OM
 SAUS=sausages
 DIFF_PVM=diff_pvm
 RV=replacevols
+MDV=make_dyadic_vectors
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o pt_matrix_mesh.o
@@ -28,9 +29,10 @@ ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
 DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 RVOBJS=replacevols.o
+MDVOBJS=make_dyadic_vectors.o
 
 SCRIPTS = eddy_correct
-XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm
+XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors
 RUNTCLS = Fdt
 
 all: ${XFILES} reord_OM sausages
@@ -61,6 +63,9 @@ ${DIFF_PVM}:    	${DIFF_PVMOBJS}
 
 ${RV}:    	${RVOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RVOBJS} ${DLIBS}
+
+${MDV}:    	${MDVOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MDVOBJS} ${DLIBS}
 
 
 
