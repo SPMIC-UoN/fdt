@@ -143,7 +143,7 @@ mkdir -p ${subjdir}.bedpost/diff_slices
 echo copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpost
 ${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpost
-
+${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpost/nodif_brain
 
 
 mkdir -p ${subjdir}.bedpost/logs
