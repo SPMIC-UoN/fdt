@@ -6,7 +6,7 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} 
 
  
-DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lavwio -lcprob -lprob -lm -lz
+DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 
 DTIFIT=dtifit
