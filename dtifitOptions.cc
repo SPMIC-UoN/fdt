@@ -1,4 +1,4 @@
-/*  dtibayesOptions.cc
+/*  dtifitOptions.cc
 
     Mark Woolrich, FMRIB Image Analysis Group
 

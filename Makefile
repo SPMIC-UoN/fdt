@@ -1,6 +1,6 @@
 include $(FSLCONFDIR)/default.mk
 
-PROJNAME = dtibayes
+PROJNAME = fdt
 
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB}  
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} 
