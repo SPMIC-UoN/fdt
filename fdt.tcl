@@ -1401,7 +1401,7 @@ proc fdt:apply { w dialog } {
 		    set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
 		    set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		    set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
-		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options $registration(standard_costfn)"
+		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options -cost $registration(standard_costfn)"
 		    fdt_monitor $w "convert_xfm -omat $stand2str -inverse $str2stand"
 		    fdt_monitor $w "convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
 		    fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
