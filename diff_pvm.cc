@@ -342,9 +342,9 @@ int main(int argc, char *argv[])
 
     VolumeSeries data;
     data.read(opts.datafile.value());   
-    data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
-    cout<<"done"<<endl;
-    return 0;
+    // data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
+//     cout<<"done"<<endl;
+//     return 0;
     int ntpts = data.tsize();
     Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
     Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
