@@ -201,10 +201,10 @@ void Diff_pvmModel::setparams()
     }
     clear_params();
   
-    SinPrior thtmp(1);
+    SinPrior thtmp(1,-1000*M_PI,1000*M_PI);
     add_param("th",0.2,0.02,thtmp,true,true); //Will unwrap th param before saving
-    UnifPrior phtmp(0.2,2000*M_PI);
-    add_param("ph",0, 0.02,phtmp,true,true); //Will unwrap th param before saving
+    UnifPrior phtmp(-1000*M_PI,1000*M_PI);
+    add_param("ph",0.2, 0.02,phtmp,true,true); //Will unwrap th param before saving
     UnifPrior ftmp(0,1);
     add_param("f",0.5,0.02,ftmp,true,true);
     GammaPrior dtmp(4,1.0/0.0003); //test this out,

@@ -257,6 +257,8 @@ void waypoints(){
   volume<int> tmpway;
   vector<bool> passed_flags; //store whether the current sample has passed through each of the waypoints
   for( unsigned int m = 0; m < masknames.size(); m++ ){
+    if(opts.verbose.value()>0)
+      cout<<masknames[m]<<endl;
     read_volume(tmpway,masknames[m]);
     waymasks.push_back(tmpway);
     passed_flags.push_back(false);

@@ -206,6 +206,7 @@ int main(int argc, char** argv)
   volume<float> l1(maxx-minx,maxy-miny,maxz-minz);
   volume<float> l2(maxx-minx,maxy-miny,maxz-minz);
   volume<float> l3(maxx-minx,maxy-miny,maxz-minz);
+  volume<float> MD(maxx-minx,maxy-miny,maxz-minz);
   volume<float> FA(maxx-minx,maxy-miny,maxz-minz);
   volume<float> S0(maxx-minx,maxy-miny,maxz-minz);
   volume4D<float> V1(maxx-minx,maxy-miny,maxz-minz,3);
@@ -215,13 +216,14 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],l1);
   copybasicproperties(data[0],l2);
   copybasicproperties(data[0],l3);
+  copybasicproperties(data[0],MD);
   copybasicproperties(data[0],FA);
   copybasicproperties(data[0],S0);
   copybasicproperties(data[0],V1[0]);
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
-  l1=0;l2=0;l3=0;FA=0;S0=0;V1=0;V2=0;V3=0;
+  l1=0;l2=0;l3=0;MD=0;FA=0;S0=0;V1=0;V2=0;V3=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
@@ -245,6 +247,7 @@ int main(int argc, char** argv)
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
+	    MD(i-minx,j-miny,k-minz)=(evals(1)+evals(2)+evals(3))/3;
 	    FA(i-minx,j-miny,k-minz)=fa;
 	    S0(i-minx,j-miny,k-minz)=s0;
 	    V1(i-minx,j-miny,k-minz,0)=evec1(1);
@@ -295,7 +298,7 @@ int main(int argc, char** argv)
     string v1file=opts.ofile.value()+"_V1";
     string v2file=opts.ofile.value()+"_V2";
     string v3file=opts.ofile.value()+"_V3";
-
+    string MDfile=opts.ofile.value()+"_MD";
     if(opts.littlebit.value()){
       fafile+="littlebit";
       s0file+="littlebit";
@@ -305,6 +308,7 @@ int main(int argc, char** argv)
       v1file+="littlebit";
       v2file+="littlebit";
       v3file+="littlebit";
+      MDfile+="littlebit";
     }
   
     save_volume(FA,fafile,tempinfo);
@@ -312,6 +316,7 @@ int main(int argc, char** argv)
     save_volume(l1,l1file,tempinfo);
     save_volume(l2,l2file,tempinfo);
     save_volume(l3,l3file,tempinfo);
+    save_volume(MD,MDfile,tempinfo);
     save_volume4D(V1,v1file,tempinfo);
     save_volume4D(V2,v2file,tempinfo);
     save_volume4D(V3,v3file,tempinfo);
