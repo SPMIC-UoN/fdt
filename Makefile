@@ -17,6 +17,7 @@ MED=medianfilter
 ROM=reord_OM
 SAUS=sausages
 DIFF_PVM=diff_pvm
+RV=replacevols
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 PTOBJS=probtrack.o probtrackOptions.o
@@ -26,6 +27,7 @@ MEDOBJS=medianfilter.o
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
 DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
+RVOBJS=replacevols.o
 
 SCRIPTS = eddy_correct
 XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm
@@ -56,6 +58,9 @@ ${SAUS}:    	${SAUSOBJS}
 
 ${DIFF_PVM}:    	${DIFF_PVMOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DIFF_PVMOBJS} ${DLIBS}
+
+${RV}:    	${RVOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RVOBJS} ${DLIBS}
 
 
 
