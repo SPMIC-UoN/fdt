@@ -356,7 +356,7 @@ proc fdt:dialog { w tclstartupfile } {
     $w.tool.menu add command eddy_current -label "Eddy current correction"
     $w.tool.menu add command bedpost      -label "BEDPOST Estimation of diffusion parameters"
     $w.tool.menu add command registration -label "Registration"
-    $w.tool.menu add command probtrack    -label "ProbTrack Probabalistic tracking"
+    $w.tool.menu add command probtrack    -label "ProbTrack Probabilistic tracking"
     $w.tool.menu add separator xutilsx
     $w.tool.menu add command dtifit       -label "DTIFit Reconstruct diffusion tensors"
 

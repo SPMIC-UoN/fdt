@@ -17,28 +17,29 @@ separately.
 The main FDT programmes, which are accesible from the GUI are:
 
 <ul><li><a href="fdt_eddy.html">eddycorrect</a> - for correction of eddy current distortion</li>
-<li><a href="fdt_bedpost.html">Bedpost</a> - for local modelling of diffusion parameters.</li>
-<li><a href="fdt_probtrack.html">ProbTrack</a> - for tractography and connectivity-based segmentation</li> 
-<li><a href="fdt_dtifit.html">DtiFit</a> - for local of fitting of diffusion tensors</li></ul>
+<li><a href="fdt_bedpost.html">bedpost</a> - for local modelling of diffusion parameters.</li>
+<li><a href="fdt_probtrack.html">probtrack</a> - for tractography and connectivity-based segmentation</li> 
+<li><a href="fdt_dtifit.html">dtifit</a> - for local of fitting of diffusion tensors</li></ul>
 
-<br>The FDT GUI also includes a <a href="fdt_reg.html">registration</a> option that registers images using <a
-href="http://www.fmrib.ox.ac.uk/fsl/flirt/index.html" target="_top"> FLIRT </a>
+<br>The FDT GUI also includes a <a
+href="fdt_reg.html">registration</a> option that registers images
+using <a href="../flirt/index.html" target="_top">FLIRT</a>.
 
 <p>Additional FDT programmes, that can be run only from the command line, are:
 <ul><li><a href="fdt_thresh.html">proj_thresh</a> - for thresholding some outputs
-of ProbTrack</li>
+of probtrack</li>
 <li><A href="fdt_biggest.html">find_the_biggest</a> - for performing hard
-segmentation on the outputs of connectivity-based thersholding in ProbTrack</li></ul>
+segmentation on the outputs of connectivity-based thresholding in probtrack</li></ul>
 
 <p>The probabilistic tractography tools within FDT are very flexible and allow
 the user to generate connectivity distributions from single or multiple
-voxels; to limit these distribution based on anatomical criteria and to
+voxels; to limit these distributions based on anatomical criteria and to
 perform segmentation based on the probability of connection to user-defined
 target regions.
 
-<p>To call the FDT GUI, either run <b>Fdt</b>, or run <b>fsl</b> and press the <b>FDT</b> button.
+<p>To call the FDT GUI, either run <b>Fdt</b> (<b>Fdt_gui</b> on Mac
+or Windows), or run <b>fsl</b> and press the <b>FDT</b> button.
 
 <p>For an overview of the local diffusion modelling and tractography used
-within FDT see the <a href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">appendix</a>
-
+within FDT see the <a href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">appendix</a>.
 
