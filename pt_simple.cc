@@ -30,12 +30,12 @@ void track(){
   Matrix Seeds_to_DTI;
   if(opts.seedref.value()!=""){
     read_volume(prob,opts.seedref.value());
-    prob=0;beenhere=prob;
+    beenhere=prob*0;
     read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
   }
   else{
-    prob=mask;prob=0;
-    beenhere=prob;
+    prob=mask;
+    beenhere=prob*0;
     Seeds_to_DTI=Identity(4);
   }
   
@@ -60,7 +60,7 @@ void track(){
   
   
   for(int SN=1; SN<=Seeds.Nrows();SN++){
-
+    prob=0;
     ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 
     
@@ -195,8 +195,8 @@ void track(){
       part.reset();
       indexset(beenhere,path,0);
       
-    } // Close Particle Number Loop
-    string thisout=opts.outfile.value()+num2str(xst)+(string)"_"+num2str(yst)+(string)"_"+num2str(zst);
+    } // Close Particle Number Loop    
+    string thisout=opts.outfile.value()+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     save_volume(prob,thisout);
   } //Close Seed number Loop
 }
