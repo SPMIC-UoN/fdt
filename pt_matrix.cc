@@ -626,15 +626,14 @@ void maskmatrix(){
     ColumnVector clustsums(maxclusternum),clustmaxes(maxclusternum);
     clustsums=0;clustmaxes=0;
     for(int Sz=Seeds.minz();Sz<=Seeds.maxz();Sz++){
-      cout<<Sz<<endl;
+      cout<<seedclust<<" "<<Sz<<endl;
       for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
 	for(int Sx=Seeds.minx();Sx<=Seeds.maxx();Sx++){
-	  if(Seeds(Sx,Sy,Sz)>0){
+	  if(Seeds(Sx,Sy,Sz)==seedclust){
 
 	    clustsize++;
-	    ColumnVector flags(maxclusternum);  flags=0;
+	    ColumnVector flags(maxclusternum); 
 	    ColumnVector clustcounts(maxclusternum);  clustcounts=0;
-
 
 
 	    ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
@@ -645,7 +644,7 @@ void maskmatrix(){
 	    Particle part(0,0,0,0,0,0,opts.steplength.value(),mask.xdim(),mask.ydim(),mask.zdim(),false);
 	    hitcount=0;
 	    for( int p = 0; p < nparticles ; p++ ){
-	    
+	     flags=0;
 	      for(int direc=1;direc<=2;direc++){
 		x=xst;y=yst;z=zst;
 		part.change_xyz(x,y,z);	    

@@ -135,6 +135,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
     }
   Dvec = -pinv(Amat)*logS;
+  cout << Dvec;
   s0=exp(-Dvec(7));
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
   tens = vec2tens(Dvec);
