@@ -32,7 +32,7 @@ RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 
 
-SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad
+SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
 
 

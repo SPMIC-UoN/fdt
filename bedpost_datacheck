@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ $1 = "" ]; then 
-    echo "Usage: $0 data directory"
+if [ "$1" = "" ]; then 
+    echo "Usage: $0 data_dir"
     exit;
 fi
 
@@ -18,7 +18,41 @@ done
 
 for bv in ${DIR}/bvals ${DIR}/bvecs;do
     echo " num lines in $bv "
-    cat $bv|wc -l
+    cat $bv|wc -l |grep -v "^ *$"
     echo " num words in $bv "
     cat $bv|wc -w
 done
+
+if [ `imtest ${DIR}/data` -eq 1 -a `imtest ${DIR}/nodif_brain_mask` -eq 1 ];then
+
+    dx=`avwval ${DIR}/data dim1`
+    dy=`avwval ${DIR}/data dim2`
+    dz=`avwval ${DIR}/data dim3`
+    dt=`avwval ${DIR}/data dim4`
+    
+    nbmx=`avwval ${DIR}/nodif_brain_mask dim1`
+    nbmy=`avwval ${DIR}/nodif_brain_mask dim2`
+    nbmz=`avwval ${DIR}/nodif_brain_mask dim3`
+    
+    
+    if [ $dx -ne $nbmx -o  $dy -ne $nbmy -o $dz -ne $nbmz ];then 
+	echo "data dimensions do not match mask dimensions"
+    fi
+    
+    bvallen=`cat ${DIR}/bvals|wc -w|grep -v "^ *$"`
+    bveclenw=`cat ${DIR}/bvecs|wc -w`
+    bveclenl=`cat ${DIR}/bvecs|wc -l|grep -v "^ *$"`
+    bveclen=`echo "$bveclenw / $bveclenl"|bc`
+
+    
+    if [ $bveclen -ne $bvallen ];then
+	echo "bvecs and bvals are incompatible"
+    fi
+    if [ $bvallen -ne $dt ];then 
+	echo "number of elements in bvals is not equal to number of vols in data"
+    fi
+    if [ $bveclen -ne $dt ];then 
+	echo "number of elements per line in bvecs is not equal to number of vols in data"
+    fi
+	
+fi
