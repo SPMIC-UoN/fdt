@@ -30,7 +30,7 @@ full_list=`${FSLDIR}/bin/imglob -oneperimage vol*`
 for i in $full_list ; do
     echo processing $i
     echo processing $i >> ${output}.ecclog
-    ${FSLDIR}/bin/flirt -in $i -ref $output -nosearch -o $i >> ${output}.ecclog
+    ${FSLDIR}/bin/flirt -in $i -ref $output -nosearch -o $i -paddingsize 1 >> ${output}.ecclog
 done
 
 avwmerge -t $output $full_list

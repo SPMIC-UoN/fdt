@@ -979,25 +979,35 @@ proc fdt:select_tool { w tool } {
 }
 
 proc fdt_monitor { w cmd } {
-    global debugging
+    global debugging OSFLAVOUR
 
     puts "$cmd"
-    set oldcursor [ $w configure -cursor { watch red white } ]
-    catch {
-	update idletasks
-	if { ! $debugging } {
-	    set fd [ open "|$cmd" r ]
-	    while { ( [ gets $fd line ] >= 0 ) } {
-		update idletasks
-		puts $line
+
+    if { $OSFLAVOUR != "cygwin" } {
+	set oldcursor [ $w configure -cursor { watch red white } ]
+
+	catch {
+	    update idletasks
+	    if { ! $debugging } {
+		set fd [ open "|$cmd" r ]
+		while { ( [ gets $fd line ] >= 0 ) } {
+		    update idletasks
+		    puts $line
+		}
+		close $fd
 	    }
-	    close $fd
-	}
-    } junk
-    $w configure -cursor $oldcursor
+	} junk
+
+	$w configure -cursor $oldcursor
+
+    } else {
+	catch { exec sh -c $cmd } junk
+    }
+
     if { $junk != "" } {
 	MxPause "Errors: $junk"
     } 
+
     puts "Done!"
 }
 
@@ -1073,8 +1083,8 @@ proc fdt:apply { w dialog } {
 	    if { [file exists ${bedpost(directory)}.bedpost ] } {
 		set canwrite [ YesNoWidget "Overwrite ${bedpost(directory)}.bedpost?" Yes No ]
 		if { $canwrite } {
-		    puts "rm -rf $bedpost(directory)"
-		    catch { exec rm -rf $bedpost(directory) } errmsg
+		    puts "rm -rf ${bedpost(directory)}.bedpost"
+		    catch { exec rm -rf ${bedpost(directory)}.bedpost } errmsg
 		}
 	    }
 	    if { $canwrite } {
