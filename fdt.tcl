@@ -387,12 +387,12 @@ proc fdt:dialog { w tclstartupfile } {
     proc registration_set_directory { w dirname } {
 	global registration
 
-	set struct [ file join $dirname struct_brain.hdr ]
+	set struct [ file join $dirname struct_brain ]
 
 	if { [ file exists ${struct}.gz] } {
-	    set registration(struct_image) ${struct}.gz
+	    set registration(struct_image) ${struct}.hdr.gz
 	} elseif { [ file exists $struct] } {
-	    set registration(struct_image) $struct
+	    set registration(struct_image) ${struct}.hdr
 	} else {
 	    set registration(struct_image) ""
 	}
@@ -443,7 +443,7 @@ proc fdt:dialog { w tclstartupfile } {
     proc ecc_update_files { w filename } {
 	global eddy
 
-	set eddy(output) [ file join [file dirname $eddy(input)] data.hdr.gz ]
+	set eddy(output) [ file join [file dirname $eddy(input)] data ]
     }
     FSLFileEntry $w.ecc.input \
 	-variable eddy(input) \
@@ -1031,9 +1031,9 @@ proc fdt:apply { w dialog } {
 	    global dtifit
 
 	    if { ! $dtifit(expert_yn) } {
-		set dtifit(input)  [ file join $dtifit(directory) data.hdr.gz ]
+		set dtifit(input)  [ file join $dtifit(directory) data ]
 		set dtifit(output) [ file join $dtifit(directory) dti ]
-		set dtifit(mask)   [ file join $dtifit(directory) nodif_brain_mask.hdr.gz ]
+		set dtifit(mask)   [ file join $dtifit(directory) nodif_brain_mask ]
 		set dtifit(bvecs)  [ file join $dtifit(directory) bvecs ]
 		set dtifit(bvals)  [ file join $dtifit(directory) bvals ]
 	    }
