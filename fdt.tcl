@@ -964,20 +964,20 @@ proc fdt:select_tool { w tool } {
 
 proc fdt_monitor { w cmd } {
     puts "$cmd"
-    set oldcursor [ $w configure -cursor { watch red white } ]
-    catch {
-	update idletasks
-	set fd [ open "|$cmd" r ]
-	while { ( [ gets $fd line ] >= 0 ) } {
-	    update idletasks
-	    puts $line
-	}
-	close $fd
-    } junk
-    $w configure -cursor $oldcursor
-    if { $junk != "" } {
-	MxPause "Errors: $junk"
-    } 
+#     set oldcursor [ $w configure -cursor { watch red white } ]
+#     catch {
+# 	update idletasks
+# 	set fd [ open "|$cmd" r ]
+# 	while { ( [ gets $fd line ] >= 0 ) } {
+# 	    update idletasks
+# 	    puts $line
+# 	}
+# 	close $fd
+#     } junk
+#     $w configure -cursor $oldcursor
+#     if { $junk != "" } {
+# 	MxPause "Errors: $junk"
+#     } 
     puts "Done!"
 }
 
@@ -1077,6 +1077,14 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
+
+	    set tn [open "| $BINPATH/tmpnam"]
+	    gets $tn filebase
+	    close $tn
+	    set logfile "${filebase}_log.tcl"
+	    set log [open "$logfile" w]
+	    puts $log "set tool $tool"
+	    set copylog ""
 	    set ssopts ""
 	    if { $probtrack(usereference_yn) } {
 		set ssopts "--xfm=$probtrack(xfm)"
@@ -1087,13 +1095,6 @@ proc fdt:apply { w dialog } {
 	    }
 	    set basics "--forcedir -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask"	    
 
-	    set tn [open "| $BINPATH/tmpnam"]
-	    gets $tn filebase
-	    close $tn
-	    set logfile "${filebase}_log.tcl"
-	    set log [open "$logfile" w]
-	    puts $log "set tool $tool"
-	    set copylog ""
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn usef_yn modeuler_yn \
 			       curvature nsteps steplength nparticles} {
 		puts $log "set probtrack($entry) $probtrack($entry)"
@@ -1111,6 +1112,9 @@ proc fdt:apply { w dialog } {
 			puts $log "set probtrack(xfm) $probtrack(xfm)"
 		    } else {
 			set ssopts ""
+		    }
+		    if { $probtrack(exclude_yn) == 1 } {
+			set ssopts "$ssopts --rubbish=$probtrack(exclude)"
 		    }
 		    set fd [ open "${filebase}_coordinates.txt" w ]
 		    $w.data.seedxyz update
@@ -1140,8 +1144,18 @@ proc fdt:apply { w dialog } {
 			return
 		    }
 
-		    fdt_monitor $w "$FSLDIR/bin/probtrack --mode=simple -x ${filebase}_coordinates.txt $basics $ssopts $flags -o $probtrack(output)"
-
+		    set canwrite 1
+		    if { [ file exists $probtrack(output) ] } {
+			set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
+			if { $canwrite } {
+			    puts "rm -rf $probtrack(output)"
+			    exec rm -rf $probtrack(output)
+			}
+		    }
+		    if { $canwrite } {
+			set copylog "fdt.log"
+			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=simple -x ${filebase}_coordinates.txt $basics $ssopts $flags -o $probtrack(output)"
+		    }
 		    puts "rm ${filebase}_coordinates.txt"
 		    exec rm ${filebase}_coordinates.txt
 		}
@@ -1279,12 +1293,14 @@ proc fdt:apply { w dialog } {
 		mat2 {
 		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
 		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
+		    if { $probtrack(lrmask) == "" } { set errorStr "$errorStr You must specify the low resolution mask!" }
 		    if { $errorStr != "" } {
 			MxPause $errorStr
 			return
 		    }
 		    puts $log "set probtrack(seed) $probtrack(seed)"
 		    puts $log "set probtrack(dir) $probtrack(dir)"
+		    puts $log "set probtrack(lrmask) $probtrack(lrmask)"
 
 		    set canwrite 1
 		    if { [ file exists $probtrack(dir) ] } {
@@ -1298,7 +1314,7 @@ proc fdt:apply { w dialog } {
 			puts "mkdir -p $probtrack(dir)"
 			exec mkdir -p $probtrack(dir)
 			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=matrix2 -x $probtrack(seed) $basics $ssopts $flags -o fdt_matrix --dir=$probtrack(dir)"
+			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=matrix2 -x $probtrack(seed) $basics $ssopts --lrmask=$probtrack(lrmask) $flags -o fdt_matrix --dir=$probtrack(dir)"
 		    }
 		}
 		mskmat {
@@ -1392,8 +1408,10 @@ proc fdt:apply { w dialog } {
 	}
     }
 
-    MxPause "  Done!  "
-    update idletasks
+    if { $canwrite } { 
+	MxPause "  Done!  "
+	update idletasks
+    }
 
     if {$dialog == "destroy"} {
         fdt:destroy $w
