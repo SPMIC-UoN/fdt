@@ -2,6 +2,7 @@
 #include <fstream>
 #include "newimage/newimageall.h"
 #include "utils/log.h"
+#include "meshclass/meshclass.h"
 #include "probtrackOptions.h"
 #include "particle.h"
 #include "tractvols.h"
@@ -12,6 +13,7 @@ using namespace TRACT;
 using namespace Utilities;
 using namespace PARTICLE;
 using namespace TRACTVOLS;
+using namespace mesh;
 //using namespace NEWMAT;
 //////////////////////////
 /////////////////////////
@@ -46,6 +48,15 @@ ColumnVector vox_to_vox(const ColumnVector& xyz1,const ColumnVector& dims1,const
   return xyz2;
 }
 
+
+ColumnVector mni_to_imgvox(const ColumnVector& mni,const ColumnVector& mni_origin,const Matrix& mni2img, const ColumnVector& img_dims){
+  ColumnVector mni_new_origin(4),img_mm;//homogeneous
+  ColumnVector img_vox(3);
+  mni_new_origin<<mni(1)+mni_origin(1)<<mni(2)+mni_origin(2)<<mni(3)+mni_origin(3)<<1;
+  img_mm=mni2img*mni_new_origin;
+  img_vox<<img_mm(1)/img_dims(1)<<img_mm(2)/img_dims(2)<<img_mm(3)/img_dims(3);
+  return img_vox;
+}
 
 
 
@@ -1829,6 +1840,194 @@ void seeds_to_targets()
 
 
 
+
+
+
+void meshtrack(){
+  probtrackOptions& opts =probtrackOptions::getInstance();
+ 
+  ////////////////////////////
+  Log& logger = LogSingleton::getInstance();
+  if(opts.verbose.value()>1){
+    logger.makeDir("particles","particle0",true,false);
+  }
+  ////////////////////////////////////
+  float xst,yst,zst,x,y,z;
+  int nparticles=opts.nparticles.value();
+  int nsteps=opts.nsteps.value();
+  ///////////////////////////////////
+  volume<int> mask;
+  volume<int> RUBBISH;
+  volume<int> skipmask;
+  volume<int> prob,beenhere;
+  read_volume(mask,opts.maskfile.value());
+  if(opts.seedref.value()!=""){
+    read_volume(prob,opts.seedref.value());
+    prob=0;beenhere=prob;
+    
+  }
+  else{
+    prob=mask;prob=0;
+    beenhere=prob;
+  }
+  
+  Matrix Seeds_to_DTI;
+  read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value()); // Here seeds_to_dti should take the standard volume to diff space 
+  
+  float lcrat=5;
+  volume4D<float> loopcheck((int)ceil(mask.xsize()/lcrat)+1,(int)ceil(mask.ysize()/lcrat)+1,(int)ceil(mask.zsize()/lcrat)+1,3);
+  loopcheck=0;
+  
+  if(opts.rubbishfile.value()!="") read_volume(RUBBISH,opts.rubbishfile.value());
+  if(opts.skipmask.value()!="") read_volume(skipmask,opts.skipmask.value());
+  
+  TractVols vols(opts.usef.value());
+  vols.initialise(opts.basename.value());
+  
+  Matrix path(nsteps,3);
+  path=1;
+
+  float tmp2;
+  float randtmp1,randtmp2,randtmp3;
+  ColumnVector th_ph_f;
+  
+  Mesh mseeds;
+  int ftype=mseeds.load(opts.seedfile.value()); 
+  ColumnVector mni_origin(3),fs_coord_mm(3),xyz_dti,xyz_seeds,dim_seeds(3);
+  dim_seeds<<prob.xdim()<<prob.ydim()<<prob.zdim(); //In seedref space if exists. Else in dti space
+  mni_origin << 92 << 128 << 37;
+  
+  
+  
+  for (vector<Mpoint*>::iterator i = mseeds._points.begin(); i!=mseeds._points.end(); i++ ){
+    if((*i)->get_value() >0){
+      
+      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z; 
+      xyz_dti=mni_to_imgvox(fs_coord_mm,mni_origin, Seeds_to_DTI,vols.dimensions()); //xyz_dti in voxels, not mm
+      xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3); //xyz_dti in voxels,not mm
+      
+      
+      
+      Particle part(0,0,0,0,0,0,opts.steplength.value(),mask.xdim(),mask.ydim(),mask.zdim(),false);
+      
+      int length=0;
+      for( int p = 0; p < nparticles ; p++ ){
+	if(opts.verbose.value()>0){
+	  cout<<"particle number "<<p<<endl;
+	}
+	
+	if(opts.verbose.value()>1)
+	  logger.setLogFile("particle"+num2str(p));
+	
+	//Don't have a direction loop as in other cases, as always want to track in from cortex.
+	
+	x=xst;y=yst;z=zst;
+	part.change_xyz(x,y,z);	    
+	
+	for( int it = 1 ; it <= nsteps/2; it++){
+	  if( (mask( round(part.x()), round(part.y()), round(part.z())) == 1) ){
+	    if(opts.loopcheck.value()){
+	      float oldrx=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),0);
+	      float oldry=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),1);
+	      float oldrz=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),2);
+	      if(part.rx()*oldrx+part.ry()*oldry+part.rz()*oldrz<0)
+		{
+		  break;
+		}
+	   
+	      loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),0)=part.rx();
+	      loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),1)=part.ry();
+	      loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),2)=part.rz();
+	      
+	    }
+	    
+	    
+	    if(opts.verbose.value()>1){
+	      logger << part;
+	    } 
+	    
+	    
+	    int x_s,y_s,z_s;
+	    
+	    if(opts.seedref.value()!=""){
+	      x=part.x();y=part.y();z=part.z();
+	      xyz_dti <<x<<y<<z;
+	      xyz_seeds=vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,Seeds_to_DTI.i());
+	      x_s =(int)round((float)xyz_seeds(1));
+	      y_s =(int)round((float)xyz_seeds(2));
+	      z_s =(int)round((float)xyz_seeds(3));
+	    }
+	    else{
+	      x_s=(int)round(part.x());
+	      y_s=(int)round(part.y());
+	      z_s=(int)round(part.z());
+	    }
+	      
+	    if(opts.rubbishfile.value()!="")
+	      {
+		if(RUBBISH(x_s,y_s,z_s)==1) break;
+	      }
+	      
+	    path(it,1)=x_s; 
+	    path(it,2)=y_s;
+	    path(it,3)=z_s;
+
+	    if(beenhere(x_s,y_s,z_s)==0){
+	      prob(x_s,y_s,z_s)+=1;
+	      beenhere(x_s,y_s,z_s)=1;
+	    }
+	      
+	    
+	    if(opts.skipmask.value() == ""){
+	      th_ph_f=vols.sample(part.x(),part.y(),part.z());
+	    }
+	    else{
+	      if(skipmask(x_s,y_s,z_s)==0)
+		th_ph_f=vols.sample(part.x(),part.y(),part.z());
+	    }
+	    
+	    
+	    tmp2=rand(); tmp2/=RAND_MAX;
+	    if(th_ph_f(3)>tmp2){
+	      if(!part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value())){
+		break;
+	      }
+	      
+	      if((th_ph_f(1)!=0&&th_ph_f(2)!=0)){
+		if(!opts.modeuler.value())
+		  part.jump(th_ph_f(1),th_ph_f(2));
+		else
+		  {
+		    ColumnVector test_th_ph_f;
+		    part.testjump(th_ph_f(1),th_ph_f(2));
+		    test_th_ph_f=vols.sample(part.testx(),part.testy(),part.testz());
+		    part.jump(test_th_ph_f(1),test_th_ph_f(2));
+		  }
+		
+	      }
+	      
+
+	    }
+	    length++;
+	      
+	  }
+	    
+	} // Close Step Number Loop
+	  
+	if(opts.loopcheck.value()){
+	  loopcheck=0;}
+	  
+	part.reset();
+	indexset(beenhere,path,0);
+	
+      } // Close Particle Number Loop
+      (*i)->set_value(length/nparticles);
+
+      //      string thisout=opts.outfile.value()+num2str(xst)+(string)"_"+num2str(yst)+(string)"_"+num2str(zst);
+      // save_volume(prob,thisout);
+    }
+  } //Close Seed number Loop
+}
 
 
 
