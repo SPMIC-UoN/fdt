@@ -1073,8 +1073,8 @@ proc fdt:apply { w dialog } {
 	    if { [file exists ${bedpost(directory)}.bedpost ] } {
 		set canwrite [ YesNoWidget "Overwrite ${bedpost(directory)}.bedpost?" Yes No ]
 		if { $canwrite } {
-		    puts "rm -rf $bedpost(directory)"
-		    catch { exec rm -rf $bedpost(directory) } errmsg
+		    puts "rm -rf ${bedpost(directory)}.bedpost"
+		    catch { exec rm -rf ${bedpost(directory)}.bedpost } errmsg
 		}
 	    }
 	    if { $canwrite } {
