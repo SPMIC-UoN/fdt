@@ -979,10 +979,14 @@ proc fdt:select_tool { w tool } {
 }
 
 proc fdt_monitor { w cmd } {
-    global debugging
+    global debugging OSFLAVOUR
 
     puts "$cmd"
-    set oldcursor [ $w configure -cursor { watch red white } ]
+
+    if { $OSFLAVOUR != "cygwin" } {
+	set oldcursor [ $w configure -cursor { watch red white } ]
+    }
+
     catch {
 	update idletasks
 	if { ! $debugging } {
@@ -994,7 +998,11 @@ proc fdt_monitor { w cmd } {
 	    close $fd
 	}
     } junk
-    $w configure -cursor $oldcursor
+
+    if { $OSFLAVOUR != "cygwin" } {
+	$w configure -cursor $oldcursor
+    }
+
     if { $junk != "" } {
 	MxPause "Errors: $junk"
     } 
