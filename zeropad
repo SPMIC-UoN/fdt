@@ -20,7 +20,7 @@ exit
 [ "$2" = "" ] && Usage
 
 
-i=`echo $1 | wc -m`;
+i=`echo $1 | wc -c`;
 j=0;
 k=` expr $2 - $i`;
 k=` expr $k + 1`;
