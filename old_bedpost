@@ -4,6 +4,10 @@
 #
 #   SHCOPYRIGHT
 
+if [ x$SGE_ROOT -eq x ] ; then
+  . /usr/local/share/sge-6.0/default/common/settings.sh
+fi
+
 Usage() {
     echo ""
     echo "Usage: bedpost <subject directory> "
@@ -12,63 +16,6 @@ Usage() {
     echo "expects to find data nodif_brain_mask nodif in subject directory"
     echo ""
     exit
-}
-
-trap Clean_Exit 2
-
-
-Clean_Exit(){
-
-	if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
-	    i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
-	    for j in ${i};do 
-		host=`echo $j | awk -F _fdt_ '{print $1}'`
-		pid=`echo $j | awk -F _fdt_ '{print $2}'`
-		if [ "x${FSLMACHINELIST}" != "x" ]; then
-#	            ${FSLREMOTECALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
-		 echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $host /bin/sh >/dev/null 2>&1 &
-		else
-		    ${FSLDIR}/bin/bedpost_kill_pid ${pid}
-		fi
-		rm ${subjdir}.bedpost/logs/pid_${$}/${j}
-	    done
-	fi
-	ExitUnlock;
-}
-
-Lock(){
-    if [ "x${FSLLOCKDIR}" != "x" ];then
-	touch ${FSLLOCKDIR}/.bedpost.lock
-    fi
-}
-
-ExitUnlock(){
-    if [ -e ${FSLLOCKDIR}/.bedpost.lock ];then
-	rm ${FSLLOCKDIR}/.bedpost.lock
-    fi
-
-    #clean up slices
-    ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
-    nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
-    if [ $ndat_sl -ge 0 ] ;then 
-	rm -f ${subjdir}/data_slice_*
-    fi
-    
-    if [ $nnodif_sl -ge 0 ] ;then 
-	rm -f ${subjdir}/nodif_brain_mask_slice_*
-    fi
-    
-    exit
-}
-
-LockTest(){
-    if [ "x${FSLLOCKDIR}" = "x" ];then
-	echo 1;
-    elif [ ! -e ${FSLLOCKDIR}/.bedpost.lock ];then
-	echo 1;
-    else
-	echo 0;
-    fi
 }
 
 make_absolute(){
@@ -85,22 +32,7 @@ make_absolute(){
 }
 
 
-
 [ "$1" = "" ] && Usage
-
-if [ `LockTest` -eq 0 ]; then
-    echo "bedpost is currently being run - try again later"
-    exit
-fi
-
-if [ "x${FSLMACHINELIST}" != "x" ];then
-    if [ "x${FSLREMOTECALL}" = "x" ];then
-	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
-	exit
-    fi
-fi
-
-Lock;
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
@@ -111,123 +43,86 @@ echo subjectdir is $subjdir
 
 if [ ! -d $subjdir ]; then
 	echo "subject directory $1 not found"
-	ExitUnlock
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
 	echo "${subjdir}/bvecs not found"
-	ExitUnlock
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
 	echo "${subjdir}/bvals not found"
-	ExitUnlock
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
 	echo "${subjdir}/data not found"
-	ExitUnlock
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
 	echo "${subjdir}/nodif not found"
-	ExitUnlock
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	echo "${subjdir}/nodif_brain_mask not found"
-	ExitUnlock
 fi
 
+echo Making bedpost directory structure
 
-echo making bedpost directory
 mkdir -p ${subjdir}.bedpost/
 mkdir -p ${subjdir}.bedpost/diff_slices
-
-echo copying files to bedpost directory
-cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpost
-${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpost
-${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpost/nodif_brain
-
-
 mkdir -p ${subjdir}.bedpost/logs
 mkdir -p ${subjdir}.bedpost/logs/pid_${$}
-
-nslices=`avwval ${subjdir}/data dim3`
-
-${FSLDIR}/bin/avwslice ${subjdir}/data
-${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
-
-#for parallel processing, the following need to be setup elsewhere
-#FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
-#FSLREMOTECALL="ssh (or rsh or whatever you want to use)"
-
-if [ "x$FSLMACHINELIST" = "x" ] ; then
-    echo "processing data on local host"
-    ${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$} &
-else
-    echo "processing data on hosts: $FSLMACHINELIST"
-    for machine in $FSLMACHINELIST; do
-	echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"|	$FSLREMOTECALL $machine /bin/sh  &
-    done
-fi
-
-
-b=0
-finished=0;
-while [ $finished -eq 0 ];do
-    b=`expr $b + 1 `
-    sleep 60;
-    nfin=`echo ${subjdir}.bedpost/logs/.*_finished | grep -v ".\*" |wc -w` 
-    if [ $nfin -eq $nslices ];then
-	finished=1;
-    fi
-    if [ $b -eq 10 ]; then 
-	echo "$nfin slices processed"
-	b=0
-    fi	
-done
-
-#postprocessing
-#postprocess $subjdir
-
-##this will have to change..
-echo "Merging outputs into 4D files"
-
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
-
-${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpost/merged_thsamples ${subjdir}.bedpost/merged_phsamples ${subjdir}.bedpost/nodif_brain_mask ${subjdir}.bedpost/dyadic_vectors
-
-if [ ${finished} -eq 1 ];then
-    if [ `imtest ${subjdir}.bedpost/merged_thsamples` -eq 1 ];then
-	if [ `imtest ${subjdir}.bedpost/merged_phsamples` -eq 1 ];then
-	    if [ `imtest ${subjdir}.bedpost/merged_fsamples` -eq 1 ];then
-		rm -rf ${subjdir}.bedpost/diff_slices
-		rm -f ${subjdir}/data_slice_*
-		rm -f ${subjdir}/nodif_brain_mask_slice_*
-	    fi
-	fi
-    fi
-fi
-
-
-
 mkdir -p ${subjdir}.bedpost/xfms
-xfmdir=${subjdir}.bedpost/xfms
-echo 1 0 0 0 > ${xfmdir}/eye.mat
-echo 0 1 0 0 >> ${xfmdir}/eye.mat
-echo 0 0 1 0 >> ${xfmdir}/eye.mat
-echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
-echo "DONE"
-ExitUnlock()
+mailto=`whoami`@fmrib.ox.ac.uk
 
+echo Queuing preprocessing stages
+preprocid=`qsub -M $mailto -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_preproc.sh ${subjdir} | \
+    awk '{print $3}'`
 
+echo Queuing parallel processing stage
+nslices=`avwval ${subjdir}/data dim3`
+bedpostid=`qsub -M $mailto -hold_jid $preprocid -V -q long.q -t 1-$nslices \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_single_slice.sh $subjdir | \
+    awk '{print $3}' | awk -F. '{print $1}'`
 
+echo Queuing post processing stage
+mergeid=`qsub -M $mailto -hold_jid $bedpostid -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_postproc.sh $subjdir | \
+    awk '{print $3}'`
 
+echo
+echo Type ${subjdir}.bedpost/monitor to show progress.
+cat <<EOM > ${subjdir}.bedpost/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpost/logs
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    if [ -f \$logdir/bedpost.o$bedpostid.1 ] ; then
+      nfin=\`cat \$logdir/bedpost.o$bedpostid.* |\
+        grep Done | wc -w | awk '{print $1}'\` 
+    fi
+    if [ \$nfin -eq $nslices ] ; then
+        finished=1
+    fi
 
+    echo "\$nfin slices processed"
+    sleep 600;
+done
+EOM
+chmod +x ${subjdir}.bedpost/monitor
+
+echo Type ${subjdir}.bedpost/cancel to terminate the task.
+cat <<EOC > ${subjdir}.bedpost/cancel
+#!/bin/sh
+qdel $mergeid $bedpostid $preprocid
+EOC
+chmod +x ${subjdir}.bedpost/cancel
+
+echo
+echo You will get an email at the end of the post-processing stage.
+echo

@@ -989,7 +989,7 @@ proc fdt_monitor { w cmd } {
 	catch {
 	    update idletasks
 	    if { ! $debugging } {
-		set fd [ open "|$cmd" r ]
+		set fd [ open "|qrsh -V -q long.q $cmd" r ]
 		while { ( [ gets $fd line ] >= 0 ) } {
 		    update idletasks
 		    puts $line
@@ -1107,7 +1107,7 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
 
-	    set tn [open "| $BINPATH/tmpnam"]
+	    set tn [open "| $BINPATH/tmpnam /usr/local/share/tmp/fdt"]
 	    gets $tn filebase
 	    close $tn
 	    set logfile "${filebase}_log.tcl"
