@@ -990,6 +990,7 @@ proc fdt_monitor { w cmd } {
 	    update idletasks
 	    if { ! $debugging } {
 		set fd [ open "|$cmd" r ]
+#		set fd [ open "|qrsh -V -now n -q long.q $cmd" r ]
 		while { ( [ gets $fd line ] >= 0 ) } {
 		    update idletasks
 		    puts $line
