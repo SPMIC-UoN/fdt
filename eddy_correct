@@ -1,0 +1,43 @@
+#!/bin/sh
+
+Usage() {
+echo ""
+echo "Usage: eddy_coorect <4dinput> <4doutput> <reference_no>"
+echo ""
+exit
+}
+
+[ "$1" = "" ] && Usage
+[ "$2" = "" ] && Usage
+[ "$3" = "" ] && Usage
+
+input=`basename ${1} .hdr`
+input=`basename ${input} .img`
+output=`basename ${2} .hdr`
+output=`basename ${output} .img`
+ref=${3}
+
+if [ ! -e ${input}.hdr -o ! -e ${input}.img ];then
+    echo "Input does not exist or is not in analyze format"
+    exit
+fi
+
+avwroi ${input} ${$}ref ${ref} 1
+
+nvols=`avwval ${input} dim4`
+avwsplit ${input}
+i=0;
+avwmaths vol0000 newvol0000
+while [ ${i} -lt ${nvols} ];do
+    echo ${i} volumes completed
+    inp=`zeropad $i 4`;
+    flirt -in vol${inp} -ref ${$}ref  -nosearch -o newvol${inp}
+    i=`expr $i + 1`; 
+done
+rm vol* ${$}*
+avwmerge -t ${output} newvol*.hdr
+
+rm newvol*
+
+
+

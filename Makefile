@@ -21,7 +21,7 @@ FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 
-
+SCRIPTS = eddy_correct
 XFILES = dtifit probtrack find_the_biggest medianfilter
 RUNTCLS = Fdt
 
