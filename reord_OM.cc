@@ -311,15 +311,10 @@ int main ( int argc, char **argv ){
  }
  // write_ascii_matrix(newOMmat.t(),"preprecock");
  //Checking for and loading up Seed Coordinates
- string coordname="coords_for_"+ip+".hdr";
- ifstream coordfile(coordname.c_str());
- if(!coordfile){
-   string coordname="coords_for_"+ip+".hdr.gz";
-   ifstream coordfile(coordname.c_str());
- }
- if(coordfile){
-   coordfile.close();
-   read_volume(coordvol,"coords_for_"+ip);
+
+ string coordname="coords_for_"+ip;
+ if(fsl_imageexists(coordname)){
+   read_volume(coordvol,coordname);
    coordbool=true;
    mycoordmat.ReSize(coordvol.xsize(),coordvol.ysize());
    for(int j=0;j<coordvol.ysize();j++){
@@ -333,15 +328,9 @@ int main ( int argc, char **argv ){
  }
 
 //Checking For and Loading Up Tract coordinates
- string trcoordname="tract_space_coords_for_"+ip+".hdr";
- ifstream trcoordfile(trcoordname.c_str());
- if(!trcoordfile){
-   string trcoordname="tract_space_coords_for_"+ip+".hdr.gz";
-   ifstream trcoordfile(trcoordname.c_str());
- }
- if(trcoordfile){
-   trcoordfile.close();
-   read_volume(tractcoordvol,"tract_space_coords_for_"+ip);
+ string trcoordname="tract_space_coords_for_"+ip;
+ if(fsl_imageexists(trcoordname)){
+   read_volume(tractcoordvol,trcoordname);
    tractcoordbool=true;
    mytractcoordmat.ReSize(tractcoordvol.xsize(),tractcoordvol.ysize());
    for(int j=0;j<tractcoordvol.ysize();j++){

@@ -20,9 +20,9 @@ Clean_Exit(){
 	    for j in ${i};do 
 		host=`echo $j | awk -F _fdt_ '{print $1}'`
 		pid=`echo $j | awk -F _fdt_ '{print $2}'`
-		if [ "x${FSL_MACHINE_LIST}" != "x" ]; then
-#	            ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
-		    $FSL_REMOTE_CALL $host  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
+		if [ "x${FSLMACHINELIST}" != "x" ]; then
+#	            ${FSLREMOTECALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+		    $FSLREMOTECALL $host "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
 		else
 		    ${FSLDIR}/bin/bedpost_kill_pid ${pid}
 		fi
@@ -33,14 +33,14 @@ Clean_Exit(){
 }
 
 Lock(){
-    if [ "x${FSL_LOCK_DIR}" != "x" ];then
-	touch ${FSL_LOCK_DIR}/.bedpost.lock
+    if [ "x${FSLLOCKDIR}" != "x" ];then
+	touch ${FSLLOCKDIR}/.bedpost.lock
     fi
 }
 
 ExitUnlock(){
-    if [ -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
-	rm ${FSL_LOCK_DIR}/.bedpost.lock
+    if [ -e ${FSLLOCKDIR}/.bedpost.lock ];then
+	rm ${FSLLOCKDIR}/.bedpost.lock
     fi
 
     #clean up slices
@@ -58,9 +58,9 @@ ExitUnlock(){
 }
 
 LockTest(){
-    if [ "x${FSL_LOCK_DIR}" = "x" ];then
+    if [ "x${FSLLOCKDIR}" = "x" ];then
 	echo 1;
-    elif [ ! -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
+    elif [ ! -e ${FSLLOCKDIR}/.bedpost.lock ];then
 	echo 1;
     else
 	echo 0;
@@ -148,19 +148,18 @@ ${FSLDIR}/bin/avwslice ${subjdir}/data
 ${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 
 #for parallel processing, the following need to be setup elsewhere
-#FSL_MACHINE_LIST="list of machines (can be duplicated for two processors etc.)"
-#FSL_REMOTE_CALL="ssh (or rsh or whatever you want to use)"
+#FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
+#FSLREMOTECALL="ssh (or rsh or whatever you want to use)"
 
-if [ "x$FSL_MACHINE_LIST" = "x" ] ; then
+if [ "x$FSLMACHINELIST" = "x" ] ; then
     echo "processing data on local host"
     ${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$} &
 else
-    echo "processing data on hosts: $FSL_MACHINE_LIST"
-    for machine in $FSL_MACHINE_LIST; do
-	$FSL_REMOTE_CALL $machine  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
+    echo "processing data on hosts: $FSLMACHINELIST"
+    for machine in $FSLMACHINELIST; do
+	$FSLREMOTECALL $machine  "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
     done
 fi
-
 
 
 b=0
@@ -191,6 +190,19 @@ ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bed
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
 
+if [ ${finished} -eq 1 ];then
+    if [ `imtest ${subjdir}.bedpost/merged_thsamples` -eq 1 ];then
+	if [ `imtest ${subjdir}.bedpost/merged_phsamples` -eq 1 ];then
+	    if [ `imtest ${subjdir}.bedpost/merged_fsamples` -eq 1 ];then
+		rm -rf ${subjdir}.bedpost/diff_slices
+		rm -f ${subjdir}/data_slice_*
+		rm -f ${subjdir}/nodif_brain_mask_slice_*
+	    fi
+	fi
+    fi
+fi
+
+
 
 mkdir -p ${subjdir}.bedpost/xfms
 xfmdir=${subjdir}.bedpost/xfms
@@ -200,7 +212,6 @@ echo 0 0 1 0 >> ${xfmdir}/eye.mat
 echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
 echo "DONE"
-
 ExitUnlock()
 
 

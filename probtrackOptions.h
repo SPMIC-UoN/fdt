@@ -37,11 +37,11 @@ class probtrackOptions {
   Option<string> outfile;
   Option<string> rubbishfile;
   Option<string> seeds_to_dti;
-  Option<string> skipmask;
+  FmribOption<string> skipmask;
   Option<string> seedref;
   Option<string> mask2;
   Option<string> meshfile;
-  Option<string> lrmask;
+  FmribOption<string> lrmask;
   Option<string> logdir; 
   Option<bool> forcedir;
   Option<int> nparticles;
@@ -55,6 +55,7 @@ class probtrackOptions {
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
   void modehelp();
+  void matrixmodehelp();
   void status();
  private:
   probtrackOptions();  
@@ -112,7 +113,7 @@ class probtrackOptions {
 	 string("Reference vol to define seed space in simple mode - diffusion space assumed if absent"),
 	 false, requires_argument),
   mask2(string("--mask2"), string(""),
-	 string("second mask in both 2 mask modes."),
+	 string("second mask in twomask_symm mode. Waypoint mask or ascii list of masks in wapoints mode."),
        false, requires_argument),
   meshfile(string("--mesh"), string(""),
 	 string(""),
