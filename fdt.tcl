@@ -963,16 +963,20 @@ proc fdt:select_tool { w tool } {
 }
 
 proc fdt_monitor { w cmd } {
+    global debugging
+
     puts "$cmd"
     set oldcursor [ $w configure -cursor { watch red white } ]
     catch {
 	update idletasks
-	set fd [ open "|$cmd" r ]
-	while { ( [ gets $fd line ] >= 0 ) } {
-	    update idletasks
-	    puts $line
+	if { ! $debugging } {
+	    set fd [ open "|$cmd" r ]
+	    while { ( [ gets $fd line ] >= 0 ) } {
+		update idletasks
+		puts $line
+	    }
+	    close $fd
 	}
-	close $fd
     } junk
     $w configure -cursor $oldcursor
     if { $junk != "" } {
@@ -1122,7 +1126,7 @@ proc fdt:apply { w dialog } {
 			set x $probtrack(x)
 			set y $probtrack(y)
 			set z $probtrack(z)
-			if { $probtrack(reference) != "" } {
+			if { $probtrack(usereference_yn) && $probtrack(reference) != "" } {
 			    mm_to_voxels x y z $probtrack(reference)
 			} else {
 			    mm_to_voxels x y z [ file join $probtrack(bedpost_dir) nodif_brain_mask ]
@@ -1380,16 +1384,16 @@ proc fdt:apply { w dialog } {
 	    set stand2diff [ file join $registration(directory) xfms standard2diff.mat ]
 	    set diff       [ file join $registration(directory) nodif_brain ]
 	    if { $registration(struct_yn) } {
-		set searchrx  "-searchrx $registration(struct_search) $registration(struct_search)"
-		set searchry  "-searchry $registration(struct_search) $registration(struct_search)"
-		set searchrz  "-searchrz $registration(struct_search) $registration(struct_search)"
+		set searchrx  "-searchrx -$registration(struct_search) $registration(struct_search)"
+		set searchry  "-searchry -$registration(struct_search) $registration(struct_search)"
+		set searchrz  "-searchrz -$registration(struct_search) $registration(struct_search)"
 		set options   "$searchrx $searchry $searchrz -dof $registration(struct_dof)"
 		fdt_monitor $w "flirt -in $diff -ref $registration(struct_image) -omat $diff2str $options"
 		fdt_monitor $w "convert_xfm -omat $str2diff -inverse $diff2str"
 		if { $registration(standard_yn) } {
-		    set searchrx  "-searchrx $registration(standard_search) $registration(standard_search)"
-		    set searchry  "-searchry $registration(standard_search) $registration(standard_search)"
-		    set searchrz  "-searchrz $registration(standard_search) $registration(standard_search)"
+		    set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
+		    set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
+		    set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		    set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
 		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options"
 		    fdt_monitor $w "convert_xfm -omat $stand2str -inverse $str2stand"
@@ -1397,14 +1401,15 @@ proc fdt:apply { w dialog } {
 		    fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
 		}
 	    } elseif { $registration(standard_yn) } {
-		set searchrx  "-searchrx $registration(standard_search) $registration(standard_search)"
-		set searchry  "-searchry $registration(standard_search) $registration(standard_search)"
-		set searchrz  "-searchrz $registration(standard_search) $registration(standard_search)"
+		set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
+		set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
+		set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
 		fdt_monitor $w "flirt -in $diff -ref $registration(standard_image) -omat $diff2stand $options"
 		fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
 	    }
 	    puts "Done!"
+	    set canwrite 1		# Fudge to make the logic work
 	}
     }
 
@@ -1420,8 +1425,23 @@ proc fdt:apply { w dialog } {
 
 
 proc fdt:destroy { w } {
-        destroy $w
+    destroy $w
 }    
+
+set debugging 0
+
+while {[llength $argv] > 0 } {
+    set flag [lindex $argv 0]
+    switch -- $flag {
+	"-debugging" {
+	    set debugging 1
+	    set argv [lrange $argv 1 end]
+	    puts "Debug mode!"
+	}
+	default { break }
+    }
+}
+
 
 wm withdraw .
 if { [ info exists env(MRDATADIR) ] } {
