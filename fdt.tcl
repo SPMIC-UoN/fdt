@@ -816,7 +816,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     collapsible frame $w.advanced -title "Advanced Options"
 
-    set probtrack(nsteps) 1000
+    set probtrack(nsteps) 2000
     tixControl $w.advanced.nsteps -label "Maximum number of steps" \
 	-variable probtrack(nsteps) -step 10 -min 2 \
 	-selectmode immediate -options { entry.width 6 }    

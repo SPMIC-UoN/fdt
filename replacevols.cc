@@ -94,16 +94,16 @@ int main ( int argc, char **argv ){
   }
 
 
-  for(int j=0;j<avgs[0].size();j++){//loop over volume numbers
+  for(unsigned int j=0;j<avgs[0].size();j++){//loop over volume numbers
 
 
     //Next loop is within volume number over averages just 
     // Working out which ones to replace and which to keep.
     
     vector<int> repthis,keepthis;
-    for(int i=0;i<avgs.size();i++){ //loop over averages
+    for(unsigned int i=0;i<avgs.size();i++){ //loop over averages
       bool replaced=false;
-      for(int r=0;r<repvols.size();r++){// loop over things to be replaced
+      for(unsigned int r=0;r<repvols.size();r++){// loop over things to be replaced
 	if(avgs[i][j]==repvols[r]){
 	  replaced=true;
 	  repthis.push_back(avgs[i][j]);
@@ -119,12 +119,12 @@ int main ( int argc, char **argv ){
     if(repthis.size()>0){
       
       cerr<<"Replacing volumes: ";
-      for(int r=0;r<repthis.size();r++){  
+      for(unsigned int r=0;r<repthis.size();r++){  
 	cerr<<repthis[r]<<" ";
       }
       cerr <<endl;
       cerr<<"with the average of volumes: ";
-      for(int r=0;r<keepthis.size();r++){  
+      for(unsigned int r=0;r<keepthis.size();r++){  
 	cerr<<keepthis[r]<<" ";
       }
       cerr<<endl;
@@ -135,7 +135,7 @@ int main ( int argc, char **argv ){
 	volume<float> tmp;
 	tmp=data4D[keepthis[0] ];
 	
-	for(int n=1;n<keepthis.size();n++){
+	for(unsigned int n=1;n<keepthis.size();n++){
 	  tmp=tmp+data4D[keepthis[n] ]; 
 	}
 	tmp=tmp/keepthis.size(); //Average of all non-replaced ones.
@@ -143,7 +143,7 @@ int main ( int argc, char **argv ){
 	
 	
 	//Next loop replaces all the ones to be replaced with this average
-	for(int n=0;n<repthis.size();n++){
+	for(unsigned int n=0;n<repthis.size();n++){
 	  data4D[repthis[n] ]=tmp; //replacing.
 	}
 	

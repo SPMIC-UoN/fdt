@@ -40,6 +40,7 @@ class probtrackOptions {
   Option<string> skipmask;
   Option<string> seedref;
   Option<string> mask2;
+  Option<string> meshfile;
   Option<string> lrmask;
   Option<string> logdir; 
   Option<bool> forcedir;
@@ -113,6 +114,9 @@ class probtrackOptions {
   mask2(string("--mask2"), string(""),
 	 string("second mask in both 2 mask modes."),
        false, requires_argument),
+  meshfile(string("--mesh"), string(""),
+	 string(""),
+       false, requires_argument),
   lrmask(string("--lrmask"), string(""),
 	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode."),
        false, requires_argument),
@@ -125,7 +129,7 @@ class probtrackOptions {
   nparticles(string("-P,--nsamples"), 10000,
 	 string("Number of samples"),
 	 false, requires_argument),
-   nsteps(string("-S,--nsteps"), 1000,
+   nsteps(string("-S,--nsteps"), 2000,
 	    string("Number of steps per sample"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
@@ -160,6 +164,7 @@ class probtrackOptions {
        options.add(targetfile);
        options.add(skipmask);
        options.add(mask2);
+       options.add(meshfile);
        options.add(lrmask);
        options.add(seedref);
        options.add(logdir); 

@@ -1765,7 +1765,7 @@ void seeds_to_targets()
 
 		  path(it+(direc-1)*nsteps/2,1)=round(part.x()); 
 		  path(it+(direc-1)*nsteps/2,2)=round(part.y());
-		  path(it+(direc-1)*nsteps/2,3)=round(part.z()); //stopring path in DTI space here
+		  path(it+(direc-1)*nsteps/2,3)=round(part.z()); //stopping path in DTI space here
 		  
 		  for(unsigned int m=0;m<masknames.size();m++){
 		    if(target_masks[m](x_s,y_s,z_s)>0 && flags[m]==0){
@@ -1892,7 +1892,8 @@ void meshtrack(){
   ColumnVector th_ph_f;
   
   Mesh mseeds;
-  int ftype=mseeds.load(opts.seedfile.value()); 
+  int ftype=mseeds.load(opts.meshfile.value()); 
+  mseeds.load_fs_label(opts.seedfile.value());
   ColumnVector mni_origin(3),fs_coord_mm(3),xyz_dti,xyz_seeds,dim_seeds(3);
   dim_seeds<<prob.xdim()<<prob.ydim()<<prob.zdim(); //In seedref space if exists. Else in dti space
   mni_origin << 92 << 128 << 37;
@@ -2028,7 +2029,7 @@ void meshtrack(){
       // save_volume(prob,thisout);
     }
   } //Close Seed number Loop
-  mseeds.save(opts.outfile.value(),ftype);
+  mseeds.save_fs_label(logger.AppendDir(opts.outfile.value()));
 }
 
 
@@ -2057,12 +2058,15 @@ int main ( int argc, char **argv ){
     matrix2();
   else if(opts.mode.value()=="maskmatrix")
     maskmatrix();
+  else if(opts.mode.value()=="meshtrack")
+    meshtrack();
   else{
     cout <<"Invalid setting for option  mode -- try setting mode=help"<<endl;
   }
       
   return 0;
 }
+
 
 
 
