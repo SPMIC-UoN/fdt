@@ -2,7 +2,7 @@
 
 Usage() {
     echo ""
-    echo "Usage: eddy_coorect <4dinput> <4doutput> <reference_no>"
+    echo "Usage: eddy_correct <4dinput> <4doutput> <reference_no>"
     echo ""
     exit
 }
