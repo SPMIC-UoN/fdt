@@ -7,4 +7,4 @@
 #include "tractvols.h"
 
 void twomasks_symm();
-void twomasks_asymm();
+void waypoints();

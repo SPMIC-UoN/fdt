@@ -35,8 +35,8 @@ int main ( int argc, char **argv ){
     alltracts();
   else if(opts.mode.value()=="twomasks_symm")
     twomasks_symm();
-  else if(opts.mode.value()=="twomasks_asymm")
-    twomasks_asymm();
+  else if(opts.mode.value()=="waypoints")
+    waypoints();
   else if(opts.mode.value()=="matrix1")
     matrix1();
   else if(opts.mode.value()=="matrix2"){
