@@ -103,7 +103,7 @@ tixWidgetClass multiFileSelect {
     -superclass tixPrimitive
     -classname MultiFileSelect
     -method {
-	save
+	save load
     }
     -flag {
 	-variable -labelwidth -label -directory -pattern -title -filterhist
@@ -205,6 +205,10 @@ proc multiFileSelect:remove { w } {
 proc multiFileSelect:load { w filename } {
     upvar #0 $w data
 
+    if { ![ file exists $filename ] } {
+	MxPause "Warning: Bad or missing targets file!"
+	return
+    }
     set fd [ open $filename ]
     [$w subwidget files] delete 0 end
     while { [ gets $fd file ] >= 0 } {
@@ -903,6 +907,7 @@ proc fdt:dialog { w tclstartupfile } {
     set probtrack(mode) simple
     fdt:probtrack_mode $w $probtrack(mode)
 
+    update idletasks
     if { $tclstartupfile != "" } {
 	puts "Reading $tclstartupfile"
 	source $tclstartupfile
@@ -1258,7 +1263,7 @@ proc fdt:apply { w dialog } {
 		    if { $canwrite } {
 			puts "mkdir -p $probtrack(dir)"
 			exec mkdir -p $probtrack(dir)
-			puts "$w.data.targets save \"$probtrack(dir)/targets.txt\""
+			puts $log "$w.data.targets load \"$probtrack(dir)/targets.txt\""
 			$w.data.targets save "$probtrack(dir)/targets.txt"
 			set copylog "$probtrack(dir)/fdt.log"
 			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=seeds_to_targets -x $probtrack(seed) $basics $ssopts $flags --targetmasks=${probtrack(dir)}/targets.txt --dir=$probtrack(dir)"
