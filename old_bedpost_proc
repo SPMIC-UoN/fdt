@@ -2,27 +2,29 @@
 
 Usage() {
     echo ""
-    echo "Usage: bedpost_proc <subject_dir> <nslices>"
+    echo "Usage: bedpost_proc <subject_dir> <nslices> [piddir]"
     echo ""
     exit
 }
 
 [ "$2" = "" ] && Usage
+[ "$3" = "" ] || touch ${3}/`hostname`_fdt_${$}
 
 subjdir=$1
 nslices=$2
-    
+
 slice=0
 while [ $slice -lt $nslices ];do
-
     if [ ! -e ${subjdir}.bedpost/logs/.$slice ] ; then
-	echo `hostname` > ${subjdir}.bedpost/logs/.$slice
+	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slice
 	sleep 10
-	if [ `hostname` = `cat ${subjdir}.bedpost/logs/.$slice` ] ; then
+	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slice` ] ; then
 	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slice --mask=${subjdir}/nodif_brain_mask_slice_$slice -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slice --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slice
+	    touch ${subjdir}.bedpost/logs/.${slice}_finished
 	fi
     fi
     slice=`echo "$slice + 1" | bc`
 done
-    
 
+[ "$3" = "" ] || rm ${3}/`hostname`_fdt_${$}
+sleep 10

@@ -231,8 +231,14 @@ void mesh_matrix2(){
 	      th_ph_f=vols.sample(part.x(),part.y(),part.z());
 	    }
 	    else{
-	      if(skipmask((int)round(part.x()),(int)round(part.y()),(int)round(part.z()))==0)
+	      xyz_rubbish=vox_to_vox(xyz_dti,vols.dimensions(),dim_rubbish,Seeds_to_DTI.i());
+	      int x_s =(int)round((float)xyz_rubbish(1));
+	      int y_s =(int)round((float)xyz_rubbish(2));
+	      int z_s =(int)round((float)xyz_rubbish(3));
+	      
+	      if(skipmask(x_s,y_s,z_s)==0)
 		th_ph_f=vols.sample(part.x(),part.y(),part.z());
+
 	    }
 	    
 	    tmp2=rand(); tmp2/=RAND_MAX;

@@ -247,7 +247,7 @@ void matrix2(){
 		    th_ph_f=vols.sample(part.x(),part.y(),part.z());
 		  }
 		  else{
-		    if(skipmask((int)round(part.x()),(int)round(part.y()),(int)round(part.z()))==0)
+		    if(skipmask(x_s,y_s,z_s)==0)
 		      th_ph_f=vols.sample(part.x(),part.y(),part.z());
 		  }
 		  

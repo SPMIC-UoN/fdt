@@ -2,36 +2,80 @@
 
 Usage() {
     echo ""
-    echo "Usage: Bedpost <subject directory> "
+    echo "Usage: bedpost <subject directory> "
     echo ""
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
-    echo "N.B. nodif_brain_mask has to be betted"
     echo ""
-    echo "If struct is in subject directory transforms will be made"
-    echo "NB: if there, struct should already be betted"
     exit
 }
 
-ExitUnlock() {
-    rm /usr/people/dtiuser/locks/.bedpost.lock
+trap Clean_Exit 2
+
+
+Clean_Exit(){
+    
+    if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
+	i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
+	for j in ${i};do 
+	    host=`echo $j | awk --field-separator=_fdt_ '{print $1}'`
+	    pid=`echo $j | awk --field-separator=_fdt_ '{print $2}'`
+	    ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+	done
+    fi
+    
+    ExitUnlock;
+}
+
+Lock(){
+    if [ x${FSL_LOCK_DIR} != "x" ];then
+	touch ${FSL_LOCK_DIR}/.bedpost.lock
+    fi
+}
+
+ExitUnlock(){
+    if [ -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
+	rm ${FSL_LOCK_DIR}/.bedpost.lock
+    fi
     exit
 }
+
+LockTest(){
+    if [ x${FSL_LOCK_DIR} = "x" ];then
+	echo 1;
+    elif [ ! -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
+	echo 1;
+    else
+	echo 0;
+    fi
+}
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
+}
+
 
 
 [ "$1" = "" ] && Usage
 
-
-if [ -e /usr/people/dtiuser/locks/.bedpost.lock ]; then
+if [ `LockTest` -eq 0 ]; then
     echo "bedpost is currently being run - try again later"
     exit
 fi
 
-touch /usr/people/dtiuser/locks/.bedpost.lock
+Lock();
 
-projdir=`pwd`
-subjdir=`basename $1`
-subjdir=${projdir}/${subjdir}
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
 echo subjectdir is $subjdir
 
@@ -52,60 +96,39 @@ if [ ! -e ${subjdir}/bvals ]; then
 	ExitUnlock
 fi
 
-if [ ! -e ${subjdir}/data.hdr ]; then
-	echo "${subjdir}/data.hdr not found"
+if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
 	ExitUnlock
 fi
 
-if [ ! -e ${subjdir}/nodif.hdr ]; then
-	echo "${subjdir}/nodif.hdr not found"
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
+	echo "${subjdir}/nodif not found"
 	ExitUnlock
 fi
 
-if [ ! -e ${subjdir}/nodif_brain_mask.hdr ]; then
-	echo "${subjdir}/nodif_brain_mask.hdr not found"
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
 	ExitUnlock
 fi
-
-
-if [ ! -e ${subjdir}/data.img ]; then
-	echo "${subjdir}/data.img not found"
-	ExitUnlock
-fi
-
-if [ ! -e ${subjdir}/nodif.img ]; then
-	echo "${subjdir}/nodif.img not found"
-	ExitUnlock
-fi
-
-if [ ! -e ${subjdir}/nodif_brain_mask.img ]; then
-	echo "${subjdir}/nodif_brain_mask.img not found"
-	ExitUnlock
-fi
-
 
 
 echo making bedpost directory
-mkdir ${subjdir}.bedpost/
-mkdir ${subjdir}.bedpost/diff_slices
+mkdir -p ${subjdir}.bedpost/
+mkdir -p ${subjdir}.bedpost/diff_slices
 
 echo copying files to bedpost directory
-cp ${subjdir}/bvecs ${subjdir}.bedpost
-cp ${subjdir}/bvals ${subjdir}.bedpost
-cp ${subjdir}/nodif.hdr ${subjdir}.bedpost
-cp ${subjdir}/nodif.img ${subjdir}.bedpost
-cp ${subjdir}/nodif_brain_mask.hdr ${subjdir}.bedpost
-cp ${subjdir}/nodif_brain_mask.img ${subjdir}.bedpost
-
+cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpost
+${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpost
 
 
 
 mkdir -p ${subjdir}.bedpost/logs
+mkdir -p ${subjdir}.bedpost/logs/pid_${$}
 
 nslices=`avwval ${subjdir}/data dim3`
 
-${FSLDIR}/bin/avwslice ${subjdir}/data
-${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+#${FSLDIR}/bin/avwslice ${subjdir}/data
+#${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 
 #following need to be setup elsewhere
 #FSL_MACHINE_LIST="cayenne0 cayenne0 cayenne2 cayenne3"
@@ -115,15 +138,22 @@ if [ "$FSL_MACHINE_LIST" = "" ] ; then
     ${FSLDIR}/bin/bedpost_proc $subjdir $nslices
 else
     for machine in $FSL_MACHINE_LIST; do
-	$FSL_REMOTE_CALL $machine ${FSLDIR}/bin/bedpost_proc $subjdir $nslices &
+	$FSL_REMOTE_CALL $machine  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
     done
 fi
 
 
-echo "DONE"
+finished=0;
+while [ $finished -eq 0 ];do
+    sleep 60;
+    nfin=`ls ${subjdir}.bedpost/logs/.*_finished |wc -w` #fix this (see Bedpost)
+    if [ $nfin -eq $nslices ];then
+	finished=1;
+    fi
+done
+
 #postprocessing
 #postprocess $subjdir
-
 
 mkdir -p ${subjdir}.bedpost/xfms
 xfmdir=${subjdir}.bedpost/xfms
@@ -132,7 +162,11 @@ echo 0 1 0 0 >> ${xfmdir}/eye.mat
 echo 0 0 1 0 >> ${xfmdir}/eye.mat
 echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
+echo "DONE"
 
-rm /usr/people/dtiuser/locks/.bedpost.lock
+ExitUnlock()
+
+
+
 
 
