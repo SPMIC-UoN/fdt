@@ -31,8 +31,11 @@ DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 
+
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad
-XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors
+XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
+
+
 RUNTCLS = Fdt
 
 all: ${XFILES} reord_OM sausages
