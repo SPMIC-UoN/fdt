@@ -10,3 +10,8 @@ else
      done
 fi
 
+if [ "x${FSLLOCKDIR}" != "x" ];then 
+    if [ -r ${FSLLOCKDIR}/.bedpost.lock ];then
+	rm ${FSLLOCKDIR}/.bedpost.lock
+    fi
+fi
