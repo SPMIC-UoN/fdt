@@ -6,7 +6,7 @@ else
     unique_machines=`echo $FSLMACHINELIST |tr " " \\\n |sort -u`
     echo $unique_machines;
      for machine in $unique_machines; do
-	  $FSLREMOTECALL $machine  "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_all; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
+	  echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_all; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $machine /bin/sh  &
      done
 fi
 

@@ -22,7 +22,7 @@ Clean_Exit(){
 		pid=`echo $j | awk -F _fdt_ '{print $2}'`
 		if [ "x${FSLMACHINELIST}" != "x" ]; then
 #	            ${FSLREMOTECALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
-		    $FSLREMOTECALL $host "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
+		 echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $host /bin/sh >/dev/null 2>&1 &
 		else
 		    ${FSLDIR}/bin/bedpost_kill_pid ${pid}
 		fi
@@ -87,6 +87,13 @@ make_absolute(){
 if [ `LockTest` -eq 0 ]; then
     echo "bedpost is currently being run - try again later"
     exit
+fi
+
+if [ "x${FSLMACHINELIST}" != "x" ];then
+    if [ "x${FSLREMOTECALL}" = "x" ];then
+	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
+	exit
+    fi
 fi
 
 Lock;
@@ -157,7 +164,7 @@ if [ "x$FSLMACHINELIST" = "x" ] ; then
 else
     echo "processing data on hosts: $FSLMACHINELIST"
     for machine in $FSLMACHINELIST; do
-	$FSLREMOTECALL $machine  "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"  &
+	echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"|	$FSLREMOTECALL $machine /bin/sh  &
     done
 fi
 
