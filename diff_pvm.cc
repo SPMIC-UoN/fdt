@@ -202,15 +202,15 @@ void Diff_pvmModel::setparams()
     clear_params();
   
     SinPrior thtmp(1);
-    add_param("th",0.2,0.02,thtmp,true);    
+    add_param("th",0.2,0.02,thtmp,true,true); //Will unwrap th param before saving
     UnifPrior phtmp(0.2,2000*M_PI);
-    add_param("ph",0, 0.02,phtmp,true);
+    add_param("ph",0, 0.02,phtmp,true,true); //Will unwrap th param before saving
     UnifPrior ftmp(0,1);
-    add_param("f",0.5,0.02,ftmp,true);
+    add_param("f",0.5,0.02,ftmp,true,true);
     GammaPrior dtmp(4,1.0/0.0003); //test this out,
-    add_param("d",0.005,0.00005,dtmp,true);
+    add_param("d",0.005,0.00005,dtmp,true,true);
     UnifPrior S0tmp(0,100000);
-    add_param("S0",10000,100,S0tmp,true);//false);
+    add_param("S0",10000,100,S0tmp,true,true);//false);
     
   }
 
@@ -359,18 +359,21 @@ int main(int argc, char *argv[])
     
     cout << "ntpts=" << ntpts << endl;
     cout << "nvoxels=" << mask.getVolumeSize() << endl;
-
+    
     Diff_pvmModel model(bvecs,bvals,Diff_pvmOptions::getInstance().debuglevel.value());
-
+    
     LSMCMCManager lsmcmc(Diff_pvmOptions::getInstance(),model,data,mask);
     LSLaplaceManager lslaplace(Diff_pvmOptions::getInstance(),model,data,mask);
-
-
+    
+    
     if(Diff_pvmOptions::getInstance().inference.value()=="mcmc")
       {
 	lsmcmc.setup();
 	lsmcmc.run();
+	element_mod_n(lsmcmc.getsamples(0),M_PI);
+	element_mod_n(lsmcmc.getsamples(1),2*M_PI);
 	lsmcmc.save();
+	
       }
     else
       {

@@ -20,8 +20,7 @@ Clean_Exit(){
 	    for j in ${i};do 
 		host=`echo $j | awk -F _fdt_ '{print $1}'`
 		pid=`echo $j | awk -F _fdt_ '{print $2}'`
-		echo ${pid}
-		if [ x${FSL_MACHINE_LIST} != "x" ]; then
+		if [ "x${FSL_MACHINE_LIST}" != "x" ]; then
 #	            ${FSL_REMOTE_CALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
 		    $FSL_REMOTE_CALL $host  "if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh; elif [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh; elif [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" >/dev/null 2>&1 &
 		else
@@ -34,7 +33,7 @@ Clean_Exit(){
 }
 
 Lock(){
-    if [ x${FSL_LOCK_DIR} != "x" ];then
+    if [ "x${FSL_LOCK_DIR}" != "x" ];then
 	touch ${FSL_LOCK_DIR}/.bedpost.lock
     fi
 }
@@ -48,18 +47,18 @@ ExitUnlock(){
     ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
     nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
     if [ $ndat_sl -ge 0 ] ;then 
-	echo "rm -f ${subjdir}/data_slice_*"
+	rm -f ${subjdir}/data_slice_*
     fi
     
     if [ $nnodif_sl -ge 0 ] ;then 
-	echo "rm -f ${subjdir}/nodif_brain_mask_slice_*"
+	rm -f ${subjdir}/nodif_brain_mask_slice_*
     fi
     
     exit
 }
 
 LockTest(){
-    if [ x${FSL_LOCK_DIR} = "x" ];then
+    if [ "x${FSL_LOCK_DIR}" = "x" ];then
 	echo 1;
     elif [ ! -e ${FSL_LOCK_DIR}/.bedpost.lock ];then
 	echo 1;
@@ -185,9 +184,9 @@ done
 ##this will have to change..
 echo "Merging outputs into 4D files"
 
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples.hdr.gz`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples.hdr.gz`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples.hdr.gz`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples

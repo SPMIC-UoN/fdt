@@ -31,7 +31,7 @@ DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 
-SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_clean_up bedpost_kill_all bedpost_kill_pid
+SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_clean_up bedpost_kill_all bedpost_kill_pid zeropad
 XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors
 RUNTCLS = Fdt
 
