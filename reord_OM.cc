@@ -1,0 +1,364 @@
+#include <iostream>
+#include <fstream>
+#include <cmath>
+#include "newimage/newimageall.h"
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+using namespace NEWIMAGE;
+using namespace NEWMAT;
+
+  void spect_reord(SymmetricMatrix& A,ColumnVector& r,ColumnVector& y){
+    SymmetricMatrix Q=-A;
+      DiagonalMatrix t(Q.Nrows());
+      t=0;
+      DiagonalMatrix D;
+      Matrix V;
+      for(int i=1;i<=Q.Nrows();i++){
+        float rowsum1=0, rowsum2=0;
+        for(int j=1;j<=Q.Ncols();j++){
+          if(i!=j) rowsum1+=Q(i,j);
+          rowsum2+=A(i,j);
+        }
+          Q(i,i)=-rowsum1;
+          t(i)=1/sqrt(rowsum2);
+      }
+      Q << t*Q*t;
+      EigenValues(Q,D,V);
+      vector<pair<float,int> > myvec;
+      vector<pair<float,int> > myvec2;
+      
+      for(int i=1;i<=D.Nrows();i++){
+	pair<float,int> mypair;
+	mypair.first=D(i);
+	mypair.second=i;
+	myvec.push_back(mypair);
+      }
+      sort(myvec.begin(),myvec.end());
+      int ind=myvec[1].second; // index for second eigenval
+      
+      ColumnVector v2scale(V.Nrows());
+      for(int i=1;i<=V.Nrows();i++){
+	v2scale(i)=V(i,ind); //second eigvec
+      }
+      v2scale=t*v2scale; //scale it
+      
+      
+      for(int i=1;i<=D.Nrows();i++){
+	pair<float,int> mypair;
+	mypair.first=v2scale(i);
+	mypair.second=i;
+	myvec2.push_back(mypair);
+      }
+      //myvec2 contains scaled second eigenvector and index for sorting.
+      
+      
+      sort(myvec2.begin(),myvec2.end());
+      r.ReSize(D.Nrows());
+      y.ReSize(D.Nrows());
+      
+      for(int i=1;i<=D.Nrows();i++){
+	y(i)=myvec2[i-1].first;
+	r(i)=myvec2[i-1].second;
+      }
+      
+  } 
+
+
+void rem_zrowcol(const Matrix& myOMmat,const Matrix& coordmat,const Matrix& tractcoordmat,const bool coordbool,const bool tractcoordbool,Matrix& newOMmat,Matrix& newcoordmat, Matrix& newtractcoordmat)
+{
+ 
+ vector<int> zerorows;
+ vector<int> zerocols;
+ int dimsum =0;
+
+
+
+ cerr<< "Checking for all zero rows"<<endl;
+ for(int i=1;i<=myOMmat.Nrows();i++){
+   dimsum=0;
+   for(int j=1;j<=myOMmat.Ncols();j++){
+     dimsum+=(int)myOMmat(i,j);
+   }
+   if(dimsum==0){zerorows.push_back(i);}
+ }
+
+
+
+ cerr<< "Checking for all zero cols"<<endl;
+ for(int j=1;j<=myOMmat.Ncols();j++){
+   dimsum=0;
+   for(int i=1;i<=myOMmat.Nrows();i++){
+     dimsum+=(int)myOMmat(i,j);
+   }
+   if(dimsum==0){zerocols.push_back(j);}
+ }
+
+
+ newOMmat.ReSize(myOMmat.Nrows()-zerorows.size(),myOMmat.Ncols()-zerocols.size());
+ if(coordbool){
+   newcoordmat.ReSize(coordmat.Nrows()-zerorows.size(),3);
+ }
+ if(tractcoordbool){
+   newtractcoordmat.ReSize(tractcoordmat.Nrows()-zerocols.size(),3);
+ }
+
+ int zrowcounter=0,zcolcounter=0,nzrowcounter=1,nzcolcounter=1;
+ cerr<<"Forming New Matrix"<<endl;
+ for(int j=1;j<=myOMmat.Ncols();j++){
+   zrowcounter=0;
+   nzrowcounter=1;
+
+   if(zerocols.size()>0){ //Are there any Zero Columns
+     if(zerocols[zcolcounter]!=j){  // Only add a col if it's not the next zcol
+       for(int i=1;i<=myOMmat.Nrows();i++){
+	 if(zerorows.size()>0){ //Are there any zero rows?
+	   if(zerorows[zrowcounter]!=i){ //Only add a row if it's not the next zrow
+	     newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);
+	     nzrowcounter++;
+	   }
+	   else{zrowcounter++;}
+	 }
+	 else{newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);nzrowcounter++;}//No Zero Rows
+       }
+       nzcolcounter++;
+     }
+     else{zcolcounter++;} //move onto next z col
+   }
+   
+   else{  //No zero Columns
+     for(int i=1;i<=myOMmat.Nrows();i++){
+       if(zerorows.size()>0){
+	 if(zerorows[zrowcounter]!=i){ //Only add a row if it's not the next zrow
+	   newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);
+	   nzrowcounter++;
+	 }
+	 else{zrowcounter++;}
+       }
+       else{newOMmat(nzrowcounter,nzcolcounter)=myOMmat(i,j);nzrowcounter++;}
+     }
+     nzcolcounter++;
+   }
+
+}
+
+
+ if(coordbool){
+   cerr<<"Updating Seed Coordinates"<<endl;
+   zrowcounter=0;nzrowcounter=1;
+   if(zerorows.size()>0){//Are there any zero rows?
+     for(int i=1;i<=coordmat.Nrows();i++){
+       if(zerorows[zrowcounter]!=i){
+	 newcoordmat(nzrowcounter,1)=coordmat(i,1);
+	 newcoordmat(nzrowcounter,2)=coordmat(i,2);
+	 newcoordmat(nzrowcounter,3)=coordmat(i,3);
+	 nzrowcounter++;
+       }
+       else{zrowcounter++;}
+     }
+   } 
+   else{//No zero Rows
+     newcoordmat=coordmat;
+   }
+}
+
+ if(tractcoordbool){
+   cerr<<"Updating Tract Coordinates"<<endl;
+   zcolcounter=0;nzcolcounter=1;
+   if(zerocols.size()>0){//Are there any zero cols?
+     for(int i=1;i<=tractcoordmat.Nrows();i++){
+       if(zerocols[zcolcounter]!=i){
+	 newtractcoordmat(nzcolcounter,1)=tractcoordmat(i,1);
+	 newtractcoordmat(nzcolcounter,2)=tractcoordmat(i,2);
+	 newtractcoordmat(nzcolcounter,3)=tractcoordmat(i,3);
+	 nzcolcounter++;
+       }
+       else{zcolcounter++;}
+     }
+   }
+   else{//No zero Cols 
+     newtractcoordmat=tractcoordmat;
+   }
+ }
+
+  
+}
+
+
+
+
+int main ( int argc, char **argv ){
+ if(argc<4){
+    cerr<<"usage: reord_OM <matrix> <output base> <bin>"<<endl;
+    cerr<<" matrix in 2D analyze format"<<endl;
+    cerr<<" bin=0 gives no binarising at all"<<endl;
+    cerr<<" any other <bin> binarises above that number "<<endl;
+    exit(0);
+  }
+ string ip=argv[1];
+ make_basename(ip);
+
+ ColumnVector y1,r1,y2,r2;
+ volume<int> myOM;
+ volume<int> coordvol;
+ volume<int> tractcoordvol;
+ bool coordbool=false,tractcoordbool=false;
+ read_volume(myOM,ip);
+ 
+ Matrix myOMmat(myOM.xsize(),myOM.ysize());
+ Matrix mycoordmat,mytractcoordmat;
+ Matrix newOMmat,newcoordmat,newtractcoordmat;
+
+ for(int j=0;j<myOM.ysize();j++){
+   for(int i=0;i<myOM.xsize();i++){
+     if(atof(argv[3])==0)
+       myOMmat(i+1,j+1)=float(myOM(i,j,0)); 
+     else{
+       if(myOM(i,j,0)>atof(argv[3])){
+	 myOMmat(i+1,j+1)=1.0f;
+       }
+       else{
+	 myOMmat(i+1,j+1)=0.0f;
+       }
+     }
+   }
+ }
+ // write_ascii_matrix(newOMmat.t(),"preprecock");
+ //Checking for and loading up Seed Coordinates
+ string coordname="coords_for_"+ip+".hdr";
+ ifstream coordfile(coordname.c_str());
+ if(!coordfile){
+   string coordname="coords_for_"+ip+".hdr.gz";
+   ifstream coordfile(coordname.c_str());
+ }
+ if(coordfile){
+   coordfile.close();
+   read_volume(coordvol,"coords_for_"+ip);
+   coordbool=true;
+   mycoordmat.ReSize(coordvol.xsize(),coordvol.ysize());
+   for(int j=0;j<coordvol.ysize();j++){
+     for(int i=0;i<coordvol.xsize();i++){
+       mycoordmat(i+1,j+1)=coordvol(i,j,0);
+     }
+   }
+ }
+ else{
+   cerr<<"Seed Space Coordinate File Not present - Ignoring"<<endl;
+ }
+
+//Checking For and Loading Up Tract coordinates
+ string trcoordname="tract_space_coords_for_"+ip+".hdr";
+ ifstream trcoordfile(trcoordname.c_str());
+ if(!trcoordfile){
+   string trcoordname="tract_space_coords_for_"+ip+".hdr.gz";
+   ifstream trcoordfile(trcoordname.c_str());
+ }
+ if(trcoordfile){
+   trcoordfile.close();
+   read_volume(tractcoordvol,"tract_space_coords_for_"+ip);
+   tractcoordbool=true;
+   mytractcoordmat.ReSize(tractcoordvol.xsize(),tractcoordvol.ysize());
+   for(int j=0;j<tractcoordvol.ysize();j++){
+     for(int i=0;i<tractcoordvol.xsize();i++){
+       mytractcoordmat(i+1,j+1)=tractcoordvol(i,j,0);
+     }
+   }
+ }
+ else{
+   cerr<<"Tract Space Coordinate File Not present - Ignoring"<<endl;
+ }
+
+ rem_zrowcol(myOMmat,mycoordmat,mytractcoordmat,coordbool,tractcoordbool,newOMmat,newcoordmat,newtractcoordmat);
+//   cerr<<"NOW"<<endl;
+//   cerr<<myOMmat.MaximumAbsoluteValue()<<endl;
+//   cerr<<newOMmat.MaximumAbsoluteValue()<<endl;
+ 
+ //write_ascii_matrix("ncm",newcoordmat);
+ // write_ascii_matrix("nctm",newtractcoordmat);
+
+
+
+
+
+cerr<<"Starting first Reordering"<<endl;
+ SymmetricMatrix CtCt;
+ CtCt << corrcoef(newOMmat.t());
+ CtCt << CtCt+1;
+
+ spect_reord(CtCt,r1,y1);
+ cerr<<"Starting Second Reordering"<<endl;
+ SymmetricMatrix CC;
+ CC << corrcoef(newOMmat);
+ CC<<CC+1;
+ spect_reord(CC,r2,y2);
+ 
+
+ string base=argv[2];
+ make_basename(base);
+ write_ascii_matrix(r1,base+"r1");
+ write_ascii_matrix(y1,base+"y1");
+ write_ascii_matrix(r2,base+"r2");
+ write_ascii_matrix(y2,base+"y2");
+ volume<int> outvol(newOMmat.Nrows(),newOMmat.Ncols(),1);
+ volume<float> outCCvol(newOMmat.Nrows(),newOMmat.Nrows(),1);
+ volume<int> outcoords(newcoordmat.Nrows(),3,1);
+ volume<int> outtractcoords(newtractcoordmat.Nrows(),3,1);
+
+ cerr<<"Permuting Matrix"<<endl;
+ for(int j=0;j<outvol.ysize();j++){
+   for(int i=0;i<outvol.xsize();i++){
+     outvol(i,j,0)=(int)newOMmat((int)r1(i+1),(int)r2(j+1));
+   }
+ }
+
+ cerr<<"Seed CC"<<endl;
+ for(int j=0;j<outCCvol.ysize();j++){
+   for(int i=0;i<outCCvol.xsize();i++){
+     outCCvol(i,j,0)=CtCt((int)r1(i+1),(int)r1(j+1));
+   }
+ }
+ 
+ 
+  if(coordbool){
+   cerr<<"Permuting Seed Coordinates"<<endl;
+   for(int i=0;i<outcoords.xsize();i++){
+     outcoords(i,0,0)=(int)newcoordmat(r1(i+1),1);
+     outcoords(i,1,0)=(int)newcoordmat(r1(i+1),2);
+     outcoords(i,2,0)=(int)newcoordmat(r1(i+1),3);
+   } 
+ }
+ if(tractcoordbool){
+   cerr<<"Permuting Tract Coordinates"<<endl;
+   for(int i=0;i<outtractcoords.xsize();i++){
+     outtractcoords(i,0,0)=(int)newtractcoordmat(r2(i+1),1);
+     outtractcoords(i,1,0)=(int)newtractcoordmat(r2(i+1),2);
+     outtractcoords(i,2,0)=(int)newtractcoordmat(r2(i+1),3);
+   } 
+ }
+ save_volume(outvol,"reord_"+base);
+ save_volume(outCCvol,"reord_CC_"+base);
+ save_volume(outcoords,"coords_for_reord_"+base);
+ save_volume(outtractcoords,"tract_space_coords_for_reord_"+base);
+
+ return 0;
+}
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
