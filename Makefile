@@ -23,6 +23,7 @@ MEDOBJS=medianfilter.o
 
 
 XFILES = dtifit probtrack find_the_biggest medianfilter
+RUNTCLS = Fdt
 
 all: ${XFILES}
 
