@@ -58,7 +58,7 @@ while [ ${avg} -le ${numavgs} ]; do
     	scan=`expr $scan + 1`;
     done
     avwmerge -t ${$}avg_${avg}_all `imglob -oneperimage ${$}avg_${avg}_scan_*`
-    add4d data  ${$}avg_${avg}_all data;
+    avwmaths data  -add ${$}avg_${avg}_all data;
     avg=`expr $avg + 1`;
     
 done
