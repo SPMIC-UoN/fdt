@@ -1,0 +1,28 @@
+#!/bin/sh
+
+Usage() {
+    echo ""
+    echo "Usage: bedpost_proc <subject_dir> <nslices>"
+    echo ""
+    exit
+}
+
+[ "$2" = "" ] && Usage
+
+subjdir=$1
+nslices=$2
+    
+slice=0
+while [ $slice -lt $nslices ];do
+
+    if [ ! -e ${subjdir}.bedpost/logs/.$slice ] ; then
+	echo `hostname` > ${subjdir}.bedpost/logs/.$slice
+	sleep 10
+	if [ `hostname` = `cat ${subjdir}.bedpost/logs/.$slice` ] ; then
+	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slice --mask=${subjdir}/nodif_brain_mask_slice_$slice -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slice --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slice
+	fi
+    fi
+    slice=`echo "$slice + 1" | bc`
+done
+    
+

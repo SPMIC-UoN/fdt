@@ -1,0 +1,138 @@
+#!/bin/sh
+
+Usage() {
+    echo ""
+    echo "Usage: Bedpost <subject directory> "
+    echo ""
+    echo "expects to find bvals and bvecs in subject directory"
+    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo "N.B. nodif_brain_mask has to be betted"
+    echo ""
+    echo "If struct is in subject directory transforms will be made"
+    echo "NB: if there, struct should already be betted"
+    exit
+}
+
+ExitUnlock() {
+    rm /usr/people/dtiuser/locks/.bedpost.lock
+    exit
+}
+
+
+[ "$1" = "" ] && Usage
+
+
+if [ -e /usr/people/dtiuser/locks/.bedpost.lock ]; then
+    echo "bedpost is currently being run - try again later"
+    exit
+fi
+
+touch /usr/people/dtiuser/locks/.bedpost.lock
+
+projdir=`pwd`
+subjdir=`basename $1`
+subjdir=${projdir}/${subjdir}
+
+echo subjectdir is $subjdir
+
+#check that all required files exist
+
+if [ ! -d $subjdir ]; then
+	echo "subject directory $1 not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/data.hdr ]; then
+	echo "${subjdir}/data.hdr not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/nodif.hdr ]; then
+	echo "${subjdir}/nodif.hdr not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/nodif_brain_mask.hdr ]; then
+	echo "${subjdir}/nodif_brain_mask.hdr not found"
+	ExitUnlock
+fi
+
+
+if [ ! -e ${subjdir}/data.img ]; then
+	echo "${subjdir}/data.img not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/nodif.img ]; then
+	echo "${subjdir}/nodif.img not found"
+	ExitUnlock
+fi
+
+if [ ! -e ${subjdir}/nodif_brain_mask.img ]; then
+	echo "${subjdir}/nodif_brain_mask.img not found"
+	ExitUnlock
+fi
+
+
+
+echo making bedpost directory
+mkdir ${subjdir}.bedpost/
+mkdir ${subjdir}.bedpost/diff_slices
+
+echo copying files to bedpost directory
+cp ${subjdir}/bvecs ${subjdir}.bedpost
+cp ${subjdir}/bvals ${subjdir}.bedpost
+cp ${subjdir}/nodif.hdr ${subjdir}.bedpost
+cp ${subjdir}/nodif.img ${subjdir}.bedpost
+cp ${subjdir}/nodif_brain_mask.hdr ${subjdir}.bedpost
+cp ${subjdir}/nodif_brain_mask.img ${subjdir}.bedpost
+
+
+
+
+mkdir -p ${subjdir}.bedpost/logs
+
+nslices=`avwval ${subjdir}/data dim3`
+
+${FSLDIR}/bin/avwslice ${subjdir}/data
+${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+
+#following need to be setup elsewhere
+#FSL_MACHINE_LIST="cayenne0 cayenne0 cayenne2 cayenne3"
+#FSL_REMOTE_CALL="ssh"
+
+if [ "$FSL_MACHINE_LIST" = "" ] ; then
+    ${FSLDIR}/bin/bedpost_proc $subjdir $nslices
+else
+    for machine in $FSL_MACHINE_LIST; do
+	$FSL_REMOTE_CALL $machine ${FSLDIR}/bin/bedpost_proc $subjdir $nslices &
+    done
+fi
+
+
+echo "DONE"
+#postprocessing
+#postprocess $subjdir
+
+
+mkdir -p ${subjdir}.bedpost/xfms
+xfmdir=${subjdir}.bedpost/xfms
+echo 1 0 0 0 > ${xfmdir}/eye.mat
+echo 0 1 0 0 >> ${xfmdir}/eye.mat
+echo 0 0 1 0 >> ${xfmdir}/eye.mat
+echo 0 0 0 1 >> ${xfmdir}/eye.mat
+
+
+rm /usr/people/dtiuser/locks/.bedpost.lock
+
+
