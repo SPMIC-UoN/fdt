@@ -2029,7 +2029,7 @@ void meshtrack(){
       // save_volume(prob,thisout);
     }
   } //Close Seed number Loop
-  mseeds.save_fs_label(logger.AppendDir(opts.outfile.value()));
+  mseeds.save_fs_label(logger.appendDir(opts.outfile.value()));
 }
 
 
