@@ -243,7 +243,6 @@ void rem_cols(Matrix& myOMmat,Matrix& tractcoordmat,const bool tractcoordbool,co
 
  
  if(tractcoordbool){
-   cerr<<"Updating Tract Coordinates"<<endl;
    zcolcounter=0;nzcolcounter=1;
    if(excl_cols.size()>0){//Are there any zero cols?
      for(int i=1;i<=tractcoordmat.Nrows();i++){
@@ -361,6 +360,7 @@ int main ( int argc, char **argv ){
  // work out which columns in the matrix to remove 
  // This only works if there is a lookup matrix available
 
+
  if(argc==5){
    volume<int> lookup_tract;
    volume<int> excl;
@@ -377,7 +377,20 @@ int main ( int argc, char **argv ){
      for(int j=0;j<=excl.ysize();j++){
        for(int i=0;i<=excl.xsize();i++){
 	 if(excl(i,j,k)==1){
-	   excl_cols.push_back(lookup_tract(i,j,k)+1);
+	   if(lookup_tract(i,j,k)!=0){
+	     
+	     if(lookup_tract(i,j,k)<=mytractcoordmat.Nrows()){
+	       excl_cols.push_back(lookup_tract(i,j,k)+1);
+	     }
+	     else{
+	       cerr<<"Something a bit dodgy has happened here"<<endl;
+	       cerr<<"Have you already run a reord_OM on this matrix"<<endl;
+	       cerr<<"If so you can't use an exclusion mask as the"<<endl;
+	       cerr<<"tractspace_lookup volume is not valid for this matrix"<<endl;
+	     }
+	     
+	     
+	   }
 	 }
        }
      }
