@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include <vector>
 #include <algorithm>
 #include "newimage/newimageall.h"

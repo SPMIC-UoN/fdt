@@ -1,4 +1,9 @@
 #!/bin/sh
+
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
+
 Usage(){
     echo "bedpost_kill_pid <pid>"
     echo ""

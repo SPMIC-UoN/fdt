@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
+
 if [ "x$FSLMACHINELIST" = "x" ] ; then
     ${FSLDIR}/bin/bedpost_kill_all
 else

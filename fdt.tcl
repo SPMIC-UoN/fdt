@@ -1,10 +1,10 @@
-#  FSL interface for FDT (BEDPOST and ProbTrack)
-#  Copyright (c) Timothy Behrens and Heidi Johansen-Berg and Dave Flitney (GUIs), FMRIB Centre, University of Oxford.
+#   FSL interface for FDT (BEDPOST and ProbTrack)
 #
-#  This program should be considered a beta test version
-#  and must not be used for any clinical purposes.
+#   Timothy Behrens, Heidi Johansen-Berg and Dave Flitney, FMRIB Image Analysis Group
 #
-#  Uses fdt_proc.tcl for processing
+#   Copyright (C) 2004 University of Oxford
+#
+#   TCLCOPYRIGHT
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 set TCLPATH [file dirname [ info script ] ]

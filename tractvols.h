@@ -1,3 +1,11 @@
+/*  tractvols.h
+
+    Tim Behrens, FMRIB Image Analysis Group
+
+    Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #ifndef __TRACTVOLS_H_
 #define __TRACTVOLS_H_
 

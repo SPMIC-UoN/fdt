@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include <iostream>
 #include <cmath>
 #include "miscmaths/miscmaths.h"

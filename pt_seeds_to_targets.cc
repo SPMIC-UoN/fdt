@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "pt_seeds_to_targets.h"
 
 using namespace std;

@@ -1,5 +1,9 @@
 #!/bin/sh
  
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
+
 usage()
 {
 echo "Usage : $0 <big4D dataset> <avg file>"

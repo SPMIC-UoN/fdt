@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "pt_matrix_mesh.h"
 
 using namespace std;

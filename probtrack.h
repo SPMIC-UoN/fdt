@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "probtrackOptions.h"
 #include "particle.h"
 #include "tractvols.h"

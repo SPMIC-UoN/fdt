@@ -2,7 +2,7 @@
 
     Mark Woolrich, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 2004 University of Oxford  */
 
 /*  CCOPYRIGHT  */
 

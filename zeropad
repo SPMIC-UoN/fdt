@@ -1,7 +1,12 @@
 #!/bin/sh
 
-# ZEROPAD - Tim behrens
-# Pad numbers with zeros
+#   ZEROPAD - Pad numbers with zeros
+#
+#   Tem Behrens, FMRIB Image Analysis Group
+#
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
 
 Usage() {
 echo ""

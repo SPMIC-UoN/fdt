@@ -1,4 +1,9 @@
 #!/bin/sh
+
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
+
 j=`ps -U $USER |grep -v grep | grep bedpost|grep -v bedpost_kill | awk '{print $1}'`
 if [ "x${j}" != "x" ];then 
     kill -KILL $j

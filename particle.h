@@ -1,3 +1,7 @@
+/*  Copyright (C) 2004 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #ifndef __PARTICLE_H_
 #define __PARTICLE_H_
 
