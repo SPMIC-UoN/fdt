@@ -1,7 +1,5 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
-#
 #   SHCOPYRIGHT
 
 Usage() {
@@ -43,7 +41,7 @@ Lock(){
 }
 
 ExitUnlock(){
-    if [ -e ${FSLLOCKDIR}/.bedpost.lock ];then
+    if [ -f ${FSLLOCKDIR}/.bedpost.lock ];then
 	rm ${FSLLOCKDIR}/.bedpost.lock
     fi
 
@@ -64,7 +62,7 @@ ExitUnlock(){
 LockTest(){
     if [ "x${FSLLOCKDIR}" = "x" ];then
 	echo 1;
-    elif [ ! -e ${FSLLOCKDIR}/.bedpost.lock ];then
+    elif [ ! -f ${FSLLOCKDIR}/.bedpost.lock ];then
 	echo 1;
     else
 	echo 0;
@@ -109,17 +107,18 @@ echo subjectdir is $subjdir
 
 #check that all required files exist
 
+
 if [ ! -d $subjdir ]; then
 	echo "subject directory $1 not found"
 	ExitUnlock
 fi
 
-if [ ! -e ${subjdir}/bvecs ]; then
+if [ ! -f ${subjdir}/bvecs ]; then
 	echo "${subjdir}/bvecs not found"
 	ExitUnlock
 fi
 
-if [ ! -e ${subjdir}/bvals ]; then
+if [ ! -f ${subjdir}/bvals ]; then
 	echo "${subjdir}/bvals not found"
 	ExitUnlock
 fi
