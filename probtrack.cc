@@ -1923,7 +1923,7 @@ void meshtrack(){
 	
 	x=xst;y=yst;z=zst;
 	part.change_xyz(x,y,z);	    
-	
+	part.set_dir((*i)->local_normal().X,(*i)->local_normal().Y,(*i)->local_normal().Z);//Set the start dir so that we track inwards from cortex
 	for( int it = 1 ; it <= nsteps/2; it++){
 	  if( (mask( round(part.x()), round(part.y()), round(part.z())) == 1) ){
 	    if(opts.loopcheck.value()){
@@ -1989,7 +1989,8 @@ void meshtrack(){
 	    
 	    tmp2=rand(); tmp2/=RAND_MAX;
 	    if(th_ph_f(3)>tmp2){
-	      if(!part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value())){
+	      if(!part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value()) && it!=1){ 
+		//Don't do curvature checking on the first step as we have set the old direction to the surface normal 
 		break;
 	      }
 	      

@@ -178,7 +178,12 @@ namespace PARTICLE{
 	}
 	
       }
-  
+
+      void set_dir(const float& rx,const float& ry,const float& rz){
+	m_rx=rx;m_ry=ry;m_rz=rz;m_has_jumped=true;
+      }
+      
+      
       bool check_dir(const float& theta,const float& phi, const float& thr){
 	if(m_has_jumped){
 	  float rx_new=cos(phi)*sin(theta);
