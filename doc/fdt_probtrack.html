@@ -106,7 +106,7 @@ be a filename or a directory name depending on the mode.
 <h3>Path Distribution Estimation - available modes and mode-specific settings:</h3>
 <ul><li><a href="#single">Single seed voxel</a></li>
 <li><a href="#seedmask">Seed mask</a></li>
-<li><a href="#seedwaypoint">Seed mask and target mask</a></li>
+<li><a href="#seedwaypoint">Seed mask and waypoint masks</a></li>
 <li><a href="#twomask">Two masks - symmetric </a></li></ul>
 
 <a name="single"></a>
@@ -116,8 +116,7 @@ be a filename or a directory name depending on the mode.
 ALT="simple tract">  
 Generates a connectivity distribution from a single,
 user-specified voxel
-<p>Gui Options: <br>Options common to all path distribution estimation
-modes are explained <a href="#path">here</a> <br><b>Seeds space:</b>
+<p>Gui Options: <br><b>Seeds space:</b>
 Enter the x,y,z co-ordinates of a single seed voxel.  Use the buttons
 to the right to specify whether the co-ordinates are given in voxels
 or millimetres. Note if the "seed space is not diffusion" is set, and
@@ -135,8 +134,7 @@ internal capsule overlaid on an FA image.
 <h3>Seed Mask Mode:</h3>
 Generates a connectivity distribution from a user-specified
 region of interest.
-<p>Gui Options: <br>Options common to all path distribution estimation
-modes are explained <a href="#path">here</a> <br><b>Seed image:</b>
+<p>Gui Options: <br><b>Seed image:</b>
 Use the browse button to locate the seed image - this should be a
 binary mask. Probabilistic tractography will be run from every voxel
 with a value greater than 0 in this mask.
