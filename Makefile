@@ -33,12 +33,14 @@ MDVOBJS=make_dyadic_vectors.o
 
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
+FSCRIPTS=correct_and_average ocmr_preproc
 XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
+FXFILES = reord_OM sausages
 
 
 RUNTCLS = Fdt
 
-all: ${XFILES} reord_OM sausages
+all: ${XFILES} ${FXFILES} 
 
 ${PT}:		   ${PTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS} 
