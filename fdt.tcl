@@ -18,7 +18,7 @@ tixWidgetClass registrationImageSelect {
     -classname RegistrationImageSelect
     
     -flag {
-	-variable -filename -labelwidth -label -search -dof -pattern -filterhist
+	-variable -filename -labelwidth -label -search -dof -pattern -filterhist -costfn
     }
     
     -configspec {
@@ -30,6 +30,7 @@ tixWidgetClass registrationImageSelect {
 	{-filename filename Filename {}}
 	{-search search Search N}
 	{-dof dof DOF N}
+	{-costfn costfn Costfn N}
 	{-pattern pattern Pattern "*.{hdr,hdr.gz,nii,nii.gz}"}
     }
 }
@@ -65,14 +66,17 @@ proc registrationImageSelect:ConstructWidget { w } {
     $w.frame.options.search add command 180 -label "Full search"
 
     tixOptionMenu $w.frame.options.dof -variable $data(-dof)
-    $w.frame.options.dof add command 3  -label "3 DOF (translation-only)"
     $w.frame.options.dof add command 6  -label "6 DOF"
     $w.frame.options.dof add command 7  -label "7 DOF"
     $w.frame.options.dof add command 9  -label "9 DOF"
     $w.frame.options.dof add command 12 -label "12 DOF"
+
+    tixOptionMenu $w.frame.options.costfn -variable $data(-costfn)
+    $w.frame.options.costfn add command corratio -label "Correlation ratio"
+    $w.frame.options.costfn add command mutualinfo -label "Mutual information"
     
     pack $w.frame.options.f -in [$w.frame.options subwidget frame] -side top -expand yes -fill x
-    pack $w.frame.options.dof $w.frame.options.search -in [$w.frame.options subwidget frame] -side right
+    pack $w.frame.options.costfn $w.frame.options.dof $w.frame.options.search -in [$w.frame.options subwidget frame] -side right
     pack $w.frame.visible_yn $w.frame.label -in $w.frame -side left -expand yes -padx 3
     pack $w.frame -in $w
     
@@ -188,7 +192,7 @@ proc multiFileSelect:load { w filename } {
     upvar #0 $w data
 
     if { ![ file exists $filename ] } {
-	MxPause "Warning: Bad or missing targets file!"
+	MxPause "Warning: Bad or missing file!"
 	return
     }
     set fd [ open $filename ]
@@ -393,6 +397,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-filename registration(struct_image) \
 	-dof registration(struct_dof) \
 	-search registration(struct_search) \
+	-costfn registration(struct_costfn) \
 	-directory $PWD \
 	-label "Main structural image" \
 	-labelwidth $LWIDTH \
@@ -406,6 +411,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-filename registration(standard_image) \
 	-dof registration(standard_dof) \
 	-search registration(standard_search) \
+	-costfn registration(standard_costfn) \
 	-directory $PWD \
 	-label "Standard space" \
 	-labelwidth $LWIDTH \
@@ -593,7 +599,7 @@ proc fdt:dialog { w tclstartupfile } {
     $w.data.mode add command xtitlex -label "Path distribution estimation" -state disabled
     $w.data.mode add command simple  -label "  Single seed voxel"
     $w.data.mode add command all     -label "  Seed mask"
-    $w.data.mode add command maska   -label "  Seed mask and target mask"
+    $w.data.mode add command maska   -label "  Seed mask and waypoint masks"
     $w.data.mode add command masks   -label "  Two masks - symmetric"
     $w.data.mode add separator xseedsx
     $w.data.mode add command seeds  -label "Connectivity-based seed classification"
@@ -630,9 +636,7 @@ proc fdt:dialog { w tclstartupfile } {
 	-filterhist VARS(history)
 
     tixLabelFrame $w.data.target -label "Target list"
-
     multiFileSelect $w.data.targets -label "Target file: " -labelwidth $LWIDTH -directory $PWD
-
     pack $w.data.targets -in [$w.data.target subwidget frame] \
 	-side top -anchor w -padx 3 -pady 3
 
@@ -659,6 +663,11 @@ proc fdt:dialog { w tclstartupfile } {
 	-width 35 \
 	-command "probtrack_update_files $w" \
 	-filterhist VARS(history)
+
+    tixLabelFrame $w.data.waypoint -label "Waypoint masks"
+    multiFileSelect $w.data.waypoints -label "Waypoint mask file: " -labelwidth $LWIDTH -directory $PWD
+    pack $w.data.waypoints -in [$w.data.waypoint subwidget frame] \
+	-side top -anchor w -padx 3 -pady 3
 
     set probtrack(x) 0
     set probtrack(y) 0
@@ -826,11 +835,11 @@ proc fdt:dialog { w tclstartupfile } {
 	-selectmode immediate -options { entry.width 4 }    
     $w.advanced.steplength subwidget label config -width $LWIDTH
 
-    set probtrack(usef_yn) 0
-    checkbutton $w.advanced.usef \
-	-text "Use anisotropy constraints" \
-	-variable probtrack(usef_yn) \
-	-command "if { \$probtrack(usef_yn) } { puts yes; set probtrack(nsteps) 20000 } else { puts no; set probtrack(nsteps) 1000 }"
+#     set probtrack(usef_yn) 0
+#     checkbutton $w.advanced.usef \
+# 	-text "Use anisotropy constraints" \
+# 	-variable probtrack(usef_yn) \
+# 	-command "if { \$probtrack(usef_yn) } { set probtrack(nsteps) 20000 } else { set probtrack(nsteps) 1000 }"
 
     set probtrack(modeuler_yn) 0
     checkbutton $w.advanced.modeuler \
@@ -838,7 +847,6 @@ proc fdt:dialog { w tclstartupfile } {
 	-variable probtrack(modeuler_yn)
 
     pack \
-	$w.advanced.usef \
 	$w.advanced.modeuler \
 	$w.advanced.nsteps \
 	$w.advanced.steplength \
@@ -906,6 +914,7 @@ proc fdt:probtrack_mode { w mode } {
     pack forget $w.data.usereference_yn
     pack forget $w.data.reference
     pack forget $w.data.seed2
+    pack forget $w.data.waypoint
     pack forget $w.data.seedxyz
     pack forget $w.data.out
     pack $w.data.seed $w.data.usereference_yn $w.data.xfm -in $seedspacef -side top \
@@ -921,8 +930,7 @@ proc fdt:probtrack_mode { w mode } {
 	    pack forget $w.data.seed
   	}
 	maska {
-	    pack $w.data.seed2 -in $seedspacef -side top -after $w.data.seed
-	    [$w.data.seed2 subwidget label] configure -text "Target image:"
+	    pack $w.data.waypoint -in $w.data -side top -padx 3 -pady 3 -after $w.data.seedspace -anchor nw
 	}
 	masks {
 	    pack $w.data.seed2 -in $seedspacef -side top -after $w.data.seed
@@ -1076,7 +1084,7 @@ proc fdt:apply { w dialog } {
 	    set flags ""
 	    if { $probtrack(verbose_yn) == 1 } { set flags "$flags -V 1" }
 	    if { $probtrack(loopcheck_yn) == 1 } { set flags "$flags -l" }
-	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
+#	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
 
@@ -1097,7 +1105,7 @@ proc fdt:apply { w dialog } {
 	    }
 	    set basics "--forcedir -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask"	    
 
-    	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn usef_yn modeuler_yn \
+    	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn \
 			       curvature nsteps steplength nparticles} {
 		puts $log "set probtrack($entry) $probtrack($entry)"
 	    }
@@ -1214,14 +1222,12 @@ proc fdt:apply { w dialog } {
 		}
 		maska {
 		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(seed2) == "" } { set errorStr "$errorStr You must select a target image!" }
 		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
 		    if { $errorStr != "" } {
 			MxPause $errorStr
 			return
 		    }
 		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(seed2) $probtrack(seed2)"
 		    puts $log "set probtrack(dir) $probtrack(dir)"
 
 		    set canwrite 1
@@ -1235,8 +1241,10 @@ proc fdt:apply { w dialog } {
 		    if { $canwrite } {
 			puts "mkdir -p $probtrack(dir)"
 			exec mkdir -p $probtrack(dir)
+			puts $log "$w.data.watpoints load \"$probtrack(dir)/waypoints.txt\""
+			$w.data.waypoints save "$probtrack(dir)/waypoints.txt"
 			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=twomasks_asymm --seed=$probtrack(seed) --mask2=$probtrack(seed2) $basics $ssopts $flags -o fdt_paths --dir=$probtrack(dir)"
+			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=waypoints --seed=$probtrack(seed) --mask2=${probtrack(dir)}/waypoints.txt $basics $ssopts $flags -o fdt_paths --dir=$probtrack(dir)"
 		    }
 		}
 		seeds {
@@ -1386,14 +1394,14 @@ proc fdt:apply { w dialog } {
 		set searchry  "-searchry -$registration(struct_search) $registration(struct_search)"
 		set searchrz  "-searchrz -$registration(struct_search) $registration(struct_search)"
 		set options   "$searchrx $searchry $searchrz -dof $registration(struct_dof)"
-		fdt_monitor $w "flirt -in $diff -ref $registration(struct_image) -omat $diff2str $options"
+		fdt_monitor $w "flirt -in $diff -ref $registration(struct_image) -omat $diff2str $options -cost $registration(struct_costfn)"
 		fdt_monitor $w "convert_xfm -omat $str2diff -inverse $diff2str"
 		if { $registration(standard_yn) } {
 		    set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
 		    set searchry  "-searchry -$registration(standard_search) $registration(standard_search)"
 		    set searchrz  "-searchrz -$registration(standard_search) $registration(standard_search)"
 		    set options   "$searchrx $searchry $searchrz -dof $registration(standard_dof)"
-		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options"
+		    fdt_monitor $w "flirt -in $registration(struct_image) -ref $registration(standard_image) -omat $str2stand $options $registration(standard_costfn)"
 		    fdt_monitor $w "convert_xfm -omat $stand2str -inverse $str2stand"
 		    fdt_monitor $w "convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
 		    fdt_monitor $w "convert_xfm -omat $stand2diff -inverse $diff2stand"
