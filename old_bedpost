@@ -197,6 +197,8 @@ ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bed
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
 ${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
 
+${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpost/merged_thsamples ${subjdir}.bedpost/merged_phsamples ${subjdir}.bedpost/nodif_brain_mask ${subjdir}.bedpost/dyadic_vectors
+
 if [ ${finished} -eq 1 ];then
     if [ `imtest ${subjdir}.bedpost/merged_thsamples` -eq 1 ];then
 	if [ `imtest ${subjdir}.bedpost/merged_phsamples` -eq 1 ];then
