@@ -48,11 +48,11 @@ ExitUnlock(){
     ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
     nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
     if [ $ndat_sl -ge 0 ] ;then 
-	rm -f ${subjdir}/data_slice_*
+	echo "rm -f ${subjdir}/data_slice_*"
     fi
     
     if [ $nnodif_sl -ge 0 ] ;then 
-	rm -f ${subjdir}/nodif_brain_mask_slice_*
+	echo "rm -f ${subjdir}/nodif_brain_mask_slice_*"
     fi
     
     exit
@@ -152,7 +152,7 @@ ${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 #FSL_MACHINE_LIST="list of machines (can be duplicated for two processors etc.)"
 #FSL_REMOTE_CALL="ssh (or rsh or whatever you want to use)"
 
-if [ x$FSL_MACHINE_LIST = "x" ] ; then
+if [ "x$FSL_MACHINE_LIST" = "x" ] ; then
     echo "processing data on local host"
     ${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$} &
 else

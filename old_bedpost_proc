@@ -24,7 +24,7 @@ while [ $slice -lt $nslices ];do
 	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slicezp
 	sleep 10
 	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slicezp | sed -n '1p'` ] ; then
-	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slicezp --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slicezp
+	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slicezp --nj=2 --bi=0 --se=1 > ${subjdir}.bedpost/logs/log$slicezp
 	    touch ${subjdir}.bedpost/logs/.${slicezp}_finished
 	fi
     fi
