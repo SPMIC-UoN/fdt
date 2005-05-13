@@ -147,7 +147,7 @@ void track(){
 	    
 	    if(opts.rubbishfile.value()!="")
 	      {
-		if(RUBBISH(x_s,y_s,z_s)==1) break;
+		if(RUBBISH(x_s,y_s,z_s)>0) break;
 	      }
 
 	    path(it+(direc-1)*nsteps/2,1)=x_s; 

@@ -51,7 +51,7 @@ class probtrackOptions {
   Option<bool> loopcheck;
   Option<bool> usef;
   Option<bool> modeuler;
-  Option<float> rseed;
+  Option<int> rseed;
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
   void modehelp();
@@ -148,7 +148,7 @@ class probtrackOptions {
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
-   rseed(string("--rseed"), 0.324571,
+   rseed(string("--rseed"), 12345,
 	 string("Random seed"),
 	 false, requires_argument), 
    options("probtrack","probtrack -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrack --help\n")

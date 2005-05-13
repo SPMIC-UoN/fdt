@@ -423,7 +423,7 @@ void mesh_lengths(){
 	      
 	    if(opts.rubbishfile.value()!="")
 	      {
-		if(RUBBISH(x_s,y_s,z_s)==1) break;
+		if(RUBBISH(x_s,y_s,z_s)>0) break;
 	      }
 	      
 	    path(it,1)=x_s; 
