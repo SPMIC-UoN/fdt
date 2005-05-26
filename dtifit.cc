@@ -154,7 +154,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   evec2 << Vd(1,midind) << Vd(2,midind) << Vd(3,midind);
   evec3 << Vd(1,minind) << Vd(2,minind) << Vd(3,minind);
 
-  float numer=(1.5*(Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
+  float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
   float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
  
   if(denom>0) fsquared=numer/denom;
