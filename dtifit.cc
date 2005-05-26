@@ -161,9 +161,6 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   else fsquared=0;
   if(fsquared>0){f=sqrt(fsquared);}
   else{f=0;}
-  //  f = sqrt((1.5*(Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd))/(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3)));
-  // if(f>=0.95) f=0.95;
-  //if(f<=0.001) f=0.001;
 
 }
 
