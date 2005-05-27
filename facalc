@@ -8,6 +8,7 @@ echo ""
 echo "Usage: facalc basename outbase"
 echo "e.g. facalc dti test"
 echo "will write test_FA instead of dti_FA"
+exit
 fi
 
 bn=$1
