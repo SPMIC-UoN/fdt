@@ -1,0 +1,386 @@
+/* Xfibres Diffusion Partial Volume Model  
+
+    Tim Behrens - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <strstream>
+#define WANT_STREAM
+#define WANT_MATH
+//  #include "newmatap.h"
+//  #include "newmatio.h"
+#include <string>
+#include <math.h>
+#include "utils/log.h"
+#include "diff_pvmoptions.h"
+#include "utils/tracer_plus.h"
+#include "miscmaths/miscprob.h"
+#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
+#include "stdlib.h"
+#include "fibre.h"
+#include "xfibresoptions.h"
+
+//#include "bint/model.h"
+//#include "bint/lsmcmcmanager.h"
+//#include "bint/lslaplacemanager.h"
+
+using namespace FIBRE;
+using namespace  Xfibres;
+using namespace Utilities;
+using namespace NEWMAT;
+using namespace NEWIMAGE;
+using namespace MISCMATHS;
+
+
+
+const float maxfloat=1e10;
+const float minfloat=1e-10;
+const float maxlogfloat=23;
+const float minlogfloat=-23;
+
+
+inline float min(float a,float b){
+  return a<b ? a:b;}
+inline float max(float a,float b){
+  return a>b ? a:b;}
+inline Matrix Anis()
+{ 
+  Matrix A(3,3);
+  A << 1 << 0 << 0
+    << 0 << 0 << 0
+    << 0 << 0 << 0;
+  return A;
+}
+
+inline Matrix Is()
+{ 
+  Matrix I(3,3);
+  I << 1 << 0 << 0
+    << 0 << 1 << 0
+    << 0 << 0 << 1;
+  return I;
+}
+
+inline ColumnVector Cross(const ColumnVector& A,const ColumnVector& B)
+{
+  ColumnVector res(3);
+  res << A(2)*B(3)-A(3)*B(2)
+      << A(3)*B(1)-A(1)*B(3)
+      << A(1)*B(2)-B(1)*A(2);
+  return res;
+}
+
+inline Matrix Cross(const Matrix& A,const Matrix& B)
+{
+  Matrix res(3,1);
+  res << A(2,1)*B(3,1)-A(3,1)*B(2,1)
+      << A(3,1)*B(1,1)-A(1,1)*B(3,1)
+      << A(1,1)*B(2,1)-B(1,1)*A(2,1);
+  return res;
+}
+
+float mod(float a, float b){
+  while(a>b){a=a-b;}
+  while(a<0){a=a+b;} 
+  return a;
+}
+
+
+Matrix form_Amat(const Matrix& r,const Matrix& b)
+{
+  Matrix A(r.Ncols(),7);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+  }
+  return A;
+}
+
+inline SymmetricMatrix vec2tens(ColumnVector& Vec){
+  SymmetricMatrix tens(3);
+  tens(1,1)=Vec(1);
+  tens(2,1)=Vec(2);
+  tens(3,1)=Vec(3);
+  tens(2,2)=Vec(4);
+  tens(3,2)=Vec(5);
+  tens(3,3)=Vec(6);
+  return tens;
+}
+
+
+
+class Samples{
+  xfibresOptions& opts;
+  Matrix m_dsamples;
+  Matrix m_S0samples;
+  vector<Matrix> m_thsamples;
+  vector<Matrix> m_phsamples;
+  vector<Matrix> m_fsamples;
+  vector<Matrix> m_lamsamples;
+public:
+
+  Samples(int nvoxels):opts(xfibresOptions::getInstance()){
+    int count=0;
+    int nsamples=0;
+    
+    for(int i=0;i<=opts.njumps.value();i++){
+      count++;
+      if(count==opts.sampleevery.value()){
+	count=0;nsamples++;
+      }
+    }
+    
+    m_dsamples.ReSize(nsamples,nvoxels);
+    m_S0samples.ReSize(nsamples,nvoxels);
+    for(int f=0;f<opts.nfibres.value();f++){
+      m_thsamples[f].ReSize(nsamples,nvoxels);
+      m_thsamples[f]=0;
+      m_phsamples[f].ReSize(nsamples,nvoxels);
+      m_phsamples[f]=0;
+      m_fsamples[f].ReSize(nsamples,nvoxels);
+      m_fsamples[f]=0;
+      m_lamsamples[f].ReSize(nsamples,nvoxels);
+      m_lamsamples[f]=0;
+    }
+    
+  }
+  
+  
+  void record(Multifibre& mfib, int vox, int samp){
+    m_dsamples(samp,vox)=mfib.get_d();
+    m_S0samples(samp,vox)=mfib.get_S0();
+    for(int f=0;f<opts.nfibres.value();f++){
+      m_thsamples[f](samp,vox)=mfib.fibres()[f].get_th();
+      m_phsamples[f](samp,vox)=mfib.fibres()[f].get_ph();
+      m_fsamples[f](samp,vox)=mfib.fibres()[f].get_f();
+      m_lamsamples[f](samp,vox)=mfib.fibres()[f].get_lam();
+      
+    }
+  }
+  
+  void save(){
+    
+  }
+  
+};
+
+
+
+
+
+
+
+
+
+
+
+class xfibresVoxelManager{
+ 
+  xfibresOptions& opts;
+  
+  Samples& m_samples;
+  int m_voxelnumber;
+  const ColumnVector& m_data;
+  const ColumnVector& m_alpha;
+  const ColumnVector& m_beta;
+  const Matrix& m_bvals; 
+  Multifibre m_multifibre;
+ public:
+  xfibresVoxelManager(const ColumnVector& data,const ColumnVector& alpha, 
+		      const ColumnVector& beta, const Matrix& b, const Matrix& Amat,
+		      Samples& samples,int voxelnumber):
+    opts(xfibresOptions::getInstance()), 
+    m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
+    m_alpha(alpha), m_beta(beta), m_bvals(b), 
+    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value()){ }
+  
+   
+  
+  void initialise(const Matrix& Amat){
+    //initialising 
+    ColumnVector logS(m_data.Nrows()),tmp(m_data.Nrows()),Dvec(7),dir(3);
+    SymmetricMatrix tens;   
+    DiagonalMatrix Dd;  
+    Matrix Vd;  
+    float mDd,fsquared;
+    float th,ph,f,D,S0;
+      
+    for ( int i = 1; i <= logS.Nrows(); i++)
+      {
+	if(m_data(i)>0){
+	  logS(i)=log(m_data(i));
+	}
+	else{
+	  logS(i)=0;
+	}
+      }
+    Dvec = -pinv(Amat)*logS;
+    if(  Dvec(7) >  -maxlogfloat  ){ 
+      S0=exp(-Dvec(7));
+    }
+    else{
+      S0=m_data.MaximumAbsoluteValue();
+    }
+      
+    for ( int i = 1; i <= logS.Nrows(); i++)
+      {
+	if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.MaximumAbsoluteValue();  }
+	logS(i)=(m_data(i)/S0)>0.01 ? log((i)):log(0.01*S0);
+      }
+    Dvec = -pinv(Amat)*logS;
+    S0=exp(-Dvec(7));
+    if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.Sum()/m_data.Nrows();  }
+    tens = vec2tens(Dvec);
+    EigenValues(tens,Dd,Vd);
+    mDd = Dd.Sum()/Dd.Nrows();
+    int maxind = Dd(1) > Dd(2) ? 1:2;   //finding maximum eigenvalue
+    maxind = Dd(maxind) > Dd(3) ? maxind:3;
+    dir << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
+    cart2sph(dir,th,ph);
+    th= mod(th,M_PI);
+    ph= mod(ph,2*M_PI);
+    D = Dd(maxind);
+      
+
+    float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
+    float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
+    if(denom>0) fsquared=numer/denom;
+    else fsquared=0;
+    if(fsquared>0){f=sqrt(fsquared);}
+    else{f=0;}
+    if(f>=0.95) f=0.95;
+    if(f<=0.001) f=0.001;
+    
+    if(opts.nfibres.value()>0){
+      Fibre fib(m_alpha,m_beta,m_bvals,D,th,ph,f,1);
+      m_multifibre.addfibre(fib);
+      Fibre fibun(m_alpha,m_beta,m_bvals,D);
+      for(int i=2; i<=opts.nfibres.value(); i++){
+	 m_multifibre.addfibre(fibun);
+      }
+    
+    }
+     
+  }
+ 
+
+  void runmcmc(){
+    int count=0, recordcount=0,sample=0;
+    for( int i =0;i<opts.nburn.value();i++){
+      m_multifibre.jump();
+      count++;
+      if(count==opts.updateproposalevery.value()){
+	m_multifibre.update_proposals();
+	count=0;
+      }
+    }
+    
+    for( int i =0;i<opts.njumps.value();i++){
+      m_multifibre.jump();
+      count++;
+      recordcount++;
+      if(recordcount==opts.sampleevery.value()){
+	m_samples.record(m_multifibre,m_voxelnumber,sample);
+	sample++;
+	recordcount=0;
+      }
+      if(count==opts.updateproposalevery.value()){
+	m_multifibre.update_proposals();
+	count=0;
+	
+      }
+    }
+    
+    
+  }
+    
+};
+
+
+  
+int main(int argc, char *argv[])
+{
+  try{  
+
+    // Setup logging:
+    Log& logger = LogSingleton::getInstance();
+    
+    xfibresOptions& opts = xfibresOptions::getInstance();
+    opts.parse_command_line(argc,argv,logger);
+    
+    srand(xfibresOptions::getInstance().seed.value());
+    
+    
+    Matrix datam, bvals,bvecs;
+    volume<char> mask;
+    bvals=read_ascii_matrix(opts.bvalsfile.value());
+    bvecs=read_ascii_matrix(opts.bvecsfile.value());
+    
+    {//scope in whic the data exists in 4D format;
+      volume4D<float> data;
+      read_volume4D(data,opts.datafile.value());
+      read_volume(mask,opts.maskfile.value());
+      datam=data.matrix(mask);  
+    }
+    
+    Samples samples(datam.Ncols());
+    
+    
+    
+    //if(opts.debuglevel.value()==1)
+    //Tracer_Plus::setrunningstackon();
+    
+    //if(opts.timingon.value())
+    //Tracer_Plus::settimingon();
+    
+    // read data
+
+    //VolumeSeries data;
+    //data.read(opts.datafile.value());   
+    // data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
+//     cout<<"done"<<endl;
+//     return 0;
+    //int ntpts = data.tsize();
+    //Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
+    //Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
+    // mask:
+    //Volume mask;
+    ///mask.read(opts.maskfile.value());
+    //mask.threshold(1e-16);
+    
+    // threshold using mask:
+    //data.setPreThresholdPositions(mask.getPreThresholdPositions());
+    //data.thresholdSeries();
+    ColumnVector A,B,C;
+    
+    Matrix b,Amat;
+    int n;
+
+    Multifibre(A,B,C,b,n);
+  }
+  catch(Exception& e) 
+    {
+      cerr << endl << e.what() << endl;
+    }
+  catch(X_OptionError& e) 
+    {
+      cerr << endl << e.what() << endl;
+    }
+
+  return 0;
+}

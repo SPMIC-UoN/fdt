@@ -30,7 +30,7 @@ MEDOBJS=medianfilter.o
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
 DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
-XFIBOBJS=xfibres.o
+XFIBOBJS=xfibres.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 

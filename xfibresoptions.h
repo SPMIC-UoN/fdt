@@ -1,0 +1,146 @@
+/*  BpmOptions.h
+
+    Mark Woolrich, FMRIB Image Analysis Group
+
+    Copyright (C) 1999-2000 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
+#if !defined(xfibresOptions_h)
+#define xfibresOptions_h
+
+#include <string>
+#include <iostream.h>
+#include <fstream.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "utils/options.h"
+#include "utils/log.h"
+#include "utils/tracer_plus.h"
+//#include "newmatall.h"
+using namespace Utilities;
+
+namespace Xfibres {
+
+class xfibresOptions {
+ public:
+  static xfibresOptions& getInstance();
+  ~xfibresOptions() { delete gopt; }
+  
+  Option<bool> verbose;
+  Option<bool> help;
+  Option<string> logdir;
+  Option<bool> forcedir;
+  Option<string> datafile;
+  Option<string> ofile;
+  Option<string> maskfile;
+  Option<string> bvecsfile;
+  Option<string> bvalsfile;
+  Option<int> nfibres;
+  Option<int> njumps;
+  Option<int> nburn;
+  Option<int> sampleevery;
+  Option<int> updateproposalevery;
+  Option<float> seed;
+  void parse_command_line(int argc, char** argv,  Log& logger);
+  
+ private:
+  xfibresOptions();  
+  const xfibresOptions& operator=(xfibresOptions&);
+  xfibresOptions(xfibresOptions&);
+
+  OptionParser options; 
+      
+  static xfibresOptions* gopt;
+  
+};
+
+ inline xfibresOptions& xfibresOptions::getInstance(){
+   if(gopt == NULL)
+     gopt = new xfibresOptions();
+   
+   return *gopt;
+ }
+
+ inline xfibresOptions::xfibresOptions() :
+  verbose(string("-V,--verbose"), false, 
+	  string("switch on diagnostic messages"), 
+	  false, no_argument),
+  help(string("-h,--help"), false,
+	string("display this message"),
+	false, no_argument),
+  logdir(string("--ld,--logdir"), string("logdir"),
+	 string("log directory (default is logdir)"),
+	 false, requires_argument),
+  forcedir(string("--forcedir"),false,string("Use the actual directory name given - i.e. don't add + to make a new directory"),false,no_argument),
+  datafile(string("--data,--datafile"), string("data"),
+	      string("data file"),
+	      true, requires_argument),  
+  ofile(string("-o,--out"), string("dti"),
+	 string("Output basename"),
+	 true, requires_argument),
+  maskfile(string("-m,--mask, --maskfile"), string("nodif_brain_mask"),
+	    string("mask file"),
+	    true, requires_argument),
+  bvecsfile(string("-r,--bvecs"), string("bvecs"),
+	     string("b vectors file"),
+	     true, requires_argument),  
+  bvalsfile(string("-b,--bvals"), string("bvals"),
+	     string("b values file"),
+	     true, requires_argument), 
+  nfibres(string("--nf,--nfibres"),1,
+	 string("Maximum nukmber of fibres to fit in each voxel (default 1)"),
+	 false,requires_argument),
+  njumps(string("--nj,--njumps"),5000,
+	 string("Num of jumps to be made by MCMC (default is 5000)"),
+	 false,requires_argument),
+  nburn(string("--bi,--burnin"),1,
+	string("Num of jumps at start of MCMC to be discarded (default is 1)"),
+	false,requires_argument),
+  sampleevery(string("--se,--sampleevery"),1,
+	string("Num of jumps for each sample (MCMC) (default is 1)"),
+	false,requires_argument),
+  updateproposalevery(string("--upe,--updateproposalevery"),40,
+	string("Num of jumps for each update to the proposal density std (MCMC) (default is 40)"),
+	false,requires_argument),
+  seed(string("--seed"),0.76986654,string("seed for pseudo random number generator"),
+       false,requires_argument),
+   options("xfibres", "xfibres -k <filename>\n xfibres --verbose\n")
+   {
+     
+    
+     try {
+       options.add(verbose);
+       options.add(help);
+       options.add(logdir);
+       options.add(forcedir);
+       options.add(datafile);
+       options.add(ofile);
+       options.add(maskfile);
+       options.add(bvecsfile);
+       options.add(bvalsfile);
+       options.add(nfibres);
+       options.add(njumps);
+       options.add(nburn);
+       options.add(sampleevery);
+       options.add(updateproposalevery);
+       options.add(seed);
+       
+     }
+     catch(X_OptionError& e) {
+       options.usage();
+       cerr << endl << e.what() << endl;
+     } 
+     catch(std::exception &e) {
+       cerr << e.what() << endl;
+     }    
+     
+   }
+}
+
+#endif
+
+
+
+
+

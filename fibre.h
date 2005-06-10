@@ -57,8 +57,8 @@ namespace FIBRE{
     const Matrix& m_bvals;
   public:
     //constructors::
-    Fibre(const float& d, const ColumnVector& alpha, 
-	  const ColumnVector& beta, const Matrix& bvals):
+    Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
+	   const Matrix& bvals,const float& d):
       m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
 
       m_th=0;
@@ -94,10 +94,10 @@ namespace FIBRE{
       m_Signal=0;
       m_Signal_old=m_Signal;
     }
-    Fibre(const float& d, const ColumnVector& alpha, 
-	  const ColumnVector& beta, const Matrix& bvals, 
+    Fibre(const ColumnVector& alpha, 
+	  const ColumnVector& beta, const Matrix& bvals, const float& d, 
 	  const float& th, const float& ph, const float& f, 
-	  const float& lam, const int Npts) : 
+	  const float& lam) : 
       m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_d(d), 
       m_alpha(alpha), m_beta(beta), m_bvals(bvals)
      {
@@ -131,6 +131,12 @@ namespace FIBRE{
       m_Signal=0;
       m_Signal_old=m_Signal;
     }
+    Fibre(const Fibre& rhs): 
+      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals){
+      *this=rhs;
+    }
+
+      
     ~Fibre(){}
     
     inline float get_th() const{ return m_th;}
@@ -142,8 +148,12 @@ namespace FIBRE{
     inline float get_f() const{ return m_f;}
     inline void set_f(const float f){ m_f=f; }
     
-    inline ColumnVector getSignal() const{  //flitney had "inline ColumnVector&" here
-      return m_Signal;                      // What is the difference?
+    inline float get_lam() const{ return m_lam;}
+    inline void set_lam(const float lam){ m_lam=lam; }
+    
+    
+    inline const ColumnVector& getSignal() const{  
+      return m_Signal;                      
     }
     
     inline void restoreSignal() {
@@ -305,7 +315,40 @@ namespace FIBRE{
     }
     
     
-    
+    Fibre& operator=(const Fibre& rhs){
+      m_th=rhs.m_th;
+      m_ph=rhs.m_ph;
+      m_f=rhs.m_f;
+      m_lam=rhs. m_lam;
+      m_th_prop=rhs. m_th_prop;
+      m_ph_prop=rhs.m_ph_prop;
+      m_f_prop=rhs.m_f_prop;
+      m_lam_prop=rhs.m_lam_prop;
+      m_th_old=rhs.m_th_old;
+      m_ph_old=rhs.m_ph_old;
+      m_f_old=rhs.m_f_old;
+      m_lam_old=rhs.m_lam_old;
+      m_th_prior=rhs.m_th_prior;
+      m_ph_prior=rhs.m_ph_prior;
+      m_f_prior=rhs. m_f_prior;
+      m_lam_prior=rhs.m_lam_prior;
+      m_th_old_prior=rhs.m_th_old_prior;
+      m_ph_old_prior=rhs.m_ph_old_prior;
+      m_f_old_prior=rhs.m_f_old_prior;
+      m_lam_old_prior=rhs.m_lam_old_prior;
+      m_prior_en=rhs.m_prior_en;
+      m_old_prior_en=rhs. m_old_prior_en;
+      m_th_acc=rhs.m_th_acc; 
+      m_th_rej=rhs.m_th_rej;
+      m_ph_acc=rhs.m_ph_acc;
+      m_ph_rej=rhs. m_ph_rej; 
+      m_f_acc=rhs.m_f_acc;
+      m_f_rej=rhs.m_f_rej;
+      m_lam_acc=rhs.m_lam_acc; 
+      m_lam_rej=rhs.m_lam_rej;
+      m_Signal=rhs.m_Signal; 
+      m_Signal_old=rhs. m_Signal_old; 
+    }
 
     friend  ostream& operator<<(ostream& ostr,const Fibre& p);
 
@@ -347,7 +390,7 @@ namespace FIBRE{
     
   public:
     Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
-	       const ColumnVector& beta, const Matrix& b, const Matrix& Amat, int N ):
+	       const ColumnVector& beta, const Matrix& b, int N ):
     m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b){
       
       //      initialise(Amat,N);
@@ -355,72 +398,21 @@ namespace FIBRE{
     
     ~Multifibre(){}
     
-    /*
-     void initialise(const Matrix& Amat, int N){
-      //initialising 
-      ColumnVector logS(m_data.Nrows()),tmp(m_data.Nrows()),Dvec(7),dir(3);
-      SymmetricMatrix tens;   //Basser's Diffusion Tensor;
-      DiagonalMatrix Dd;   //eigenvalues
-      Matrix Vd;   //eigenvectors
-      float mDd,fsquared;
-      float th,ph,f,D,S0;
-    
-      for ( int i = 1; i <= logS.Nrows(); i++)
-	{
-	  if(m_data(i)>0){
-	    logS(i)=log(m_data(i));
-	  }
-	  else{
-	    logS(i)=0;
-	  }
-	}
-      Dvec = -pinv(Amat)*logS;
-      if(  Dvec(7) >  -23  ){ //23=maxlogfloat
-	S0=exp(-Dvec(7));
-      }
-      else{
-	S0=m_data.MaximumAbsoluteValue();
-      }
-
-      for ( int i = 1; i <= logS.Nrows(); i++)
-	{
-	  if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.MaximumAbsoluteValue();  }
-	  logS(i)=(m_data(i)/S0)>0.01 ? log((i)):log(0.01*S0);
-	}
-      Dvec = -pinv(Amat)*logS;
-      S0=exp(-Dvec(7));
-      if(S0<m_data.Sum()/S.Nrows()){ S0=m_data.Sum()/m_data.Nrows();  }
-      tens = vec2tens(Dvec);
-      EigenValues(tens,Dd,Vd);
-      mDd = Dd.Sum()/Dd.Nrows();
-      int maxind = Dd(1) > Dd(2) ? 1:2;   //finding maximum eigenvalue
-      maxind = Dd(maxind) > Dd(3) ? maxind:3;
-      dir << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
-      cart2sph(dir,th,ph);
-      th= mod(th,M_PI);
-      ph= mod(ph,2*M_PI);
-      D = Dd(maxind);
-      
-      float numer=1.5(*(Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
-      float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
-      if(denom>0) fsquared=numer/denom;
-      else fsquared=0;
-      if(fsquared>0){f=sqrt(fsquared);}
-      else{f=0;}
-      if(f>=0.95) f=0.95;
-      if(f<=0.001) f=0.001;
-      
-      
-      m_d=D; m_d_old=m_d;
-      m_S0=S0; m_S0_old=m_S0;
-      
-      
-      
-	       
-      
+    const vector<Fibre>& fibres() const{
+      return m_fibres;
     }
     
-    */
+    void addfibre(const Fibre& fib){
+      m_fibres.push_back(fib);
+    }
+    
+    inline float get_d() const{ return m_d;}
+    inline void set_d(const float d){ m_d=d; }
+    
+
+    inline float get_S0() const{ return m_S0;}
+    inline void set_S0(const float S0){ m_S0=S0; }
+    
 
     inline bool compute_d_prior(){
       m_d_old_prior=m_d_prior;
@@ -530,6 +522,10 @@ namespace FIBRE{
       m_d_rej=0;
       m_S0_acc=0; 
       m_S0_rej=0;
+      for(unsigned int f=0; f<m_fibres.size();f++){
+	m_fibres[f].update_proposals();
+      }
+      
     }
 
     
