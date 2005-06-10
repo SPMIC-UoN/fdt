@@ -202,7 +202,7 @@ class xfibresVoxelManager{
   Multifibre m_multifibre;
  public:
   xfibresVoxelManager(const ColumnVector& data,const ColumnVector& alpha, 
-		      const ColumnVector& beta, const Matrix& b, const Matrix& Amat,
+		      const ColumnVector& beta, const Matrix& b,
 		      Samples& samples,int voxelnumber):
     opts(xfibresOptions::getInstance()), 
     m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
     
     
     Matrix datam, bvals,bvecs;
-    volume<char> mask;
+    volume<float> mask;
     bvals=read_ascii_matrix(opts.bvalsfile.value());
     bvecs=read_ascii_matrix(opts.bvecsfile.value());
     
@@ -338,40 +338,22 @@ int main(int argc, char *argv[])
       datam=data.matrix(mask);  
     }
     
+    
+    Matrix Amat;
+    ColumnVector alpha, beta;
+    Amat=form_Amat(bvecs,bvals);
+    cart2sph(bvecs,alpha,beta);
     Samples samples(datam.Ncols());
     
     
+    for(int vox=1;vox<=datam.Ncols();vox++){
+      xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
+      vm.initialise(Amat);
+      vm.runmcmc();
+    }
     
-    //if(opts.debuglevel.value()==1)
-    //Tracer_Plus::setrunningstackon();
-    
-    //if(opts.timingon.value())
-    //Tracer_Plus::settimingon();
-    
-    // read data
+    samples.save();
 
-    //VolumeSeries data;
-    //data.read(opts.datafile.value());   
-    // data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
-//     cout<<"done"<<endl;
-//     return 0;
-    //int ntpts = data.tsize();
-    //Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
-    //Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
-    // mask:
-    //Volume mask;
-    ///mask.read(opts.maskfile.value());
-    //mask.threshold(1e-16);
-    
-    // threshold using mask:
-    //data.setPreThresholdPositions(mask.getPreThresholdPositions());
-    //data.thresholdSeries();
-    ColumnVector A,B,C;
-    
-    Matrix b,Amat;
-    int n;
-
-    Multifibre(A,B,C,b,n);
   }
   catch(Exception& e) 
     {

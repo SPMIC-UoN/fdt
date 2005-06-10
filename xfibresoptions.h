@@ -41,7 +41,7 @@ class xfibresOptions {
   Option<int> nburn;
   Option<int> sampleevery;
   Option<int> updateproposalevery;
-  Option<float> seed;
+  Option<int> seed;
   void parse_command_line(int argc, char** argv,  Log& logger);
   
  private:
@@ -103,7 +103,7 @@ class xfibresOptions {
   updateproposalevery(string("--upe,--updateproposalevery"),40,
 	string("Num of jumps for each update to the proposal density std (MCMC) (default is 40)"),
 	false,requires_argument),
-  seed(string("--seed"),0.76986654,string("seed for pseudo random number generator"),
+  seed(string("--seed"),8665904,string("seed for pseudo random number generator"),
        false,requires_argument),
    options("xfibres", "xfibres -k <filename>\n xfibres --verbose\n")
    {
