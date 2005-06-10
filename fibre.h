@@ -348,6 +348,7 @@ namespace FIBRE{
       m_lam_rej=rhs.m_lam_rej;
       m_Signal=rhs.m_Signal; 
       m_Signal_old=rhs. m_Signal_old; 
+      return *this;
     }
 
     friend  ostream& operator<<(ostream& ostr,const Fibre& p);
