@@ -137,27 +137,28 @@ public:
   Samples(int nvoxels):opts(xfibresOptions::getInstance()){
     int count=0;
     int nsamples=0;
-    
-    for(int i=0;i<=opts.njumps.value();i++){
+  
+    for(int i=0;i<opts.njumps.value();i++){
       count++;
       if(count==opts.sampleevery.value()){
 	count=0;nsamples++;
       }
     }
-    
+ 
+
     m_dsamples.ReSize(nsamples,nvoxels);
+    m_dsamples=0;
     m_S0samples.ReSize(nsamples,nvoxels);
+    m_S0samples=0;
+   
     for(int f=0;f<opts.nfibres.value();f++){
-      m_thsamples[f].ReSize(nsamples,nvoxels);
-      m_thsamples[f]=0;
-      m_phsamples[f].ReSize(nsamples,nvoxels);
-      m_phsamples[f]=0;
-      m_fsamples[f].ReSize(nsamples,nvoxels);
-      m_fsamples[f]=0;
-      m_lamsamples[f].ReSize(nsamples,nvoxels);
-      m_lamsamples[f]=0;
+      m_thsamples.push_back(m_S0samples);
+      m_phsamples.push_back(m_S0samples);
+      m_fsamples.push_back(m_S0samples);
+      m_lamsamples.push_back(m_S0samples);
+
     }
-    
+ 
   }
   
   
@@ -173,8 +174,27 @@ public:
     }
   }
   
-  void save(){
-    
+  void save(const volume<float>& mask){
+    volume4D<float> tmp;
+    Log& logger = LogSingleton::getInstance();
+    tmp.setmatrix(m_dsamples,mask);
+    save_volume4D(tmp,logger.appendDir("dsamples"));
+    tmp.setmatrix(m_S0samples,mask);
+    save_volume4D(tmp,logger.appendDir("S0samples"));
+    for(int f=0;f<opts.nfibres.value();f++){
+      tmp.setmatrix(m_thsamples[f]);
+      string oname="th"+num2str(f)+"samples";
+      save_volume4D(tmp,logger.appendDir(oname));
+      tmp.setmatrix(m_phsamples[f]);
+      oname="ph"+num2str(f)+"samples";
+      save_volume4D(tmp,logger.appendDir(oname));
+      tmp.setmatrix(m_fsamples[f]);
+      oname="f"+num2str(f)+"samples";
+      save_volume4D(tmp,logger.appendDir(oname));
+      tmp.setmatrix(m_lamsamples[f]);
+      oname="lam"+num2str(f)+"samples";
+      save_volume4D(tmp,logger.appendDir(oname));
+    }
   }
   
 };
@@ -195,7 +215,7 @@ class xfibresVoxelManager{
   
   Samples& m_samples;
   int m_voxelnumber;
-  const ColumnVector& m_data;
+  const ColumnVector m_data;
   const ColumnVector& m_alpha;
   const ColumnVector& m_beta;
   const Matrix& m_bvals; 
@@ -219,7 +239,6 @@ class xfibresVoxelManager{
     Matrix Vd;  
     float mDd,fsquared;
     float th,ph,f,D,S0;
-      
     for ( int i = 1; i <= logS.Nrows(); i++)
       {
 	if(m_data(i)>0){
@@ -236,12 +255,13 @@ class xfibresVoxelManager{
     else{
       S0=m_data.MaximumAbsoluteValue();
     }
-      
+
     for ( int i = 1; i <= logS.Nrows(); i++)
       {
 	if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.MaximumAbsoluteValue();  }
 	logS(i)=(m_data(i)/S0)>0.01 ? log((i)):log(0.01*S0);
       }
+
     Dvec = -pinv(Amat)*logS;
     S0=exp(-Dvec(7));
     if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.Sum()/m_data.Nrows();  }
@@ -255,7 +275,6 @@ class xfibresVoxelManager{
     th= mod(th,M_PI);
     ph= mod(ph,2*M_PI);
     D = Dd(maxind);
-      
 
     float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
     float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
@@ -265,9 +284,9 @@ class xfibresVoxelManager{
     else{f=0;}
     if(f>=0.95) f=0.95;
     if(f<=0.001) f=0.001;
-    
     if(opts.nfibres.value()>0){
       Fibre fib(m_alpha,m_beta,m_bvals,D,th,ph,f,1);
+      cerr<<fib<<endl;
       m_multifibre.addfibre(fib);
       Fibre fibun(m_alpha,m_beta,m_bvals,D);
       for(int i=2; i<=opts.nfibres.value(); i++){
@@ -280,7 +299,7 @@ class xfibresVoxelManager{
  
 
   void runmcmc(){
-    int count=0, recordcount=0,sample=0;
+    int count=0, recordcount=0,sample=1;//sample will index a newmat matrix 
     for( int i =0;i<opts.nburn.value();i++){
       m_multifibre.jump();
       count++;
@@ -331,28 +350,29 @@ int main(int argc, char *argv[])
     bvals=read_ascii_matrix(opts.bvalsfile.value());
     bvecs=read_ascii_matrix(opts.bvecsfile.value());
     
-    {//scope in whic the data exists in 4D format;
+    {//scope in which the data exists in 4D format;
       volume4D<float> data;
       read_volume4D(data,opts.datafile.value());
       read_volume(mask,opts.maskfile.value());
       datam=data.matrix(mask);  
     }
     
-    
+   
     Matrix Amat;
     ColumnVector alpha, beta;
     Amat=form_Amat(bvecs,bvals);
     cart2sph(bvecs,alpha,beta);
     Samples samples(datam.Ncols());
-    
+  
     
     for(int vox=1;vox<=datam.Ncols();vox++){
+
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
       vm.initialise(Amat);
       vm.runmcmc();
     }
     
-    samples.save();
+    samples.save(mask);
 
   }
   catch(Exception& e) 
