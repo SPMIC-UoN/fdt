@@ -207,7 +207,6 @@ public:
 	ftmp.second=f;
 	sfs.push_back(ftmp);
       }
-      cerr<<sfs.size()<<endl;
       sort(sfs.begin(),sfs.end());
       
       for(int samp=1;samp<=m_dsamples.Nrows();samp++){
@@ -410,8 +409,7 @@ int main(int argc, char *argv[])
     cerr<<"ok2"<<endl;
     cerr<<datam.Ncols()<<endl;
     for(int vox=1;vox<=datam.Ncols();vox++){
-      cerr<<"I'm ok sam"<<endl;
-      cerr <<vox<<"/"<<datam.Ncols()<<endl;;
+      cerr <<vox<<"/"<<datam.Ncols()<<endl;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
       vm.initialise(Amat);
       vm.runmcmc();
