@@ -182,17 +182,17 @@ public:
     tmp.setmatrix(m_S0samples,mask);
     save_volume4D(tmp,logger.appendDir("S0samples"));
     for(int f=0;f<opts.nfibres.value();f++){
-      tmp.setmatrix(m_thsamples[f]);
-      string oname="th"+num2str(f)+"samples";
+      tmp.setmatrix(m_thsamples[f],mask);
+      string oname="th"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_phsamples[f]);
-      oname="ph"+num2str(f)+"samples";
+      tmp.setmatrix(m_phsamples[f],mask);
+      oname="ph"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_fsamples[f]);
-      oname="f"+num2str(f)+"samples";
+      tmp.setmatrix(m_fsamples[f],mask);
+      oname="f"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_lamsamples[f]);
-      oname="lam"+num2str(f)+"samples";
+      tmp.setmatrix(m_lamsamples[f],mask);
+      oname="lam"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
     }
   }
@@ -259,7 +259,7 @@ class xfibresVoxelManager{
     for ( int i = 1; i <= logS.Nrows(); i++)
       {
 	if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.MaximumAbsoluteValue();  }
-	logS(i)=(m_data(i)/S0)>0.01 ? log((i)):log(0.01*S0);
+	logS(i)=(m_data(i)/S0)>0.01 ? log(m_data(i)):log(0.01*S0);
       }
 
     Dvec = -pinv(Amat)*logS;
@@ -284,17 +284,18 @@ class xfibresVoxelManager{
     else{f=0;}
     if(f>=0.95) f=0.95;
     if(f<=0.001) f=0.001;
+    if(D<=0) D=2e-3;
+    m_multifibre.set_d(D);
+    m_multifibre.set_S0(S0);
     if(opts.nfibres.value()>0){
-      Fibre fib(m_alpha,m_beta,m_bvals,D,th,ph,f,1);
-      cerr<<fib<<endl;
-      m_multifibre.addfibre(fib);
-      Fibre fibun(m_alpha,m_beta,m_bvals,D);
+      m_multifibre.addfibre(th,ph,f,1);
       for(int i=2; i<=opts.nfibres.value(); i++){
-	 m_multifibre.addfibre(fibun);
+	 m_multifibre.addfibre();
       }
     
     }
-     
+    m_multifibre.initialise_energies();
+    m_multifibre.initialise_props();
   }
  
 
@@ -338,10 +339,9 @@ int main(int argc, char *argv[])
 
     // Setup logging:
     Log& logger = LogSingleton::getInstance();
-    
+    cerr<<"here"<<endl;
     xfibresOptions& opts = xfibresOptions::getInstance();
     opts.parse_command_line(argc,argv,logger);
-    
     srand(xfibresOptions::getInstance().seed.value());
     
     
@@ -356,17 +356,17 @@ int main(int argc, char *argv[])
       read_volume(mask,opts.maskfile.value());
       datam=data.matrix(mask);  
     }
-    
-   
+    cerr<<"ok"<<endl;
     Matrix Amat;
     ColumnVector alpha, beta;
     Amat=form_Amat(bvecs,bvals);
     cart2sph(bvecs,alpha,beta);
     Samples samples(datam.Ncols());
-  
-    
+    cerr<<"ok2"<<endl;
+    cerr<<datam.Ncols()<<endl;
     for(int vox=1;vox<=datam.Ncols();vox++){
-
+      cerr<<"I'm ok sam"<<endl;
+      cerr <<vox<<"/"<<datam.Ncols()<<endl;;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
       vm.initialise(Amat);
       vm.runmcmc();

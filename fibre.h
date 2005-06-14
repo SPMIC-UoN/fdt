@@ -61,38 +61,43 @@ namespace FIBRE{
 	   const Matrix& bvals,const float& d):
       m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
 
-      m_th=0;
-      m_th_old=m_th;
-      m_ph=0;
-      m_ph_old=m_ph;
-      m_f=0;
-      m_f_old=m_f;
-      m_lam=1;
-      m_lam_old=m_lam;
-      m_th_prop=0.2;
-      m_ph_prop=0.2;
-      m_f_prop=0.2;
-      m_lam_prop=1;
-
-      m_th_prior=0;
-      compute_th_prior();
-
-      m_ph_prior=0;
-      compute_ph_prior();
-      
-      m_f_prior=0;
+	m_th=M_PI/2;
+	m_th_old=m_th;
+	m_ph=0;
+	m_ph_old=m_ph;
+	m_f=0.05;
+	m_f_old=m_f;
+	m_lam=1;
+	m_lam_old=m_lam;
+	m_th_prop=0.2;
+	m_ph_prop=0.2;
+	m_f_prop=0.2;
+	m_lam_prop=1;
+	
+	m_th_prior=0;
+	compute_th_prior();
+	
+	m_ph_prior=0;
+	compute_ph_prior();
+	
+	m_f_prior=0;
       compute_f_prior();
       
       m_lam_prior=0;
       compute_lam_prior();
-      
+
+      m_Signal.ReSize(alpha.Nrows());
+      m_Signal=0;
+      m_Signal_old=m_Signal;
+
+      compute_prior();
+      compute_signal();
+
       m_th_acc=0; m_th_rej=0;
       m_ph_acc=0; m_ph_rej=0;
       m_f_acc=0; m_f_rej=0;
       m_lam_acc=0; m_lam_rej=0;
-      m_Signal.ReSize(alpha.Nrows());
-      m_Signal=0;
-      m_Signal_old=m_Signal;
+
     }
     Fibre(const ColumnVector& alpha, 
 	  const ColumnVector& beta, const Matrix& bvals, const float& d, 
@@ -122,14 +127,20 @@ namespace FIBRE{
       
       m_lam_prior=0;
       compute_lam_prior();
-      
+
+
+      m_Signal.ReSize(alpha.Nrows());
+      m_Signal=0;
+      m_Signal_old=m_Signal;
+
+      compute_prior();
+      compute_signal();
+	    
       m_th_acc=0; m_th_rej=0;
       m_ph_acc=0; m_ph_rej=0;
       m_f_acc=0; m_f_rej=0;
       m_lam_acc=0; m_lam_rej=0;
-      m_Signal.ReSize(alpha.Nrows());
-      m_Signal=0;
-      m_Signal_old=m_Signal;
+     
     }
     Fibre(const Fibre& rhs): 
       m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals){
@@ -188,7 +199,10 @@ namespace FIBRE{
     
     inline bool compute_th_prior(){
       m_th_old_prior=m_th_prior;
-      m_th_prior=-log(fabs(sin(m_th)/2));
+      if(m_th==0){m_th_prior=0;}
+      else{
+	m_th_prior=-log(fabs(sin(m_th)/2));
+      }
       return false; //instant rejection flag
     }
     inline bool compute_ph_prior(){
@@ -403,8 +417,29 @@ namespace FIBRE{
       return m_fibres;
     }
     
-    void addfibre(const Fibre& fib){
+    void addfibre(const float th, const float ph, const float f,const float lam){
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,th,ph,f,lam);
       m_fibres.push_back(fib);
+    }
+
+    void addfibre(){
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d);
+      m_fibres.push_back(fib);
+    }
+    
+    void initialise_energies(){
+      compute_d_prior();
+      compute_S0_prior();
+      m_prior_en=0;
+      compute_prior();
+      m_likelihood_en=0;
+      compute_likelihood();
+      compute_energy();
+    }
+    
+    void initialise_props(){
+      m_S0_prop=m_S0/10; //must have set inital values before this is called;
+      m_d_prop=m_d/10;
     }
     
     inline float get_d() const{ return m_d;}
@@ -435,6 +470,14 @@ namespace FIBRE{
 	}
     }
 
+    bool reject_f_sum(){
+      float fsum=0;
+      for(unsigned int f=0;f<m_fibres.size();f++){
+	fsum+=m_fibres[f].get_f();	
+      }
+      return fsum>1; //true if sum(f) > 1 and therefore, we should reject f
+    }
+    
     inline void compute_prior(){
       m_old_prior_en=m_prior_en;
       m_prior_en=m_d_prior+m_S0_prior;
@@ -451,11 +494,13 @@ namespace FIBRE{
       for(unsigned int f=0;f<m_fibres.size();f++){
 	pred=pred+m_fibres[f].get_f()*m_fibres[f].getSignal();
 	fsum+=m_fibres[f].get_f();
+	
       }
       for(int i=1;i<=pred.Nrows();i++){
 	pred(i)=pred(i)+(1-fsum)*exp(-m_d*m_bvals(1,i));
       }
       pred=pred*m_S0;
+      
       float sumsquares=(m_data-pred).SumSquare();
       m_likelihood_en=(m_data.Nrows()/2)*log(sumsquares/2);
     }
@@ -472,9 +517,15 @@ namespace FIBRE{
     }
     
     inline void restore_energy(){
+      m_prior_en=m_old_prior_en;
+      m_likelihood_en=m_old_likelihood_en;
       m_energy=m_old_energy;
     }
     
+    inline void restore_energy_no_lik(){
+      m_prior_en=m_old_prior_en;
+      m_energy=m_old_energy;
+    }
 
     inline bool propose_d(){
       m_d_old=m_d;
@@ -539,10 +590,13 @@ namespace FIBRE{
 	compute_prior();
 	compute_likelihood();
 	compute_energy();
-	if(test_energy())
+	if(test_energy()){
 	  accept_d();
-	else
+	}
+	else{
 	  reject_d();
+	  restore_energy();
+	}
       }
       else{ 
 	reject_d();
@@ -554,74 +608,109 @@ namespace FIBRE{
 	compute_energy();
 	if(test_energy())
 	  accept_S0();
-	else
+	else{
 	  reject_S0();
+	  restore_energy();
+	}
       }
       else{
 	reject_S0();
-      }
+      } 
       
       for(unsigned int f=0;f<m_fibres.size();f++){
+	//cout<<"pre th"<<m_fibres[f].get_th()<<endl;	
+	//	cout << m_fibres[f].getSignal()<<endl;
+	//cout<<"prior"<<m_prior_en<<endl;
+	//cout<<"lik"<<m_likelihood_en<<endl;
+	//cout<<"energy"<<m_energy<<endl;
+	//cout <<endl;
 	if(!m_fibres[f].propose_th()){
+	  
 	  compute_prior();
 	  compute_likelihood();
 	  compute_energy();
-	  if(test_energy())
+	  //cout<<"pre th"<<m_fibres[f].get_th()<<endl;	
+	  //	cout << m_fibres[f].getSignal()<<endl;
+	  //cout<<"prior"<<m_prior_en<<endl;
+	  //cout<<"lik"<<m_likelihood_en<<endl;
+	  //cout<<"energy"<<m_energy<<endl;
+	  	  
+	  if(test_energy()){
 	    m_fibres[f].accept_th();
-	  else
+	  //cout<<"accepted"<<endl;}
+	  }
+	  else{
 	    m_fibres[f].reject_th();
+	    restore_energy();
+	    //cout<<"rejected"<<endl;
+	  }
+	    //cout <<endl<<endl;
 	}
 	else {
 	  m_fibres[f].reject_th();
 	}
 	
-	if(!m_fibres[f].propose_ph()){
-	compute_prior();
-	compute_likelihood();
-	compute_energy();
-	if(test_energy())
-	  m_fibres[f].accept_ph();
-	else
-	  m_fibres[f].reject_ph();
-	}
-	else{
-	  m_fibres[f].reject_ph();
-	}
-	
-	if(!m_fibres[f].propose_f()){
-	  compute_prior();
-	  compute_likelihood();
-	  compute_energy();
-	  if(test_energy())
-	    m_fibres[f].accept_f();
-	  else
+	  if(!m_fibres[f].propose_ph()){
+	    compute_prior();
+	    compute_likelihood();
+	    compute_energy();
+	    if(test_energy())
+	      m_fibres[f].accept_ph();
+	    else{
+	      m_fibres[f].reject_ph();
+	      restore_energy();
+	    }
+	  }
+	  else{
+	    m_fibres[f].reject_ph();
+	  }
+	  
+	  if(!m_fibres[f].propose_f()){
+	    if(!reject_f_sum()){
+	      compute_prior();
+	      compute_likelihood();
+	      compute_energy();
+	      if(test_energy()){
+		m_fibres[f].accept_f();
+	      }
+	      else{
+		m_fibres[f].reject_f();
+		restore_energy();
+	      }
+	    }
+	    else{//else for rejectin fsum>1
+	      m_fibres[f].reject_f();
+	    }
+	  }
+	  else{//else for rejecting rejflag returned from propose_f()
 	    m_fibres[f].reject_f();
-	}
-	else{
-	  m_fibres[f].reject_f();
-	}
-	
-
-	if(!m_fibres[f].propose_lam()){
-	compute_prior();
-	//	compute_likelihood(); //lam does not affect the likelihood.
-	compute_energy();
-	if(test_energy())
-	  m_fibres[f].accept_lam();
-	else
-	  m_fibres[f].reject_lam();
-	}
-	else{
-	  m_fibres[f].reject_lam();
-	}
+	  }
+	  
+      
+	  if(!m_fibres[f].propose_lam()){
+	    compute_prior();
+	    compute_energy();
+	    if(test_energy()){
+	      m_fibres[f].accept_lam();
+	    }
+	    else{
+	      m_fibres[f].reject_lam();
+	      restore_energy_no_lik();
+	    }
+	  }
+	  else{
+	    m_fibres[f].reject_lam();
+	  }
+      
+ 
       }
-
-
+      
+      
+      
     }
     
-
-
-};
+    
+  };
   
   
 }

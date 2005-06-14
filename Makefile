@@ -6,7 +6,8 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
  
-DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+#DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 
 DTIFIT=dtifit
@@ -20,7 +21,7 @@ DIFF_PVM=diff_pvm
 XFIBRES=xfibres
 RV=replacevols
 MDV=make_dyadic_vectors
-
+TEST=testfile
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o pt_matrix_mesh.o
@@ -33,7 +34,7 @@ DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 XFIBOBJS=xfibres.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
-
+TESTOBJS=testfile.o
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 FSCRIPTS=correct_and_average ocmr_preproc
@@ -77,6 +78,9 @@ ${RV}:    	${RVOBJS}
 
 ${MDV}:    	${MDVOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MDVOBJS} ${DLIBS}
+
+${TEST}:    	${TESTOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
 
 
 
