@@ -176,22 +176,64 @@ public:
   
   void save(const volume<float>& mask){
     volume4D<float> tmp;
+    //So that I can sort the output fibres into
+    // files ordered by fibre fractional volume..
+    vector<Matrix> thsamples_out=m_thsamples;
+    vector<Matrix> phsamples_out=m_phsamples;
+    vector<Matrix> fsamples_out=m_fsamples;
+    vector<Matrix> lamsamples_out=m_lamsamples;
+
     Log& logger = LogSingleton::getInstance();
     tmp.setmatrix(m_dsamples,mask);
     save_volume4D(tmp,logger.appendDir("dsamples"));
     tmp.setmatrix(m_S0samples,mask);
     save_volume4D(tmp,logger.appendDir("S0samples"));
+    
+    //Sort the output based on mean_fsamples
+    // 
+    vector<Matrix> sumf;
     for(int f=0;f<opts.nfibres.value();f++){
-      tmp.setmatrix(m_thsamples[f],mask);
+      Matrix tmp=sum(m_fsamples[f],1);
+      sumf.push_back(tmp);
+    }  
+    
+    for(int vox=1;vox<=m_dsamples.Ncols();vox++){
+      vector<pair<float,int> > sfs;
+      pair<float,int> ftmp;
+      for(int f=0;f<opts.nfibres.value();f++){
+	ftmp.first=sumf[f](1,vox);
+	ftmp.second=f;
+	sfs.push_back(ftmp);
+      }
+      sort(sfs.begin(),sfs.end());
+      
+      for(int samp=1;samp<=m_dsamples.Nrows();samp++){
+	for(int f=0;f<opts.nfibres.value();f++){
+ 	  thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
+	  phsamples_out[f](samp,vox)=m_phsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
+	  fsamples_out[f](samp,vox)=m_fsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
+	  lamsamples_out[f](samp,vox)=m_lamsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
+	}
+      
+      }
+      
+      
+    }
+    
+    // save the sorted fibres
+    for(int f=0;f<opts.nfibres.value();f++){
+      element_mod_n(thsamples_out[f],M_PI);
+      element_mod_n(phsamples_out[f],2*M_PI);
+      tmp.setmatrix(thsamples_out[f],mask);
       string oname="th"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_phsamples[f],mask);
+      tmp.setmatrix(phsamples_out[f],mask);
       oname="ph"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_fsamples[f],mask);
+      tmp.setmatrix(fsamples_out[f],mask);
       oname="f"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(m_lamsamples[f],mask);
+      tmp.setmatrix(lamsamples_out[f],mask);
       oname="lam"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
     }
