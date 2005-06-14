@@ -25,7 +25,7 @@ while [ $fib -le $numfib ];do
     echo $fib
     ${FSLDIR}/bin/avwmaths f${fib}samples -Tmean mean_f${fib}samples
     ${FSLDIR}/bin/avwmaths mean_f${fib}samples -thr $thresh -bin ${$}bin${fib}
-    ${FSLDIR}/bin/avwmaths numfib -add ${$}bin${fib} numfibs
+    ${FSLDIR}/bin/avwmaths numfibs -add ${$}bin${fib} numfibs
     ${FSLDIR}/bin/make_dyadic_vectors th${fib}samples ph${fib}samples dyads${fib}
     fib=`echo "$fib +1"|bc`;
 done
