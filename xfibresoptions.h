@@ -32,7 +32,6 @@ class xfibresOptions {
   Option<string> logdir;
   Option<bool> forcedir;
   Option<string> datafile;
-  Option<string> ofile;
   Option<string> maskfile;
   Option<string> bvecsfile;
   Option<string> bvalsfile;
@@ -73,12 +72,9 @@ class xfibresOptions {
 	 string("log directory (default is logdir)"),
 	 false, requires_argument),
   forcedir(string("--forcedir"),false,string("Use the actual directory name given - i.e. don't add + to make a new directory"),false,no_argument),
-  datafile(string("--data,--datafile"), string("data"),
+  datafile(string("-k,--data,--datafile"), string("data"),
 	      string("data file"),
 	      true, requires_argument),  
-  ofile(string("-o,--out"), string("dti"),
-	 string("Output basename"),
-	 true, requires_argument),
   maskfile(string("-m,--mask, --maskfile"), string("nodif_brain_mask"),
 	    string("mask file"),
 	    true, requires_argument),
@@ -115,7 +111,6 @@ class xfibresOptions {
        options.add(logdir);
        options.add(forcedir);
        options.add(datafile);
-       options.add(ofile);
        options.add(maskfile);
        options.add(bvecsfile);
        options.add(bvalsfile);

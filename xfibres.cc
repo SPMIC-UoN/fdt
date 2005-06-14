@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
     cart2sph(bvecs,alpha,beta);
     Samples samples(datam.Ncols());
     for(int vox=1;vox<=datam.Ncols();vox++){
-      cout` <<vox<<"/"<<datam.Ncols()<<endl;
+      cout <<vox<<"/"<<datam.Ncols()<<endl;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
       vm.initialise(Amat);
       vm.runmcmc();
