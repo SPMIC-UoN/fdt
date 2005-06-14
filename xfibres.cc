@@ -192,19 +192,22 @@ public:
     //Sort the output based on mean_fsamples
     // 
     vector<Matrix> sumf;
+    cerr<<"cock"<<endl;
     for(int f=0;f<opts.nfibres.value();f++){
       Matrix tmp=sum(m_fsamples[f],1);
       sumf.push_back(tmp);
     }  
-    
+    cerr<<"cock2"<<endl;
     for(int vox=1;vox<=m_dsamples.Ncols();vox++){
       vector<pair<float,int> > sfs;
       pair<float,int> ftmp;
+      
       for(int f=0;f<opts.nfibres.value();f++){
 	ftmp.first=sumf[f](1,vox);
 	ftmp.second=f;
 	sfs.push_back(ftmp);
       }
+      cerr<<sfs.size()<<endl;
       sort(sfs.begin(),sfs.end());
       
       for(int samp=1;samp<=m_dsamples.Nrows();samp++){
@@ -219,11 +222,11 @@ public:
       
       
     }
-    
+    cerr<<"cock3"<<endl;
     // save the sorted fibres
     for(int f=0;f<opts.nfibres.value();f++){
-      element_mod_n(thsamples_out[f],M_PI);
-      element_mod_n(phsamples_out[f],2*M_PI);
+      //      element_mod_n(thsamples_out[f],M_PI);
+      //      element_mod_n(phsamples_out[f],2*M_PI);
       tmp.setmatrix(thsamples_out[f],mask);
       string oname="th"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
