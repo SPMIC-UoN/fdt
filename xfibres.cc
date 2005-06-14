@@ -192,12 +192,10 @@ public:
     //Sort the output based on mean_fsamples
     // 
     vector<Matrix> sumf;
-    cerr<<"cock"<<endl;
     for(int f=0;f<opts.nfibres.value();f++){
       Matrix tmp=sum(m_fsamples[f],1);
       sumf.push_back(tmp);
     }  
-    cerr<<"cock2"<<endl;
     for(int vox=1;vox<=m_dsamples.Ncols();vox++){
       vector<pair<float,int> > sfs;
       pair<float,int> ftmp;
@@ -221,7 +219,6 @@ public:
       
       
     }
-    cerr<<"cock3"<<endl;
     // save the sorted fibres
     for(int f=0;f<opts.nfibres.value();f++){
       //      element_mod_n(thsamples_out[f],M_PI);
@@ -383,7 +380,6 @@ int main(int argc, char *argv[])
 
     // Setup logging:
     Log& logger = LogSingleton::getInstance();
-    cerr<<"here"<<endl;
     xfibresOptions& opts = xfibresOptions::getInstance();
     opts.parse_command_line(argc,argv,logger);
     srand(xfibresOptions::getInstance().seed.value());
@@ -400,16 +396,13 @@ int main(int argc, char *argv[])
       read_volume(mask,opts.maskfile.value());
       datam=data.matrix(mask);  
     }
-    cerr<<"ok"<<endl;
     Matrix Amat;
     ColumnVector alpha, beta;
     Amat=form_Amat(bvecs,bvals);
     cart2sph(bvecs,alpha,beta);
     Samples samples(datam.Ncols());
-    cerr<<"ok2"<<endl;
-    cerr<<datam.Ncols()<<endl;
     for(int vox=1;vox<=datam.Ncols();vox++){
-      cerr <<vox<<"/"<<datam.Ncols()<<endl;
+      cout` <<vox<<"/"<<datam.Ncols()<<endl;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);
       vm.initialise(Amat);
       vm.runmcmc();
