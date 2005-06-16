@@ -20,7 +20,8 @@ numfib=`${FSLDIR}/bin/imglob -oneperimage f*samples |wc -w`
 
 echo "$numfib fibres"
 fib=1;
-avwmaths S0samples -mul 0 numfibs
+avwroi S0samples numfibs 0 1
+avwmaths numfibs -mul 0 numfibs
 while [ $fib -le $numfib ];do
     echo $fib
     ${FSLDIR}/bin/avwmaths f${fib}samples -Tmean mean_f${fib}samples
