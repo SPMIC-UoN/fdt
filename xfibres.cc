@@ -127,6 +127,7 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 class Samples{
   xfibresOptions& opts;
   Matrix m_dsamples;
+  Matrix m_disosamples;
   Matrix m_S0samples;
   vector<Matrix> m_thsamples;
   vector<Matrix> m_phsamples;
@@ -148,6 +149,8 @@ public:
 
     m_dsamples.ReSize(nsamples,nvoxels);
     m_dsamples=0;
+    m_disosamples.ReSize(nsamples,nvoxels);
+    m_disosamples=0;
     m_S0samples.ReSize(nsamples,nvoxels);
     m_S0samples=0;
    
@@ -164,6 +167,7 @@ public:
   
   void record(Multifibre& mfib, int vox, int samp){
     m_dsamples(samp,vox)=mfib.get_d();
+    m_disosamples(samp,vox)=mfib.get_diso();
     m_S0samples(samp,vox)=mfib.get_S0();
     for(int f=0;f<opts.nfibres.value();f++){
       m_thsamples[f](samp,vox)=mfib.fibres()[f].get_th();
@@ -186,6 +190,8 @@ public:
     Log& logger = LogSingleton::getInstance();
     tmp.setmatrix(m_dsamples,mask);
     save_volume4D(tmp,logger.appendDir("dsamples"));
+    tmp.setmatrix(m_disosamples,mask);
+    save_volume4D(tmp,logger.appendDir("disosamples"));
     tmp.setmatrix(m_S0samples,mask);
     save_volume4D(tmp,logger.appendDir("S0samples"));
     
@@ -327,6 +333,7 @@ class xfibresVoxelManager{
     if(f<=0.001) f=0.001;
     if(D<=0) D=2e-3;
     m_multifibre.set_d(D);
+    m_multifibre.set_diso(D);
     m_multifibre.set_S0(S0);
     if(opts.nfibres.value()>0){
       m_multifibre.addfibre(th,ph,f,1);
