@@ -49,6 +49,7 @@ namespace FIBRE{
     int m_f_rej;
     int m_lam_acc; 
     int m_lam_rej;
+    bool m_lam_jump;
     ColumnVector m_Signal; 
     ColumnVector m_Signal_old; 
     const float& m_d;
@@ -65,15 +66,16 @@ namespace FIBRE{
 	m_th_old=m_th;
 	m_ph=0;
 	m_ph_old=m_ph;
-	m_f=0.05;
+	m_f=0.01;
 	m_f_old=m_f;
-	m_lam=1;
+	m_lam=10;
 	m_lam_old=m_lam;
+	m_lam_jump=true;
 	m_th_prop=0.2;
 	m_ph_prop=0.2;
 	m_f_prop=0.2;
 	m_lam_prop=1;
-	
+
 	m_th_prior=0;
 	compute_th_prior();
 	
@@ -102,8 +104,8 @@ namespace FIBRE{
     Fibre(const ColumnVector& alpha, 
 	  const ColumnVector& beta, const Matrix& bvals, const float& d, 
 	  const float& th, const float& ph, const float& f, 
-	  const float& lam) : 
-      m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_d(d), 
+	  const float& lam, const bool lam_jump=true) : 
+      m_th(th), m_ph(ph), m_f(f), m_lam(lam),m_lam_jump(lam_jump), m_d(d),  
       m_alpha(alpha), m_beta(beta), m_bvals(bvals)
      {
 
@@ -218,13 +220,14 @@ namespace FIBRE{
 	return true;
       else{
 	m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
+	m_f_prior=3*m_f_prior;
 	return false;
       }
     }
     
     inline bool compute_lam_prior(){
       m_lam_old_prior=m_lam_prior;
-      if(m_lam <0 | m_lam > 1e16)
+      if(m_lam <0 | m_lam > 1e16 )
 	return true;
       else{
 	m_lam_prior=0;
@@ -309,12 +312,15 @@ namespace FIBRE{
     }
     
     inline bool propose_lam(){
+      if(m_lam_jump){
       m_lam_old=m_lam;
       m_lam+=normrnd().AsScalar()*m_lam_prop;
       bool rejflag=compute_lam_prior();
       compute_f_prior();
       compute_prior();
       return rejflag;
+      }
+      else {return true;}
     };
     
     inline void accept_lam(){
@@ -384,13 +390,6 @@ namespace FIBRE{
     float m_d_old_prior;
     float m_d_acc;
     float m_d_rej;
-    float m_diso;
-    float m_diso_old;
-    float m_diso_prop;
-    float m_diso_prior; 
-    float m_diso_old_prior;
-    float m_diso_acc;
-    float m_diso_rej;
     float m_S0;
     float m_S0_old;
     float m_S0_prop;
@@ -424,8 +423,8 @@ namespace FIBRE{
       return m_fibres;
     }
     
-    void addfibre(const float th, const float ph, const float f,const float lam){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d,th,ph,f,lam);
+    void addfibre(const float th, const float ph, const float f,const float lam, const bool lam_jump=true){
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,th,ph,f,lam,lam_jump);
       m_fibres.push_back(fib);
     }
 
@@ -436,7 +435,6 @@ namespace FIBRE{
     
     void initialise_energies(){
       compute_d_prior();
-      compute_diso_prior();
       compute_S0_prior();
       m_prior_en=0;
       compute_prior();
@@ -448,23 +446,19 @@ namespace FIBRE{
     void initialise_props(){
       m_S0_prop=m_S0/10; //must have set inital values before this is called;
       m_d_prop=m_d/10;
-      m_diso_prop=m_diso/10;
     }
     
     inline float get_d() const{ return m_d;}
     inline void set_d(const float d){ m_d=d; }
+    
 
-    inline float get_diso() const{ return m_diso;}
-    inline void set_diso(const float diso){ m_diso=diso; }
-    
-    
     inline float get_S0() const{ return m_S0;}
     inline void set_S0(const float S0){ m_S0=S0; }
     
 
     inline bool compute_d_prior(){
       m_d_old_prior=m_d_prior;
-      if(m_d<0||m_d>5e-3)
+      if(m_d<0)
 	return true;
       else{
 	m_d_prior=0;
@@ -472,17 +466,6 @@ namespace FIBRE{
       }
     }
     
-
-    inline bool compute_diso_prior(){
-      m_diso_old_prior=m_diso_prior;
-      if(m_diso<0||m_diso>5e-3)
-	return true;
-      else{
-	m_diso_prior=0;
-	return false;
-      }
-    }
-        
     inline bool compute_S0_prior(){
       m_S0_old_prior=m_S0_prior;
       if(m_S0<0) return true;
@@ -503,7 +486,7 @@ namespace FIBRE{
     
     inline void compute_prior(){
       m_old_prior_en=m_prior_en;
-      m_prior_en=m_d_prior+m_diso_prior+m_S0_prior;
+      m_prior_en=m_d_prior+m_S0_prior;
       for(unsigned int f=0;f<m_fibres.size(); f++){
 	m_prior_en=m_prior_en+m_fibres[f].get_prior();
       } 
@@ -520,7 +503,7 @@ namespace FIBRE{
 	
       }
       for(int i=1;i<=pred.Nrows();i++){
-	pred(i)=pred(i)+(1-fsum)*exp(-m_diso*m_bvals(1,i));
+	pred(i)=pred(i)+(1-fsum)*exp(-m_d*m_bvals(1,i));
       }
       pred=pred*m_S0;
       
@@ -572,26 +555,6 @@ namespace FIBRE{
       m_d_rej++;
     }
     
-
-    inline bool propose_diso(){
-      m_diso_old=m_diso;
-      m_diso+=normrnd().AsScalar()*m_diso_prop;
-      bool rejflag=compute_diso_prior();//inside this it stores the old prior
-      return rejflag;
-    };
-    
-    inline void accept_diso(){
-      m_diso_acc++;      
-    }
-    
-    inline void reject_diso(){
-      m_diso=m_diso_old;
-      m_diso_prior=m_diso_old_prior;
-      m_prior_en=m_old_prior_en;
-      m_diso_rej++;
-    }
-    
-    
     inline bool propose_S0(){
       m_S0_old=m_S0;
       m_S0+=normrnd().AsScalar()*m_S0_prop;
@@ -612,7 +575,6 @@ namespace FIBRE{
     
     inline void update_proposals(){
       m_d_prop*=sqrt(float(m_d_acc+1)/float(m_d_rej+1));
-      m_diso_prop*=sqrt(float(m_diso_acc+1)/float(m_diso_rej+1));
       m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
       m_d_acc=0; 
       m_d_rej=0;
@@ -644,22 +606,6 @@ namespace FIBRE{
       }
       else{ 
 	reject_d();
-      }
-      
-      if(!propose_diso()){
-	compute_prior();
-	compute_likelihood();
-	compute_energy();
-	if(test_energy()){
-	  accept_diso();
-	}
-	else{
-	  reject_diso();
-	  restore_energy();
-	}
-      }
-      else{ 
-	reject_diso();
       }
       
       if(!propose_S0()){
