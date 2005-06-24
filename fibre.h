@@ -366,6 +366,7 @@ namespace FIBRE{
       m_f_rej=rhs.m_f_rej;
       m_lam_acc=rhs.m_lam_acc; 
       m_lam_rej=rhs.m_lam_rej;
+      m_lam_jump=rhs.m_lam_jump;
       m_Signal=rhs.m_Signal; 
       m_Signal_old=rhs. m_Signal_old; 
       return *this;
