@@ -88,7 +88,7 @@ class xfibresOptions {
   nfibres(string("--nf,--nfibres"),1,
 	 string("Maximum nukmber of fibres to fit in each voxel (default 1)"),
 	 false,requires_argument),
-  fudge(string("fudge"),1,
+  fudge(string("--fudge"),1,
 	 string("ARD fudge factor"),
 	 false,requires_argument),
   njumps(string("--nj,--njumps"),5000,
