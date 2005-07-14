@@ -108,7 +108,6 @@ namespace FIBRE{
       m_th(th), m_ph(ph), m_f(f), m_lam(lam),m_lam_jump(lam_jump), m_d(d),  
       m_alpha(alpha), m_beta(beta), m_bvals(bvals)
      {
-
       m_th_old=m_th;
       m_ph_old=m_ph;
       m_f_old=m_f;
@@ -117,7 +116,7 @@ namespace FIBRE{
       m_ph_prop=0.2;
       m_f_prop=0.2;
       m_lam_prop=1;
-
+      
       m_th_prior=0;
       compute_th_prior();
 
@@ -313,12 +312,12 @@ namespace FIBRE{
     
     inline bool propose_lam(){
       if(m_lam_jump){
-      m_lam_old=m_lam;
-      m_lam+=normrnd().AsScalar()*m_lam_prop;
-      bool rejflag=compute_lam_prior();
-      compute_f_prior();
-      compute_prior();
-      return rejflag;
+	m_lam_old=m_lam;
+	m_lam+=normrnd().AsScalar()*m_lam_prop;
+	bool rejflag=compute_lam_prior();
+	compute_f_prior();
+	compute_prior();
+	return rejflag;
       }
       else {return true;}
     };
@@ -339,7 +338,7 @@ namespace FIBRE{
       m_th=rhs.m_th;
       m_ph=rhs.m_ph;
       m_f=rhs.m_f;
-      m_lam=rhs. m_lam;
+      m_lam=rhs.m_lam;
       m_th_prop=rhs. m_th_prop;
       m_ph_prop=rhs.m_ph_prop;
       m_f_prop=rhs.m_f_prop;
@@ -693,7 +692,7 @@ namespace FIBRE{
 	    m_fibres[f].reject_f();
 	  }
 	  
-      
+	  
 	  if(!m_fibres[f].propose_lam()){
 	    compute_prior();
 	    compute_energy();
