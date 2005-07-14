@@ -1,4 +1,4 @@
-/*  tractvols.h
+/*  tractvolsX.h
 
     Tim Behrens, FMRIB Image Analysis Group
 
@@ -16,36 +16,93 @@
 #include "newimage/newimageall.h"
 #include <iostream>
 #include "stdlib.h"
-
+#include "probtrackxOptions.h"
 using namespace std;
 using namespace NEWIMAGE;
+using namespace TRACT;
 
 namespace TRACTVOLS{
   class TractVols
     {
     private:
-      volume4D<float> thsamples;
-      volume4D<float> phsamples;
-      volume4D<float> fsamples;
+      probtrackxOptions& opts;
+      vector<volume4D<float>* > thsamples;
+      vector<volume4D<float>* > phsamples;
+      vector<volume4D<float>* > fsamples;
+      bool init_sample;
+      int fibst;
       bool usef;
     public:
       //constructors::
-      TractVols(const bool& usefin=false):usef(usefin){}
-      ~TractVols(){}
-      
-      //Initialise
-      void initialise(const string& basename){
-	read_volume4D(thsamples,basename+"_thsamples");
-	read_volume4D(phsamples,basename+"_phsamples");
-	if(usef)
-	  read_volume4D(fsamples,basename+"_fsamples");
+      TractVols(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(1),usef(usefin){}
+      TractVols():opts(probtrackxOptions::getInstance()){}
+      ~TractVols(){
+	for(unsigned int m=0;m<thsamples.size();m++)
+	  delete thsamples[m]; //ask flitney, do you just delete the ptr??
+	for(unsigned int m=0;m<phsamples.size();m++)
+	  delete phsamples[m];
+	for(unsigned int m=0;m<fsamples.size();m++)
+	  delete fsamples[m];
       }
       
+      
+      void reset(const int& fibst_in){
+	init_sample=true;
+	fibst=fibst_in;
+      }
+      //Initialise
+      void initialise(const string& basename){
+	
 
-      ColumnVector sample(const float& x,const float& y,const float&z){
-	// 	int r_x=(int) round(x);
-	// 	int r_y=(int) round(y);
-	// 	int r_z=(int) round(z);
+	if(fsl_imageexists(basename+"_thsamples")){
+	  volume4D<float> *tmpthptr= new volume4D<float>;
+	  volume4D<float> *tmpphptr= new volume4D<float>;
+	  volume4D<float> *tmpfptr= new volume4D<float>;
+	  cout<<"1"<<endl;
+	  read_volume4D(*tmpthptr,basename+"_thsamples");
+	  cout<<"2"<<endl;
+	  thsamples.push_back(tmpthptr);
+	  cout<<"3"<<endl;
+	  read_volume4D(*tmpphptr,basename+"_phsamples");
+	  cout<<"4"<<endl;
+	  phsamples.push_back(tmpphptr);
+	  cout<<"5"<<endl;
+	  if(usef){
+	    read_volume4D(*tmpfptr,basename+"_fsamples");
+	    fsamples.push_back(tmpfptr);
+	  }
+	  cout<<"6"<<endl;
+	}
+	else{
+	  int fib=1;
+	  bool fib_existed=true;
+	  while(fib_existed){
+	    if(fsl_imageexists(basename+"_th"+num2str(fib)+"samples")){
+	      volume4D<float> *tmpthptr= new volume4D<float>;
+	      volume4D<float> *tmpphptr= new volume4D<float>;
+	      volume4D<float> *tmpfptr= new volume4D<float>;
+	      cout<<fib<<"_1"<<endl;
+	      read_volume4D(*tmpthptr,basename+"_th"+num2str(fib)+"samples");
+	      thsamples.push_back(tmpthptr);
+	      cout<<fib<<"_2"<<endl;
+	      read_volume4D(*tmpphptr,basename+"_ph"+num2str(fib)+"samples");
+	      phsamples.push_back(tmpphptr);
+	      cout<<fib<<"_3"<<endl;
+	      read_volume4D(*tmpfptr,basename+"_f"+num2str(fib)+"samples");
+	      fsamples.push_back(tmpfptr);
+	      fib++;
+	    }
+	    else{
+	      fib_existed=false;
+	    }
+	  }
+	  
+	}
+	cout<<"7"<<endl;
+      }
+      
+      
+      ColumnVector sample(const float& x,const float& y,const float&z,const float& r_x,const float& r_y,const float& r_z){
 	
 	////////Probabilistic interpolation
 	int cx =(int) ceil(x),fx=(int) floor(x);
@@ -93,17 +150,49 @@ namespace TRACTVOLS{
 	
 	
 	float samp=rand(); samp/=RAND_MAX;
-	samp=round(samp*(thsamples.tsize()-1));
-	//float phi = phsamples(r_x,r_y,r_z,samp);
-	//float theta = thsamples(r_x,r_y,r_z,samp);
+	samp=round(samp*((*thsamples[0]).tsize()-1));
+	float theta=0,phi=0;
+	float dotmax=0,dottmp=0;
+	int fibind=0;
+	if(thsamples.size()>1){//more than 1 fibre
+	  if(init_sample){//go for the specified option on the first jump
+	    theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
+	    phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
+	    init_sample=false;
+	  }
+	  else{
+	    for(unsigned int fib=0;fib<thsamples.size();fib++){
+	      if((*fsamples[fib])(int(newx),int(newy),int(newz),int(samp))>opts.fibthresh.value()){
+		float phtmp=(*phsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		float thtmp=(*thsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		dottmp=fabs(sin(thtmp)*cos(phtmp)*r_x + sin(thtmp)*sin(phtmp)*r_y + cos(thtmp)*r_z);
+		if(dottmp>dotmax){
+		  dotmax=dottmp;
+		  theta=thtmp;
+		  phi=phtmp;
+		  fibind=fib;
+		}
 		
-	float phi = phsamples(int(newx),int(newy),int(newz),int(samp));
-	float theta = thsamples(int(newx),int(newy),int(newz),int(samp));
+	      }
+	      
+	    }
+	    
+	    if(dotmax==0){
+	      theta=(*thsamples[0])(int(newx),int(newy),int(newz),int(samp));
+	      phi=(*phsamples[0])(int(newx),int(newy),int(newz),int(samp));
+	    }
+	  }
+	}
+	else{
+	  theta=(*thsamples[0])(int(newx),int(newy),int(newz),int(samp));
+	  phi=(*phsamples[0])(int(newx),int(newy),int(newz),int(samp));
+	}
+
 	
 	float f;
 	
 	if(usef){
-	  f = fsamples(int(newx),int(newy),int(newz),int(samp));
+	  f = (*fsamples[fibind])(int(newx),int(newy),int(newz),int(samp));
 	}
 	else
 	  f=1;
@@ -116,7 +205,7 @@ namespace TRACTVOLS{
 
       ColumnVector dimensions(){
 	ColumnVector dims(3);
-	dims << thsamples.xdim() <<thsamples.ydim() << thsamples.zdim();
+	dims << (*thsamples[0]).xdim() <<(*thsamples[0]).ydim() << (*thsamples[0]).zdim();
 	return dims;
       }
     };

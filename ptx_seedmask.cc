@@ -17,7 +17,7 @@ using namespace mesh;
 
 void seedmask()
 { 
-  probtrackOptions& opts =probtrackOptions::getInstance();
+  probtrackxOptions& opts =probtrackxOptions::getInstance();
 
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();

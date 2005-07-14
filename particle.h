@@ -46,25 +46,51 @@ namespace PARTICLE{
       int m_jumpsign;
     public:
       //constructors::
-      Particle(const float& xin=0,const float& yin=0,
-	       const float& zin=0,const float& rxin=0,
-	       const float& ryin=0,const float &rzin=0,
-	       const float& steplengthin=0.5,
-	       const float& xdimin=2,
-	       const float& ydimin=2,
-	       const float& zdimin=2,
+      Particle(const float& xin,const float& yin,
+	       const float& zin,const float& rxin,
+	       const float& ryin,const float &rzin,
+	       const float& steplengthin,
+	       const float& xdimin,
+	       const float& ydimin,
+	       const float& zdimin,
 	       const bool& hasjumpedin=false,
 	       const bool& simdiffin=false) : 
 	m_x(xin), m_y(yin), m_z(zin), m_rx(rxin), 
 	m_ry(ryin),m_rz(rzin),m_steplength(steplengthin),
 	m_xdim(xdimin),m_ydim(ydimin),m_zdim(zdimin),
 	m_has_jumped(hasjumpedin),m_simdiff(false){}
+      Particle(){}
       ~Particle(){}
-
+      
+      //initialise
+      void initialise(const float& xin=0,const float& yin=0,
+		      const float& zin=0,const float& rxin=0,
+		      const float& ryin=0,const float &rzin=0,
+		 const float& steplengthin=0.5,
+		 const float& xdimin=2,
+		 const float& ydimin=2,
+		 const float& zdimin=2,
+		 const bool& hasjumpedin=false,
+		 const bool& simdiffin=false){
+	m_x=xin;
+	m_y=yin;
+	m_z=zin;
+	m_rx=rxin; 
+	m_ry=ryin;
+	m_rz=rzin;
+	m_steplength=steplengthin;
+	m_xdim=xdimin;
+	m_ydim=ydimin;
+	m_zdim=zdimin;
+	m_has_jumped=hasjumpedin;
+	m_simdiff=simdiffin;
+      }
+      
+      
       //return values
       const float& x() const { return m_x; }
       float x() { return m_x; }
-  
+      
       const float& y() const { return m_y; }
       float y() { return m_y; }
   
@@ -209,6 +235,9 @@ namespace PARTICLE{
     ostr<<p.m_x<<" "<<p.m_y<<" "<<p.m_z<<endl;
     return ostr;
   }
+
+  
+
 
 }
 

@@ -24,7 +24,7 @@ using namespace mesh;
 
 
 int main ( int argc, char **argv ){
-  probtrackOptions& opts =probtrackOptions::getInstance();
+  probtrackxOptions& opts =probtrackxOptions::getInstance();
   Log& logger = LogSingleton::getInstance();
   opts.parse_command_line(argc,argv,logger);
   srand(opts.rseed.value());

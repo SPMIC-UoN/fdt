@@ -1,4 +1,4 @@
-/*  Gam.cc
+/*  particle.cc
 
     Tim Behrens, FMRIB Image Analysis Group
 
@@ -7,10 +7,3 @@
 /*  CCOPYRIGHT  */
 
 #include "particle.h"
-
-
-
-
-
-
-

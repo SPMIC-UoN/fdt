@@ -12,6 +12,7 @@ DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz 
 
 DTIFIT=dtifit
 PT=probtrack
+PTX=probtrackx
 FTB=find_the_biggest
 PJ=proj_thresh
 MED=medianfilter
@@ -25,6 +26,7 @@ TEST=testfile
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o pt_matrix_mesh.o
+PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o
 FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
@@ -45,6 +47,9 @@ FXFILES = reord_OM sausages replacevols
 RUNTCLS = Fdt
 
 all: ${XFILES} ${FXFILES} 
+
+${PTX}:		   ${PTXOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
 
 ${PT}:		   ${PTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS} 

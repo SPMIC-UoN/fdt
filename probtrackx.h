@@ -2,7 +2,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include "probtrackOptions.h"
+#include "probtrackxOptions.h"
 #include "particle.h"
 #include "tractvols.h"
 #include "ptx_simple.h"

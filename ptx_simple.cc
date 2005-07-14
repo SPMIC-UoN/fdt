@@ -15,7 +15,7 @@ using namespace mesh;
 
 
 void track(){
-  probtrackOptions& opts =probtrackOptions::getInstance();
+  probtrackxOptions& opts =probtrackxOptions::getInstance();
   
   ////////////////////////////
   Log& logger = LogSingleton::getInstance();

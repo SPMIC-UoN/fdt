@@ -2,7 +2,7 @@
 #include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "meshclass/meshclass.h"
-#include "probtrackOptions.h"
+#include "probtrackxOptions.h"
 #include "particle.h"
 #include "tractvols.h"
 
@@ -21,7 +21,7 @@ namespace TRACT{
     //Everything in DTI space is done INSIDE this class and lower level classes (particle and tractvols)
     //This class communicates with higher level classes in Seed voxels.
     //
-    probtrackOptions& opts;
+    probtrackxOptions& opts;
     Log& logger;
     Particle m_part;
     vector<ColumnVector> m_path;
@@ -80,7 +80,7 @@ namespace TRACT{
 
 
   class Counter{
-    probtrackOptions& opts;
+    probtrackxOptions& opts;
     Log& logger;
     volume<int> m_prob;
     volume<int> m_beenhere;
@@ -113,7 +113,7 @@ namespace TRACT{
     Streamliner& m_nonconst_stline;
     
   public:
-    Counter(const volume<int>& seeds,Streamliner& stline):opts(probtrackOptions::getInstance()),
+    Counter(const volume<int>& seeds,Streamliner& stline):opts(probtrackxOptions::getInstance()),
 							  logger(LogSingleton::getInstance()),
 							  m_seeds(seeds),m_stline(stline),
 							  m_nonconst_stline(stline){
@@ -180,14 +180,14 @@ namespace TRACT{
   };
   
   class Seedmanager{
-    probtrackOptions& opts;
+    probtrackxOptions& opts;
     Log& logger;
     Counter& m_counter;    
     Streamliner& m_stline;
     const volume<int>& m_seeds;
     ColumnVector m_seeddims;
   public:
-    Seedmanager(Counter& counter):opts(probtrackOptions::getInstance()),
+    Seedmanager(Counter& counter):opts(probtrackxOptions::getInstance()),
 				  logger(LogSingleton::getInstance()),
 				  m_counter(counter),
 				  m_stline(m_counter.get_nonconst_streamline()),

@@ -23,7 +23,7 @@ namespace TRACT{
   }
   
   
-  Streamliner::Streamliner():opts(probtrackOptions::getInstance()),logger(LogSingleton::getInstance()),
+  Streamliner::Streamliner():opts(probtrackxOptions::getInstance()),logger(LogSingleton::getInstance()),
 			     vols(opts.usef.value()){
     
     read_volume(m_mask,opts.maskfile.value());
