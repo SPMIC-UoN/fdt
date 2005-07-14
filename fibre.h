@@ -11,10 +11,12 @@
 #include "libprob.h"
 #include <cmath>
 #include "miscmaths/miscprob.h"
+#include "xfibresoptions.h"
 
 using namespace std; 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace Xfibres;
 
 namespace FIBRE{
   
@@ -56,11 +58,12 @@ namespace FIBRE{
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
     const Matrix& m_bvals;
-  public:
+    xfibresOptions& opts;
+ public:
     //constructors::
     Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
 	   const Matrix& bvals,const float& d):
-      m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
+      m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals),opts(xfibresOptions::getInstance()){
 
 	m_th=M_PI/2;
 	m_th_old=m_th;
@@ -106,7 +109,7 @@ namespace FIBRE{
 	  const float& th, const float& ph, const float& f, 
 	  const float& lam, const bool lam_jump=true) : 
       m_th(th), m_ph(ph), m_f(f), m_lam(lam),m_lam_jump(lam_jump), m_d(d),  
-      m_alpha(alpha), m_beta(beta), m_bvals(bvals)
+      m_alpha(alpha), m_beta(beta), m_bvals(bvals),opts(xfibresOptions::getInstance())
      {
       m_th_old=m_th;
       m_ph_old=m_ph;
@@ -144,7 +147,7 @@ namespace FIBRE{
      
     }
     Fibre(const Fibre& rhs): 
-      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals){
+      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals),opts(xfibresOptions::getInstance()){
       *this=rhs;
     }
 
@@ -218,13 +221,8 @@ namespace FIBRE{
       if (m_f<0 | m_f>=1 )
 	return true;
       else{
-	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f)); //THIS IS THE BETA DISTRIBUTION UNMARGINALISED
-	if(m_lam_jump)
-	  m_f_prior=log(1-m_f) + 2*log(fabs(log(1-m_f))); //-log(1/(1-f)*1/log(1-f)^2) which is the marginalised energy
-	else
-	  m_f_prior=0;
-	
-	m_f_prior=3*m_f_prior;
+	m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
+	m_f_prior=opts.fudge.value()*m_f_prior;
 	return false;
       }
     }
@@ -698,20 +696,20 @@ namespace FIBRE{
 	  }
 	  
 	  
-	  // if(!m_fibres[f].propose_lam()){ //not jumping lam because of marginalised reference prior
-	  // 	    compute_prior();
-	  // 	    compute_energy();
-	  // 	    if(test_energy()){
-	  // 	      m_fibres[f].accept_lam();
-	  // 	    }
-	  // 	    else{
-	  // 	      m_fibres[f].reject_lam();
-	  // 	      restore_energy_no_lik();
-	  // 	    }
-	  // 	  }
-	  // 	  else{
-	  // 	    m_fibres[f].reject_lam();
-	  // 	  }
+	  if(!m_fibres[f].propose_lam()){
+	    compute_prior();
+	    compute_energy();
+	    if(test_energy()){
+	      m_fibres[f].accept_lam();
+	    }
+	    else{
+	      m_fibres[f].reject_lam();
+	      restore_energy_no_lik();
+	    }
+	  }
+	  else{
+	    m_fibres[f].reject_lam();
+	  }
       
  
       }

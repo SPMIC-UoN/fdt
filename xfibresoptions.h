@@ -36,6 +36,7 @@ class xfibresOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<int> nfibres;
+  Option<float> fudge;
   Option<int> njumps;
   Option<int> nburn;
   Option<int> sampleevery;
@@ -87,6 +88,9 @@ class xfibresOptions {
   nfibres(string("--nf,--nfibres"),1,
 	 string("Maximum nukmber of fibres to fit in each voxel (default 1)"),
 	 false,requires_argument),
+  fudge(string("fudge"),1,
+	 string("ARD fudge factor"),
+	 false,requires_argument),
   njumps(string("--nj,--njumps"),5000,
 	 string("Num of jumps to be made by MCMC (default is 5000)"),
 	 false,requires_argument),
@@ -115,6 +119,7 @@ class xfibresOptions {
        options.add(bvecsfile);
        options.add(bvalsfile);
        options.add(nfibres);
+       options.add(fudge);
        options.add(njumps);
        options.add(nburn);
        options.add(sampleevery);
