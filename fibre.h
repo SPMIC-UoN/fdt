@@ -218,7 +218,12 @@ namespace FIBRE{
       if (m_f<0 | m_f>=1 )
 	return true;
       else{
-	m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
+	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f)); //THIS IS THE BETA DISTRIBUTION UNMARGINALISED
+	if(m_lam_jump)
+	  m_f_prior=log(1-m_f) + 2*log(fabs(log(1-m_f))); //-log(1/(1-f)*1/log(1-f)^2) which is the marginalised energy
+	else
+	  m_f_prior=0;
+	
 	m_f_prior=3*m_f_prior;
 	return false;
       }
@@ -693,20 +698,20 @@ namespace FIBRE{
 	  }
 	  
 	  
-	  if(!m_fibres[f].propose_lam()){
-	    compute_prior();
-	    compute_energy();
-	    if(test_energy()){
-	      m_fibres[f].accept_lam();
-	    }
-	    else{
-	      m_fibres[f].reject_lam();
-	      restore_energy_no_lik();
-	    }
-	  }
-	  else{
-	    m_fibres[f].reject_lam();
-	  }
+	  // if(!m_fibres[f].propose_lam()){ //not jumping lam because of marginalised reference prior
+	  // 	    compute_prior();
+	  // 	    compute_energy();
+	  // 	    if(test_energy()){
+	  // 	      m_fibres[f].accept_lam();
+	  // 	    }
+	  // 	    else{
+	  // 	      m_fibres[f].reject_lam();
+	  // 	      restore_energy_no_lik();
+	  // 	    }
+	  // 	  }
+	  // 	  else{
+	  // 	    m_fibres[f].reject_lam();
+	  // 	  }
       
  
       }
