@@ -73,7 +73,7 @@ namespace TRACT{
   
   bool Streamliner::streamline(const float& x_init,const float& y_init,const float& z_init, const ColumnVector& dim_seeds,const int& fibst){ 
     
-    //fibst tells tractvols which fibre to start with if there are more than one..
+    //fibst tells tractvolsx which fibre to start with if there are more than one..
     //x_init etc. are in seed space...
     vols.reset(fibst);
     m_x_s_init=x_init; //seed x position in voxels

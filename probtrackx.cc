@@ -15,7 +15,6 @@ using namespace NEWIMAGE;
 using namespace TRACT;
 using namespace Utilities;
 using namespace PARTICLE;
-using namespace TRACTVOLS;
 using namespace mesh;
 //using namespace NEWMAT;
 //////////////////////////

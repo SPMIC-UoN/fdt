@@ -4,12 +4,12 @@
 #include "meshclass/meshclass.h"
 #include "probtrackxOptions.h"
 #include "particle.h"
-#include "tractvols.h"
+#include "tractvolsx.h"
 
 using namespace std;
 using namespace NEWIMAGE;
 using namespace Utilities;
-using namespace TRACTVOLS;
+using namespace TRACTVOLSX;
 using namespace mesh;
 using namespace PARTICLE;
 
@@ -18,7 +18,7 @@ namespace TRACT{
 
 
   class Streamliner{
-    //Everything in DTI space is done INSIDE this class and lower level classes (particle and tractvols)
+    //Everything in DTI space is done INSIDE this class and lower level classes (particle and tractvolsx)
     //This class communicates with higher level classes in Seed voxels.
     //
     probtrackxOptions& opts;
@@ -33,7 +33,7 @@ namespace TRACT{
     vector<bool> m_passed_flags;
     vector<bool> m_own_waymasks;
     Matrix m_Seeds_to_DTI;
-    TractVols vols;
+    Tractvolsx vols;
     float m_lcrat;
     float m_x_s_init;
     float m_y_s_init;
