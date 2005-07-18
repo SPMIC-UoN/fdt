@@ -58,13 +58,8 @@ namespace FIBRE{
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
     const Matrix& m_bvals;
-<<<<<<< fibre.h
-    xfibresOptions& opts;
-  public:
-=======
     xfibresOptions& opts;
  public:
->>>>>>> 1.10
     //constructors::
     Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
 	   const Matrix& bvals,const float& d):
@@ -228,7 +223,7 @@ namespace FIBRE{
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
 	if(m_lam_jump)
-	  m_f_prior=log(1-f)+2*log(fabs(log(1-f))); //marginalised with uniform prior on lambda
+	  m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
 	else
 	  m_f_prior=0;
 	
