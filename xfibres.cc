@@ -127,6 +127,7 @@ class Samples{
   xfibresOptions& opts;
   Matrix m_dsamples;
   Matrix m_S0samples;
+  Matrix m_lik_energy;
   vector<Matrix> m_thsamples;
   vector<Matrix> m_phsamples;
   vector<Matrix> m_fsamples;
@@ -149,6 +150,7 @@ public:
     m_dsamples=0;
     m_S0samples.ReSize(nsamples,nvoxels);
     m_S0samples=0;
+    m_lik_energy.ReSize(nsamples,nvoxels);
    
     for(int f=0;f<opts.nfibres.value();f++){
       m_thsamples.push_back(m_S0samples);
@@ -164,6 +166,7 @@ public:
   void record(Multifibre& mfib, int vox, int samp){
     m_dsamples(samp,vox)=mfib.get_d();
     m_S0samples(samp,vox)=mfib.get_S0();
+    m_lik_energy(samp,vox)=mfib.get_likelihood_energy();
     for(int f=0;f<opts.nfibres.value();f++){
       m_thsamples[f](samp,vox)=mfib.fibres()[f].get_th();
       m_phsamples[f](samp,vox)=mfib.fibres()[f].get_ph();
@@ -181,12 +184,14 @@ public:
     vector<Matrix> phsamples_out=m_phsamples;
     vector<Matrix> fsamples_out=m_fsamples;
     vector<Matrix> lamsamples_out=m_lamsamples;
-
+    
     Log& logger = LogSingleton::getInstance();
     tmp.setmatrix(m_dsamples,mask);
     save_volume4D(tmp,logger.appendDir("dsamples"));
     tmp.setmatrix(m_S0samples,mask);
     save_volume4D(tmp,logger.appendDir("S0samples"));
+    tmp.setmatrix(m_lik_energy,mask);
+    save_volume4D(tmp,logger.appendDir("lik_energy"));
     
     //Sort the output based on mean_fsamples
     // 

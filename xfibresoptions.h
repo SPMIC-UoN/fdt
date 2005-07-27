@@ -42,6 +42,7 @@ class xfibresOptions {
   Option<int> sampleevery;
   Option<int> updateproposalevery;
   Option<int> seed;
+  Option<bool> no_ard;
   void parse_command_line(int argc, char** argv,  Log& logger);
   
  private:
@@ -105,6 +106,8 @@ class xfibresOptions {
 	false,requires_argument),
   seed(string("--seed"),8665904,string("seed for pseudo random number generator"),
        false,requires_argument),
+  no_ard(string("--noard"),false,string("Turn ARD off on all fibres"),
+       false,no_argument),
    options("xfibres", "xfibres -k <filename>\n xfibres --verbose\n")
    {
      
@@ -125,6 +128,7 @@ class xfibresOptions {
        options.add(sampleevery);
        options.add(updateproposalevery);
        options.add(seed);
+       options.add(no_ard);
        
      }
      catch(X_OptionError& e) {

@@ -222,11 +222,15 @@ namespace FIBRE{
 	return true;
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
-	if(m_lam_jump)
-	  m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
-	else
+	if(opts.no_ard.value()){
 	  m_f_prior=0;
-	
+	}
+	else{
+	  if(m_lam_jump)
+	    m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
+	  else
+	    m_f_prior=0;
+	}
 	m_f_prior=opts.fudge.value()*m_f_prior;
 	return false;
       }
@@ -459,7 +463,9 @@ namespace FIBRE{
     inline float get_d() const{ return m_d;}
     inline void set_d(const float d){ m_d=d; }
     
-
+    inline float get_energy() const { return m_likelihood_en+m_prior_en;}
+    inline float get_likelihood_energy() const { return m_likelihood_en;}
+    
     inline float get_S0() const{ return m_S0;}
     inline void set_S0(const float S0){ m_S0=S0; }
     
