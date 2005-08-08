@@ -227,8 +227,9 @@ namespace FIBRE{
 	}
 	else{
 	  if(m_lam_jump)
-	    m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
-	  else
+	    // m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
+	    m_f_prior=std::log(m_f);
+	    else
 	    m_f_prior=0;
 	}
 	m_f_prior=opts.fudge.value()*m_f_prior;
