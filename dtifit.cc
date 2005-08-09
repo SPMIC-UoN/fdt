@@ -187,7 +187,15 @@ int main(int argc, char** argv)
   
   // Set random seed:
   Matrix r = read_ascii_matrix(opts.bvecsfile.value());
+  if(r.Nrows()>3) r=r.t();
+  for(int i=1;i<=r.Ncols();i++){
+    float tmpsum=sqrt(r(i,1)*r(i,1)+r(i,2)*r(i,2)+r(i,3)*r(i,3));
+    r(i,1)=r(i,1)/tmpsum;
+    r(i,2)=r(i,2)/tmpsum;
+    r(i,3)=r(i,3)/tmpsum;
+  }
   Matrix b = read_ascii_matrix(opts.bvalsfile.value());
+  if(b.Nrows()>1) b=b.t();
   volume4D<float> data;
   volume<int> mask;
   volumeinfo tempinfo;
@@ -238,12 +246,11 @@ int main(int argc, char** argv)
       for(int j=miny; j < maxy; j++){
 	for(int i =minx; i< maxx; i++){
 	
-	  if(mask(i,j,k)==1){
+	  if(mask(i,j,k)>0){
 	    
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	   
 	    tensorfit(evals,evec1,evec2,evec3,fa,s0,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
