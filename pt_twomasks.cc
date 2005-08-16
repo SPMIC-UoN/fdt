@@ -94,7 +94,7 @@ void twomasks_symm(){
 	    ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 	    xyz_seeds << Sx << Sy << Sz;
 	    dim_seeds <<Seeds.xdim()<<Seeds.ydim()<<Seeds.zdim();
-	  
+	    
 	    xyz_dti=vox_to_vox(xyz_seeds,dim_seeds,vols.dimensions(),Seeds_to_DTI);    
 	    xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3);
 	    Particle part(0,0,0,0,0,0,opts.steplength.value(),mask.xdim(),mask.ydim(),mask.zdim(),false);
@@ -310,7 +310,7 @@ void waypoints(){
   
   float tmp2;
   ColumnVector th_ph_f;
-
+  int keeptotal=0;
     for(int Sz=Seeds.minz();Sz<=Seeds.maxz();Sz++){
       cout<<Sz<<endl;
       for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
@@ -434,6 +434,7 @@ void waypoints(){
 		}
 		
 		if(keepflag){
+		  keeptotal++;
        		  for(int s=1;s<=partlength;s++){
 		    int x_s=int(path(s,1));
 		    int y_s=int(path(s,2));
@@ -461,5 +462,9 @@ void waypoints(){
    
 
     }//close z loop
-  save_volume(prob,logger.appendDir(opts.outfile.value()));
+    ColumnVector keeptotvec(1);
+    keeptotvec(1)=keeptotal;
+    
+    save_volume(prob,logger.appendDir(opts.outfile.value()));
+    write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
 }
