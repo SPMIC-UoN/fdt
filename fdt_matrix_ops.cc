@@ -13,6 +13,16 @@ using namespace std;
 using namespace NEWIMAGE;
 using namespace NEWMAT;
 
+string matf2coordf(string matf){
+  unsigned int pos=matf.rfind("/");
+  if(pos!=string::npos)
+    matf.replace(pos,1,"/coords_for_");
+  else
+    matf="coords_for_"+matf;
+
+  return matf;
+}
+
 
 int main ( int argc, char **argv ){
   if(argc<5){
@@ -38,11 +48,14 @@ int main ( int argc, char **argv ){
     volume<float> *tmp= new volume<float>;
     volume<int> *tmpcoords= new volume<int>;
     volume<int> *tmpmask= new volume<int>;
-    read_volume(*tmp,argv[ 2*i + 1 ]);
-    read_volume(*tmpcoords,"coords_for_" + string(argv[ 2*i + 1 ]) );
+    string matfile=string(argv[ 2*i + 1 ]);
+    string coordfile=matf2coordf(matfile);
+    read_volume(*tmp,matfile);
+    read_volume(*tmpcoords,coordfile);
     read_volume(*tmpmask,argv[ 2*(i + 1) ]);
     mats.push_back(tmp);
     masks.push_back(tmpmask);
+    coords.push_back(tmpcoords);
     if(i==0) totalmask=*tmpmask;
     else totalmask=totalmask+ *tmpmask;
 
@@ -71,7 +84,6 @@ int main ( int argc, char **argv ){
     lookups.push_back(lu);
   }
   
-  
   int nvoxels=0;
 
   for(int z=0;z<incmask.zsize();z++) {
@@ -82,9 +94,8 @@ int main ( int argc, char **argv ){
     }
   }
   
-  volume<float> output(nvoxels,(*mats[0]).ysize(),0);
-  volume<float> outcoords(nvoxels,3,0);
-  
+  volume<float> output(nvoxels,(*mats[0]).ysize(),1);
+  volume<float> outcoords(nvoxels,3,1);
   int newrow=0;
   for(int z=0;z<incmask.zsize();z++) {
     for(int y=0;y<incmask.ysize();y++){
@@ -98,10 +109,13 @@ int main ( int argc, char **argv ){
 		for(int col=0;col<(*mats[i]).ysize();col++){
 		  output(newrow,col,0)=(*mats[i])(oldrow,col,0);
 		}
+		//cout<<x<<" "<<y<<" "<<z<<endl;
+		//cout<<newrow<<" "<<oldrow<<endl;
+		//cout<<(*coords[i])(oldrow,0,0)<<" "<<(*coords[i])(oldrow,1,0)<<" "<<(*coords[i])(oldrow,2,0)<<endl;
 		outcoords(newrow,0,0)=(*coords[i])(oldrow,0,0);
 		outcoords(newrow,1,0)=(*coords[i])(oldrow,1,0);
 		outcoords(newrow,2,0)=(*coords[i])(oldrow,2,0);
-		
+		//cout<<"yep"<<endl;
 		found=true;
 		newrow++;
 	      }
@@ -114,8 +128,15 @@ int main ( int argc, char **argv ){
     }
   }
 
+  for(int i=0;i<Nmats;i++){
+    delete mats[i];
+    delete coords[i];
+    delete masks[i];
+    delete lookups[i];
+}
   save_volume(output,argv[argc-1]);
-  save_volume(outcoords,"coords_for_"+string(argv[argc-1]));
+  string coordout=matf2coordf(string(argv[argc-1]));
+  save_volume(outcoords,coordout);
  return 0;
 }
  
