@@ -22,6 +22,7 @@ DIFF_PVM=diff_pvm
 XFIBRES=xfibres
 RV=replacevols
 MDV=make_dyadic_vectors
+FMO=fdt_matrix_ops
 TEST=testfile
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
@@ -36,12 +37,13 @@ DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 XFIBOBJS=xfibres.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
+FMOOBJS=fdt_matrix_ops.o
 TESTOBJS=testfile.o
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 FSCRIPTS=correct_and_average ocmr_preproc
 XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
-FXFILES = reord_OM sausages replacevols
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops
 
 
 RUNTCLS = Fdt
@@ -83,6 +85,9 @@ ${RV}:    	${RVOBJS}
 
 ${MDV}:    	${MDVOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MDVOBJS} ${DLIBS}
+
+${FMO}:    	${FMOOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FMOOBJS} ${DLIBS}
 
 ${TEST}:    	${TESTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
