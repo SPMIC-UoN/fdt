@@ -36,6 +36,7 @@ class probtrackOptions {
   Option<string> targetfile;
   Option<string> outfile;
   Option<string> rubbishfile;
+  FmribOption<string> uberrubbishfile;
   Option<string> seeds_to_dti;
   FmribOption<string> skipmask;
   Option<string> seedref;
@@ -103,6 +104,9 @@ class probtrackOptions {
 	    false, requires_argument),
    rubbishfile(string("--rubbish"), string(""),
 	    string("Rubbish file"),
+	    false, requires_argument),
+  uberrubbishfile(string("--rubbishkill"), string(""),
+	    string("Rubbish and kill file - does not include the _whole path_ of a streamline that reaches this maskfile"),
 	    false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
 	      string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
@@ -172,6 +176,7 @@ class probtrackOptions {
        options.add(forcedir); 
        options.add(outfile);
        options.add(rubbishfile);
+       options.add(uberrubbishfile);
        options.add(seeds_to_dti);
        options.add(nparticles);
        options.add(nsteps);

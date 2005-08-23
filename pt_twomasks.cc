@@ -41,12 +41,16 @@ void twomasks_symm(){
     Seeds=Seeds+(2*mask2);
   }
 
-
-  volume<int> RUBBISH;
+  volume<int> RUBBISH; //just stops the streamline but counts where it has already been
+  volume<int> UBERRUBBISH; //kills streamline and excludes where it has already been
   if(opts.rubbishfile.value()!=""){
     read_volume(RUBBISH,opts.rubbishfile.value());
   }
-
+  if(opts.uberrubbishfile.value()!=""){
+    read_volume(UBERRUBBISH,opts.uberrubbishfile.value());
+  }
+  
+ 
   volume<int> prob;
   volume<int> beenhere;
   beenhere=Seeds;
@@ -137,6 +141,13 @@ void twomasks_symm(){
 		    int x_s =(int)round((float)xyz_seeds(1));
 		    int y_s =(int)round((float)xyz_seeds(2));
 		    int z_s =(int)round((float)xyz_seeds(3));
+		    
+		    if(opts.uberrubbishfile.value()!=""){
+		      if(UBERRUBBISH(x_s,y_s,z_s)>0) {
+			keepflag=false;
+			break;
+		      }
+		    }
 		    if(opts.rubbishfile.value()!=""){
 		      if(RUBBISH(x_s,y_s,z_s)>0) break;
 		    }
@@ -268,11 +279,18 @@ void waypoints(){
     passed_flags.push_back(false);
   }
   
-  volume<int> RUBBISH;
+
+  volume<int> RUBBISH; //just stops the streamline but counts where it has already been
+  volume<int> UBERRUBBISH; //kills streamline and excludes where it has already been
+  bool uberkeepflag=true;
   if(opts.rubbishfile.value()!=""){
     read_volume(RUBBISH,opts.rubbishfile.value());
   }
-
+  if(opts.uberrubbishfile.value()!=""){
+    read_volume(UBERRUBBISH,opts.uberrubbishfile.value());
+  }
+  
+  
   volume<int> prob;
   volume<int> beenhere;
   beenhere=Seeds;
@@ -336,7 +354,7 @@ void waypoints(){
 		for(unsigned int pf=0;pf<passed_flags.size();pf++) {
 		  passed_flags[pf]=false;  /// only keep it if this direction went through all the masks
 		}
-
+		uberkeepflag=true;
 		for( int it = 1 ; it <= nsteps/2; it++){
 		  if( (mask( round(part.x()), round(part.y()), round(part.z())) > 0) ){
 		    
@@ -366,6 +384,12 @@ void waypoints(){
 		    int x_s =(int)round((float)xyz_seeds(1));
 		    int y_s =(int)round((float)xyz_seeds(2));
 		    int z_s =(int)round((float)xyz_seeds(3));
+		    if(opts.uberrubbishfile.value()!=""){
+		      if(UBERRUBBISH(x_s,y_s,z_s)>0) {
+			uberkeepflag=false;
+			break;
+		      }
+		    }
 		    if(opts.rubbishfile.value()!=""){
 		      if(RUBBISH(x_s,y_s,z_s)>0) break;
 		    }
@@ -428,7 +452,7 @@ void waypoints(){
 	      
 	      // Do the counting after a particle has finished
 	      // And only if all passed_flags are set
-		bool keepflag=true;
+		bool keepflag=uberkeepflag;
 		for(unsigned int pf=0;pf<passed_flags.size();pf++){
 		  keepflag=(keepflag && passed_flags[pf]);
 		}
