@@ -38,11 +38,6 @@ using namespace MISCMATHS;
 
 
 
-const float maxfloat=1e10;
-const float minfloat=1e-10;
-const float maxlogfloat=23;
-const float minlogfloat=-23;
-
 
 inline float min(float a,float b){
   return a<b ? a:b;}
@@ -358,7 +353,14 @@ class xfibresVoxelManager{
     for( int i =0;i<opts.njumps.value();i++){
       m_multifibre.jump();
       count++;
-      recordcount++;
+     
+      if(opts.verbose.value()) 
+	{
+	  cout<<endl<<i<<" "<<endl<<endl;
+	  m_multifibre.report();
+      
+	}
+	  recordcount++;
       if(recordcount==opts.sampleevery.value()){
 	m_samples.record(m_multifibre,m_voxelnumber,sample);
 	sample++;

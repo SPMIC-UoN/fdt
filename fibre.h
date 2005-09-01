@@ -17,9 +17,13 @@ using namespace std;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 using namespace Xfibres;
-
+const float maxfloat=1e10;
+const float minfloat=1e-10;
+const float maxlogfloat=23;
+const float minlogfloat=-23;
 namespace FIBRE{
   
+
   class Fibre{
     float m_th;
     float m_ph;
@@ -166,6 +170,41 @@ namespace FIBRE{
     inline float get_lam() const{ return m_lam;}
     inline void set_lam(const float lam){ m_lam=lam; }
     
+    inline void report() const {
+    OUT(m_th);
+    OUT(m_ph);
+    OUT(m_f);
+    OUT(m_lam);
+    OUT(m_th_prop);
+    OUT(m_ph_prop);
+    OUT(m_f_prop);
+    OUT(m_lam_prop);
+    OUT(m_th_old);
+    OUT(m_ph_old);
+    OUT(m_f_old);
+    OUT(m_lam_old);
+    OUT(m_th_prior);
+    OUT(m_ph_prior);
+    OUT(m_f_prior);
+    OUT(m_lam_prior);
+    OUT(m_th_old_prior);
+    OUT(m_ph_old_prior);
+    OUT(m_f_old_prior);
+    OUT(m_lam_old_prior);
+    OUT(m_prior_en);
+    OUT(m_old_prior_en);
+    OUT(m_th_acc); 
+    OUT(m_th_rej);
+    OUT(m_ph_acc);
+    OUT(m_ph_rej); 
+    OUT(m_f_acc);
+    OUT(m_f_rej);
+    OUT(m_lam_acc); 
+    OUT(m_lam_rej);
+    OUT(m_lam_jump);
+      
+
+    }
     
     inline const ColumnVector& getSignal() const{  
       return m_Signal;                      
@@ -187,9 +226,13 @@ namespace FIBRE{
 
     inline void update_proposals(){
       m_th_prop*=sqrt(float(m_th_acc+1)/float(m_th_rej+1));
+      m_th_prop=min(m_th_prop,maxfloat);
       m_ph_prop*=sqrt(float(m_ph_acc+1)/float(m_ph_rej+1));
+      m_ph_prop=min(m_ph_prop,maxfloat);
       m_f_prop*=sqrt(float(m_f_acc+1)/float(m_f_rej+1));
+      m_f_prop=min(m_f_prop,maxfloat);
       m_lam_prop*=sqrt(float(m_lam_acc+1)/float(m_lam_rej+1));
+      m_lam_prop=min(m_lam_prop,maxfloat);
       m_th_acc=0; 
       m_th_rej=0;
       m_ph_acc=0; 
@@ -218,7 +261,7 @@ namespace FIBRE{
       //note(gamma(lam+1)/(gamma(1)*gamma(lam)) = lam
       // the following is a beta distribution with alpha=0
       m_f_old_prior=m_f_prior;
-      if (m_f<0 | m_f>=1 )
+      if (m_f<=0 | m_f>=1 )
 	return true;
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
@@ -352,7 +395,7 @@ namespace FIBRE{
       m_ph=rhs.m_ph;
       m_f=rhs.m_f;
       m_lam=rhs.m_lam;
-      m_th_prop=rhs. m_th_prop;
+      m_th_prop=rhs.m_th_prop;
       m_ph_prop=rhs.m_ph_prop;
       m_f_prop=rhs.m_f_prop;
       m_lam_prop=rhs.m_lam_prop;
@@ -362,25 +405,25 @@ namespace FIBRE{
       m_lam_old=rhs.m_lam_old;
       m_th_prior=rhs.m_th_prior;
       m_ph_prior=rhs.m_ph_prior;
-      m_f_prior=rhs. m_f_prior;
+      m_f_prior=rhs.m_f_prior;
       m_lam_prior=rhs.m_lam_prior;
       m_th_old_prior=rhs.m_th_old_prior;
       m_ph_old_prior=rhs.m_ph_old_prior;
       m_f_old_prior=rhs.m_f_old_prior;
       m_lam_old_prior=rhs.m_lam_old_prior;
       m_prior_en=rhs.m_prior_en;
-      m_old_prior_en=rhs. m_old_prior_en;
+      m_old_prior_en=rhs.m_old_prior_en;
       m_th_acc=rhs.m_th_acc; 
       m_th_rej=rhs.m_th_rej;
       m_ph_acc=rhs.m_ph_acc;
-      m_ph_rej=rhs. m_ph_rej; 
+      m_ph_rej=rhs.m_ph_rej; 
       m_f_acc=rhs.m_f_acc;
       m_f_rej=rhs.m_f_rej;
       m_lam_acc=rhs.m_lam_acc; 
       m_lam_rej=rhs.m_lam_rej;
       m_lam_jump=rhs.m_lam_jump;
       m_Signal=rhs.m_Signal; 
-      m_Signal_old=rhs. m_Signal_old; 
+      m_Signal_old=rhs.m_Signal_old; 
       return *this;
     }
 
@@ -470,6 +513,30 @@ namespace FIBRE{
     inline float get_S0() const{ return m_S0;}
     inline void set_S0(const float S0){ m_S0=S0; }
     
+    inline void report() const{
+      OUT(m_d);
+      OUT(m_d_old);
+      OUT(m_d_prop);
+      OUT(m_d_prior); 
+      OUT(m_d_old_prior);
+      OUT(m_d_acc);
+      OUT(m_d_rej);
+      OUT(m_S0);
+      OUT(m_S0_old);
+      OUT(m_S0_prop);
+      OUT(m_S0_prior);
+      OUT(m_S0_old_prior);
+      OUT(m_S0_acc);
+      OUT(m_S0_rej);
+      OUT(m_prior_en);
+      OUT(m_old_prior_en);
+      OUT(m_likelihood_en);
+      OUT(m_old_likelihood_en);
+      OUT(m_energy);
+      OUT(m_old_energy);
+      for (unsigned int i=0;i<m_fibres.size();i++){cout <<"fibre "<<i<<endl;m_fibres[i].report();}
+    }
+
 
     inline bool compute_d_prior(){
       m_d_old_prior=m_d_prior;
@@ -590,7 +657,9 @@ namespace FIBRE{
     
     inline void update_proposals(){
       m_d_prop*=sqrt(float(m_d_acc+1)/float(m_d_rej+1));
+      m_d_prop=min(m_d_prop,maxfloat);
       m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
+      m_S0_prop=min(m_S0_prop,maxfloat);
       m_d_acc=0; 
       m_d_rej=0;
       m_S0_acc=0; 
