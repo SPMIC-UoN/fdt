@@ -114,55 +114,6 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
   return tens;
 }
 
-inline void cart2sph(const ColumnVector& dir, float& th, float& ph)
-{
-  float mag=sqrt(dir(1)*dir(1)+dir(2)*dir(2)+dir(3)*dir(3));
-  if(mag==0){
-    ph=M_PI/2;
-    th=M_PI/2;
-  }
-  else{
-
-    if(dir(1)==0 && dir(2)>=0) ph=M_PI/2;
-    else if(dir(1)==0 && dir(2)<0) ph=-M_PI/2;
-    else if(dir(1)>0) ph=atan(dir(2)/dir(1));
-    else if(dir(2)>0) ph=atan(dir(2)/dir(1))+M_PI;
-    else ph=atan(dir(2)/dir(1))-M_PI;
-    
-    if(dir(3)==0) th=M_PI/2;
-    else if(dir(3)>0) th=atan(sqrt(dir(1)*dir(1)+dir(2)*dir(2))/dir(3));
-    else th=atan(sqrt(dir(1)*dir(1)+dir(2)*dir(2))/dir(3))+M_PI;
-  }
-}
-
-
-
-void cart2sph(const Matrix& dir,ColumnVector& th,ColumnVector& ph)
-{
-  for (int i=1;i<=dir.Ncols();i++) {
-    float mag=sqrt(dir(1,i)*dir(1,i)+dir(2,i)*dir(2,i)+dir(3,i)*dir(3,i));
-    if(mag==0){
-      ph(i)=M_PI/2;
-      th(i)=M_PI/2;
-    }
-    else{
-      if(dir(1,i)==0 && dir(2,i)>=0) ph(i)=M_PI/2;
-      else if(dir(1,i)==0 && dir(2,i)<0) ph(i)=-M_PI/2;
-      else if(dir(1,i)>0) ph(i)=atan(dir(2,i)/dir(1,i));
-      else if(dir(2,i)>0) ph(i)=atan(dir(2,i)/dir(1,i))+M_PI;
-      else ph(i)=atan(dir(2,i)/dir(1,i))-M_PI;
-
-      if(dir(3,i)==0) th(i)=M_PI/2;
-      else if(dir(3,i)>0) th(i)=atan(sqrt(dir(1,i)*dir(1,i)+dir(2,i)*dir(2,i))/dir(3,i));
-      else th(i)=atan(sqrt(dir(1,i)*dir(1,i)+dir(2,i)*dir(2,i))/dir(3,i))+M_PI;
-
-    }
-  }
-}
-
-
-
-
 
 class Diff_pvmModel : public ForwardModel  
   {
