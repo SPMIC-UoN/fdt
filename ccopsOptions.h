@@ -85,6 +85,7 @@ class ccopsOptions {
      try {
        options.add(help);
        options.add(inmatrix);
+       options.add(basename);
        options.add(excl_mask);
        options.add(reord1);
        options.add(reord2);
