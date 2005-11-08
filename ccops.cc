@@ -275,6 +275,7 @@ void rem_cols(Matrix& myOMmat,Matrix& tractcoordmat,const bool tractcoordbool,co
 int main ( int argc, char **argv ){
   ccopsOptions& opts = ccopsOptions::getInstance();
   int success=opts.parse_command_line(argc,argv);
+  if(!success) return 0;
   string ip=opts.inmatrix.value();
   make_basename(ip);
   
