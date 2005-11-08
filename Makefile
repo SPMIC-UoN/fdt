@@ -11,6 +11,7 @@ DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lni
 
 
 DTIFIT=dtifit
+CCOPS=ccops
 PT=probtrack
 PTX=probtrackx
 FTB=find_the_biggest
@@ -26,6 +27,7 @@ FMO=fdt_matrix_ops
 TEST=testfile
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
+CCOPSOBJS=ccops.o ccopsOptions.o
 PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o pt_matrix_mesh.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o
 FTBOBJS=find_the_biggest.o
@@ -42,7 +44,7 @@ TESTOBJS=testfile.o
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 FSCRIPTS=correct_and_average ocmr_preproc
-XFILES = dtifit probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
+XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops
 
 
@@ -67,6 +69,9 @@ ${MED}:    	${MEDOBJS}
 
 ${DTIFIT}:    	${DTIFITOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIFITOBJS} ${DLIBS}
+
+${CCOPS}:    	${CCOPSOBJS}	
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CCOPSOBJS} ${DLIBS}
 
 ${ROM}:    	${ROMOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ROMOBJS} ${DLIBS}
