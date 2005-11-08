@@ -64,7 +64,7 @@ class ccopsOptions {
 	       string("Output basename"),
 	       true, requires_argument),
    excl_mask(string("-x"), string(""),
-	     string("exclusion mask"),
+	     string("exclusion mask (in tract space johannes)"),
 	     false, requires_argument),  
    reord1(string("--r1"), bool(false),
 	     string("do seedspace reordering (default no)"),
