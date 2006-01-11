@@ -103,7 +103,7 @@ namespace TRACTVOLSX{
       
       
       ColumnVector sample(const float& x,const float& y,const float&z,const float& r_x,const float& r_y,const float& r_z){
-	
+
 	////////Probabilistic interpolation
 	int cx =(int) ceil(x),fx=(int) floor(x);
 	int cy =(int) ceil(y),fy=(int) floor(y);

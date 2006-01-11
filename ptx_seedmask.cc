@@ -28,9 +28,11 @@ void seedmask()
   Seedmanager seedmanager(counter);
   
   for(int z=0;z<seeds.zsize();z++){
+    cout <<"sl "<<z<<endl;
     for(int y=0;y<seeds.ysize();y++){
       for(int x=0;x<seeds.xsize();x++){
 	if(seeds(x,y,z)>0){
+	  cout <<"run"<<endl;
 	  seedmanager.run(x,y,z); 
 	}
       }
@@ -38,7 +40,7 @@ void seedmask()
   }
   
   counter.save();
-  
+  cout<<"finished"<<endl;
 }
 
 

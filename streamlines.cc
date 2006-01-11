@@ -94,10 +94,9 @@ namespace TRACT{
     for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
       m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
     }
-      
+    
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
-	  
 	///////////////////////////////////
 	//loopchecking
 	///////////////////////////////////
@@ -537,6 +536,7 @@ namespace TRACT{
   
   void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly){
     //onewayonly for mesh things..
+    cout <<x<<" "<<y<<" "<<z<<endl;
     int fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
     for(int p=0;p<opts.nparticles.value();p++){
       if(opts.verbose.value()>1)

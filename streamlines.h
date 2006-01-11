@@ -128,7 +128,8 @@ namespace TRACT{
     void initialise();
     
     void initialise_path_dist(){
-      m_prob.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());      
+      m_prob=m_seeds;
+      m_prob=0;
     }
     void initialise_seedcounts();
     

@@ -123,16 +123,41 @@ class Samples{
   Matrix m_dsamples;
   Matrix m_S0samples;
   Matrix m_lik_energy;
+  
   vector<Matrix> m_thsamples;
   vector<Matrix> m_phsamples;
   vector<Matrix> m_fsamples;
   vector<Matrix> m_lamsamples;
+
+  //for storing means
+  RowVector m_mean_dsamples;
+  RowVector m_mean_S0samples;
+  vector<Matrix> m_dyadic_vectors;
+  vector<RowVector> m_mean_fsamples;
+  vector<RowVector> m_mean_lamsamples;
+  
+  float m_sum_d;
+  float m_sum_S0;
+  vector<SymmetricMatrix> m_dyad;
+  vector<float> m_sum_f;
+  vector<float> m_sum_lam;
+  int m_nsamps;
+  ColumnVector m_vec;
+  
+  volume<int> m_vol2matrixkey;
+  Matrix m_matrix2volkey;
+  volume<int> m_beenhere;
+
+  
 public:
 
-  Samples(int nvoxels):opts(xfibresOptions::getInstance()){
+  Samples( volume<int> vol2matrixkey,Matrix matrix2volkey,int nvoxels):
+    opts(xfibresOptions::getInstance()),m_vol2matrixkey(vol2matrixkey),m_matrix2volkey(matrix2volkey){
+    
+    m_beenhere=m_vol2matrixkey*0;
     int count=0;
     int nsamples=0;
-  
+    
     for(int i=0;i<opts.njumps.value();i++){
       count++;
       if(count==opts.sampleevery.value()){
@@ -146,13 +171,33 @@ public:
     m_S0samples.ReSize(nsamples,nvoxels);
     m_S0samples=0;
     m_lik_energy.ReSize(nsamples,nvoxels);
-   
+    
+    m_mean_dsamples.ReSize(nvoxels);
+    m_mean_dsamples=0;
+    m_mean_S0samples.ReSize(nvoxels);
+    m_mean_S0samples=0;
+    Matrix tmpvecs(3,nvoxels);
+    tmpvecs=0;
+    m_sum_d=0;
+    m_sum_S0=0;
+    SymmetricMatrix tmpdyad(3);
+    tmpdyad=0;
+    m_nsamps=nsamples;
+    m_vec.ReSize(3);
     for(int f=0;f<opts.nfibres.value();f++){
       m_thsamples.push_back(m_S0samples);
       m_phsamples.push_back(m_S0samples);
       m_fsamples.push_back(m_S0samples);
       m_lamsamples.push_back(m_S0samples);
+      
 
+      m_dyadic_vectors.push_back(tmpvecs);
+      m_mean_fsamples.push_back(m_mean_S0samples);
+      m_mean_lamsamples.push_back(m_mean_S0samples);
+
+      m_sum_lam.push_back(0);
+      m_sum_f.push_back(0);
+      m_dyad.push_back(tmpdyad);
     }
  
   }
@@ -160,16 +205,125 @@ public:
   
   void record(Multifibre& mfib, int vox, int samp){
     m_dsamples(samp,vox)=mfib.get_d();
+    m_sum_d+=mfib.get_d();
     m_S0samples(samp,vox)=mfib.get_S0();
+    m_sum_S0+=mfib.get_S0();
     m_lik_energy(samp,vox)=mfib.get_likelihood_energy();
     for(int f=0;f<opts.nfibres.value();f++){
-      m_thsamples[f](samp,vox)=mfib.fibres()[f].get_th();
-      m_phsamples[f](samp,vox)=mfib.fibres()[f].get_ph();
+      float th=mfib.fibres()[f].get_th();
+      float ph=mfib.fibres()[f].get_ph();
+      m_thsamples[f](samp,vox)=th;
+      m_phsamples[f](samp,vox)=ph;
       m_fsamples[f](samp,vox)=mfib.fibres()[f].get_f();
       m_lamsamples[f](samp,vox)=mfib.fibres()[f].get_lam();
-      
+      //for means
+      m_vec << sin(th)*cos(ph) << sin(th)*sin(ph)<<cos(th) ;
+      m_dyad[f] << m_dyad[f]+m_vec*m_vec.t();
+      m_sum_f[f]+=mfib.fibres()[f].get_f();
+      m_sum_lam[f]+=mfib.fibres()[f].get_lam();
     }
   }
+  
+  void finish_voxel(int vox){
+    m_mean_dsamples(vox)=m_sum_d/m_nsamps;
+    m_mean_S0samples(vox)=m_sum_S0/m_nsamps;
+
+    m_sum_d=0;
+    m_sum_S0=0;
+
+    DiagonalMatrix dyad_D; //eigenvalues
+    Matrix dyad_V; //eigenvectors
+    int nfibs=0;
+    for(int f=0;f<opts.nfibres.value();f++){
+      
+      EigenValues(m_dyad[f],dyad_D,dyad_V);
+      int maxeig;
+      if(dyad_D(1)>dyad_D(2)){
+	if(dyad_D(1)>dyad_D(3)) maxeig=1;
+	else maxeig=3;
+      }
+      else{
+	if(dyad_D(2)>dyad_D(3)) maxeig=2;
+	else maxeig=3;
+      }
+      m_dyadic_vectors[f](1,vox)=dyad_V(1,maxeig);
+      m_dyadic_vectors[f](2,vox)=dyad_V(2,maxeig);
+      m_dyadic_vectors[f](3,vox)=dyad_V(3,maxeig);
+      
+      if((m_sum_f[f]/m_nsamps)>0.05){
+	nfibs++;
+      }
+      m_mean_fsamples[f](vox)=m_sum_f[f]/m_nsamps;
+      m_mean_lamsamples[f](vox)=m_sum_lam[f]/m_nsamps;
+      
+      m_dyad[f]=0;
+      m_sum_f[f]=0;
+      m_sum_lam[f]=0;
+    }
+    m_beenhere(int(m_matrix2volkey(vox,1)),int(m_matrix2volkey(vox,2)),int(m_matrix2volkey(vox,3)))=nfibs;
+    cout <<"boobooboo"<<endl;
+    cout<<int(m_matrix2volkey(vox,1))<<" "<<int(m_matrix2volkey(vox,2))<<" "<<int(m_matrix2volkey(vox,3))<<endl;
+}
+  
+  
+  bool neighbour_initialise(int vox, Multifibre& mfibre){
+    int xx = int(m_matrix2volkey(vox,1));
+    int yy = int(m_matrix2volkey(vox,2));
+    int zz = int(m_matrix2volkey(vox,3));
+    int voxn=1,voxbest=1;
+    bool ret=false;
+    int maxfib=1;
+    float maxsf=0;
+    for(int x=xx-1;x<=xx+1;x++){
+      for(int y=yy-1;y<=yy+1;y++){
+	for(int z=zz-1;z<=zz+1;z++){
+	  if(m_beenhere(x,y,z)>=maxfib){
+	    float sumf=0;
+	    voxn=m_vol2matrixkey(x,y,z);
+	    for(unsigned int fib=0;fib<m_mean_fsamples.size();fib++){
+	      if(voxn!=0)
+		sumf+=m_mean_fsamples[fib](voxn);
+	      else sumf=0;
+	     	    }
+	    if(sumf>maxsf){
+	      maxsf=sumf;
+	      maxfib=m_beenhere(x,y,z);
+	      voxbest=voxn;
+	      
+	      ret=true;
+	    }
+	  }
+	
+	  
+	}
+      } 
+    }
+    cout<<ret<<" ret"<<endl;
+    if(ret){
+      mfibre.set_d(m_mean_dsamples(voxbest));
+      mfibre.set_S0(m_mean_S0samples(voxbest));
+      for(int f=0; f<opts.nfibres.value(); f++){
+	
+	float th;
+	float ph;
+	ColumnVector vec(3);
+	vec(1)= m_dyadic_vectors[f](1,voxbest);
+	vec(2)= m_dyadic_vectors[f](2,voxbest);
+	vec(3)= m_dyadic_vectors[f](3,voxbest);
+	cart2sph(vec,th,ph);
+	if(f==0)
+	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,false);//no a.r.d. on first fibre
+	else
+	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,true);
+
+      }
+	
+      
+    }
+    return ret;
+    
+  }
+  
   
   void save(const volume<float>& mask){
     volume4D<float> tmp;
@@ -180,6 +334,11 @@ public:
     vector<Matrix> fsamples_out=m_fsamples;
     vector<Matrix> lamsamples_out=m_lamsamples;
     
+    vector<Matrix> dyadic_vectors_out=m_dyadic_vectors;
+    vector<Matrix> mean_fsamples_out;
+    for(unsigned int f=0;f<m_mean_fsamples.size();f++)
+      mean_fsamples_out.push_back(m_mean_fsamples[f]);
+
     Log& logger = LogSingleton::getInstance();
     tmp.setmatrix(m_dsamples,mask);
     save_volume4D(tmp,logger.appendDir("dsamples"));
@@ -213,9 +372,14 @@ public:
 	  fsamples_out[f](samp,vox)=m_fsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  lamsamples_out[f](samp,vox)=m_lamsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	}
-      
       }
       
+      for(int f=0;f<opts.nfibres.value();f++){
+	mean_fsamples_out[f](1,vox)=m_mean_fsamples[sfs[(sfs.size()-1)-f].second](vox);
+	dyadic_vectors_out[f](1,vox)=m_dyadic_vectors[sfs[(sfs.size()-1)-f].second](1,vox);
+	dyadic_vectors_out[f](2,vox)=m_dyadic_vectors[sfs[(sfs.size()-1)-f].second](2,vox);
+	dyadic_vectors_out[f](3,vox)=m_dyadic_vectors[sfs[(sfs.size()-1)-f].second](3,vox);
+      }
       
     }
     // save the sorted fibres
@@ -231,15 +395,19 @@ public:
       tmp.setmatrix(fsamples_out[f],mask);
       oname="f"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
-      tmp.setmatrix(lamsamples_out[f],mask);
-      oname="lam"+num2str(f+1)+"samples";
+      //      tmp.setmatrix(lamsamples_out[f],mask);
+      //      oname="lam"+num2str(f+1)+"samples";
+      //      save_volume4D(tmp,logger.appendDir(oname));
+      tmp.setmatrix(mean_fsamples_out[f],mask);
+      oname="mean_f"+num2str(f+1)+"samples";
+      save_volume(tmp[0],logger.appendDir(oname));
+      tmp.setmatrix(dyadic_vectors_out[f],mask);
+      oname="dyads"+num2str(f+1);
       save_volume4D(tmp,logger.appendDir(oname));
     }
   }
   
 };
-
-
 
 
 
@@ -270,8 +438,15 @@ class xfibresVoxelManager{
     m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value()){ }
   
    
-  
   void initialise(const Matrix& Amat){
+    if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre)){
+      initialise_tensor(Amat);
+    }
+    m_multifibre.initialise_energies();
+    m_multifibre.initialise_props();
+  }
+  
+  void initialise_tensor(const Matrix& Amat){
     //initialising 
     ColumnVector logS(m_data.Nrows()),tmp(m_data.Nrows()),Dvec(7),dir(3);
     SymmetricMatrix tens;   
@@ -334,15 +509,15 @@ class xfibresVoxelManager{
       }
     
     }
-    m_multifibre.initialise_energies();
-    m_multifibre.initialise_props();
+    
+    
   }
  
 
   void runmcmc(){
     int count=0, recordcount=0,sample=1;//sample will index a newmat matrix 
     for( int i =0;i<opts.nburn.value();i++){
-      m_multifibre.jump();
+      m_multifibre.jump( i > opts.nburn_noard.value() );
       count++;
       if(count==opts.updateproposalevery.value()){
 	m_multifibre.update_proposals();
@@ -358,9 +533,9 @@ class xfibresVoxelManager{
 	{
 	  cout<<endl<<i<<" "<<endl<<endl;
 	  m_multifibre.report();
-      
+	  
 	}
-	  recordcount++;
+      recordcount++;
       if(recordcount==opts.sampleevery.value()){
 	m_samples.record(m_multifibre,m_voxelnumber,sample);
 	sample++;
@@ -373,7 +548,7 @@ class xfibresVoxelManager{
       }
     }
     
-    
+    m_samples.finish_voxel(m_voxelnumber);
   }
     
 };
@@ -383,30 +558,31 @@ class xfibresVoxelManager{
 int main(int argc, char *argv[])
 {
   try{  
-
     // Setup logging:
     Log& logger = LogSingleton::getInstance();
     xfibresOptions& opts = xfibresOptions::getInstance();
     opts.parse_command_line(argc,argv,logger);
     srand(xfibresOptions::getInstance().seed.value());
-    
-    
-    Matrix datam, bvals,bvecs;
+    Matrix datam, bvals,bvecs,matrix2volkey;
     volume<float> mask;
+    volume<int> vol2matrixkey;
     bvals=read_ascii_matrix(opts.bvalsfile.value());
     bvecs=read_ascii_matrix(opts.bvecsfile.value());
-    
+
     {//scope in which the data exists in 4D format;
       volume4D<float> data;
       read_volume4D(data,opts.datafile.value());
       read_volume(mask,opts.maskfile.value());
-      datam=data.matrix(mask);  
+      datam=data.matrix(mask); 
+      matrix2volkey=data.matrix2volkey(mask);
+      vol2matrixkey=data.vol2matrixkey(mask);
     }
     Matrix Amat;
     ColumnVector alpha, beta;
     Amat=form_Amat(bvecs,bvals);
     cart2sph(bvecs,alpha,beta);
-    Samples samples(datam.Ncols());
+    Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols());
+    
     for(int vox=1;vox<=datam.Ncols();vox++){
       cout <<vox<<"/"<<datam.Ncols()<<endl;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvals,samples,vox);

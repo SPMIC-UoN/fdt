@@ -257,7 +257,7 @@ namespace FIBRE{
       m_ph_prior=0;
       return false;
     }
-    inline bool compute_f_prior(){
+    inline bool compute_f_prior(bool can_use_ard=true){
       //note(gamma(lam+1)/(gamma(1)*gamma(lam)) = lam
       // the following is a beta distribution with alpha=0
       m_f_old_prior=m_f_prior;
@@ -265,7 +265,7 @@ namespace FIBRE{
 	return true;
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
-	if(opts.no_ard.value()){
+	if(opts.no_ard.value() || !can_use_ard ){
 	  m_f_prior=0;
 	}
 	else{
@@ -347,10 +347,10 @@ namespace FIBRE{
       m_ph_rej++;
     }
     
-    inline bool propose_f(){
+    inline bool propose_f( bool can_use_ard=true){
       m_f_old=m_f;
       m_f+=normrnd().AsScalar()*m_f_prop;
-      bool rejflag=compute_f_prior();
+      bool rejflag=compute_f_prior(can_use_ard);
       compute_prior();
       return rejflag;
     };
@@ -674,7 +674,7 @@ namespace FIBRE{
     
     
 
-    void jump(){
+    void jump( bool can_use_ard=true ){
       
       if(!propose_d()){
 	compute_prior();
@@ -755,7 +755,7 @@ namespace FIBRE{
 	    m_fibres[f].reject_ph();
 	  }
 	  
-	  if(!m_fibres[f].propose_f()){
+	  if(!m_fibres[f].propose_f( can_use_ard )){
 	    if(!reject_f_sum()){
 	      compute_prior();
 	      compute_likelihood();

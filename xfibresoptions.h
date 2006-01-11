@@ -39,6 +39,7 @@ class xfibresOptions {
   Option<float> fudge;
   Option<int> njumps;
   Option<int> nburn;
+  Option<int> nburn_noard;
   Option<int> sampleevery;
   Option<int> updateproposalevery;
   Option<int> seed;
@@ -96,7 +97,10 @@ class xfibresOptions {
 	 string("Num of jumps to be made by MCMC (default is 5000)"),
 	 false,requires_argument),
   nburn(string("--bi,--burnin"),1,
-	string("Num of jumps at start of MCMC to be discarded (default is 1)"),
+	string("Total num of jumps at start of MCMC to be discarded"),
+	false,requires_argument),
+  nburn_noard(string("--bn,--burnin_noard"),0,
+	string("num of burnin jumps before the ard is imposed"),
 	false,requires_argument),
   sampleevery(string("--se,--sampleevery"),1,
 	string("Num of jumps for each sample (MCMC) (default is 1)"),
@@ -125,6 +129,7 @@ class xfibresOptions {
        options.add(fudge);
        options.add(njumps);
        options.add(nburn);
+       options.add(nburn_noard);
        options.add(sampleevery);
        options.add(updateproposalevery);
        options.add(seed);
