@@ -261,6 +261,7 @@ public:
       m_sum_lam[f]=0;
     }
     m_beenhere(int(m_matrix2volkey(vox,1)),int(m_matrix2volkey(vox,2)),int(m_matrix2volkey(vox,3)))=nfibs;
+    cout<<nfibs<<endl;
     cout <<"boobooboo"<<endl;
     cout<<int(m_matrix2volkey(vox,1))<<" "<<int(m_matrix2volkey(vox,2))<<" "<<int(m_matrix2volkey(vox,3))<<endl;
 }
@@ -298,6 +299,7 @@ public:
 	}
       } 
     }
+    ret=(maxfib>1); //
     cout<<ret<<" ret"<<endl;
     if(ret){
       mfibre.set_d(m_mean_dsamples(voxbest));
