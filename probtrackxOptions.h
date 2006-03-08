@@ -9,9 +9,9 @@
 #if !defined(probtrackxOptions_h)
 #define probtrackxOptions_h
 
-#include <string>
-#include <iostream>
-#include <fstream>
+#include <string> 
+#include <iostream.h>
+#include <fstream.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
@@ -57,6 +57,7 @@ class probtrackxOptions {
   Option<float> steplength;
   Option<bool> loopcheck;
   Option<bool> usef;
+  Option<bool> randfib;
   Option<bool> modeuler;
   Option<int> rseed;
   void parse_command_line(int argc, char** argv,Log& logger);
@@ -174,6 +175,9 @@ class probtrackxOptions {
    usef(string("-f,--usef"), false, 
 	 string("Use anisotropy to constrain tracking"), 
 	 false, no_argument),
+  randfib(string("--randfib"), false, 
+	 string("Select randomly from the first two fibres when seeding"), 
+	 false, no_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
@@ -215,6 +219,7 @@ class probtrackxOptions {
        options.add(steplength);
        options.add(loopcheck);
        options.add(usef);
+       options.add(randfib);
        options.add(modeuler);
        options.add(rseed);
      }

@@ -538,6 +538,15 @@ namespace TRACT{
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
     int fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+
+    if(opts.randfib.value()){
+      float tmp=rand()/RAND_MAX;
+      if(tmp>0.5)
+	fibst=0;
+      else
+	fibst=1;// fix this for > 2 fibres
+    }
+    
     for(int p=0;p<opts.nparticles.value();p++){
       if(opts.verbose.value()>1)
 	logger.setLogFile("particle"+num2str(p));

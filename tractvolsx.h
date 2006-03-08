@@ -161,6 +161,7 @@ namespace TRACTVOLSX{
 	    init_sample=false;
 	  }
 	  else{
+	    
 	    for(unsigned int fib=0;fib<thsamples.size();fib++){
 	      if((*fsamples[fib])(int(newx),int(newy),int(newz),int(samp))>opts.fibthresh.value()){
 		float phtmp=(*phsamples[fib])(int(newx),int(newy),int(newz),int(samp));
@@ -176,7 +177,6 @@ namespace TRACTVOLSX{
 	      }
 	      
 	    }
-	    
 	    if(dotmax==0){
 	      theta=(*thsamples[0])(int(newx),int(newy),int(newz),int(samp));
 	      phi=(*phsamples[0])(int(newx),int(newy),int(newz),int(samp));

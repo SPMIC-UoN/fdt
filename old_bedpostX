@@ -1,0 +1,243 @@
+#!/bin/sh
+
+#   SHCOPYRIGHT
+
+Usage() {
+    echo ""
+    echo "Usage: bedpostX <subject directory> "
+    echo ""
+    echo "expects to find bvals and bvecs in subject directory"
+    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo ""
+    exit
+}
+
+trap Clean_Exit 2
+
+
+Clean_Exit(){
+
+	if [ -d ${subjdir}.bedpostX/logs/pid_${$} ];then
+	    i=`ls  ${subjdir}.bedpostX/logs/pid_${$}`
+	    for j in ${i};do 
+		host=`echo $j | awk -F _fdt_ '{print $1}'`
+		pid=`echo $j | awk -F _fdt_ '{print $2}'`
+		if [ "x${FSLMACHINELIST}" != "x" ]; then
+#	            ${FSLREMOTECALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+		 echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpostX_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $host /bin/sh >/dev/null 2>&1 &
+		else
+		    ${FSLDIR}/bin/bedpostX_kill_pid ${pid}
+		fi
+		rm ${subjdir}.bedpostX/logs/pid_${$}/${j}
+	    done
+	fi
+	ExitUnlock;
+}
+
+Lock(){
+    if [ "x${FSLLOCKDIR}" != "x" ];then
+	touch ${FSLLOCKDIR}/.bedpostX.lock
+    fi
+}
+
+ExitUnlock(){
+    if [ -f ${FSLLOCKDIR}/.bedpostX.lock ];then
+	rm ${FSLLOCKDIR}/.bedpostX.lock
+    fi
+
+    #clean up slices
+    ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
+    nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
+    if [ $ndat_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/data_slice_*
+    fi
+    
+    if [ $nnodif_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/nodif_brain_mask_slice_*
+    fi
+    
+    exit
+}
+
+LockTest(){
+    if [ "x${FSLLOCKDIR}" = "x" ];then
+	echo 1;
+    elif [ ! -f ${FSLLOCKDIR}/.bedpostX.lock ];then
+	echo 1;
+    else
+	echo 0;
+    fi
+}
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
+}
+
+
+
+[ "$1" = "" ] && Usage
+
+if [ `LockTest` -eq 0 ]; then
+    echo "bedpostX is currently being run - try again later"
+    exit
+fi
+
+if [ "x${FSLMACHINELIST}" != "x" ];then
+    if [ "x${FSLREMOTECALL}" = "x" ];then
+	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
+	exit
+    fi
+fi
+
+Lock;
+
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+
+echo subjectdir is $subjdir
+
+#check that all required files exist
+
+
+if [ ! -d $subjdir ]; then
+	echo "subject directory $1 not found"
+	ExitUnlock
+fi
+
+if [ ! -f ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
+	ExitUnlock
+fi
+
+if [ ! -f ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
+	echo "${subjdir}/nodif not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
+	ExitUnlock
+fi
+
+
+echo making bedpostX directory
+mkdir -p ${subjdir}.bedpostX/
+mkdir -p ${subjdir}.bedpostX/diff_slices
+
+echo copying files to bedpostX directory
+cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
+${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
+${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/nodif_brain
+
+
+mkdir -p ${subjdir}.bedpostX/logs
+mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
+
+nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
+
+${FSLDIR}/bin/avwslice ${subjdir}/data
+${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+
+#for parallel processing, the following need to be setup elsewhere
+#FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
+#FSLREMOTECALL="ssh (or rsh or whatever you want to use)"
+
+if [ "x$FSLMACHINELIST" = "x" ] ; then
+    echo "processing data on local host"
+    ${FSLDIR}/bin/bedpostX_proc $subjdir $nslices ${subjdir}.bedpostX/logs/pid_${$} &
+else
+    echo "processing data on hosts: $FSLMACHINELIST"
+    for machine in $FSLMACHINELIST; do
+	echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpostX_proc $subjdir $nslices ${subjdir}.bedpostX/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"|	$FSLREMOTECALL $machine /bin/sh  &
+    done
+fi
+
+
+b=0
+finished=0;
+while [ $finished -eq 0 ];do
+    b=`expr $b + 1 `
+    sleep 60;
+    nfin=`echo ${subjdir}.bedpostX/logs/.*_finished | grep -v ".\*" |wc -w` 
+    if [ $nfin -eq $nslices ];then
+	finished=1;
+    fi
+    if [ $b -eq 10 ]; then 
+	echo "$nfin slices processed"
+	b=0
+    fi	
+done
+
+#postprocessing
+#postprocess $subjdir
+
+
+numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples |wc -w`
+
+
+fib=1;
+while [ $fib -le $numfib ];do
+    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_th${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/th${fib}samples`
+    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_ph${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/ph${fib}samples`
+    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_f${fib}samples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/f${fib}samples`
+    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_th${fib}samples -Tmean ${subjdir}.bedpostX/mean_th${fib}samples
+    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_ph${fib}samples -Tmean ${subjdir}.bedpostX/mean_ph${fib}samples
+    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_f${fib}samples -Tmean ${subjdir}.bedpostX/mean_f${fib}samples
+
+    ${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpostX/merged_th${fib}samples ${subjdir}.bedpostX/merged_ph${fib}samples ${subjdir}.bedpostX/nodif_brain_mask ${subjdir}.bedpostX/dyads${fib}
+
+    fib=`echo "$fib +1"|bc`;
+done
+
+echo Removing intermediate files
+
+if [ `imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
+  if [ `imtest ${subjdir}.bedpostX/merged_ph1samples` -eq 1 ];then
+    if [ `imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
+      rm -rf ${subjdir}.bedpostX/diff_slices
+      rm -f ${subjdir}/data_slice_*
+      rm -f ${subjdir}/nodif_brain_mask_slice_*
+    fi
+  fi
+fi
+
+echo Creating identity xfm
+
+xfmdir=${subjdir}.bedpostX/xfms
+echo 1 0 0 0 > ${xfmdir}/eye.mat
+echo 0 1 0 0 >> ${xfmdir}/eye.mat
+echo 0 0 1 0 >> ${xfmdir}/eye.mat
+echo 0 0 0 1 >> ${xfmdir}/eye.mat
+
+echo Done
+
+
+
+
+
+
+ExitUnlock()
+
+
+
+
+

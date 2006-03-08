@@ -1,7 +1,7 @@
 /* Xfibres Diffusion Partial Volume Model  
 
     Tim Behrens - FMRIB Image Analysis Group
-
+ 
     Copyright (C) 2005 University of Oxford  */
 
 /*  CCOPYRIGHT  */
@@ -9,7 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <sstream>
+#include <strstream>
 #define WANT_STREAM
 #define WANT_MATH
 //  #include "newmatap.h"
@@ -368,8 +368,8 @@ public:
       sort(sfs.begin(),sfs.end());
       
       for(int samp=1;samp<=m_dsamples.Nrows();samp++){
-	for(int f=0;f<opts.nfibres.value();f++){
- 	  thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
+	for(int f=0;f<opts.nfibres.value();
+	  thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  phsamples_out[f](samp,vox)=m_phsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  fsamples_out[f](samp,vox)=m_fsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  lamsamples_out[f](samp,vox)=m_lamsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
