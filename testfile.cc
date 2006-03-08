@@ -17,7 +17,7 @@ using namespace NEWIMAGE;
   string myline;
   else{
       avg_file.getline(myline);
-      istrstream mylinestr(myline);
+      istringstream mylinestr(myline);
       mylinestr>>start;
       mylinestr>>length;
       cerr<<start<<" "<<length<<endl;

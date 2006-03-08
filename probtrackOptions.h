@@ -10,8 +10,8 @@
 #define probtrackOptions_h
 
 #include <string>
-#include <iostream.h>
-#include <fstream.h>
+#include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"

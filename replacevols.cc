@@ -33,7 +33,7 @@ int read_avg_file (vector<vector<int> >& avgs,const string fname){
 	}
       }
 
-      istrstream mylinestr(myline.c_str());   
+      istringstream mylinestr(myline.c_str());   
 
       while(!mylinestr.eof()){
 
