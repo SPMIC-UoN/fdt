@@ -6,7 +6,7 @@
 
 Usage() {
     echo ""
-    echo "Usage: bedpostX_proc <subject_dir> <nslices> [piddir]"
+    echo "Usage: bedpost_proc <subject_dir> <nslices> [piddir]"
     echo ""
     exit
 }
@@ -24,12 +24,12 @@ nslices=$2
 slice=0
 while [ $slice -lt $nslices ];do
     slicezp=`${FSLDIR}/bin/zeropad $slice 4`
-    if [ ! -f ${subjdir}.bedpostX/logs/.$slicezp ] ; then
-	echo `hostname`_${$} > ${subjdir}.bedpostX/logs/.$slicezp
+    if [ ! -f ${subjdir}.bedpost/logs/.$slicezp ] ; then
+	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slicezp
 	sleep 10
-	if [ `hostname`_${$} = `cat ${subjdir}.bedpostX/logs/.$slicezp | sed -n '1p'` ] ; then
-	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpostX/diff_slices/data_slice_$slicezp --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpostX/logs/log$slicezp
-	    touch ${subjdir}.bedpostX/logs/.${slicezp}_finished
+	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slicezp | sed -n '1p'` ] ; then
+	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slicezp --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slicezp
+	    touch ${subjdir}.bedpost/logs/.${slicezp}_finished
 	fi
     fi
     slice=`echo "$slice + 1" | bc`
