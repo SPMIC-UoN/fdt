@@ -368,7 +368,7 @@ public:
       sort(sfs.begin(),sfs.end());
       
       for(int samp=1;samp<=m_dsamples.Nrows();samp++){
-	for(int f=0;f<opts.nfibres.value();
+	for(int f=0;f<opts.nfibres.value();f++){;
 	  thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  phsamples_out[f](samp,vox)=m_phsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	  fsamples_out[f](samp,vox)=m_fsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
