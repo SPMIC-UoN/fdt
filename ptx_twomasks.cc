@@ -38,10 +38,12 @@ void twomasks()
       }
     }
   }
+  cout<<"finished a"<<endl;
   stline.pop_waymasks();
-  
+  cout<<"popped"<<endl;
   
   stline.add_waymask(seeds);
+  
   for(int z=0;z<seeds2.zsize();z++){
     for(int y=0;y<seeds2.ysize();y++){
       for(int x=0;x<seeds2.xsize();x++){
@@ -52,7 +54,7 @@ void twomasks()
     }
   }
   
-
+  
   counter.save();
   
 }
