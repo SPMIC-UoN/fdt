@@ -11,12 +11,11 @@
 #include "libprob.h"
 #include <cmath>
 #include "miscmaths/miscprob.h"
-#include "xfibresoptions.h"
 
 using namespace std; 
 using namespace NEWMAT;
 using namespace MISCMATHS;
-using namespace Xfibres;
+
 const float maxfloat=1e10;
 const float minfloat=1e-10;
 const float maxlogfloat=23;
@@ -47,6 +46,7 @@ namespace FIBRE{
     float m_lam_old_prior;
     float m_prior_en;
     float m_old_prior_en;
+    float m_ardfudge;
     int m_th_acc; 
     int m_th_rej;
     int m_ph_acc;
@@ -62,12 +62,11 @@ namespace FIBRE{
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
     const Matrix& m_bvals;
-    xfibresOptions& opts;
  public:
     //constructors::
     Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
-	   const Matrix& bvals,const float& d):
-      m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals),opts(xfibresOptions::getInstance()){
+	   const Matrix& bvals,const float& d,const float& ardfudge=1):
+     m_ardfudge(ardfudge), m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
 
 	m_th=M_PI/2;
 	m_th_old=m_th;
@@ -109,11 +108,11 @@ namespace FIBRE{
 
     }
     Fibre(const ColumnVector& alpha, 
-	  const ColumnVector& beta, const Matrix& bvals, const float& d, 
+	  const ColumnVector& beta, const Matrix& bvals, const float& d, const float& ardfudge,
 	  const float& th, const float& ph, const float& f, 
 	  const float& lam, const bool lam_jump=true) : 
-      m_th(th), m_ph(ph), m_f(f), m_lam(lam),m_lam_jump(lam_jump), m_d(d),  
-      m_alpha(alpha), m_beta(beta), m_bvals(bvals),opts(xfibresOptions::getInstance())
+      m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d),
+      m_alpha(alpha), m_beta(beta), m_bvals(bvals)
      {
       m_th_old=m_th;
       m_ph_old=m_ph;
@@ -151,7 +150,7 @@ namespace FIBRE{
      
     }
     Fibre(const Fibre& rhs): 
-      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals),opts(xfibresOptions::getInstance()){
+      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals){
       *this=rhs;
     }
 
@@ -265,7 +264,7 @@ namespace FIBRE{
 	return true;
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
-	if(opts.no_ard.value() || !can_use_ard ){
+	if(!can_use_ard ){
 	  m_f_prior=0;
 	}
 	else{
@@ -275,7 +274,7 @@ namespace FIBRE{
 	    else
 	    m_f_prior=0;
 	}
-	m_f_prior=opts.fudge.value()*m_f_prior;
+	m_f_prior=m_ardfudge*m_f_prior;
 	return false;
       }
     }
@@ -459,7 +458,8 @@ namespace FIBRE{
     float m_old_likelihood_en;
     float m_energy;
     float m_old_energy;
-    
+    float m_ardfudge;
+
     const ColumnVector& m_data;
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
@@ -467,8 +467,8 @@ namespace FIBRE{
     
   public:
     Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
-	       const ColumnVector& beta, const Matrix& b, int N ):
-    m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b){
+	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1):
+      m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b){
       
       //      initialise(Amat,N);
     }
@@ -480,12 +480,12 @@ namespace FIBRE{
     }
     
     void addfibre(const float th, const float ph, const float f,const float lam, const bool lam_jump=true){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d,th,ph,f,lam,lam_jump);
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,lam,lam_jump);
       m_fibres.push_back(fib);
     }
 
     void addfibre(){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d);
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge);
       m_fibres.push_back(fib);
     }
     

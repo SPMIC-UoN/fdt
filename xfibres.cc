@@ -437,7 +437,7 @@ class xfibresVoxelManager{
     opts(xfibresOptions::getInstance()), 
     m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
     m_alpha(alpha), m_beta(beta), m_bvals(b), 
-    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value()){ }
+    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value()){ }
   
    
   void initialise(const Matrix& Amat){
@@ -519,7 +519,7 @@ class xfibresVoxelManager{
   void runmcmc(){
     int count=0, recordcount=0,sample=1;//sample will index a newmat matrix 
     for( int i =0;i<opts.nburn.value();i++){
-      m_multifibre.jump( i > opts.nburn_noard.value() );
+      m_multifibre.jump( !opts.no_ard.value() );
       count++;
       if(count==opts.updateproposalevery.value()){
 	m_multifibre.update_proposals();
@@ -528,7 +528,7 @@ class xfibresVoxelManager{
     }
     
     for( int i =0;i<opts.njumps.value();i++){
-      m_multifibre.jump();
+      m_multifibre.jump(!opts.no_ard.value());
       count++;
      
       if(opts.verbose.value()) 
