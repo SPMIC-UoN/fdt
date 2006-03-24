@@ -6,7 +6,7 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
  
-DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+DLIBS = -lfdt -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 #DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 
@@ -29,7 +29,7 @@ TEST=testfile
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTOBJS=probtrack.o probtrackOptions.o pt_alltracts.o pt_matrix.o pt_seeds_to_targets.o pt_simple.o pt_twomasks.o pt_matrix_mesh.o
-PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o
+PTXOBJS=probtrackx.o probtrackxOptions.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o
 FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
@@ -42,6 +42,12 @@ MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
 TESTOBJS=testfile.o
 
+LIBHDRS=streamlines.h fibre.h particle.h tractvolsx.h
+LIBOBJS=streamlines.o particle.o
+
+HFILES=${LIBHDRS}
+AFILES=libfdt.a
+
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 FSCRIPTS=correct_and_average ocmr_preproc
 XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
@@ -50,7 +56,10 @@ FXFILES = reord_OM sausages replacevols fdt_matrix_ops
 
 RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} 
+all: libfdt.a ${XFILES} ${FXFILES} 
+
+libfdt.a: ${LIBOBJS}
+	${AR} -r libfdt.a ${LIBOBJS}
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
