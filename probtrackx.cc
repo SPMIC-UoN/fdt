@@ -34,9 +34,11 @@ int main ( int argc, char **argv ){
   }
   if(opts.mode.value()=="simple")
     track();
-  else if(fsl_imageexists(opts.mask2.value())){ twomasks();}
+  string tmpin=opts.seedfile.value();
+  if(fsl_imageexists(opts.mask2.value())){ twomasks();}
   else if(fsl_imageexists(opts.seedfile.value())){ seedmask();}
-  
+  //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
+
   // else if(opts.mode.value()=="seeds_to_targets")
   //     seeds_to_targets();
   //   else if(opts.mode.value()=="seedmask")
@@ -57,9 +59,9 @@ int main ( int argc, char **argv ){
   //     maskmatrix();
   //   else if(opts.mode.value()=="meshlengths")
   //     mesh_lengths();
-  else{
-    cout <<"Invalid setting for option  mode -- try setting mode=help"<<endl;
-  }
+  //else{
+  //   cout <<"Invalid setting for option  mode -- try setting mode=help"<<endl;
+  //}
   
   return 0;
 }

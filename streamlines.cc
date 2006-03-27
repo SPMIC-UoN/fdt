@@ -493,7 +493,7 @@ namespace TRACT{
   }
   
   void Counter::save_pathdist(){  
-    save_volume(m_prob,logger.appendDir(opts.outfile.value()));
+    save_volume(m_prob,logger.appendDir("fdt_paths"));
   }
   
   void Counter::save_pathdist(string add){  //for simple mode
@@ -537,11 +537,12 @@ namespace TRACT{
   
   }
   
-  void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly){
+  void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
-    int fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
-
+    if(fibst == -1){
+      fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+    }
     if(opts.randfib.value()){
       float tmp=rand()/RAND_MAX;
       if(tmp>0.5)

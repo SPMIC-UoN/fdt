@@ -33,22 +33,20 @@ void twomasks()
     for(int y=0;y<seeds.ysize();y++){
       for(int x=0;x<seeds.xsize();x++){
 	if(seeds(x,y,z)>0){
-	  seedmanager.run(x,y,z); 
+	  seedmanager.run(x,y,z,false,-1); 
 	}
       }
     }
   }
-  cout<<"finished a"<<endl;
   stline.pop_waymasks();
-  cout<<"popped"<<endl;
   
   stline.add_waymask(seeds);
-  
+  cout<<"added"<<endl;
   for(int z=0;z<seeds2.zsize();z++){
     for(int y=0;y<seeds2.ysize();y++){
       for(int x=0;x<seeds2.xsize();x++){
 	if(seeds2(x,y,z)>0){
-	  seedmanager.run(x,y,z); 
+	  seedmanager.run(x,y,z,false,seeds2(x,y,z)-1); 
 	}
       }
     }
