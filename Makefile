@@ -24,7 +24,9 @@ XFIBRES=xfibres
 RV=replacevols
 MDV=make_dyadic_vectors
 FMO=fdt_matrix_ops
+INDEXER=indexer
 TEST=testfile
+
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -40,12 +42,14 @@ XFIBOBJS=xfibres.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
+INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
+
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
 FSCRIPTS=correct_and_average ocmr_preproc
 XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
 
 
 RUNTCLS = Fdt
@@ -93,6 +97,9 @@ ${MDV}:    	${MDVOBJS}
 
 ${FMO}:    	${FMOOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FMOOBJS} ${DLIBS}
+
+${INDEXER}:    	${INDEXEROBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${INDEXEROBJS} ${DLIBS}
 
 ${TEST}:    	${TESTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
