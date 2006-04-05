@@ -196,7 +196,7 @@ namespace TRACT{
       m_seeddims.ReSize(3);
       m_seeddims<<m_seeds.xdim()<<m_seeds.ydim()<<m_seeds.zdim();
     }
-    void run(const float& x,const float& y,const float& z,bool onewayonly=false);
+    void run(const float& x,const float& y,const float& z,bool onewayonly=false, int fibst=-1);
   };
 
 }

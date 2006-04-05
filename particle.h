@@ -17,7 +17,8 @@
 //                                                              //
 //////////////////////////////////////////////////////////////////
 #include <iostream>
-#include "stdlib.h"
+#include <cstdlib>
+#include <cmath>
 
 using namespace std;
 

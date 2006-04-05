@@ -124,22 +124,25 @@ namespace TRACT{
 	int x_s =(int)round((float)xyz_seeds(1));
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
-	if(opts.rubbishfile.value()!=""){
-	  if(m_rubbish(x_s,y_s,z_s)>0) break;
-	}
 	  
+	//update every passed_flag
+	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
+	  if( (*m_waymasks[wm])(x_s,y_s,z_s)>0 ) {
+	    m_passed_flags[wm]=true;
+	  }
+	}
 	m_path.push_back(xyz_seeds);
 	//	  m_path(it,1)=x_s; 
 	//	  m_path(it,2)=y_s;
 	//	  m_path(it,3)=z_s;
 	partlength++;
-	  
-	//update every passed_flag
-	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
-	  if( (*m_waymasks[wm])(x_s,y_s,z_s)>0 ) 
-	    m_passed_flags[wm]=true;
+	
+
+	if(opts.rubbishfile.value()!=""){
+	  if(m_rubbish(x_s,y_s,z_s)>0) break;
 	}
 	  
+	
 	  
 	if(opts.skipmask.value() == ""){
 	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
@@ -188,8 +191,8 @@ namespace TRACT{
     }   
     return accept_path;
   }
-
-
+  
+  
   void Counter::initialise(){
     if(opts.simpleout.value()||opts.matrix1out.value()){
       initialise_path_dist();
@@ -490,7 +493,7 @@ namespace TRACT{
   }
   
   void Counter::save_pathdist(){  
-    save_volume(m_prob,logger.appendDir(opts.outfile.value()));
+    save_volume(m_prob,logger.appendDir("fdt_paths"));
   }
   
   void Counter::save_pathdist(string add){  //for simple mode
@@ -534,11 +537,12 @@ namespace TRACT{
   
   }
   
-  void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly){
+  void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
-    int fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
-
+    if(fibst == -1){
+      fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+    }
     if(opts.randfib.value()){
       float tmp=rand()/RAND_MAX;
       if(tmp>0.5)
@@ -554,7 +558,7 @@ namespace TRACT{
       m_stline.reset();
       bool forwardflag=false,backwardflag=false;
       if(!onewayonly){
-	if(m_stline.streamline(x,y,z,m_seeddims,fibst)){
+	if(m_stline.streamline(x,y,z,m_seeddims,fibst)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();

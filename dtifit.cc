@@ -189,10 +189,12 @@ int main(int argc, char** argv)
   Matrix r = read_ascii_matrix(opts.bvecsfile.value());
   if(r.Nrows()>3) r=r.t();
   for(int i=1;i<=r.Ncols();i++){
-    float tmpsum=sqrt(r(i,1)*r(i,1)+r(i,2)*r(i,2)+r(i,3)*r(i,3));
-    r(i,1)=r(i,1)/tmpsum;
-    r(i,2)=r(i,2)/tmpsum;
-    r(i,3)=r(i,3)/tmpsum;
+    float tmpsum=sqrt(r(1,i)*r(1,i)+r(2,i)*r(2,i)+r(3,i)*r(3,i));
+    if(tmpsum!=0){
+      r(1,i)=r(1,i)/tmpsum;
+      r(2,i)=r(2,i)/tmpsum;
+      r(3,i)=r(3,i)/tmpsum;
+    }  
   }
   Matrix b = read_ascii_matrix(opts.bvalsfile.value());
   if(b.Nrows()>1) b=b.t();
