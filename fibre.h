@@ -64,6 +64,7 @@ namespace FIBRE{
     const Matrix& m_bvals;
  public:
     //constructors::
+
     Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
 	   const Matrix& bvals,const float& d,const float& ardfudge=1):
      m_ardfudge(ardfudge), m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
@@ -466,16 +467,20 @@ namespace FIBRE{
     const Matrix& m_bvals;
     
   public:
+    // empty constructor
+
     Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
 	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1):
       m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b){
-      
       //      initialise(Amat,N);
     }
     
     ~Multifibre(){}
     
     const vector<Fibre>& fibres() const{
+      return m_fibres;
+    }
+    vector<Fibre>& get_fibres(){
       return m_fibres;
     }
     
@@ -506,6 +511,8 @@ namespace FIBRE{
     
     inline float get_d() const{ return m_d;}
     inline void set_d(const float d){ m_d=d; }
+
+    inline int get_nfibre(){return m_fibres.size();}
     
     inline float get_energy() const { return m_likelihood_en+m_prior_en;}
     inline float get_likelihood_energy() const { return m_likelihood_en;}
@@ -575,6 +582,7 @@ namespace FIBRE{
     }
     
     void compute_likelihood(){
+
       m_old_likelihood_en=m_likelihood_en;
       ColumnVector pred(m_alpha.Nrows());
       pred=0;
@@ -582,15 +590,17 @@ namespace FIBRE{
       for(unsigned int f=0;f<m_fibres.size();f++){
 	pred=pred+m_fibres[f].get_f()*m_fibres[f].getSignal();
 	fsum+=m_fibres[f].get_f();
-	
       }
       for(int i=1;i<=pred.Nrows();i++){
 	pred(i)=pred(i)+(1-fsum)*exp(-m_d*m_bvals(1,i));
       }
       pred=pred*m_S0;
       
+
+
       float sumsquares=(m_data-pred).SumSquare();
       m_likelihood_en=(m_data.Nrows()/2)*log(sumsquares/2);
+     
     }
     
   
@@ -798,7 +808,32 @@ namespace FIBRE{
       
       
     }
-    
+    Multifibre& operator=(const Multifibre& rhs){
+      m_fibres=rhs.m_fibres;
+      m_d=rhs.m_d;
+      m_d_old=rhs.m_d_old;
+      m_d_prop=rhs.m_d_prop;
+      m_d_prior=rhs.m_d_prior; 
+      m_d_old_prior=rhs.m_d_old_prior;
+      m_d_acc=rhs.m_d_acc;
+      m_d_rej=rhs.m_d_rej;
+      m_S0=rhs.m_S0;
+      m_S0_old=rhs.m_S0_old;
+      m_S0_prop=rhs.m_S0_prop;
+      m_S0_prior=rhs.m_S0_prior;
+      m_S0_old_prior=rhs.m_S0_old_prior;
+      m_S0_acc=rhs.m_S0_acc;
+      m_S0_rej=rhs.m_S0_rej;
+      m_prior_en=rhs.m_prior_en;
+      m_old_prior_en=rhs.m_old_prior_en;
+      m_likelihood_en=rhs.m_likelihood_en;
+      m_old_likelihood_en=rhs.m_old_likelihood_en;
+      m_energy=rhs.m_energy;
+      m_old_energy=rhs.m_old_energy;
+      m_ardfudge=rhs.m_ardfudge;
+
+      return *this;
+    }
     
   };
   
