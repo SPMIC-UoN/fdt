@@ -1,0 +1,136 @@
+#!/bin/sh
+
+#   Copyright (C) 2004 University of Oxford
+#
+#   SHCOPYRIGHT
+
+if [ "x$SGE_ROOT" = "x" ] ; then
+  if [ -f /usr/local/share/sge-6.0/default/common/settings.sh ] ; then
+    . /usr/local/share/sge-6.0/default/common/settings.sh
+  else if [ -f /usr/local/sge-6/default/common/settings.sh ] ; then
+      . /usr/local/sge-6/default/common/settings.sh
+    else
+      echo "bedpostX: Fatal error: couldn\'t locate SGE_ROOT\!"
+      exit 255
+    fi
+  fi
+fi
+
+Usage() {
+    echo ""
+    echo "Usage: bedpostX <subject directory> "
+    echo ""
+    echo "expects to find bvals and bvecs in subject directory"
+    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo ""
+    exit
+}
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
+}
+
+
+[ "$1" = "" ] && Usage
+
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+
+echo subjectdir is $subjdir
+
+#check that all required files exist
+
+if [ ! -d $subjdir ]; then
+	echo "subject directory $1 not found"
+fi
+
+if [ ! -e ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
+fi
+
+if [ ! -e ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
+	echo "${subjdir}/nodif not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
+fi
+
+echo Making bedpost directory structure
+
+mkdir -p ${subjdir}.bedpost/
+mkdir -p ${subjdir}.bedpost/diff_slices
+mkdir -p ${subjdir}.bedpost/logs
+mkdir -p ${subjdir}.bedpost/logs/pid_${$}
+mkdir -p ${subjdir}.bedpost/xfms
+
+mailto=`whoami`@fmrib.ox.ac.uk
+
+echo Queuing preprocessing stages
+preprocid=`qsub -M $mailto -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/sge_bedpostX_preproc.sh ${subjdir} | \
+    awk '{print $3}'`
+
+echo Queuing parallel processing stage
+nslices=`avwval ${subjdir}/data dim3`
+bedpostid=`qsub -M $mailto -hold_jid $preprocid -V -q long.q -t 1-$nslices \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir | \
+    awk '{print $3}' | awk -F. '{print $1}'`
+
+echo Queuing post processing stage
+mergeid=`qsub -M $mailto -hold_jid $bedpostid -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/sge_bedpostX_postproc.sh $subjdir | \
+    awk '{print $3}'`
+
+echo
+echo Type ${subjdir}.bedpost/monitor to show progress.
+cat <<EOM > ${subjdir}.bedpost/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpost/logs
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    if [ -f \$logdir/bedpost.o$bedpostid.1 ] ; then
+      nfin=\`cat \$logdir/bedpost.o$bedpostid.* |\
+        grep Done | wc -w | awk '{print \$1}'\` 
+    fi
+    if [ \$nfin -eq $nslices ] ; then
+        finished=1
+    fi
+
+    echo "\$nfin slices processed"
+    sleep 600;
+done
+EOM
+chmod +x ${subjdir}.bedpost/monitor
+
+echo Type ${subjdir}.bedpost/cancel to terminate the task.
+cat <<EOC > ${subjdir}.bedpost/cancel
+#!/bin/sh
+qdel $mergeid $bedpostid $preprocid
+EOC
+chmod +x ${subjdir}.bedpost/cancel
+
+echo
+echo You will get an email at the end of the post-processing stage.
+echo
