@@ -2,6 +2,10 @@
 
 #   SHCOPYRIGHT
 
+if [ "x$SGE_ROOT" != "x" ] && [ -f $FSLDIR/bin/sge_bedpostX ] ; then
+    exec $FSLDIR/bin/sge_bedpostX $@
+fi
+
 Usage() {
     echo ""
     echo "Usage: bedpostX <subject directory> "
