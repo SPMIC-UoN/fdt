@@ -45,9 +45,13 @@ FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 
+SGEBEDPOST =sge_bedpost  sge_bedpost_postproc.sh  sge_bedpost_preproc.sh  sge_bedpost_single_slice.sh
+SGEBEDPOSTX=sge_bedpostX sge_bedpostX_postproc.sh sge_bedpostX_preproc.sh sge_bedpostX_single_slice.sh
 
 SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck
-FSCRIPTS=correct_and_average ocmr_preproc
+FSCRIPTS=correct_and_average ocmr_preproc bedpostX bedpostX_proc bedpostX_cleanup bedpostX_kill_all \
+	${SGEBEDPOST} ${SGEBEDPOSTX}
+
 XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
 
