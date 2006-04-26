@@ -13,6 +13,6 @@ ${FSLDIR}/bin/xfibres\
  --data=$subjdir/data_slice_$slicezp\
  --mask=$subjdir/nodif_brain_mask_slice_$slicezp\
  -b $subjdir/bvals -r $subjdir/bvecs\
- --forcedir --logdir=$subjdir.bedpost/diff_slices/data_slice_$slicezp\
- --nj=1000 --bi=600 --se=20 --upe=24 --nfibres=2 > $subjdir.bedpost/logs/log$slicezp  && echo Done
+ --forcedir --logdir=$subjdir.bedpostX/diff_slices/data_slice_$slicezp\
+ --nj=1000 --bi=600 --se=20 --upe=24 --nfibres=2 > $subjdir.bedpostX/logs/log$slicezp  && echo Done
 
