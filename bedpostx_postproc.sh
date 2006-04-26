@@ -4,7 +4,7 @@ subjdir=$1
 
 #$ -S /bin/sh
 #$ -V
-#$ -N bp_postproc
+#$ -N bpx_postproc
 #$ -m ae
 
 
