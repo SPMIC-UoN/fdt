@@ -313,7 +313,7 @@ namespace FIBRE{
       compute_signal();
       return rejflag;
     };
-    
+
     inline void accept_th(){
       m_th_acc++;      
     }
@@ -347,6 +347,36 @@ namespace FIBRE{
       m_ph_rej++;
     }
     
+    
+    bool propose_th_ph(float th,float ph){
+      //m_th_old=m_th;m_ph_old=m_ph;
+      m_th=th;m_ph=ph;
+      bool rejflag_th=compute_th_prior();//inside this it stores the old prior
+      bool rejflag_ph=compute_ph_prior();
+
+      compute_prior();
+      compute_signal();
+
+      return rejflag_th | rejflag_ph;
+    }
+    void accept_th_ph(){
+      m_th_acc++;
+      m_ph_acc++;
+    }
+    void reject_th_ph(){
+      m_ph=m_ph_old;
+      m_ph_prior=m_ph_old_prior;
+
+      m_th=m_th_old;
+      m_th_prior=m_th_old_prior;
+
+      m_prior_en=m_old_prior_en;
+      m_Signal=m_Signal_old;//Is there a better way of doing this??
+
+      m_th_rej++;
+      m_ph_rej++;
+    }
+
     inline bool propose_f( bool can_use_ard=true){
       m_f_old=m_f;
       m_f+=normrnd().AsScalar()*m_f_prop;
@@ -516,6 +546,7 @@ namespace FIBRE{
     
     inline float get_energy() const { return m_likelihood_en+m_prior_en;}
     inline float get_likelihood_energy() const { return m_likelihood_en;}
+    inline float get_prior() const {return m_prior_en;}
     
     inline float get_S0() const{ return m_S0;}
     inline void set_S0(const float S0){ m_S0=S0; }
@@ -609,6 +640,24 @@ namespace FIBRE{
       m_energy=m_prior_en+m_likelihood_en;
     }
     
+    void evaluate_energy(){
+      m_old_energy=m_energy;
+
+      for(unsigned int f=0;f<m_fibres.size();f++){
+	m_fibres[f].compute_th_prior();
+	m_fibres[f].compute_ph_prior();
+	m_fibres[f].compute_f_prior();
+	m_fibres[f].compute_lam_prior();
+	m_fibres[f].compute_signal();
+	m_fibres[f].compute_prior();
+      }
+      compute_prior();
+      compute_likelihood();
+
+      m_energy=m_prior_en+m_likelihood_en;
+    }
+
+
     bool test_energy(){
       float tmp=exp(m_old_energy-m_energy);
       return (tmp>unifrnd().AsScalar());
