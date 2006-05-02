@@ -35,6 +35,7 @@ class probtrackxOptions {
   Option<string> mode;
   Option<string> targetfile;
   Option<bool> simpleout;
+  Option<int> pathdist;
   Option<bool> s2tout;
   FmribOption<bool> matrix1out;
   FmribOption<bool> matrix2out;
@@ -109,6 +110,9 @@ class probtrackxOptions {
   simpleout(string("--opd"), false,
 	    string("output path distribution"),
 	    false, no_argument), 
+  pathdist(string("--pd"), 1,
+	   string("path distribution, 1:probability,2:distance corrected value"),
+	   false, requires_argument), 
   s2tout(string("--os2t"), false,
 	 string("output seeds to targets"),
 	 false, no_argument),
@@ -119,18 +123,17 @@ class probtrackxOptions {
 	  string("output matrix2"),
 	  false, no_argument), 
   maskmatrixout(string("--omaskmatrix"), false,
-	    string("output maskmatrix"),
-	  false, no_argument), 
-
-  outfile(string("-o,--out"), string(""),
-	    string("Output file (only for single seed voxel mode)"),
-	    false, requires_argument),
+		string("output maskmatrix"),
+		false, no_argument), 
+   outfile(string("-o,--out"), string(""),
+	   string("Output file (only for single seed voxel mode)"),
+	   false, requires_argument),
    rubbishfile(string("--rubbish"), string(""),
-	    string("Rubbish file"),
-	    false, requires_argument),
+	       string("Rubbish file"),
+	       false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
-	      string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
-  skipmask(string("--no_integrity"), string(""),
+		string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
+   skipmask(string("--no_integrity"), string(""),
 	   string("no explanation needed"),
 	   false, requires_argument),
   seedref(string("--seedref"), string(""),
@@ -205,6 +208,7 @@ class probtrackxOptions {
        options.add(logdir); 
        options.add(forcedir); 
        options.add(simpleout);
+       options.add(pathdist);
        options.add(s2tout);
        options.add(matrix1out);
        options.add(matrix2out);

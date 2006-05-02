@@ -363,11 +363,23 @@ namespace TRACT{
   
   void Counter::update_pathdist(){
     const vector<ColumnVector>& path=m_stline.get_path_ref();
-    for(unsigned int i=0;i<path.size();i++){
-      int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
-      if(m_beenhere(x_s,y_s,z_s)==0){
-	m_prob(x_s,y_s,z_s)+=1;
-	m_beenhere(x_s,y_s,z_s)=1;
+    if(opts.pathdist.value()==1){
+      for(unsigned int i=0;i<path.size();i++){
+	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
+	if(m_beenhere(x_s,y_s,z_s)==0){
+	  m_prob(x_s,y_s,z_s)+=1;
+	  m_beenhere(x_s,y_s,z_s)=1;
+	}
+      }
+    }
+    else{
+      int d=1;
+      for(unsigned int i=0;i<path.size();i++){
+	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
+	if(m_beenhere(x_s,y_s,z_s)==0){
+	  m_prob(x_s,y_s,z_s)+=d;d++;
+	  m_beenhere(x_s,y_s,z_s)=1;
+	}
       }
     }
     
