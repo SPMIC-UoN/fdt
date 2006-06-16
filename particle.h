@@ -19,6 +19,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <vector>
 
 using namespace std;
 
@@ -224,8 +225,24 @@ namespace PARTICLE{
 	}
 	else return true;
       }
-  
-  
+
+      // function added by Saad to choose a direction during deterministic streamlining
+      // the choosed direction is the one that is closest to current direction
+      unsigned int choose_dir(const vector<float>& th,const vector<float>& ph){
+	float ps,tmpps=0;
+	unsigned int r=0;
+
+	for(unsigned int i=0;i<th.size();i++){
+	  ps=tmpps;
+	  tmpps=fabs((sin(th[i])*(cos(ph[i])*m_rx+sin(ph[i])*m_ry)+cos(ph[i])*m_rz));
+	  r = tmpps > ps ? i : r;
+	}
+	
+	return r;
+	
+      }
+
+
       friend ostream& operator<<(ostream& ostr,const Particle& p);
   
 
