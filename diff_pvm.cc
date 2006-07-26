@@ -298,6 +298,16 @@ int main(int argc, char *argv[])
 //     return 0;
     int ntpts = data.tsize();
     Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
+    if(bvecs.Nrows()>3) bvecs=bvecs.t();
+    for(int i=1;i<=bvecs.Ncols();i++){
+      float tmpsum=sqrt(bvecs(1,i)*bvecs(1,i)+bvecs(2,i)*bvecs(2,i)+bvecs(3,i)*bvecs(3,i));
+      if(tmpsum!=0){
+	bvecs(1,i)=bvecs(1,i)/tmpsum;
+	bvecs(2,i)=bvecs(2,i)/tmpsum;
+	bvecs(3,i)=bvecs(3,i)/tmpsum;
+      }  
+    }
+
     Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
     // mask:
     Volume mask;

@@ -576,6 +576,17 @@ int main(int argc, char *argv[])
     volume<int> vol2matrixkey;
     bvals=read_ascii_matrix(opts.bvalsfile.value());
     bvecs=read_ascii_matrix(opts.bvecsfile.value());
+    if(bvecs.Nrows()>3) bvecs=bvecs.t();
+    for(int i=1;i<=bvecs.Ncols();i++){
+      float tmpsum=sqrt(bvecs(1,i)*bvecs(1,i)+bvecs(2,i)*bvecs(2,i)+bvecs(3,i)*bvecs(3,i));
+      if(tmpsum!=0){
+	bvecs(1,i)=bvecs(1,i)/tmpsum;
+	bvecs(2,i)=bvecs(2,i)/tmpsum;
+	bvecs(3,i)=bvecs(3,i)/tmpsum;
+      }  
+    }
+    
+    
 
     {//scope in which the data exists in 4D format;
       volume4D<float> data;
