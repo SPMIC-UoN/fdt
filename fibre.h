@@ -90,10 +90,12 @@ namespace FIBRE{
 	compute_ph_prior();
 	
 	m_f_prior=0;
-      compute_f_prior();
-      
-      m_lam_prior=0;
-      compute_lam_prior();
+	compute_f_prior();
+	//cc	OUT("COCK1");
+	//cc	OUT(m_f_prior);
+	//cc	OUT(m_ardfudge);
+	m_lam_prior=0;
+	compute_lam_prior();
 
       m_Signal.ReSize(alpha.Nrows());
       m_Signal=0;
@@ -132,7 +134,9 @@ namespace FIBRE{
       
       m_f_prior=0;
       compute_f_prior();
-      
+      //cc      OUT("COCK2");
+      //cc      OUT(m_f_prior);
+      //cc      OUT(m_ardfudge);
       m_lam_prior=0;
       compute_lam_prior();
 
@@ -269,13 +273,23 @@ namespace FIBRE{
 	  m_f_prior=0;
 	}
 	else{
-	  if(m_lam_jump)
+	  if(m_lam_jump){
 	    // m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
 	    m_f_prior=std::log(m_f);
+	    	  	
+	    //cc	  OUT(m_f);
+	    //cc	  OUT(m_ardfudge);
+	    //cc	  float mmk=m_ardfudge*m_f_prior;
+	    //cc	  OUT(mmk);
+	    //cc	  OUT(m_f_old_prior);
+
+	  }
 	    else
 	    m_f_prior=0;
+	  
 	}
 	m_f_prior=m_ardfudge*m_f_prior;
+
 	return false;
       }
     }
@@ -454,6 +468,7 @@ namespace FIBRE{
       m_lam_jump=rhs.m_lam_jump;
       m_Signal=rhs.m_Signal; 
       m_Signal_old=rhs.m_Signal_old; 
+      m_ardfudge=rhs.m_ardfudge;
       return *this;
     }
 

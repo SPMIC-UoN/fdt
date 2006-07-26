@@ -300,7 +300,6 @@ public:
       } 
     }
     ret=(maxfib>1); //
-    cout<<ret<<" ret"<<endl;
     if(ret){
       mfibre.set_d(m_mean_dsamples(voxbest));
       mfibre.set_S0(m_mean_S0samples(voxbest));
@@ -441,7 +440,11 @@ class xfibresVoxelManager{
   
    
   void initialise(const Matrix& Amat){
+    if(!opts.localinit.value()){
     if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre)){
+      initialise_tensor(Amat);
+    }
+    }else{
       initialise_tensor(Amat);
     }
     m_multifibre.initialise_energies();
@@ -465,14 +468,16 @@ class xfibresVoxelManager{
 	  logS(i)=0;
 	}
       }
+ 
     Dvec = -pinv(Amat)*logS;
+   
     if(  Dvec(7) >  -maxlogfloat  ){ 
       S0=exp(-Dvec(7));
     }
     else{
       S0=m_data.MaximumAbsoluteValue();
     }
-
+   
     for ( int i = 1; i <= logS.Nrows(); i++)
       {
 	if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.MaximumAbsoluteValue();  }
@@ -481,6 +486,7 @@ class xfibresVoxelManager{
 
     Dvec = -pinv(Amat)*logS;
     S0=exp(-Dvec(7));
+  
     if(S0<m_data.Sum()/m_data.Nrows()){ S0=m_data.Sum()/m_data.Nrows();  }
     tens = vec2tens(Dvec);
     EigenValues(tens,Dd,Vd);

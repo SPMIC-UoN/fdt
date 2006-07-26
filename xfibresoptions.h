@@ -44,6 +44,7 @@ class xfibresOptions {
   Option<int> updateproposalevery;
   Option<int> seed;
   Option<bool> no_ard;
+  Option<bool> localinit;
   void parse_command_line(int argc, char** argv,  Log& logger);
   
  private:
@@ -112,6 +113,8 @@ class xfibresOptions {
        false,requires_argument),
   no_ard(string("--noard"),false,string("Turn ARD off on all fibres"),
        false,no_argument),
+  localinit(string("--nospat"),false,string("Initialise with tensor, not spatially"),
+       false,no_argument),
    options("xfibres", "xfibres -k <filename>\n xfibres --verbose\n")
    {
      
@@ -130,6 +133,7 @@ class xfibresOptions {
        options.add(njumps);
        options.add(nburn);
        options.add(nburn_noard);
+       options.add(localinit);
        options.add(sampleevery);
        options.add(updateproposalevery);
        options.add(seed);
