@@ -26,7 +26,8 @@ void seedmask()
   Counter counter(seeds,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);
-  
+
+
   for(int z=0;z<seeds.zsize();z++){
     cout <<"sl "<<z<<endl;
     for(int y=0;y<seeds.ysize();y++){
