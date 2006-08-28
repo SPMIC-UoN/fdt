@@ -24,23 +24,11 @@ void twomasks()
   read_volume(seeds,opts.seedfile.value());
   read_volume(seeds2,opts.mask2.value());
 
-
   // correct for non-1 values
-  // should be seeds.binarise();
-  for(int z=seeds.minz();z<=seeds.maxz();z++)
-    for(int y=seeds.miny();y<=seeds.maxy();y++)
-      for(int x=seeds.minx();x<=seeds.maxx();x++)
-	if(seeds(x,y,z)!=0)
-	  seeds(x,y,z)=1;
-  for(int z=seeds2.minz();z<=seeds2.maxz();z++)
-    for(int y=seeds2.miny();y<=seeds2.maxy();y++)
-      for(int x=seeds2.minx();x<=seeds2.maxx();x++)
-	if(seeds2(x,y,z)!=0)
-	  seeds2(x,y,z)=1;
-  
-
-
-
+  seeds=NEWIMAGE::abs(seeds);
+  seeds.binarise(0,seeds.max()+1,exclusive);
+  seeds2=NEWIMAGE::abs(seeds2);
+  seeds2.binarise(0,seeds2.max()+1,exclusive);
 
   Streamliner stline;
   Counter counter(seeds,stline);

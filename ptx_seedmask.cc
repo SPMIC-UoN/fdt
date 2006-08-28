@@ -27,6 +27,8 @@ void seedmask()
   counter.initialise();
   Seedmanager seedmanager(counter);
 
+  seeds=NEWIMAGE::abs(seeds);
+  seeds.binarise(0,seeds.max()+1,exclusive);
 
   for(int z=0;z<seeds.zsize();z++){
     cout <<"sl "<<z<<endl;
