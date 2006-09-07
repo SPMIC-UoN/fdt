@@ -437,7 +437,7 @@ int main ( int argc, char **argv ){
       cerr<<"WARNING !! No coordinates provided. I cannot apply any connexity constraint."<<endl;
     }
     else{
-      add_connexity(CtCt,mycoordmat);
+      add_connexity(CtCt,newcoordmat);
     }
   }
   if(opts.power.value()!=1){
