@@ -227,6 +227,7 @@ fi
 echo Creating identity xfm
 
 xfmdir=${subjdir}.bedpostX/xfms
+mkdir -p $xfmdir
 echo 1 0 0 0 > ${xfmdir}/eye.mat
 echo 0 1 0 0 >> ${xfmdir}/eye.mat
 echo 0 0 1 0 >> ${xfmdir}/eye.mat
@@ -234,12 +235,7 @@ echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
 echo Done
 
-
-
-
-
-
-ExitUnlock()
+ExitUnlock
 
 
 

@@ -228,7 +228,7 @@ echo 0 0 1 0 >> ${xfmdir}/eye.mat
 echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
 echo "DONE"
-ExitUnlock()
+ExitUnlock
 
 
 
