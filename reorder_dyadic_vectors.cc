@@ -57,39 +57,49 @@ class FM{
 
     int fib=1;
     bool fib_existed=true;
+
+    cout<<"reading the data"<<endl;
     while(fib_existed){
-      if(fsl_imageexists(obasename.value()+"mean_f"+num2str(fib)+"samples")){
+      if(fsl_imageexists(obasename.value()+"/mean_f"+num2str(fib)+"samples")){
+	cout<<"found something to read"<<endl;
 	volume4D<float> *tmpdptr=new volume4D<float>;
 	volume<float> *tmpfptr=new volume<float>;
-	read_volume4D(*tmpdptr,obasename.value()+"dyads"+num2str(fib));
+	read_volume4D(*tmpdptr,obasename.value()+"/dyads"+num2str(fib));
 	dyads.push_back(*tmpdptr);
-	read_volume(*tmpfptr,obasename.value()+"mean_f"+num2str(fib)+"samples");
+	read_volume(*tmpfptr,obasename.value()+"/mean_f"+num2str(fib)+"samples");
 	meanf.push_back(*tmpfptr);
 	fib++;
       }
       else
 	fib_existed=false;
     }
+    cout<<"data read"<<endl;
 
     // read input volumes
     nx=dyads[0].xsize();
     ny=dyads[0].ysize();
     nz=dyads[0].zsize();
+
+    //OUT(nx);
+    //OUT(ny);
+    //OUT(nz);
+
     // create other volumes
     if(omask.set()){
-      volume<float> mask;
       read_volume(mask,omask.value());
     }
     else{
-      volume<float> maskvol(nx,ny,nz);
+      mask.reinitialize(nx,ny,nz);
       copybasicproperties(dyads[0],mask);
       mask=1;
     }
 
+    cout<<"state and mask"<<endl;
     state.reinitialize(nx,ny,nz);
     tmap.reinitialize(nx,ny,nz);
 
     P=MISCMATHS::perms(dyads.size());
+    OUT(P);
 
     neighbours.ReSize(3,26);
     neighbours << 1 << 0 << 0 << -1 << 0 << 0 << 1 << 1 <<-1 <<-1 << 1 <<-1 << 1 <<-1 << 0 << 0 << 0 << 0 << 1 <<-1 << 1 << 1 <<-1 <<-1 << 1 <<-1 
@@ -107,12 +117,15 @@ class FM{
     /********************************/
     
     /*** initialization ***/
-    
+    cout<<"initialise"<<endl;
     /* look for bigger f1+f2 point as a seed */
     float maxf=0,curf;
+    OUT(nx);OUT(ny);OUT(nz);
     for(int z=0;z<nz;z++)
       for(int y=0;y<ny;y++)
 	for(int x=0;x<nx;x++){
+	  if(mask(x,y,z)==0)
+	    continue;
 	  curf=0;
 	  for(unsigned int f=0;f<meanf.size();f++)
 	    curf += meanf[f](x,y,z);
@@ -128,19 +141,26 @@ class FM{
     
      /* create heap sort structure */
     Heap h(nx,ny,nz);
-    
+
+    cout<<"nbvalue1"<<endl;
     /* and all points of the ROIs as Alive Points */
     updateNBvalue(i0,j0,k0,h);
+    h.print();
+
+    //return;
     /*--------------------------------------------------------*/
     /*** big loop ***/
+    cout<<"start FM"<<endl;
     int STOP = 0;
     int counter = 0;
     while(STOP==0){
       /*break;*/
       counter++;
+      //OUT(counter);
       
       /*** uses the heap sort structure to find the NB point with the smallest T-value ***/
       h.heapRemove(tval,i0,j0,k0);
+      //cout << i0 << " " << j0 << " " << k0 << endl;
       
       /*** add this point to the set of alive points ***/
       state(i0,j0,k0)=AP;
@@ -154,7 +174,10 @@ class FM{
     }
     
   }
-  int isInside(int i,int j,int k){
+  bool isInside(int i,int j,int k){
+    //cout<<"je suis dans isInside"<<endl;
+    //OUT(i);OUT(j);OUT(k);
+    //OUT(mask(i,j,k));
     return((i>=0) && (i<nx)
 	   && (j>=0) && (j<ny) 
 	   && (k>=0) && (k<nz) 
@@ -168,37 +191,45 @@ class FM{
     V=get_vector(x,y,z);
     mF=get_f(x,y,z);
 
+    //cout << "NB voxel: ";
+    //cout << x << " " << y << " " << z << endl;
+
     int nbx,nby,nbz;
     int opt_perm=1;
     float opt_sperm=0;
-    for(int per=1;per<P.Nrows();per++){
-      
+    for(int per=1;per<=P.Nrows();per++){
+      //OUT(per);
       float opt_nb=0;int nnb=0;
       for(int nb=1;nb<=neighbours.Ncols();nb++){
+	//OUT(nb);
 	nbx=x+neighbours(1,nb);nby=y+neighbours(2,nb);nbz=z+neighbours(3,nb);
 	if(!isInside(nbx,nby,nbz))
 	  continue;
 	if(state(nbx,nby,nbz)==AP){
+	  //cout<<"this neighbour is an AP"<<endl;
 	  nV=get_vector(nbx,nby,nbz);
 	  
 	  float opt_s=0,s;
 	  for(int f=1;f<=V.Nrows();f++){
-	    s=dot(nV.Row(f).t(),V.Row(P(per,f)).t());
+	    s=abs(dot(nV.Row(f).t(),V.Row(P(per,f)).t()));
 	    if(s>opt_s){
 	      opt_s=s;
 	    }
 	  }//f
 	  opt_nb+=opt_s;
 	  nnb++;
-	}//nb
-	opt_nb/=nnb;
+	}//endif
 	
-	if(opt_nb>opt_sperm){
-	  opt_sperm=opt_nb;
-	  opt_perm=per;
-	}
+      }//nb
+
+      opt_nb/=nnb;
+      //OUT(opt_nb);
 	
-      }//endif
+      if(opt_nb>opt_sperm){
+	opt_sperm=opt_nb;
+	opt_perm=per;
+      }
+
     }//perm
     tmap(x,y,z)=1-opt_sperm; // store optimal mean scalar product
 
@@ -236,7 +267,7 @@ class FM{
     int pos;
     double val;
    
-    for(int nb=1;nb<neighbours.Ncols();nb++){
+    for(int nb=1;nb<=neighbours.Ncols();nb++){
       ni=i+neighbours(1,nb);nj=j+neighbours(2,nb);nk=k+neighbours(3,nb);
       if(isInside(ni,nj,nk)){
 	if(state(ni,nj,nk)==AP)continue;
@@ -261,8 +292,8 @@ class FM{
   void save_results(){
     int fib=1;
     for(unsigned int f=0;f<dyads.size();f++){
-      save_volume4D(dyads[f],obasename.value()+"reordered_dyads"+num2str(fib));
-      save_volume(meanf[f],obasename.value()+"reordered_meanf"+num2str(fib)+"samples");
+      save_volume4D(dyads[f],obasename.value()+"/reordered_dyads"+num2str(fib));
+      save_volume(meanf[f],obasename.value()+"/reordered_meanf"+num2str(fib)+"samples");
       fib++;
     }
   }
@@ -291,11 +322,16 @@ int main(int argc,char *argv[]){
       exit(EXIT_FAILURE);
     }
 
-
+    if(verbose.value())
+      cout<<"Call for fast marching"<<endl;
     FM fm(basename,mask);
   
+    if(verbose.value())
+      cout<<"perform fast marching"<<endl;
     fm.do_fast_marching();
 
+    if(verbose.value())
+      cout<<"save results"<<endl;
     fm.save_results();
 
 
