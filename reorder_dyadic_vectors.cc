@@ -99,7 +99,7 @@ class FM{
     tmap.reinitialize(nx,ny,nz);
 
     P=MISCMATHS::perms(dyads.size());
-    OUT(P);
+    //    OUT(P);
 
     neighbours.ReSize(3,26);
     neighbours << 1 << 0 << 0 << -1 << 0 << 0 << 1 << 1 <<-1 <<-1 << 1 <<-1 << 1 <<-1 << 0 << 0 << 0 << 0 << 1 <<-1 << 1 << 1 <<-1 <<-1 << 1 <<-1 
@@ -120,7 +120,7 @@ class FM{
     cout<<"initialise"<<endl;
     /* look for bigger f1+f2 point as a seed */
     float maxf=0,curf;
-    OUT(nx);OUT(ny);OUT(nz);
+    //OUT(nx);OUT(ny);OUT(nz);
     for(int z=0;z<nz;z++)
       for(int y=0;y<ny;y++)
 	for(int x=0;x<nx;x++){
@@ -142,10 +142,10 @@ class FM{
      /* create heap sort structure */
     Heap h(nx,ny,nz);
 
-    cout<<"nbvalue1"<<endl;
+    //cout<<"nbvalue1"<<endl;
     /* and all points of the ROIs as Alive Points */
     updateNBvalue(i0,j0,k0,h);
-    h.print();
+    //h.print();
 
     //return;
     /*--------------------------------------------------------*/
