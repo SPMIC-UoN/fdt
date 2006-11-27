@@ -1,11 +1,12 @@
 #   FSL interface for FDT (BEDPOST and ProbTrack)
 #
-#   Timothy Behrens, Heidi Johansen-Berg and Dave Flitney, FMRIB Image Analysis Group
+#   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney and Matthew Webster FMRIB Image Analysis Group
 #
-#   Copyright (C) 2004 University of Oxford
+#   Copyright (C) 2006 University of Oxford
 #
 #   TCLCOPYRIGHT
 
+#TO DO replace -filetypes * with -filetypes { } for directory selectors
 source [ file dirname [ info script ] ]/fslstart.tcl
 set TCLPATH [file dirname [ info script ] ]
 regsub tcl $TCLPATH bin BINPATH
@@ -13,275 +14,6 @@ regsub tcl $TCLPATH doc/fdt HTMLPATH
 
 set VERSION "1.0a"
 
-tixWidgetClass registrationImageSelect {
-    -superclass tixPrimitive
-    -classname RegistrationImageSelect
-    
-    -flag {
-	-variable -filename -labelwidth -label -search -dof -pattern -filterhist -costfn
-    }
-    
-    -configspec {
-	{-variable variable Variable N}
-	{-labelwidth labelwidth Labelwidth {}}
-	{-label label Label ""}
-	{-directory directory Directory {}}
-	{-filterhist filterhist Filterhist {}}
-	{-filename filename Filename {}}
-	{-search search Search N}
-	{-dof dof DOF N}
-	{-costfn costfn Costfn N}
-	{-pattern pattern Pattern "*.{hdr,hdr.gz,nii,nii.gz}"}
-    }
-}
-
-proc registrationImageSelect:ConstructWidget { w } {
-
-    upvar \#0 $w data
-
-    tixChainMethod $w ConstructWidget
-
-    set data(w:fsd) [ tixFileSelectDialog $w.fsd ]
-
-    frame $w.frame
-    
-    set data(w:chkbutton) [ checkbutton $w.frame.visible_yn -variable $data(-variable) \
-				-command "registrationImageSelect:toggle_visible $w" ]
-    label $w.frame.label -text $data(-label)
-
-    set data(w:options) [ tixLabelFrame $w.frame.options -label $data(-label) ]
-
-    set data(w:file) [ FSLFileEntry $w.frame.options.f \
-			   -variable $data(-filename) \
-			   -directory $data(-directory) \
-			   -label "" \
-			   -title "Select file" \
-			   -width 40 \
-			   -pattern $data(-pattern) \
-			   -filterhist VARS(history) ]
-
-    tixOptionMenu $w.frame.options.search -variable $data(-search)
-    $w.frame.options.search add command 0   -label "No search"
-    $w.frame.options.search add command 90  -label "Normal search"
-    $w.frame.options.search add command 180 -label "Full search"
-
-    tixOptionMenu $w.frame.options.dof -variable $data(-dof)
-    $w.frame.options.dof add command 6  -label "6 DOF"
-    $w.frame.options.dof add command 7  -label "7 DOF"
-    $w.frame.options.dof add command 9  -label "9 DOF"
-    $w.frame.options.dof add command 12 -label "12 DOF"
-
-    tixOptionMenu $w.frame.options.costfn -variable $data(-costfn)
-    $w.frame.options.costfn add command corratio -label "Correlation ratio"
-    $w.frame.options.costfn add command mutualinfo -label "Mutual information"
-    
-    pack $w.frame.options.f -in [$w.frame.options subwidget frame] -side top -expand yes -fill x
-    pack $w.frame.options.costfn $w.frame.options.dof $w.frame.options.search -in [$w.frame.options subwidget frame] -side right
-    pack $w.frame.visible_yn $w.frame.label -in $w.frame -side left -expand yes -padx 3
-    pack $w.frame -in $w
-    
-    registrationImageSelect:toggle_visible $w
-}
-
-proc registrationImageSelect:toggle_visible { w } {
-
-    upvar \#0 $w data
-    upvar \#0 $data(-variable) visible_yn
-
-    if { $visible_yn } {
-	pack forget $w.frame.label
-	pack [$w subwidget options] -side left -after [$w subwidget chkbutton] -padx 3 -pady 3
-    } else {
-	pack $w.frame.label -side left -after [$w subwidget chkbutton] -padx 3 -pady 3
-	pack forget [$w subwidget options]
-    }
-}
-
-tixWidgetClass multiFileSelect {
-    -superclass tixPrimitive
-    -classname MultiFileSelect
-    -method {
-	save load
-    }
-    -flag {
-	-variable -labelwidth -label -directory -pattern -title -filterhist
-    }
-
-    -configspec {
-	{-variable variable Variable N}
-	{-labelwidth labelwidth Labelwidth {}}
-	{-label label Label "File"}
-	{-directory directory Directory {}}
-	{-filterhist filterhist Filterhist {}}
-	{-pattern pattern Pattern "*.{hdr,hdr.gz,nii,nii.gz}"}
-	{-title title Title "Select a file"}
-    }
-}
-
-proc multiFileSelect:InitWidgetRec { w } {
-
-    upvar #0 $w data
-
-    tixChainMethod $w InitWidgetRec
-
-    set data(filename) filename$w
-}
-
-proc multiFileSelect:ConstructWidget { w } {
-
-    upvar #0 $w data
-
-    tixChainMethod $w ConstructWidget
-
-    set data(w:fsd) [ tixFileSelectDialog $w.fsd ]
-
-    frame $w.frame -borderwidth 2 -relief sunken
-
-    frame $w.frame.l
-    set data(w:files) [ listbox $w.frame.l.files -height 4 -yscrollcommand "$w.frame.l.scroller set" ]
-
-    scrollbar $w.frame.l.scroller -command "$w.frame.l.files yview"
-    pack $w.frame.l.files -in $w.frame.l -side left -expand yes -fill x
-    pack $w.frame.l.scroller -in $w.frame.l -side right -fill y
- 
-    set data(w:file) [FSLFileDirSelectDialog $w.browser \
-	    -title $data(-title) \
-	    -command "multiFileSelect:Invoke $w" \
-	    -filterhist $data(-filterhist) \
-	    -directory $data(-directory) \
-	    -pattern $data(-pattern)
-    ]
-
-    frame $w.frame.b
-
-    button $w.frame.b.add -text "Add..."  -command "$w.browser popup"
-    button $w.frame.b.del -text "Remove"  -command "multiFileSelect:remove $w"
-    button $w.frame.b.imp -text "Load list..." -command "multiFileSelect:import $w"
-    button $w.frame.b.exp -text "Save list..." -command "multiFileSelect:export $w"
-
-    pack $w.frame.b.add $w.frame.b.del $w.frame.b.imp $w.frame.b.exp -in $w.frame.b -side left -expand yes -fill x
- 
-    pack $w.frame.l $w.frame.b -in $w.frame -side top -padx 2 -pady 2 -expand yes -fill x
-
-    pack $w.frame -in $w -expand yes -fill x 
-}
-
-proc multiFileSelect:Invoke { w filename } {
-    upvar #0 $w data
-    upvar $data(-variable) Variable
-    
-    set filename [ fix_cygwin_filename $filename ]
-    set Variable $filename
-
-    [$w subwidget files] insert end $filename
-}
-
-proc multiFileSelect:remove { w } {
-    upvar #0 $w data
-    set count 0
-    foreach file [ [$w subwidget files] get 0 end ] {
-	if { [ [$w subwidget files] selection includes $count ] == 1 } {
-	    [$w subwidget files] delete $count
-	    incr count -1
-	}
-	incr count
-    } 
-}
-
-proc multiFileSelect:load { w filename } {
-    upvar #0 $w data
-
-    if { ![ file exists $filename ] } {
-	MxPause "Warning: Bad or missing file!"
-	return
-    }
-    set fd [ open $filename ]
-    [$w subwidget files] delete 0 end
-    while { [ gets $fd file ] >= 0 } {
-	[$w subwidget files] insert end $file
-    }
-    close $fd
-}
-
-proc multiFileSelect:save { w filename } {
-    upvar #0 $w data
-
-    set fd [ open $filename w ]
-    foreach file [ [$w subwidget files] get 0 end ] {
-	puts $fd $file
-    }
-    close $fd
-}
-
-proc multiFileSelect:import { w } {   
-    upvar #0 $w data
-
-    set fsd $data(w:fsd)
-    $fsd configure -title "Import list from..." -command "multiFileSelect:load $w"
-    $fsd popup
-}
-
-proc multiFileSelect:export { w } {
-    upvar #0 $w data
-
-    set fsd $data(w:fsd)
-    $fsd configure -title "Export list to..." -command "multiFileSelect:save $w"
-    $fsd popup
-}
-
-tixWidgetClass coordinateEdit {
-    -superclass tixPrimitive
-    -classname CoordinateEdit
-    -method {
-	update
-    }
-    -flag {
-	-variablex -variabley -variablez -variablemm -labelwidth -label
-    }
-
-    -configspec {
-	{-variablex variablex VariableX N}
-	{-variabley variabley VariableY N}
-	{-variablez variablez VariableZ N}
-	{-variableunits variableunits VariableUnits N}
-	{-label label Label "File"}
-	{-labelwidth labelwidth Labelwidth {}}
-    }
-}
-
-proc coordinateEdit:ConstructWidget { w } {
-
-    upvar #0 $w data
-
-    tixChainMethod $w ConstructWidget
-
-
-    frame $w.frame
-    set data($w:label) [ label $w.frame.label -text $data(-label) ]
-    if {$data(-labelwidth) != ""} {
-	$w.frame.label configure -width $data(-labelwidth)
-    }
-    
-    label $w.frame.padlbl -width 1
-
-    frame $w.frame.f -borderwidth 2
-
-    set data(w:x) [ tixControl $w.frame.f.x -label "X" -step 1 -variable $data(-variablex)\
-			-selectmode normal -options { entry.width 6 } ]
-    set data(w:y) [ tixControl $w.frame.f.y -label "Y" -step 1 -variable $data(-variabley)\
-			-selectmode normal -options { entry.width 6 } ]
-    set data(w:z) [ tixControl $w.frame.f.z -label "Z" -step 1 -variable $data(-variablez)\
-			-selectmode normal -options { entry.width 6 } ]
-
-    radiobutton $w.frame.vox -text "vox" -value vox -variable $data(-variableunits)
-    radiobutton $w.frame.mm  -text "mm"  -value mm  -variable $data(-variableunits)
-    
-    pack $w.frame.f.x $w.frame.f.y $w.frame.f.z -in $w.frame.f -side left -padx 2 -pady 0
- 
-    pack $w.frame.label $w.frame.padlbl $w.frame.f $w.frame.vox $w.frame.mm -in $w.frame -side left -padx 0 -pady 0
-
-    pack $w.frame -in $w 
-}
 
 proc coordinateEdit:update { w } {
 
@@ -307,44 +39,15 @@ proc mm_to_voxels { X Y Z mask } {
     set cX $vcX
     set cY $vcY
     set cZ $vcZ
-
-
-    #set o1 [ exec sh -c "$FSLDIR/bin/avwval $mask origin1" ]
-    #set o2 [ exec sh -c "$FSLDIR/bin/avwval $mask origin2" ]
-    #set o3 [ exec sh -c "$FSLDIR/bin/avwval $mask origin3" ]
-
-    #if { $o1 != 0 && $o2 != 0 && $o3 != 0 } {
-#	set o1 [ expr $o1 - 0.5 ]
-#	set o2 [ expr $o2 - 1.5 ]
-#	set o3 [ expr $o3 - 0.5 ]
-    #}
-#    puts "Using origin $o1 $o2 $o3"
-
-    #set cX [ expr int( ( double($cX) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim1" ] ) + $o1 ) ]
-    #set cY [ expr int( ( double($cY) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim2" ] ) + $o2 ) ]
-    #set cZ [ expr int( ( double($cZ) / [ exec sh -c "$FSLDIR/bin/avwval $mask pixdim3" ] ) + $o3 ) ]
-
-#    puts "Setting co-ordinates $cX $cY $cZ"
 }
 
 proc fdt:dialog { w tclstartupfile } {
 
-    global tool
-    global eddy
-    global bedpost
-    global registration
-    global dtifit
-    global probtrack
-    global HTMLPATH
-    global FSLDIR
-    global VERSION
-    global INMEDX
-    global VARS
-
-    set VARS(history) ""
+    global eddy bedpost registration dtifit probtrack HTMLPATH FSLDIR VERSION INMEDX VARS
 
     set LWIDTH 27
     set PWD [ pwd ]
+    set probtrack(tool) "probtrack"
 
     if [winfo exists $w] {
         wm deiconify $w
@@ -360,16 +63,9 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    
-    tixOptionMenu $w.tool.menu -variable tool 
-    $w.tool.menu add command eddy_current -label "Eddy current correction"
-    $w.tool.menu add command bedpost      -label "BEDPOST Estimation of diffusion parameters"
-    $w.tool.menu add command registration -label "Registration"
-    $w.tool.menu add command probtrack    -label "ProbTrack Probabilistic tracking"
-    $w.tool.menu add separator xutilsx
-    $w.tool.menu add command dtifit       -label "DTIFit Reconstruct diffusion tensors"
-
-    pack $w.tool.menu -in $w.tool -side left -pady 3 -padx 6 -anchor nw
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOST Estimation of diffusion parameters"  registration "Registration" probtrack "ProbTrack Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFit Reconstruct diffusion tensors" 
+    $w.tool.menu.menu entryconfigure 4 -state disabled -background black
+    pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 
     #-------- Tool Options... -------- 
 
@@ -391,94 +87,71 @@ proc fdt:dialog { w tclstartupfile } {
 	}
     }
 
-    FSLFileEntry $w.registration.directory \
-	-variable registration(directory) \
-	-directory $PWD \
-	-label "BEDPOST directory:" \
-	-labelwidth $LWIDTH \
-	-title "Choose directory" \
-	-width 35 \
-	-command "registration_set_directory $w" \
-	-filterhist VARS(history)
+    FileEntry $w.registration.directory -textvariable registration(directory) -label "BEDPOST directory:" -title "Choose directory"  -width 35 -filetypes * -command "registration_set_directory $w" 
 
-    registrationImageSelect $w.registration.struct \
-	-variable registration(struct_yn) \
-	-filename registration(struct_image) \
-	-dof registration(struct_dof) \
-	-search registration(struct_search) \
-	-costfn registration(struct_costfn) \
-	-directory $PWD \
-	-label "Main structural image" \
-	-labelwidth $LWIDTH \
-	-filterhist VARS(history)
+    frame       $w.registration.struct
+    checkbutton $w.registration.struct.yn -variable registration(struct_yn) -command "registration_packframe $w"
+    label       $w.registration.struct.lb -text "Main structural image"
+    TitleFrame  $w.registration.struct.tf -text "Main structural image" 
+    optionMenu2 $w.registration.struct.tf.search registration(struct_search) 0 "No search" 90 "Normal search" 180 "Full search"
+    optionMenu2 $w.registration.struct.tf.dof registration(struct_dof)   6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"  
+    optionMenu2 $w.registration.struct.tf.costfn registration(struct_costfn) corratio "Correlation ratio" mutualinfo "Mutual information"
+    FileEntry   $w.registration.struct.tf.file -textvariable registration(struct_image) -filetypes IMAGE -width 45
+    pack $w.registration.struct.tf.file -side top -in [ $w.registration.struct.tf getframe ]
+    pack $w.registration.struct.tf.search $w.registration.struct.tf.dof $w.registration.struct.tf.costfn -side left  -in [ $w.registration.struct.tf getframe ]
     set registration(struct_costfn) mutualinfo
     set registration(struct_dof) 12
     set registration(struct_search) 90
+    set registration(struct_yn) 0
 
+    frame       $w.registration.standard
+    checkbutton $w.registration.standard.yn -variable registration(standard_yn)  -command "registration_packframe $w"
+    TitleFrame  $w.registration.standard.tf -text "Standard space"
+    label       $w.registration.standard.lb -text "Standard space"
+    optionMenu2 $w.registration.standard.tf.search registration(standard_search) 0 "No search" 90 "Normal search" 180 "Full search"
+    optionMenu2 $w.registration.standard.tf.dof registration(standard_dof)   6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"  
+    optionMenu2 $w.registration.standard.tf.costfn registration(standard_costfn) corratio "Correlation ratio" mutualinfo "Mutual information"
+    FileEntry   $w.registration.standard.tf.file -textvariable registration(standard_image) -filetypes IMAGE -width 45 
+    pack $w.registration.standard.tf.file -side top -in [ $w.registration.standard.tf getframe ]
+    pack $w.registration.standard.tf.search $w.registration.standard.tf.dof $w.registration.standard.tf.costfn -side left -in [ $w.registration.standard.tf getframe ]
     set registration(standard_yn) 1
-    registrationImageSelect $w.registration.standard \
-	-variable registration(standard_yn) \
-	-filename registration(standard_image) \
-	-dof registration(standard_dof) \
-	-search registration(standard_search) \
-	-costfn registration(standard_costfn) \
-	-directory $PWD \
-	-label "Standard space" \
-	-labelwidth $LWIDTH \
-	-filterhist VARS(history)
     set registration(standard_dof) 12
     set registration(standard_search) 90
     set registration(standard_image) [ file join ${FSLDIR} etc standard avg152T1_brain ]
 
-    pack $w.registration.directory $w.registration.struct  $w.registration.standard -in $w.registration -side top -padx 3 -pady 3 -anchor nw
-    
-    #------- ECC --------
+    pack $w.registration.directory $w.registration.struct $w.registration.standard -side top -padx 3 -pady 3 -anchor w
 
+    proc registration_packframe { w } {
+       global registration
+       pack forget $w.registration.struct.yn $w.registration.struct.tf $w.registration.struct.yn $w.registration.struct.lb
+       pack forget $w.registration.standard.yn $w.registration.standard.tf $w.registration.standard.yn $w.registration.standard.lb
+       if {$registration(struct_yn)} { pack $w.registration.struct.yn $w.registration.struct.tf -side left -anchor w } else { pack $w.registration.struct.yn  $w.registration.struct.lb -side left -anchor w}
+       if {$registration(standard_yn)} { pack $w.registration.standard.yn $w.registration.standard.tf -side left -anchor w } else { pack $w.registration.standard.yn  $w.registration.standard.lb -side left -anchor w}
+    }
+    
+    registration_packframe $w
+    #------- ECC --------
     frame $w.ecc
 
     proc ecc_update_files { w filename } {
 	global eddy
-
 	set eddy(output) [ file join [file dirname $eddy(input)] data ]
-    }
-    FSLFileEntry $w.ecc.input \
-	-variable eddy(input) \
-	-directory $PWD \
-	-label "Diffusion weighted data:" \
-	-labelwidth $LWIDTH \
-	-title "Choose diffusion weighted image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-command "ecc_update_files $w" \
-	-filterhist VARS(history)
+    }    
 
-    FSLFileEntry $w.ecc.output \
-	-variable eddy(output) \
-	-directory $PWD \
-	-label "Corrected output data:" \
-	-labelwidth $LWIDTH \
-	-title "Choose output image name" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-filterhist VARS(history)
-    tixControl $w.ecc.refnum -label "Reference volume" \
-	-variable eddy(refnum) -step 1 -min 0 \
-	-selectmode immediate -options { entry.width 6 } 
-    pack $w.ecc.input $w.ecc.output $w.ecc.refnum -in $w.ecc -side top -padx 3 -pady 3 -expand yes -anchor w
+    FileEntry $w.ecc.input -textvariable eddy(input) -label "Diffusion weighted data:" -title "Choose diffusion weighted image"  -width 35 -filetypes IMAGE -command "ecc_update_files $w"
+
+    FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -width 35 -filetypes IMAGE -command "ecc_update_files $w"
+
+   set eddy(refnum) 0
+   LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range {0 100 1 } -width 6 
+
+    pack $w.ecc.input $w.ecc.output $w.ecc.refnum -side top -padx 3 -pady 3 -expand yes -anchor w
 
     #------- DTIFit --------
 
     frame $w.dtifit
 
-    FSLFileEntry $w.dtifit.directory \
-	-variable dtifit(directory) \
-	-directory $PWD \
-	-label "Input directory:" \
-	-labelwidth $LWIDTH \
-	-title "Choose directory" \
-	-command "set_working_directory dtifit(cwd)" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.dtifit.directory -textvariable dtifit(directory) -label  "Input directory:" -title "Choose directory" -width 35 -command "set_working_directory dtifit(cwd)"
 
     proc dtifit_toggle_expert { w } {
 	global dtifit
@@ -513,60 +186,20 @@ proc fdt:dialog { w tclstartupfile } {
     }
     
     set dtifit(cwd) $PWD
-    FSLFileEntry $w.dtifit.expert.input \
-	-variable dtifit(input) \
-	-directory $dtifit(cwd) \
-	-label "Diffusion weighted data:" \
-	-labelwidth $LWIDTH \
-	-title "Choose diffusion weighted image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-command "dtifit_update_files $w" \
-	-filterhist VARS(history)
-    
-    FSLFileEntry $w.dtifit.expert.mask \
-	-variable dtifit(mask) \
-	-directory $dtifit(cwd) \
-	-label "BET binary brain mask:" \
-	-labelwidth $LWIDTH \
-	-title "Choose BET brain mask file" \
-	-pattern "IMAGE" \
-	-command "set_working_directory dtifit(cwd)" \
-	-width 35 \
-	-filterhist VARS(history)
-    
-    FSLFileEntry $w.dtifit.expert.output \
-	-variable dtifit(output) \
-	-directory $dtifit(cwd) \
-	-label "Output basename:" \
-	-labelwidth $LWIDTH \
-	-title "Choose output base name" \
-	-command "set_working_directory dtifit(cwd)" \
-	-width 35 \
-	-filterhist VARS(history)
-    
-    FSLFileEntry $w.dtifit.expert.bvecs \
-	-variable dtifit(bvecs) \
-	-directory $dtifit(cwd) \
-	-label "Gradient directions:" \
-	-labelwidth $LWIDTH \
-	-title "Choose bvecs file" \
-	-command "set_working_directory dtifit(cwd)" \
-	-pattern "*" \
-	-width 35 \
-	-filterhist VARS(history)
-    
-    FSLFileEntry $w.dtifit.expert.bvals \
-	-variable dtifit(bvals) \
-	-directory $dtifit(cwd) \
-	-label "b values:" \
-	-labelwidth $LWIDTH \
-	-title "Choose bvals file" \
-	-command "set_working_directory dtifit(cwd)" \
-	-pattern "*" \
-	-width 35 \
-	-filterhist VARS(history)
-    
+
+#All the below orignally had -directory $dtifit(cwd) 
+    FileEntry $w.dtifit.expert.input -textvariable dtifit(input) -label  "Diffusion weighted data:" -title "Choose diffusion weighted image" -width 35 -filetypes IMAGE -command "dtifit_update_files $w" 
+    $w.dtifit.expert.input.labf configure -width $LWIDTH
+
+    FileEntry $w.dtifit.expert.mask -textvariable dtifit(mask) -label "BET binary brain mask:" -title "Choose BET brain mask file" -width 35 -filetypes IMAGE -command "set_working_directory dtifit(cwd)"
+    $w.dtifit.expert.mask.labf configure -width $LWIDTH
+    FileEntry $w.dtifit.expert.output -textvariable dtifit(output) -label "Output basename:" -title  "Choose output base name" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
+    $w.dtifit.expert.output.labf configure -width $LWIDTH
+    FileEntry $w.dtifit.expert.bvecs -textvariable dtifit(bvecs) -label "Gradient directions:" -title  "Choose bvecs file" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
+    $w.dtifit.expert.bvecs.labf configure -width $LWIDTH
+    FileEntry $w.dtifit.expert.bvals -textvariable dtifit(bvals) -label  "b values:" -title  "Choose bvals file" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
+    $w.dtifit.expert.bvals.labf configure -width $LWIDTH        
+
     pack $w.dtifit.expert.input $w.dtifit.expert.mask $w.dtifit.expert.output \
 	$w.dtifit.expert.bvecs $w.dtifit.expert.bvals \
 	-in $w.dtifit.expert -side top -padx 3 -pady 3 -expand yes -anchor w
@@ -578,14 +211,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     frame $w.bedpost
 
-    FSLFileEntry $w.bedpost.directory \
-	-variable bedpost(directory) \
-	-directory $PWD \
-	-label "Input directory:" \
-	-labelwidth $LWIDTH \
-	-title "Choose directory" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.bedpost.directory -textvariable bedpost(directory) -label "Input directory:" -title "Choose directory" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
 
     set bedpost(ecc_yn) 0
 
@@ -594,32 +220,30 @@ proc fdt:dialog { w tclstartupfile } {
 
     #-------- ...ProbTrack... -------- 
 
-    tixNoteBook $w.probtrack -ipadx 5 -ipady 5
-
-    $w.probtrack add data -label "Data"
-    $w.probtrack add options -label "Options"
+    NoteBook $w.probtrack -bd 2 -tabpady {5 10} -arcradius 3
+    $w.probtrack insert 0 data -text "Data"
+    $w.probtrack insert 1 options -text "Options"
 
     #-------- ...Mode specific options... --------
 
-    set dataf [$w.probtrack subwidget data]
+    set dataf [$w.probtrack getframe data]
     frame $w.data
 
-    tixOptionMenu $w.data.mode -label "Mode: " -variable probtrack(mode)
-    [ $w.data.mode subwidget menu ] configure -disabledforeground darkred
-    $w.data.mode add command xtitlex -label "Path distribution estimation" -state disabled
-    $w.data.mode add command simple  -label "  Single seed voxel"
-    $w.data.mode add command all     -label "  Seed mask"
-    $w.data.mode add command maska   -label "  Seed mask and waypoint masks"
-    $w.data.mode add command masks   -label "  Two masks - symmetric"
-    $w.data.mode add separator xseedsx
-    $w.data.mode add command seeds  -label "Connectivity-based seed classification"
+    LabelFrame  $w.data.mode -text "Mode: "
 
     if { [ file exists [ file join $FSLDIR bin reord_OM ] ] } {
-	$w.data.mode add separator xmatrixx
-	$w.data.mode add command mat1   -label "Matrix 1"
-	$w.data.mode add command mat2   -label "Matrix 2"
-	$w.data.mode add command mskmat -label "Mask matrix"
+        optionMenu2 $w.data.mode.menu probtrack(mode) -command "fdt:probtrack_mode $w" xtitlex "Path distribution estimation" simple "  Single seed voxel" all "  Seed mask" maska "  Seed mask and waypoint masks" masks "  Two masks - symmetric" xutilssx "--------------------------------------------" seeds "Connectivity-based seed classification" xmatrixx "--------------------------------------------" mat1 "Matrix 1" mat2 "Matrix 2" mskmat "Mask matrix"
+      $w.data.mode.menu.menu entryconfigure 0 -state disabled -background black
+      $w.data.mode.menu.menu entryconfigure 5 -state disabled -background black
+      $w.data.mode.menu.menu entryconfigure 7 -state disabled -background black
+    } else {
+    optionMenu2 $w.data.mode.menu probtrack(mode) -command "fdt:probtrack_mode $w" xtitlex "Path distribution estimation" simple "  Single seed voxel" all "  Seed mask" maska "  Seed mask and waypoint masks" masks "  Two masks - symmetric" xutilssx  "--------------------------------------------" seeds "Connectivity-based seed classification"
+     
+     $w.data.mode.menu.menu entryconfigure 0 -state disabled -background black
+     $w.data.mode.menu.menu entryconfigure 5 -state disabled -background black
+
     }
+    pack $w.data.mode.menu
 
     set probtrack(xfm) ""
     set probtrack(basename) "merged"
@@ -635,70 +259,96 @@ proc fdt:dialog { w tclstartupfile } {
 	}
     }
 
-    FSLFileEntry $w.data.directory \
-	-variable probtrack(bedpost_dir) \
-	-directory $PWD \
-	-label "BEDPOST directory" \
-	-labelwidth $LWIDTH \
-	-title "Choose BEDPOST directory" \
-	-width 35 \
-	-command "probtrack_update_files $w" \
-	-filterhist VARS(history)
+    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOST directory" -title "Choose BEDPOST directory" -width 35 -filetypes * -command "probtrack_update_files $w"
 
-    tixLabelFrame $w.data.target -label "Target list"
-    multiFileSelect $w.data.targets -label "Target file: " -labelwidth $LWIDTH -directory $PWD
-    pack $w.data.targets -in [$w.data.target subwidget frame] \
-	-side top -anchor w -padx 3 -pady 3
+    TitleFrame $w.data.target -text "Target list"    
+    listbox $w.data.targets -height 6 -width 40 -yscrollcommand "$w.data.sb set"
+    scrollbar $w.data.sb -command "$w.data.targets yview " 
+    frame $w.data.tb
+    button $w.data.tb.add -text "Add..."  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.targets} {}" 
+    button $w.data.tb.del -text "Remove"  -command "fdt_sub $w $w.data.targets" 
+    button $w.data.tb.imp -text "Load list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets} {}"
+    button $w.data.tb.exp -text "Save list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets} {}"
+    pack $w.data.tb.add $w.data.tb.del $w.data.tb.imp $w.data.tb.exp -side left
+    pack $w.data.tb -in [$w.data.target getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
+    pack $w.data.targets $w.data.sb -in [$w.data.target getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
 
-    tixLabelFrame $w.data.seedspace -label "Seed space"
-    
-    FSLFileEntry $w.data.seed \
-	-variable probtrack(seed) \
-	-directory $PWD \
-	-label "Seed image:" \
-	-labelwidth $LWIDTH \
-	-title "Choose seed image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-command "probtrack_update_files $w" \
-	-filterhist VARS(history)
+    proc fdt_add { w listbox filename } {
+    set filename [ fix_cygwin_filename $filename ]
+    $listbox insert end $filename
+    }
 
-    FSLFileEntry $w.data.seed2 \
-	-variable probtrack(seed2) \
-	-directory $PWD \
-	-label "Target image:" \
-	-labelwidth $LWIDTH \
-	-title "Choose target image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-command "probtrack_update_files $w" \
-	-filterhist VARS(history)
+    proc fdt_sub { w listbox} {
+    set count 0
+    foreach file [ $listbox get 0 end ] {
+	if { [ $listbox selection includes $count ] == 1 } {
+	    $listbox delete $count
+	    incr count -1
+	}
+	incr count
+    } 
+    }
 
-    tixLabelFrame $w.data.waypoint -label "Waypoint masks"
-    multiFileSelect $w.data.waypoints -label "Waypoint mask file: " -labelwidth $LWIDTH -directory $PWD
-    pack $w.data.waypoints -in [$w.data.waypoint subwidget frame] \
-	-side top -anchor w -padx 3 -pady 3
+    proc fdt_imp { w listbox filename } {
+    if { ![ file exists $filename ] } {
+	MxPause "Warning: Bad or missing file!"
+	return
+    }
+    set fd [ open $filename ]
+    $listbox  delete 0 end
+    while { [ gets $fd file ] >= 0 } {
+	$listbox insert end $file
+    }
+    close $fd
+    }
+
+    proc fdt_exp { w listbox filename } {
+    set fd [ open $filename w ]
+    foreach file [ $listbox get 0 end ] {
+	puts $fd $file
+    }
+    close $fd
+    }
+
+    TitleFrame $w.data.seedspace -text "Seed space"
+    FileEntry $w.data.seed -textvariable probtrack(seed) -label "Seed image:" -title "Choose seed image" -width 35 -filetypes IMAGE -command "probtrack_update_files $w"
+    FileEntry $w.data.seed2 -textvariable probtrack(seed2) -label "Target image:" -title "Choose target image" -width 35 -filetypes IMAGE -command "probtrack_update_files $w"
+ 
+    TitleFrame $w.data.waypoint -text "Waypoint masks"
+    listbox $w.data.waypoints -height 6 -width 40 -yscrollcommand "$w.data.waypoint.sb set"
+    scrollbar $w.data.waypoint.sb -command "$w.data.waypoints yview "
+    frame $w.data.waybut
+    button $w.data.waybut.add -text "Add..."  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.waypoints} {}" 
+    button $w.data.waybut.del -text "Remove"  -command "fdt_sub $w $w.data.waypoints" 
+    button $w.data.waybut.imp -text "Load list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.waypoints} {}"
+    button $w.data.waybut.exp -text "Save list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.waypoints} {}" 
+    pack $w.data.waybut.add $w.data.waybut.del $w.data.waybut.imp $w.data.waybut.exp -in $w.data.waybut -side left
+    pack $w.data.waybut -in [$w.data.waypoint getframe ] -side bottom -expand yes -fill x -anchor w -padx 3 -pady 3
+    pack $w.data.waypoints $w.data.waypoint.sb -in [$w.data.waypoint getframe ] -side left -expand yes -fill y -anchor w -padx 3 -pady 3
 
     set probtrack(x) 0
     set probtrack(y) 0
     set probtrack(z) 0
     set probtrack(units) vox
 
-    coordinateEdit $w.data.seedxyz -label "Seed:" -labelwidth $LWIDTH \
-	-variablex probtrack(x) \
-	-variabley probtrack(y) \
-	-variablez probtrack(z) \
-	-variableunits probtrack(units)
+    #Co-ordinate edit frame
+    LabelFrame   $w.data.seedxyz -text "Seed:"
+    LabelSpinBox $w.data.seedxyz.x -label "X" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
+    LabelSpinBox $w.data.seedxyz.y -label "Y" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
+    LabelSpinBox $w.data.seedxyz.z -label "Z" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
+    radiobutton $w.data.seedxyz.vox -text "vox" -value vox -variable probtrack(units)
+    radiobutton $w.data.seedxyz.mm  -text "mm"  -value mm  -variable probtrack(units)
+    pack $w.data.seedxyz.x $w.data.seedxyz.y $w.data.seedxyz.z $w.data.seedxyz.vox $w.data.seedxyz.mm -side left -padx 2 -pady 0
 
     proc probtrack_toggle_reference { w } {
 	global probtrack
 
 	if { $probtrack(usereference_yn) } { 
 	    if { $probtrack(mode) == "simple" } {
-		pack $w.data.reference $w.data.xfm -in [$w.data.seedspace subwidget frame] \
+		pack $w.data.reference $w.data.xfm -in [$w.data.seedspace getframe ] \
 		    -side top -after $w.data.usereference_yn -padx 3 -pady 3
 	    } else {
-		pack $w.data.xfm -in [$w.data.seedspace subwidget frame] \
+		pack $w.data.xfm -in [$w.data.seedspace getframe ] \
 		    -side top -after $w.data.usereference_yn -padx 3 -pady 3
 	    }
 	} else { 
@@ -711,31 +361,15 @@ proc fdt:dialog { w tclstartupfile } {
 	-variable probtrack(usereference_yn) \
 	-command "probtrack_toggle_reference $w"
 
-    FSLFileEntry $w.data.reference \
-	-variable probtrack(reference) \
-	-directory $PWD \
-	-label "Seed space reference image:" \
-	-labelwidth $LWIDTH \
-	-title "Choose reference image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.data.reference -textvariable probtrack(reference) -label "Seed space reference image:" -title "Choose reference image" -width 35 -filetypes IMAGE 
 
-    FSLFileEntry $w.data.xfm \
-	-variable probtrack(xfm) \
-	-directory $PWD \
-	-label "Seed to diff-space transform:" \
-	-labelwidth $LWIDTH \
-	-title "Select seed-space to DTI-space transformation matrix" \
-	-pattern "*.mat" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.data.xfm -textvariable probtrack(xfm) -label "Seed to diff-space transform:" -title "Select seed-space to DTI-space transformation matrix" -width 35 -filetypes *.mat
 
     proc probtrack_toggle_exclude { w } {
 	global probtrack
 
 	if { $probtrack(exclude_yn) } { 
-	    pack $w.data.exclude -in [$w.data.seedspace subwidget frame] \
+	    pack $w.data.exclude -in [$w.data.seedspace getframe ] \
 		-side top -after $w.data.exclude_yn -padx 3 -pady 3
 	} else { 
 	    pack forget $w.data.exclude
@@ -745,59 +379,27 @@ proc fdt:dialog { w tclstartupfile } {
     checkbutton $w.data.exclude_yn -text "Use exclusion mask" -variable probtrack(exclude_yn) \
 	-command "probtrack_toggle_exclude $w"
 
-    FSLFileEntry $w.data.exclude \
-	-variable probtrack(exclude) \
-	-directory $PWD \
-	-label "Exclusion mask:" \
-	-labelwidth $LWIDTH \
-	-title "Select exclusion mask image" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.data.exclude -textvariable probtrack(exclude) -label "Exclusion mask:" -title "Select exclusion mask image" -width 35 -filetypes IMAGE 
 
     pack $w.data.seed $w.data.usereference_yn $w.data.exclude_yn -in\
-	[$w.data.seedspace subwidget frame] -padx 3 -pady 3 -side top -anchor w
+	[$w.data.seedspace getframe ] -padx 3 -pady 3 -side top -anchor w
 
     probtrack_toggle_reference $w
     probtrack_toggle_exclude $w
 
-    FSLFileEntry $w.data.lrmask \
-	-variable probtrack(lrmask) \
-	-directory $PWD \
-	-label "Low resolution mask:" \
-	-labelwidth $LWIDTH \
-	-title "Choose low resolution mask" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-filterhist VARS(history)
+    FileEntry $w.data.lrmask -textvariable probtrack(lrmask) -label "Low resolution mask:" -title  "Choose low resolution mask" -width 35 -filetypes IMAGE 
 
     pack $w.data.lrmask \
-	-in [$w.data.seedspace subwidget frame] \
+	-in [$w.data.seedspace getframe ] \
 	-side top -padx 3 -pady 3 -anchor w
 
-    tixLabelFrame $w.data.output -label "Ouput"
+    TitleFrame $w.data.output -text "Ouput"
 
-    FSLFileEntry $w.data.dir \
-	-variable probtrack(dir) \
-	-directory $PWD \
-	-label "Output directory:" \
-	-labelwidth $LWIDTH \
-	-title "Name the output directory" \
-	-width 35 \
-	-filterhist VARS(history)
+   FileEntry $w.data.dir -textvariable probtrack(dir) -label  "Output directory:" -title  "Name the output directory" -width 35 -filetypes *
 
-    FSLFileEntry $w.data.out \
-	-variable probtrack(output) \
-	-directory $PWD \
-	-label "Output:" \
-	-labelwidth $LWIDTH \
-	-title "Choose output file name" \
-	-pattern "IMAGE" \
-	-width 35 \
-	-filterhist VARS(history)
+   FileEntry $w.data.out -textvariable probtrack(output) -label "Output:" -title "Choose output file name" -width 35 -filetypes IMAGE
 
-    pack $w.data.out $w.data.dir -in [$w.data.output subwidget frame] \
-	-side top -padx 3 -pady 3 -anchor w
+    pack $w.data.out $w.data.dir -in [$w.data.output getframe ] -side top -expand yes -fill x -padx 3 -pady 3 -anchor w
 
     pack $w.data.mode $w.data.directory $w.data.target $w.data.seedspace $w.data.output \
 	-in $w.data -side top -padx 3 -pady 3 -anchor nw
@@ -806,25 +408,19 @@ proc fdt:dialog { w tclstartupfile } {
 
     #-------- ...Options... --------
 
-    set optionsf [$w.probtrack subwidget options]
+    set optionsf [$w.probtrack getframe options]
 
-    tixLabelFrame $w.options -label "Basic Options"
+    TitleFrame $w.options -text "Basic Options"
 
     checkbutton $w.options.verbose \
 	    -text "Verbose" \
 	    -variable probtrack(verbose_yn)
     
     set probtrack(nparticles) 5000
-    tixControl $w.options.nparticles -label "Number of samples" \
-	-variable probtrack(nparticles) -step 100 -min 1 \
-	-selectmode immediate -options { entry.width 6 }    
-    $w.options.nparticles subwidget label config -width $LWIDTH
+    LabelSpinBox $w.options.nparticles -label  "Number of samples" -textvariable probtrack(nparticles) -range {1 1e24 100 } -width 6 
 
     set probtrack(curvature) 0.2
-    tixControl $w.options.curvature -label "Curvature threshold" \
-	-variable probtrack(curvature) -step 0.01 -min 0.0 -max 1.0 \
-	-selectmode immediate -options { entry.width 4 }    
-    $w.options.curvature subwidget label config -width $LWIDTH
+    LabelSpinBox $w.options.curvature -label "Curvature threshold" -textvariable probtrack(curvature) -range {0.0 1.0 0.01 } -width 4
 
     set probtrack(loopcheck_yn) 1
     checkbutton $w.options.loopcheck \
@@ -834,22 +430,10 @@ proc fdt:dialog { w tclstartupfile } {
     collapsible frame $w.advanced -title "Advanced Options"
 
     set probtrack(nsteps) 2000
-    tixControl $w.advanced.nsteps -label "Maximum number of steps" \
-	-variable probtrack(nsteps) -step 10 -min 2 \
-	-selectmode immediate -options { entry.width 6 }    
-    $w.advanced.nsteps subwidget label config -width $LWIDTH
+    LabelSpinBox $w.advanced.nsteps -label "Maximum number of steps" -textvariable probtrack(nsteps) -range {2 1000000 10 } -width 6
 
     set probtrack(steplength) 0.5
-    tixControl $w.advanced.steplength -label "Step length (mm)" \
-	-variable probtrack(steplength) -step 0.1 -min 0 \
-	-selectmode immediate -options { entry.width 4 }    
-    $w.advanced.steplength subwidget label config -width $LWIDTH
-
-#     set probtrack(usef_yn) 0
-#     checkbutton $w.advanced.usef \
-# 	-text "Use anisotropy constraints" \
-# 	-variable probtrack(usef_yn) \
-# 	-command "if { \$probtrack(usef_yn) } { set probtrack(nsteps) 20000 } else { set probtrack(nsteps) 1000 }"
+    LabelSpinBox $w.advanced.steplength -label "Step length (mm)" -textvariable probtrack(steplength) -range {0 10000 0.1} -width 4
 
     set probtrack(modeuler_yn) 0
     checkbutton $w.advanced.modeuler \
@@ -867,7 +451,7 @@ proc fdt:dialog { w tclstartupfile } {
 	$w.options.curvature \
 	$w.options.verbose \
 	$w.options.loopcheck \
-	-in [$w.options subwidget frame] -side top -pady 3 -padx 6 -anchor nw
+	-in [$w.options getframe ] -side top -pady 3 -padx 6 -anchor nw
 
     pack $w.options $w.advanced -in $optionsf -side top -pady 3 -padx 6 -anchor nw -expand yes -fill both
 
@@ -897,27 +481,26 @@ proc fdt:dialog { w tclstartupfile } {
  
     pack $w.tool $w.opts $w.btns -side top -expand yes -fill both
     
-    $w.data.mode configure -command "fdt:probtrack_mode $w"
-    $w.tool.menu configure -command "fdt:select_tool $w"
+ 
 
-    set tool probtrack
-    fdt:select_tool $w $tool
+    $w.probtrack raise data 
+    fdt:select_tool $w 
     set probtrack(mode) simple
-    fdt:probtrack_mode $w $probtrack(mode)
+    fdt:probtrack_mode $w
 
     update idletasks
     if { $tclstartupfile != "" } {
 	puts "Reading $tclstartupfile"
 	source $tclstartupfile
-	fdt:select_tool $w $tool
-	fdt:probtrack_mode $w $probtrack(mode)
+	fdt:select_tool $w 
+	fdt:probtrack_mode $w
     }
 }
 
-proc fdt:probtrack_mode { w mode } {
+proc fdt:probtrack_mode { w } {
     global probtrack
 
-    set seedspacef [$w.data.seedspace subwidget frame]
+    set seedspacef [$w.data.seedspace getframe ]
 
     pack forget $w.data.target
     pack forget $w.data.lrmask
@@ -929,13 +512,13 @@ proc fdt:probtrack_mode { w mode } {
     pack forget $w.data.out
     pack $w.data.seed $w.data.usereference_yn $w.data.xfm -in $seedspacef -side top \
 	-before $w.data.exclude_yn -padx 3 -pady 3 -anchor nw
-    [$w.data.seed subwidget label] configure -text "Seed image:"
-    pack $w.data.dir -in [$w.data.output subwidget frame] -side top -padx 3 -pady 3 -anchor nw
-    switch -- $mode {
+    $w.data.seed configure -label "Seed image:"
+    pack $w.data.dir -in [$w.data.output getframe ] -side top -padx 3 -pady 3 -anchor nw
+    switch -- $probtrack(mode) {
   	simple {
  	    pack $w.data.seedxyz -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.usereference_yn
 	    pack $w.data.reference -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.xfm -anchor nw
-	    pack $w.data.out -in [$w.data.output subwidget frame] -side top -padx 3 -pady 3 -anchor nw
+	    pack $w.data.out -in [$w.data.output getframe] -side top -padx 3 -pady 3 -anchor nw
   	    pack forget $w.data.dir
 	    pack forget $w.data.seed
   	}
@@ -944,8 +527,8 @@ proc fdt:probtrack_mode { w mode } {
 	}
 	masks {
 	    pack $w.data.seed2 -in $seedspacef -side top -after $w.data.seed
-	    [$w.data.seed subwidget label] configure -text "Mask image 1:"
-	    [$w.data.seed2 subwidget label] configure -text "Mask image 2:"
+	    $w.data.seed  configure -label "Mask image 1:"
+	    $w.data.seed2 configure -label "Mask image 2:"
 	}
   	seeds {
   	    pack $w.data.target -in $w.data -side top -padx 3 -pady 3 -after $w.data.seedspace -anchor nw
@@ -957,23 +540,25 @@ proc fdt:probtrack_mode { w mode } {
     }
     probtrack_toggle_reference $w
     probtrack_toggle_exclude $w
+    $w.probtrack compute_size
 }
 
-proc fdt:select_tool { w tool } {
+proc fdt:select_tool { w } {
+    global probtrack
     pack forget $w.ecc
     pack forget $w.probtrack
     pack forget $w.bedpost
     pack forget $w.registration
     pack forget $w.dtifit
-    if {$tool == "bedpost"} { 
+    if {$probtrack(tool) == "bedpost"} { 
 	pack $w.bedpost -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$tool == "probtrack"}  { 
+    } elseif {$probtrack(tool) == "probtrack"}  { 
 	pack $w.probtrack -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$tool == "dtifit"}  { 
+    } elseif {$probtrack(tool) == "dtifit"}  { 
 	pack $w.dtifit -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$tool == "eddy_current"}  { 
+    } elseif {$probtrack(tool) == "eddy_current"}  { 
 	pack $w.ecc -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$tool == "registration"} {
+    } elseif {$probtrack(tool) == "registration"} {
 	pack $w.registration -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     }
 }
@@ -1047,11 +632,11 @@ proc fdt_monitor { w cmd } {
 
 proc fdt:apply { w dialog } {
 
-    global tool
+    global probtrack(tool)
     global BINPATH
     global FSLDIR
 
-    switch -- $tool {
+    switch -- $probtrack(tool) {
 	eddy_current {
 	    global eddy
 
@@ -1146,7 +731,7 @@ proc fdt:apply { w dialog } {
 	    close $tn
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
-	    puts $log "set tool $tool"
+	    puts $log "set tool $probtrack(tool)"
 	    set copylog ""
 	    set ssopts ""
 	    if { $probtrack(usereference_yn) } {
