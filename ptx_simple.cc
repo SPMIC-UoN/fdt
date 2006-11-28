@@ -41,7 +41,7 @@ void track(){
     float xst=Seeds(SN,1);
     float yst=Seeds(SN,2);
     float zst=Seeds(SN,3);
-    seedmanager.run(xst,yst,zst);
+    seedmanager.run(xst,yst,zst,false,0);
     string add=num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     
     counter.save_pathdist(add);
