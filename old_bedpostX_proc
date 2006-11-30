@@ -6,20 +6,35 @@
 
 Usage() {
     echo ""
-    echo "Usage: bedpostX_proc <subject_dir> <nslices> [piddir]"
+    echo "Usage: bedpostX_proc <subject_dir> <nslices> [-n nfibres -w ard_weight -b burnin_period] [piddir]"
     echo ""
     exit
 }
 
 
 [ "$2" = "" ] && Usage
-[ "$3" = "" ] || touch ${3}/`hostname`_fdt_${$}
+
+#parse option arguments
+nfibres=2
+fudge=1.5
+burnin=2000
+while [ ! -z "$3" ]
+do
+  case "$3" in
+      -n) nfibres=$4;shift;;
+      -w) fudge=$4;shift;;
+      -b) burnin=$4;shift;;
+      *) piddir=$3;;
+  esac
+  shift
+done
+
+
+[ "$piddir" = "" ] || touch ${piddir}/`hostname`_fdt_${$}
 
 
 subjdir=$1
 nslices=$2
-
-
 
 slice=0
 while [ $slice -lt $nslices ];do
@@ -28,13 +43,13 @@ while [ $slice -lt $nslices ];do
 	echo `hostname`_${$} > ${subjdir}.bedpostX/logs/.$slicezp
 	sleep 10
 	if [ `hostname`_${$} = `cat ${subjdir}.bedpostX/logs/.$slicezp | sed -n '1p'` ] ; then
-	    nice ${FSLDIR}/bin/xfibres --data=$subjdir/data_slice_$slicezp --mask=$subjdir/nodif_brain_mask_slice_$slicezp -b $subjdir/bvals -r $subjdir/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_slices/data_slice_$slicezp --nj=1000 --bi=600 --bn=0 --se=20 --nfibres=2 --fudge=1.5> $subjdir.bedpostX/logs/log$slicezp 
-#bi can be changed to 2000 if convergence looks dodgy
+	    nice ${FSLDIR}/bin/xfibres --data=$subjdir/data_slice_$slicezp --mask=$subjdir/nodif_brain_mask_slice_$slicezp -b $subjdir/bvals -r $subjdir/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_slices/data_slice_$slicezp --nj=1000 --bi=$burnin --bn=0 --se=20 --nfibres=$nfibres --fudge=$fudge > $subjdir.bedpostX/logs/log$slicezp 
+
 	    touch ${subjdir}.bedpostX/logs/.${slicezp}_finished
 	fi
     fi
     slice=`echo "$slice + 1" | bc`
 done
 
-[ "$3" = "" ] || rm ${3}/`hostname`_fdt_${$}
+[ "$piddir" = "" ] || rm ${piddir}/`hostname`_fdt_${$}
 sleep 10

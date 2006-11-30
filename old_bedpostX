@@ -8,10 +8,14 @@ fi
 
 Usage() {
     echo ""
-    echo "Usage: bedpostX <subject directory> "
+    echo "Usage: bedpostX <subject directory> [options]"
     echo ""
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo "options:"
+    echo "-n (number of fibres per voxel, default 2)"
+    echo "-w (ARD weight, more weight means less fibres killed per voxel, default 1)"
+    echo "-b (burnin period, default 1000)"
     echo ""
     exit
 }
@@ -104,6 +108,22 @@ fi
 
 Lock;
 
+#parse option arguments
+nfibres=2
+fudge=1
+burnin=1000
+while [ ! -z "$2" ]
+do
+  case "$2" in
+      -n) nfibres=$3;shift;;
+      -w) fudge=$3;shift;;
+      -b) burnin=$3;shift;;
+      *) break;;
+  esac
+  shift
+done
+
+
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
@@ -167,14 +187,14 @@ ${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
 
 if [ "x$FSLMACHINELIST" = "x" ] ; then
     echo "processing data on local host"
-    ${FSLDIR}/bin/bedpostX_proc $subjdir $nslices ${subjdir}.bedpostX/logs/pid_${$} &
+    ${FSLDIR}/bin/bedpostX_proc $subjdir $nslices -n $nfibres -w $fudge -b $burnin ${subjdir}.bedpostX/logs/pid_${$} &
 else
     echo "processing data on hosts: $FSLMACHINELIST"
     for machine in $FSLMACHINELIST; do
 	echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpostX_proc $subjdir $nslices ${subjdir}.bedpostX/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"|	$FSLREMOTECALL $machine /bin/sh  &
     done
 fi
-
+echo finished
 
 b=0
 finished=0;
@@ -211,6 +231,9 @@ while [ $fib -le $numfib ];do
 
     fib=`echo "$fib +1"|bc`;
 done
+
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/meanSignal  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/meanSignal`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/stdSignal  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/stdSignal`
 
 echo Removing intermediate files
 
