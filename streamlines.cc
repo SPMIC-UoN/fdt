@@ -37,6 +37,9 @@ namespace TRACT{
     if(opts.rubbishfile.value()!=""){
       read_volume(m_rubbish,opts.rubbishfile.value());
     }
+    if(opts.stopfile.value()!=""){
+      read_volume(m_stop,opts.stopfile.value());
+    }
       
     vector<string> masknames;
     if(opts.waypoints.value()!=""){
@@ -90,7 +93,8 @@ namespace TRACT{
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
     int partlength=0;
-    //NB - this only goes in one direction!!
+    bool rubbish_passed=false;
+      //NB - this only goes in one direction!!
     for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
       m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
     }
@@ -139,9 +143,17 @@ namespace TRACT{
 	
 
 	if(opts.rubbishfile.value()!=""){
-	  if(m_rubbish(x_s,y_s,z_s)>0) break;
+	  if(m_rubbish(x_s,y_s,z_s)!=0){
+	    rubbish_passed=true;
+	    break;
+	  }
 	}
-	  
+	if(opts.stopfile.value()!=""){
+	  if(m_stop(x_s,y_s,z_s)!=0){
+	    m_path.pop_back();
+	    break;
+	  }
+	}	  
 	
 	  
 	if(opts.skipmask.value() == ""){
@@ -189,6 +201,8 @@ namespace TRACT{
 	if(!m_passed_flags[i])
 	  accept_path=false;
     }   
+    if(rubbish_passed)
+      accept_path=false;
     return accept_path;
   }
   
@@ -363,7 +377,7 @@ namespace TRACT{
   
   void Counter::update_pathdist(){
     const vector<ColumnVector>& path=m_stline.get_path_ref();
-    if(opts.pathdist.value()==1){
+    if(!opts.pathdist.value()){
       for(unsigned int i=0;i<path.size();i++){
 	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
 	if(m_beenhere(x_s,y_s,z_s)==0){
@@ -407,13 +421,34 @@ namespace TRACT{
     int xseedvox=int(round(m_stline.get_x_seed()));
     int yseedvox=int(round(m_stline.get_y_seed()));
     int zseedvox=int(round(m_stline.get_z_seed()));
-    for(unsigned int i=0;i<path.size();i++){
-      int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
-      for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
-	  m_seedcounts[m](xseedvox,yseedvox,zseedvox)=m_seedcounts[m](xseedvox,yseedvox,zseedvox)+1;
-	  m_targflags[m]=1;
-	  //m_particle_numbers[m].push_back(particle_number);
+
+    if(!opts.pathdist.value()){
+      for(unsigned int i=0;i<path.size();i++){
+	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
+	for(unsigned int m=0;m<m_targetmasknames.size();m++){
+	  if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
+	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)=m_seedcounts[m](xseedvox,yseedvox,zseedvox)+1;
+	    m_targflags[m]=1;
+	    //m_particle_numbers[m].push_back(particle_number);
+	  }
+	}
+      }
+    }
+    else{
+      int d=0;
+      int x_s=0,y_s=0,z_s=0,px,py,pz;
+      for(unsigned int i=0;i<path.size();i++){
+	px=(int)floor(x_s),py=(int)floor(y_s),pz=(int)floor(z_s);
+	x_s=int(round(float(path[i](1))));y_s=int(round(float(path[i](2))));z_s=int(round(float(path[i](3))));
+	if(i==0 | (floor(x_s)!=px | floor(y_s)!=py | floor(z_s)!=pz)){
+	  d++;
+	  for(unsigned int m=0;m<m_targetmasknames.size();m++){
+	    if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
+	      m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=d;
+	      m_targflags[m]=1;
+	      //m_particle_numbers[m].push_back(particle_number);
+	    }
+	  }
 	}
       }
     }
@@ -446,18 +481,35 @@ namespace TRACT{
   void Counter::update_matrix2_row(){
     //run this one every streamline - not every voxel..
     const vector<ColumnVector>& path=m_stline.get_path_ref();
-    for(unsigned int i=0;i<path.size();i++){
-      ColumnVector xyz_seeds=path[i];
-      ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
-      int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
-      int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
-      if(Concol2!=0){
-	if(m_beenhere2(x_lr,y_lr,z_lr)==0){
-	  m_ConMat2(m_Conrow2,Concol2,0)+=1;
-	  m_beenhere2(x_lr,y_lr,z_lr)=1;
+
+    if(!opts.pathdist.value())
+      for(unsigned int i=0;i<path.size();i++){
+	ColumnVector xyz_seeds=path[i];
+	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
+	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
+	int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
+	if(Concol2!=0){
+	  if(m_beenhere2(x_lr,y_lr,z_lr)==0){
+	    m_ConMat2(m_Conrow2,Concol2,0)+=1;
+	    m_beenhere2(x_lr,y_lr,z_lr)=1;
+	  }
+	}
+	
+      }
+    else{
+      int d=1;
+      for(unsigned int i=0;i<path.size();i++){
+	ColumnVector xyz_seeds=path[i];
+	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
+	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
+	int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
+	if(Concol2!=0){
+	  if(m_beenhere2(x_lr,y_lr,z_lr)==0){
+	    m_ConMat2(m_Conrow2,Concol2,0)+=d;d++;
+	    m_beenhere2(x_lr,y_lr,z_lr)=1;
+	  }
 	}
       }
-      
     }
     
   }
