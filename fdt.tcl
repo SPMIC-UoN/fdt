@@ -14,16 +14,6 @@ regsub tcl $TCLPATH doc/fdt HTMLPATH
 
 set VERSION "1.0a"
 
-
-proc coordinateEdit:update { w } {
-
-    upvar #0 $w data
-
-    [$w subwidget x] update
-    [$w subwidget y] update
-    [$w subwidget z] update
-}
-
 proc mm_to_voxels { X Y Z mask } {
 
     global FSLDIR
