@@ -35,8 +35,12 @@ int main ( int argc, char **argv ){
   if(opts.mode.value()=="simple")
     track();
   string tmpin=opts.seedfile.value();
-  if(fsl_imageexists(opts.mask2.value())){ twomasks();}
-  else if(fsl_imageexists(opts.seedfile.value())){ seedmask();}
+  if(fsl_imageexists(opts.seedfile.value())){ 
+    if(fsl_imageexists(opts.mask2.value())){ twomasks();}
+    else{ seedmask(); }
+  }
+  else{ nmasks(); }
+
   //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
 
   // else if(opts.mode.value()=="seeds_to_targets")

@@ -34,8 +34,8 @@ void track(){
   Counter counter(seedref,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);
-
-    
+  
+  
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
   for(int SN=1; SN<=Seeds.Nrows();SN++){
     float xst=Seeds(SN,1);

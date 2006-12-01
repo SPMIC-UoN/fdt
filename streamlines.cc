@@ -195,11 +195,20 @@ namespace TRACT{
     if(opts.loopcheck.value()){
       m_loopcheck=0;
     }
+    
     bool accept_path=true;
     if(m_passed_flags.size()!=0){
-      for(unsigned int i=0; i<m_passed_flags.size();i++)
-	if(!m_passed_flags[i])
-	  accept_path=false;
+      if(opts.waypoints_and.value()){
+	for(unsigned int i=0; i<m_passed_flags.size();i++)
+	  if(!m_passed_flags[i])
+	    accept_path=false;
+      }
+      else{
+	accept_path=false;
+	for(unsigned int i=0; i<m_passed_flags.size();i++)
+	  if(m_passed_flags[i])
+	    accept_path=true;
+      }
     }   
     if(rubbish_passed)
       accept_path=false;
