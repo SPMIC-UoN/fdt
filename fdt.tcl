@@ -324,8 +324,8 @@ proc fdt:dialog { w tclstartupfile } {
     #Co-ordinate edit frame
     LabelFrame   $w.data.seedxyz -text "Seed:"
     LabelSpinBox $w.data.seedxyz.x -label "X" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
-    LabelSpinBox $w.data.seedxyz.y -label "Y" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
-    LabelSpinBox $w.data.seedxyz.z -label "Z" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
+    LabelSpinBox $w.data.seedxyz.y -label "Y" -textvariable probtrack(y) -range {-1000000 1000000 1 } -width 6
+    LabelSpinBox $w.data.seedxyz.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } -width 6
     radiobutton $w.data.seedxyz.vox -text "vox" -value vox -variable probtrack(units)
     radiobutton $w.data.seedxyz.mm  -text "mm"  -value mm  -variable probtrack(units)
     pack $w.data.seedxyz.x $w.data.seedxyz.y $w.data.seedxyz.z $w.data.seedxyz.vox $w.data.seedxyz.mm -side left -padx 2 -pady 0
