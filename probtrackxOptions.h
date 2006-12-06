@@ -48,6 +48,7 @@ class probtrackxOptions {
   Option<string> seedref;
   Option<string> mask2;
   Option<string> waypoints;
+  Option<bool>   waypoints_and;
   Option<string> meshfile;
   FmribOption<string> lrmask;
   Option<string> logdir; 
@@ -129,8 +130,8 @@ class probtrackxOptions {
    outfile(string("-o,--out"), string(""),
 	   string("Output file (only for single seed voxel mode)"),
 	   false, requires_argument),
-   rubbishfile(string("--rubbish"), string(""),
-	       string("Rubbish file"),
+   rubbishfile(string("--avoid"), string(""),
+	       string("Reject pathways passing through locations given by this mask"),
 	       false, requires_argument),
    stopfile(string("--stop"), string(""),
 	       string("Stop tracking at locations given by this mask file"),
@@ -147,13 +148,16 @@ class probtrackxOptions {
 	 string("second mask in twomask_symm mode."),
        false, requires_argument),
  waypoints(string("--waypoints"), string(""),
-	 string("Waypoint mask or ascii list of waypoint masks."),
-       false, requires_argument), 
+	 string("Waypoint mask or ascii list of waypoint masks"),
+       false, requires_argument),
+ waypoints_and(string("--network"), true,
+	 string("Searches for pathways connecting every seed to at least one waypoint"),
+       false, no_argument), 
  meshfile(string("--mesh"), string(""),
 	 string(""),
        false, requires_argument),
   lrmask(string("--lrmask"), string(""),
-	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode."),
+	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode"),
        false, requires_argument),
   logdir(string("--dir"), string(""),
 	    string("Directory to put the final volumes in - code makes this directory"),
@@ -206,6 +210,7 @@ class probtrackxOptions {
        options.add(skipmask);
        options.add(mask2);
        options.add(waypoints);
+       options.add(waypoints_and);
        options.add(meshfile);
        options.add(lrmask);
        options.add(seedref);

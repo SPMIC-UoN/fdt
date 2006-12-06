@@ -108,21 +108,6 @@ fi
 
 Lock;
 
-#parse option arguments
-nfibres=2
-fudge=1
-burnin=1000
-while [ ! -z "$2" ]
-do
-  case "$2" in
-      -n) nfibres=$3;shift;;
-      -w) fudge=$3;shift;;
-      -b) burnin=$3;shift;;
-      *) break;;
-  esac
-  shift
-done
-
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
@@ -161,6 +146,22 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	echo "${subjdir}/nodif_brain_mask not found"
 	ExitUnlock
 fi
+
+
+#parse option arguments
+nfibres=2
+fudge=1
+burnin=1000
+while [ ! -z "$2" ]
+do
+  case "$2" in
+      -n) nfibres=$3;shift;;
+      -w) fudge=$3;shift;;
+      -b) burnin=$3;shift;;
+      *) break;;
+  esac
+  shift
+done
 
 
 echo making bedpostX directory
@@ -216,7 +217,7 @@ done
 
 
 numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples |wc -w`
-
+echo number of fibres $numfib
 
 fib=1;
 while [ $fib -le $numfib ];do
@@ -231,9 +232,6 @@ while [ $fib -le $numfib ];do
 
     fib=`echo "$fib +1"|bc`;
 done
-
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/meanSignal  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/meanSignal`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/stdSignal  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/stdSignal`
 
 echo Removing intermediate files
 

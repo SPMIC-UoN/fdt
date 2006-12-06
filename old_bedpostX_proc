@@ -14,6 +14,11 @@ Usage() {
 
 [ "$2" = "" ] && Usage
 
+
+subjdir=$1
+nslices=$2
+
+
 #parse option arguments
 nfibres=2
 fudge=1.5
@@ -29,12 +34,15 @@ do
   shift
 done
 
+echo subjdir $subjdir
+echo nslices $nslices
+echo nfibres $nfibres
+echo fudge $fudge
+echo burnin $burnin
+echo piddir $piddir
 
 [ "$piddir" = "" ] || touch ${piddir}/`hostname`_fdt_${$}
 
-
-subjdir=$1
-nslices=$2
 
 slice=0
 while [ $slice -lt $nslices ];do

@@ -360,12 +360,12 @@ public:
       mean_fsamples_out.push_back(m_mean_fsamples[f]);
 
     Log& logger = LogSingleton::getInstance();
-    tmp.setmatrix(m_dsamples,mask);
-    save_volume4D(tmp,logger.appendDir("dsamples"));
-    tmp.setmatrix(m_S0samples,mask);
-    save_volume4D(tmp,logger.appendDir("S0samples"));
-    tmp.setmatrix(m_lik_energy,mask);
-    save_volume4D(tmp,logger.appendDir("lik_energy"));
+    //tmp.setmatrix(m_dsamples,mask);
+    //save_volume4D(tmp,logger.appendDir("dsamples"));
+    //tmp.setmatrix(m_S0samples,mask);
+    //save_volume4D(tmp,logger.appendDir("S0samples"));
+    //tmp.setmatrix(m_lik_energy,mask);
+    //save_volume4D(tmp,logger.appendDir("lik_energy"));
 
     //Sort the output based on mean_fsamples
     // 
