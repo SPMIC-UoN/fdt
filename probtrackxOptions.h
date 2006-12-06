@@ -113,7 +113,7 @@ class probtrackxOptions {
 	    string("output path distribution"),
 	    false, no_argument), 
   pathdist(string("--pd"), false,
-	   string("path distribution, 1:probability,2:distance corrected value"),
+	   string("Correct path distribution for the length of the pathways"),
 	   false, no_argument), 
   s2tout(string("--os2t"), false,
 	 string("output seeds to targets"),
