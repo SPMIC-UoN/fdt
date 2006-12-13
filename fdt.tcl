@@ -622,7 +622,7 @@ proc fdt_monitor { w cmd } {
 
 proc fdt:apply { w dialog } {
 
-    global probtrack(tool)
+    global probtrack
     global BINPATH
     global FSLDIR
 
