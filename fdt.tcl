@@ -328,7 +328,7 @@ proc fdt:dialog { w tclstartupfile } {
     LabelSpinBox $w.data.seedxyz.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } -width 6
     radiobutton $w.data.seedxyz.vox -text "vox" -value vox -variable probtrack(units)
     radiobutton $w.data.seedxyz.mm  -text "mm"  -value mm  -variable probtrack(units)
-    pack $w.data.seedxyz.x $w.data.seedxyz.y $w.data.seedxyz.z $w.data.seedxyz.vox $w.data.seedxyz.mm -side left -padx 2 -pady 0
+    pack $w.data.seedxyz.x $w.data.seedxyz.y $w.data.seedxyz.z $w.data.seedxyz.vox $w.data.seedxyz.mm -side left -padx 2 -pady 0 
 
     proc probtrack_toggle_reference { w } {
 	global probtrack
@@ -344,7 +344,8 @@ proc fdt:dialog { w tclstartupfile } {
 	} else { 
 	    pack forget $w.data.reference
 	    pack forget $w.data.xfm
-	}
+ 	}
+        $w.probtrack compute_size
     }
 
     checkbutton $w.data.usereference_yn -text "Seed space is not diffusion" \
@@ -507,7 +508,7 @@ proc fdt:probtrack_mode { w } {
     pack $w.data.dir -in [$w.data.output getframe ] -side top -padx 3 -pady 3 -anchor nw
     switch -- $probtrack(mode) {
   	simple {
- 	    pack $w.data.seedxyz -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.usereference_yn
+ 	    pack $w.data.seedxyz -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.usereference_yn -anchor nw
 	    pack $w.data.reference -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.xfm -anchor nw
 	    pack $w.data.out -in [$w.data.output getframe] -side top -padx 3 -pady 3 -anchor nw
   	    pack forget $w.data.dir
