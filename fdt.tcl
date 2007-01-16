@@ -757,7 +757,6 @@ proc fdt:apply { w dialog } {
 			set ssopts "$ssopts --rubbish=$probtrack(exclude)"
 		    }
 		    set fd [ open "${filebase}_coordinates.txt" w ]
-		    $w.data.seedxyz update
 		    if { $probtrack(units) == "mm" } {
 			set x $probtrack(x)
 			set y $probtrack(y)
