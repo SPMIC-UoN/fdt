@@ -364,6 +364,7 @@ proc fdt:dialog { w tclstartupfile } {
 	} else { 
 	    pack forget $w.data.exclude
 	}
+        $w.probtrack compute_size
     }
 
     checkbutton $w.data.exclude_yn -text "Use exclusion mask" -variable probtrack(exclude_yn) \
