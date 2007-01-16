@@ -201,6 +201,6 @@ void track(){
       
     } // Close Particle Number Loop    
     string thisout=opts.outfile.value()+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
-    save_volume(prob,thisout);
+    save_volume(prob,logger.appendDir(thisout));
   } //Close Seed number Loop
 }
