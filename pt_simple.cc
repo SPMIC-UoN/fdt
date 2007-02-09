@@ -107,7 +107,7 @@ void track(){
        	}
 	
 	for( int it = 1 ; it <= nsteps/2; it++){
-	  if( (mask( round(part.x()), round(part.y()), round(part.z())) == 1) ){
+	  if( (mask( round(part.x()), round(part.y()), round(part.z())) != 0) ){
 	    if(opts.loopcheck.value()){
 	      float oldrx=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),0);
 	      float oldry=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),1);
@@ -147,7 +147,7 @@ void track(){
 	    
 	    if(opts.rubbishfile.value()!="")
 	      {
-		if(RUBBISH(x_s,y_s,z_s)>0) break;
+		if(RUBBISH(x_s,y_s,z_s)!=0) break;
 	      }
 
 	    path(it+(direc-1)*nsteps/2,1)=x_s; 
@@ -202,5 +202,6 @@ void track(){
     } // Close Particle Number Loop    
     string thisout=opts.outfile.value()+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     save_volume(prob,logger.appendDir(thisout));
+    //save_volume(prob,thisout);
   } //Close Seed number Loop
 }

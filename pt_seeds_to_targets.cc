@@ -109,7 +109,7 @@ void seeds_to_targets()
     cout<<Sz<<endl;
     for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
       for(int Sx=Seeds.minx();Sx<=Seeds.maxx();Sx++){
-	if(Seeds(Sx,Sy,Sz)>0){
+	if(Seeds(Sx,Sy,Sz)!=0){
 	  ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 	  xyz_seeds << Sx << Sy << Sz;
 	  dim_seeds <<Seeds.xdim()<<Seeds.ydim()<<Seeds.zdim();
@@ -129,7 +129,7 @@ void seeds_to_targets()
 	      
 	      
 	      for( int it = 1 ; it < nsteps/2; it++){
-		if( (mask( round(part.x()), round(part.y()), round(part.z())) == 1) ){
+		if( (mask( round(part.x()), round(part.y()), round(part.z())) != 0) ){
 		  if(opts.loopcheck.value()){
 		    float oldrx=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),0);
 		    float oldry=loopcheck((int)round(part.x()/lcrat),(int)round(part.y()/lcrat),(int)round(part.z()/lcrat),1);
@@ -159,7 +159,7 @@ void seeds_to_targets()
 		  
 
 		  if(opts.rubbishfile.value()!=""){
-		    if(RUBBISH(x_s,y_s,z_s)>0) break;
+		    if(RUBBISH(x_s,y_s,z_s)!=0) break;
 		  }
 
 		  path(it+(direc-1)*nsteps/2,1)=round(part.x()); 
@@ -167,7 +167,7 @@ void seeds_to_targets()
 		  path(it+(direc-1)*nsteps/2,3)=round(part.z()); //stopping path in DTI space here
 		  
 		  for(unsigned int m=0;m<masknames.size();m++){
-		    if(target_masks[m](x_s,y_s,z_s)>0 && flags[m]==0){
+		    if(target_masks[m](x_s,y_s,z_s)!=0 && flags[m]==0){
 		      thal_segs[m](Sx,Sy,Sz)=thal_segs[m](Sx,Sy,Sz)+1;flags[m]=1;
 		    }
 		  }

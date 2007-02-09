@@ -81,7 +81,7 @@ void alltracts(){
     cout<<Sz<<endl;
     for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
       for(int Sx=Seeds.minx();Sx<=Seeds.maxx();Sx++){
-	if(Seeds(Sx,Sy,Sz)>0){
+	if(Seeds(Sx,Sy,Sz)!=0){
 	  
 	  ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 	  xyz_seeds << Sx << Sy << Sz;
@@ -100,7 +100,7 @@ void alltracts(){
 		part.restart_reverse();  //go again in the opposite direction
 	      }
 	      for( int it = 1 ; it <= nsteps/2; it++){
-		if( (mask( round(part.x()), round(part.y()), round(part.z())) > 0) ){
+		if( (mask( round(part.x()), round(part.y()), round(part.z())) != 0) ){
 		
 		  ///////////////////////////////////
 		  //loopchecking

@@ -93,7 +93,7 @@ void twomasks_symm(){
       cout<<Sz<<endl;
       for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
 	for(int Sx=Seeds.minx();Sx<=Seeds.maxx();Sx++){
-	  if(Seeds(Sx,Sy,Sz)>0){
+	  if(Seeds(Sx,Sy,Sz)!=0){
 	    int	 maskno=Seeds(Sx,Sy,Sz);
 	    ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 	    xyz_seeds << Sx << Sy << Sz;
@@ -113,7 +113,7 @@ void twomasks_symm(){
 		int partlength=0;
 		bool keepflag=false;  /// only keep it if this direction went through the masks
 		for( int it = 1 ; it <= nsteps/2; it++){
-		  if( (mask( round(part.x()), round(part.y()), round(part.z())) > 0) ){
+		  if( (mask( round(part.x()), round(part.y()), round(part.z())) != 0) ){
 		    
 		    ///////////////////////////////////
 		    //loopchecking
@@ -333,7 +333,7 @@ void waypoints(){
       cout<<Sz<<endl;
       for(int Sy=Seeds.miny();Sy<=Seeds.maxy();Sy++){
 	for(int Sx=Seeds.minx();Sx<=Seeds.maxx();Sx++){
-	  if(Seeds(Sx,Sy,Sz)>0){
+	  if(Seeds(Sx,Sy,Sz)!=0){
 	    ColumnVector xyz_seeds(3),dim_seeds(3),xyz_dti;
 	    xyz_seeds << Sx << Sy << Sz;
 	    dim_seeds <<Seeds.xdim()<<Seeds.ydim()<<Seeds.zdim();
@@ -356,7 +356,7 @@ void waypoints(){
 		}
 		uberkeepflag=true;
 		for( int it = 1 ; it <= nsteps/2; it++){
-		  if( (mask( round(part.x()), round(part.y()), round(part.z())) > 0) ){
+		  if( (mask( round(part.x()), round(part.y()), round(part.z())) != 0) ){
 		    
 		    ///////////////////////////////////
 		    //loopchecking
@@ -385,13 +385,13 @@ void waypoints(){
 		    int y_s =(int)round((float)xyz_seeds(2));
 		    int z_s =(int)round((float)xyz_seeds(3));
 		    if(opts.uberrubbishfile.value()!=""){
-		      if(UBERRUBBISH(x_s,y_s,z_s)>0) {
+		      if(UBERRUBBISH(x_s,y_s,z_s)!=0) {
 			uberkeepflag=false;
 			break;
 		      }
 		    }
 		    if(opts.rubbishfile.value()!=""){
-		      if(RUBBISH(x_s,y_s,z_s)>0) break;
+		      if(RUBBISH(x_s,y_s,z_s)!=0) break;
 		    }
 		    path(it,1)=x_s; 
 		    path(it,2)=y_s;
@@ -400,7 +400,7 @@ void waypoints(){
 
 		    //update every passed_flag
 		    for( unsigned int wm=0;wm<waymasks.size();wm++ ){
-		      if( waymasks[wm](x_s,y_s,z_s)>0 ) 
+		      if( waymasks[wm](x_s,y_s,z_s)!=0 ) 
 			passed_flags[wm]=true;
 		    }
 
