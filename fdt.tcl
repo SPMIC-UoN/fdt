@@ -161,11 +161,10 @@ proc fdt:dialog { w tclstartupfile } {
     frame $w.dtifit.expert
 
     proc set_working_directory { cwd filename } {
-	upvar $cwd myCWD
-
+	global dtifit
 	set dirname [file dirname $filename]
-	puts "switching from $myCWD to $dirname" 
-	set myCWD $dirname
+	puts "switching from $dtifit(cwd) to $dirname" 
+	set dtifit(cwd) $dirname
     }
 
     proc dtifit_update_files { w filename } {
