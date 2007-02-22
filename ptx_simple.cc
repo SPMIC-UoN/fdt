@@ -37,14 +37,17 @@ void track(){
   
   
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
+  
+  int keeptot=0;
   for(int SN=1; SN<=Seeds.Nrows();SN++){
     float xst=Seeds(SN,1);
     float yst=Seeds(SN,2);
     float zst=Seeds(SN,3);
-    seedmanager.run(xst,yst,zst,false,0);
+    keeptot += seedmanager.run(xst,yst,zst,false,0);
     string add=num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     
     counter.save_pathdist(add);
     counter.reset_prob();
   } //Close Seed number Loop
+  counter.save_total(keeptot);
 }
