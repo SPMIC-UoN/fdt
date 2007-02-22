@@ -30,19 +30,22 @@ void seedmask()
   seeds=NEWIMAGE::abs(seeds);
   seeds.binarise(0,seeds.max()+1,exclusive);
 
+  int keeptotal=0;
   for(int z=0;z<seeds.zsize();z++){
     cout <<"sl "<<z<<endl;
     for(int y=0;y<seeds.ysize();y++){
       for(int x=0;x<seeds.xsize();x++){
 	if(seeds(x,y,z)>0){
 	  cout <<"run"<<endl;
-	  seedmanager.run(x,y,z); 
+	  keeptotal += seedmanager.run(x,y,z); 
 	}
       }
     }
   }
-  
+
+  counter.save_total(keeptotal);  
   counter.save();
+
   cout<<"finished"<<endl;
 }
 

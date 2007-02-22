@@ -63,6 +63,11 @@ namespace TRACT{
       m_own_waymasks.pop_back();
       
     }
+    void clear_waymasks(){
+      // clear all waymasks
+      for(unsigned int i=0;i<m_waymasks.size();i++)
+	pop_waymasks();
+    }
     
     inline const float get_x_seed() const {return m_x_s_init;}
     inline const float get_y_seed() const {return m_y_s_init;}
@@ -165,6 +170,7 @@ namespace TRACT{
   
     void update_maskmatrix(){} //not written yet
     
+    void save_total(const int& keeptotal);
     void save();
     void save_pathdist();
     void save_pathdist(string add);
@@ -197,7 +203,7 @@ namespace TRACT{
       m_seeddims.ReSize(3);
       m_seeddims<<m_seeds.xdim()<<m_seeds.ydim()<<m_seeds.zdim();
     }
-    void run(const float& x,const float& y,const float& z,bool onewayonly=false, int fibst=-1);
+    int run(const float& x,const float& y,const float& z,bool onewayonly=false, int fibst=-1);
   };
 
 }

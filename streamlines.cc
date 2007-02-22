@@ -214,6 +214,7 @@ namespace TRACT{
     }   
     if(rubbish_passed)
       accept_path=false;
+
     return accept_path;
   }
   
@@ -548,6 +549,15 @@ namespace TRACT{
     
   }
 
+  void Counter::save_total(const int& keeptotal){
+    
+    // save total number of particles that made it through the streamlining
+    ColumnVector keeptotvec(1);
+    keeptotvec(1)=keeptotal;
+    write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
+
+  }
+
   void Counter::save(){
     if(opts.simpleout.value()){
       save_pathdist();
@@ -612,7 +622,8 @@ namespace TRACT{
   
   }
   
-  void Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
+  // this function now returns the total number of pathways that survived a streamlining (SJ)
+  int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
     if(fibst == -1){
@@ -626,6 +637,7 @@ namespace TRACT{
 	fibst=1;// fix this for > 2 fibres
     }
     
+    int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
       if(opts.verbose.value()>1)
 	logger.setLogFile("particle"+num2str(p));
@@ -637,21 +649,23 @@ namespace TRACT{
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();
+	  nlines++;
 	}
 	m_stline.reverse();
       }
       if(m_stline.streamline(x,y,z,m_seeddims,fibst)){
 	backwardflag=true;
 	m_counter.count_streamline();
+	//nlines++; //count twice ?
       }
      
       m_counter.clear_streamline(forwardflag,backwardflag); 
     }
     m_counter.count_seed();
     
+    return nlines;
     
   }
-
 
 
 }

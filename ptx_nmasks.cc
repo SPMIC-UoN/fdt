@@ -42,8 +42,7 @@ void nmasks()
   Seedmanager seedmanager(counter);
 
   for(unsigned int i=0;i<seeds.size();i++){
-    if(i>0)
-      stline.pop_waymasks();
+    stline.clear_waymasks();
     for(unsigned int j=0;j<seeds.size();j++){
       if(j!=i)
 	stline.add_waymask(seeds[j]);
