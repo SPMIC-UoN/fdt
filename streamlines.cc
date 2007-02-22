@@ -200,7 +200,7 @@ namespace TRACT{
     
     bool accept_path=true;
     if(m_passed_flags.size()!=0){
-      if(opts.waypoints_and.value()){
+      if(!opts.network.value()){
 	for(unsigned int i=0; i<m_passed_flags.size();i++)
 	  if(!m_passed_flags[i])
 	    accept_path=false;

@@ -48,7 +48,7 @@ class probtrackxOptions {
   Option<string> seedref;
   Option<string> mask2;
   Option<string> waypoints;
-  Option<bool>   waypoints_and;
+  Option<bool> network;
   Option<string> meshfile;
   FmribOption<string> lrmask;
   Option<string> logdir; 
@@ -148,12 +148,12 @@ class probtrackxOptions {
 	 string("second mask in twomask_symm mode."),
        false, requires_argument),
  waypoints(string("--waypoints"), string(""),
-	 string("Waypoint mask or ascii list of waypoint masks"),
+	 string("Waypoint mask or ascii list of waypoint masks - only keep paths going through ALL the masks"),
        false, requires_argument),
- waypoints_and(string("--network"), true,
-	 string("Searches for pathways connecting every seed to at least one waypoint"),
-       false, no_argument), 
- meshfile(string("--mesh"), string(""),
+ network(string("--network"), false,
+	 string("Only keep paths going through at least one waypoint mask, or another seed in multiple seeds mode"),
+       false, no_argument),
+   meshfile(string("--mesh"), string(""),
 	 string(""),
        false, requires_argument),
   lrmask(string("--lrmask"), string(""),
@@ -195,7 +195,7 @@ class probtrackxOptions {
    rseed(string("--rseed"), 12345,
 	 string("Random seed"),
 	 false, requires_argument), 
-   options("probtrack","probtrack -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrack --help\n")
+   options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
      
     
@@ -210,7 +210,7 @@ class probtrackxOptions {
        options.add(skipmask);
        options.add(mask2);
        options.add(waypoints);
-       options.add(waypoints_and);
+       options.add(network);
        options.add(meshfile);
        options.add(lrmask);
        options.add(seedref);
