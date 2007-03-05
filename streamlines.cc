@@ -447,21 +447,20 @@ namespace TRACT{
       }
     }
     else{
-      int d=0;
-      int x_s=0,y_s=0,z_s=0,px,py,pz;
+      float d=0;
+      int x_s,y_s,z_s;
       for(unsigned int i=0;i<path.size();i++){
-	px=(int)floor(x_s),py=(int)floor(y_s),pz=(int)floor(z_s);
 	x_s=int(round(float(path[i](1))));y_s=int(round(float(path[i](2))));z_s=int(round(float(path[i](3))));
-	if(i==0 | (floor(x_s)!=px | floor(y_s)!=py | floor(z_s)!=pz)){
-	  d++;
-	  for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	    if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
-	      m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=d;
-	      m_targflags[m]=1;
-	      //m_particle_numbers[m].push_back(particle_number);
-	    }
+	if(i>0)
+	  d+=sqrt((path[i]-path[i-1]).SumSquare());
+	for(unsigned int m=0;m<m_targetmasknames.size();m++){
+	  if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
+	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=d;
+	    m_targflags[m]=1;
+	    //m_particle_numbers[m].push_back(particle_number);
 	  }
 	}
+	
       }
     }
     
