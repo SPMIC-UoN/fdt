@@ -58,7 +58,7 @@ XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyad
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
 
 
-RUNTCLS = Fdt
+RUNTCLS = Fdt Fdtx
 
 all: ${XFILES} ${FXFILES} 
 
