@@ -463,6 +463,7 @@ proc fdt:probtrack_mode { w } {
                      pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
                      pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
                      $w.data.seed.reference configure -label "Seed reference image:" -title "Choose reference image" 
+                     $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
                      pack $w.data.seed.ssf $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -470,13 +471,12 @@ proc fdt:probtrack_mode { w } {
                      pack $w.data.targets.cf -in $w.data.targets.f -anchor w
 
                      $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
+                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
   	}
 	network {
-                     pack  $w.data.seed.target $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+                     pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
                      pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-                     $w.data.seed.reference configure -label "First mask image:" -title "Choose mask image" 
-
+                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
 	}
     }
     $w.probtrack compute_size
@@ -677,7 +677,7 @@ proc fdt:apply { w dialog } {
 	    set copylog ""
 
 	    if { $probtrack(usereference_yn) } {
-		set flags "$flags --xfm==$probtrack(xfm)"
+		set flags "$flags --xfm=$probtrack(xfm)"
       		puts $log "set probtrack(xfm) $probtrack(xfm)"
 	    }
 
@@ -739,19 +739,23 @@ proc fdt:apply { w dialog } {
 	    set canwrite 1
       	    if { [ file exists $probtrack(output) ] } {
       		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
-       		if { $canwrite } {
-       		    puts "rm -rf $probtrack(output)"
-       		    exec rm -rf $probtrack(output)
-	            puts "mkdir -p $probtrack(output)"
-		    exec mkdir -p $probtrack(output)
-       		}
+	    }
+       	    if { $canwrite } {
+                puts "here"
+       		puts "rm -rf $probtrack(output)"
+       		exec rm -rf $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+		exec mkdir -p $probtrack(output)
        	    }
+
+            puts $probtrack(output)
+
        	    if { $canwrite } {
        		set copylog "fdt.log"
 
 	        if { $probtrack(waypoint_yn) == 1 } {
                     fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
-                    set flags "$flags --waypoints==$probtrack(output)/waypoints.txt "
+                    set flags "$flags --waypoints=$probtrack(output)/waypoints.txt "
 	        } 
 	        if { $probtrack(classify_yn) == 1 } {
                     fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
