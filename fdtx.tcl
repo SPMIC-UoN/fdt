@@ -384,7 +384,7 @@ proc fdt:dialog { w tclstartupfile } {
     set probtrack(loopcheck_yn) 1
     checkbutton $w.options.loopcheck -text "Loopcheck" -variable probtrack(loopcheck_yn)
 
-    collapsible frame $w.advanced -title "Advanced Options"
+    collapsible frame $w.advanced -title "Advanced Options" -command "$w.probtrack compute_size; set dummy"
 
     set probtrack(nsteps) 2000
     LabelSpinBox $w.advanced.nsteps -label "Maximum number of steps" -textvariable probtrack(nsteps) -range {2 1000000 10 } -width 6
@@ -458,6 +458,7 @@ proc fdt:probtrack_mode { w } {
     global probtrack
 
     pack forget $w.data.seed.voxel $w.data.seed.ssf $w.data.seed.menu $w.data.seed.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
     switch -- $probtrack(mode) {
   	simple {
                      pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -469,14 +470,10 @@ proc fdt:probtrack_mode { w } {
                      pack $w.data.seed.ssf $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
                      pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
                      pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-
                      $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
-                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
   	}
 	network {
                      pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
 	}
     }
     $w.probtrack compute_size
@@ -728,7 +725,8 @@ proc fdt:apply { w dialog } {
 	       network {
 		   set flags "$flags --network"
                    set probtrack(mode) seedmask
-                   set probtrack(reference2) $probtrack(reference)  
+                   fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
+                   set probtrack(reference2) $probtrack(output)/masks.txt
 	       }
 	    }
 
