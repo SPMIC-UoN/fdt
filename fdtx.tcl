@@ -241,8 +241,7 @@ proc fdt:dialog { w tclstartupfile } {
 
 
     frame  $w.data.seed.bcf
-    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.lrmask ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.lrmask -side top } ; $w.probtrack compute_size"
-    FileEntry $w.data.seed.bcf.lrmask -textvariable probtrack(lrmask) -label "Set Low-res mask:" -title  "Choose low resolution mask" -filetypes IMAGE 
+    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn) 
     pack $w.data.seed.bcf.bc -side top -anchor w
 
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
@@ -655,7 +654,6 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
-            if { $probtrack(bcyn) && $probtrack(lrmask) == ""} { set errorStr "$errorStr You must specify a low res mask!" }
 	    set flags ""
 	    if { $probtrack(verbose_yn) == 1 } { set flags "$flags -V 1" }
 	    if { $probtrack(loopcheck_yn) == 1 } { set flags "$flags -l" }
@@ -719,7 +717,12 @@ proc fdt:apply { w dialog } {
                     set probtrack(reference2)  ${filebase}_coordinates.txt      
 	       } 
                seedmask {
-		   if { $probtrack(bcyn) } { set flags "$flags --lrmask=$probtrack(lrmask) --omatrix2" }
+		     if { $probtrack(bcyn) } { 
+                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in seed_brain_mask -ref seed_brain_mask -applyisoxfm 5 -out lowresmask"
+                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths lowresmask -ßßthr 0.5 -bin lowresmask"
+                       set flags "$flags --lrmask=lowresmask --omatrix2" 
+                   }
+
                    set probtrack(reference2) $probtrack(reference)  
 	       }
 	       network {
@@ -761,6 +764,9 @@ proc fdt:apply { w dialog } {
                 }
 
        		fdt_monitor_short $w "$FSLDIR/bin/probtrackx --mode=$probtrack(mode) -x $probtrack(reference2) $flags"
+                if { $probtrack(classify_yn) == 1 } {
+	           fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		}
        	    }
 	    if { $probtrack(mode) == "simple" } {
 	        puts "rm ${filebase}_coordinates.txt"
