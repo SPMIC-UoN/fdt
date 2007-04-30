@@ -650,7 +650,7 @@ proc fdt:apply { w dialog } {
 	    global probtrack
 	    set errorStr ""
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpost directory!" }
-	    if { $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
@@ -686,6 +686,20 @@ proc fdt:apply { w dialog } {
 		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
 
+	    if { $errorStr != "" } {
+       		MxPause $errorStr
+       		return
+      	    }
+	    set canwrite 1
+      	    if { [ file exists $probtrack(output) ] } {
+      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
+	    }
+       	    if { $canwrite } {
+       		puts "rm -rf $probtrack(output)"
+       		exec rm -rf $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+		exec mkdir -p $probtrack(output)
+       	    }
 
 	    set flags "$flags --forcedir --opd -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask  --dir=$probtrack(output)" 
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
@@ -713,43 +727,21 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-                    set flags "$flags --seedref=$probtrack(reference) -o $probtrack(output)"
-                    set probtrack(reference2)  ${filebase}_coordinates.txt      
+                    set flags "--mode=single --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
 		     if { $probtrack(bcyn) } { 
-                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in seed_brain_mask -ref seed_brain_mask -applyisoxfm 5 -out lowresmask"
-                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths lowresmask -ßßthr 0.5 -bin lowresmask"
+                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/seed_brain_mask -ref $probtrack(bedpost_dir)/seed_brain_mask -applyisoxfm 5 -out $probtrack(bedpost_dir)/lowresmask"
+                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths lowresmask -thr 0.5 -bin lowresmask"
                        set flags "$flags --lrmask=lowresmask --omatrix2" 
                    }
-
-                   set probtrack(reference2) $probtrack(reference)  
+                   set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
 	       network {
-		   set flags "$flags --network"
-                   set probtrack(mode) seedmask
                    fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
-                   set probtrack(reference2) $probtrack(output)/masks.txt
+		   set flags "--network --mode=seedmask -x $probtrack(output)/masks.txt $flags"
 	       }
 	    }
-
-	    if { $errorStr != "" } {
-       		MxPause $errorStr
-       		return
-      	    }
-	    set canwrite 1
-      	    if { [ file exists $probtrack(output) ] } {
-      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
-	    }
-       	    if { $canwrite } {
-                puts "here"
-       		puts "rm -rf $probtrack(output)"
-       		exec rm -rf $probtrack(output)
-	        puts "mkdir -p $probtrack(output)"
-		exec mkdir -p $probtrack(output)
-       	    }
-
-            puts $probtrack(output)
 
        	    if { $canwrite } {
        		set copylog "fdt.log"
@@ -763,7 +755,7 @@ proc fdt:apply { w dialog } {
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
 
-       		fdt_monitor_short $w "$FSLDIR/bin/probtrackx --mode=$probtrack(mode) -x $probtrack(reference2) $flags"
+       		fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
                 if { $probtrack(classify_yn) == 1 } {
 	           fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
 		}
