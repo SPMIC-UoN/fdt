@@ -129,6 +129,7 @@ namespace TRACT{
 	int x_s =(int)round((float)xyz_seeds(1));
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
+	
 	  
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
