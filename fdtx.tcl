@@ -731,9 +731,9 @@ proc fdt:apply { w dialog } {
 	       } 
                seedmask {
 		     if { $probtrack(bcyn) } { 
-                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/seed_brain_mask -ref $probtrack(bedpost_dir)/seed_brain_mask -applyisoxfm 5 -out $probtrack(bedpost_dir)/lowresmask"
-                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths lowresmask -thr 0.5 -bin lowresmask"
-                       set flags "$flags --lrmask=lowresmask --omatrix2" 
+                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/seed_brain_mask -ref $probtrack(bedpost_dir)/seed_brain_mask -applyisoxfm 5 -out $probtrack(output)/lowresmask"
+                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+                       set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
                    }
                    set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
