@@ -586,7 +586,6 @@ class xfibresVoxelManager{
 int main(int argc, char *argv[])
 {
   try{  
-    cout<<"running SAAD'S version of xfibre"<<endl;
 
     // Setup logging:
     Log& logger = LogSingleton::getInstance();
