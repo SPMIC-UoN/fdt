@@ -109,7 +109,7 @@ class probtrackxOptions {
   targetfile(string("--targetmasks"), string("cmasks"),
 	    string("File containing a list of target masks - required for seeds_to_targets classification"),
 	    false, requires_argument),
-  simpleout(string("--opd"), true,
+  simpleout(string("--opd"), false,
 	    string("output path distribution"),
 	    false, no_argument), 
   pathdist(string("--pd"), false,
