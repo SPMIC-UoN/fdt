@@ -241,8 +241,10 @@ proc fdt:dialog { w tclstartupfile } {
 
 
     frame  $w.data.seed.bcf
-    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn) 
-    pack $w.data.seed.bcf.bc -side top -anchor w
+    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
+    set probtrack(scale) 5
+    LabelSpinBox $w.data.seed.bcf.w -label "Scale" -textvariable probtrack(scale) -range {1 1000000 1 } 
+    pack $w.data.seed.bcf.bc -side left -anchor w
 
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
