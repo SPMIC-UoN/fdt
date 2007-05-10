@@ -270,7 +270,7 @@ void rem_cols(Matrix& myOMmat,Matrix& tractcoordmat,const bool tractcoordbool,co
   
 }
 
-void add_connexity(SymmetricMatrix& CtCt,const Matrix& coord){
+void add_connexity(SymmetricMatrix& CtCt,const Matrix& coord,const float p=.5){
   // compute CtCt range
   float r=CtCt.Minimum();
   float R=CtCt.Maximum();
@@ -290,7 +290,7 @@ void add_connexity(SymmetricMatrix& CtCt,const Matrix& coord){
   // add distance to CtCt matrix
   for(int i=1;i<=coord.Nrows();i++)
     for(int j=1;j<=i;j++){
-      CtCt(i,j)=std::sqrt(CtCt(i,j)*CtCt(i,j)+D(i,j)*D(i,j));
+      CtCt(i,j)=std::sqrt((1-p)*CtCt(i,j)*CtCt(i,j)+p*D(i,j)*D(i,j));
     }
  
 }
@@ -432,14 +432,13 @@ int main ( int argc, char **argv ){
   CtCt << CtCt+1;
 
   // adding connexity constraint
-  if(opts.connexity.value()){
-    if(!coordbool){
-      cerr<<"WARNING !! No coordinates provided. I cannot apply any connexity constraint."<<endl;
-    }
-    else{
-      add_connexity(CtCt,newcoordmat);
-    }
+  if(!coordbool){
+    cerr<<"WARNING !! No coordinates provided. I cannot apply any connexity constraint."<<endl;
   }
+  else{
+    add_connexity(CtCt,newcoordmat,opts.connexity.value());
+  }
+
   if(opts.power.value()!=1){
     CtCt << pow(CtCt,opts.power.value());
   }

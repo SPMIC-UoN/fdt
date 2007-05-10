@@ -31,7 +31,7 @@ class ccopsOptions {
   Option<string> excl_mask;
   Option<bool> reord1;
   Option<bool> reord2;
-  Option<bool> connexity;
+  Option<float> connexity;
   Option<int> bin;
   Option<float> power;
   bool parse_command_line(int argc, char** argv);
@@ -73,9 +73,9 @@ class ccopsOptions {
    reord2(string("--r2"), bool(false),
 	     string("do tractspace reordering (default no)"),
 	     false, no_argument), 
-   connexity(string("--con"), bool(false),
-	     string("add connexity constraint (default no)"),
-	     false, no_argument), 
+   connexity(string("--con"), 0.0,
+	     string("add connexity constraint - value between 0 and 1 (0 is no constraint). default=0"),
+	     false, requires_argument), 
    bin(string("--bin"), 0, 
 	 string("binarise at (default 0 - no binarisation)"), 
 	 false, requires_argument),
