@@ -40,7 +40,7 @@ namespace TRACT{
     if(opts.stopfile.value()!=""){
       read_volume(m_stop,opts.stopfile.value());
     }
-      
+ 
     vector<string> masknames;
     if(opts.waypoints.value()!=""){
       if(fsl_imageexists(opts.waypoints.value())){
@@ -95,6 +95,7 @@ namespace TRACT{
     int partlength=0;
     bool rubbish_passed=false;
     bool stop_flag=false;
+    bool has_goneout=false;
       //NB - this only goes in one direction!!
     for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
       m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
@@ -145,7 +146,10 @@ namespace TRACT{
 	
 
 	if(opts.rubbishfile.value()!=""){
-	  if(m_rubbish(x_s,y_s,z_s)!=0){
+	  if(m_rubbish(x_s,y_s,z_s)==0){
+	    has_goneout = true;
+	  }
+	  if(m_rubbish(x_s,y_s,z_s)!=0 && has_goneout){
 	    rubbish_passed=true;
 	    break;
 	  }
@@ -157,7 +161,6 @@ namespace TRACT{
 	  else
 	    if(stop_flag)break;
 	}	  
-	
 	  
 	if(opts.skipmask.value() == ""){
 	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
