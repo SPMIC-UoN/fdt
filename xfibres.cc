@@ -360,10 +360,10 @@ public:
       mean_fsamples_out.push_back(m_mean_fsamples[f]);
 
     Log& logger = LogSingleton::getInstance();
-    //tmp.setmatrix(m_dsamples,mask);
-    //save_volume4D(tmp,logger.appendDir("dsamples"));
-    //tmp.setmatrix(m_S0samples,mask);
-    //save_volume4D(tmp,logger.appendDir("S0samples"));
+    tmp.setmatrix(m_mean_dsamples,mask);
+    save_volume4D(tmp,logger.appendDir("mean_dsamples"));
+    tmp.setmatrix(m_mean_S0samples,mask);
+    save_volume4D(tmp,logger.appendDir("mean_S0samples"));
     //tmp.setmatrix(m_lik_energy,mask);
     //save_volume4D(tmp,logger.appendDir("lik_energy"));
 
@@ -530,8 +530,8 @@ class xfibresVoxelManager{
     m_multifibre.set_d(D);
     m_multifibre.set_S0(S0);
     if(opts.nfibres.value()>0){
-      //m_multifibre.addfibre(th,ph,f,1,false);//no a.r.d. on first fibre
-      m_multifibre.addfibre(th,ph,f,1,true);// a.r.d. on first fibre
+      m_multifibre.addfibre(th,ph,f,1,false);//no a.r.d. on first fibre
+      //m_multifibre.addfibre(th,ph,f,1,true);// a.r.d. on first fibre
       for(int i=2; i<=opts.nfibres.value(); i++){
 	 m_multifibre.addfibre();
       }
