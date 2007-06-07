@@ -115,7 +115,7 @@ class xfibresOptions {
        false,no_argument),
   localinit(string("--nospat"),false,string("Initialise with tensor, not spatially"),
        false,no_argument),
-   options("xfibres", "xfibres -k <filename>\n xfibres --verbose\n")
+   options("xfibres v1.25", "xfibres -k <filename>\n xfibres --verbose\n")
    {
      
     
