@@ -500,7 +500,7 @@ proc fdt:select_tool { w } {
     }
 }
 proc fdt_monitor_short { w cmd } {
-    global debugging OSFLAVOUR
+    global debugging OSFLAVOUR FSLPARALLEL
 
     puts "$cmd"
 
@@ -569,9 +569,7 @@ proc fdt_monitor { w cmd } {
 
 proc fdt:apply { w dialog } {
 
-    global probtrack
-    global BINPATH
-    global FSLDIR
+    global probtrack BINPATH FSLDIR FSLPARALLEL
 
     switch -- $probtrack(tool) {
 	eddy_current {
@@ -649,8 +647,10 @@ proc fdt:apply { w dialog } {
 	    }
 	}
 	probtrack {
-	    global probtrack
+	    global probtrack env
 	    set errorStr ""
+            set FSLPARALLEL 0
+            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpost directory!" }
 	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
@@ -661,13 +661,25 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(loopcheck_yn) == 1 } { set flags "$flags -l" }
 	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
+            if { $probtrack(pd) } { set flags "$flags --pd"  }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
              
-            if { $probtrack(pd) } { set flags "$flags --pd"  }
+	    if { $errorStr != "" } {
+       		MxPause $errorStr
+       		return
+      	    }
+	    set canwrite 1
+      	    if { [ file exists $probtrack(output) ] } {
+      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
+	    }
+       	    if { $canwrite } {
+       		puts "rm -rf $probtrack(output)"
+       		exec rm -rf $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+		exec mkdir -p $probtrack(output)
+       	    }
 
-	    set tn [open "| $BINPATH/tmpnam"]
-	    gets $tn filebase
-	    close $tn
+	    set filebase $probtrack(output)/tmp
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
@@ -687,21 +699,6 @@ proc fdt:apply { w dialog } {
 		set flags "$flags --stop=$probtrack(stop)"
 		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
-
-	    if { $errorStr != "" } {
-       		MxPause $errorStr
-       		return
-      	    }
-	    set canwrite 1
-      	    if { [ file exists $probtrack(output) ] } {
-      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
-	    }
-       	    if { $canwrite } {
-       		puts "rm -rf $probtrack(output)"
-       		exec rm -rf $probtrack(output)
-	        puts "mkdir -p $probtrack(output)"
-		exec mkdir -p $probtrack(output)
-       	    }
 
 	    set flags "$flags --forcedir --opd -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask  --dir=$probtrack(output)" 
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
@@ -756,23 +753,45 @@ proc fdt:apply { w dialog } {
                     fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
+                
+                #TODO
 
-       		fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
-                if { $probtrack(classify_yn) == 1 } {
-	           fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
-		}
+	    
+		if { $FSLPARALLEL } {
+                    set script [open "${filebase}_script.sh" w]
+                    puts "${filebase}_script.sh"
+                    exec chmod 777 ${filebase}_script.sh
+                    puts $script "#!/bin/sh"
+                    puts $script "$FSLDIR/bin/probtrackx $flags"
+                    if { $probtrack(classify_yn) == 1 } {
+			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+                    puts $script "rm ${filebase}_coordinates.txt"
+                    puts $script "mv $logfile $copylog"
+                    puts $script "rm ${filebase}_script.sh"
+		    close $script
+		    exec batch -q long.q $script
+		} else {
+
+		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
+		    if { $probtrack(classify_yn) == 1 } {
+			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+		    }
        	    }
-	    if { $probtrack(mode) == "simple" } {
-	        puts "rm ${filebase}_coordinates.txt"
-	        exec rm ${filebase}_coordinates.txt
-	    }
-	    close $log
-	    if { $copylog != "" } {
-		puts "mv $logfile $copylog"
-		exec mv $logfile $copylog
-	    } else {
-		puts "rm $logfile"
-		exec rm $logfile
+            if { !$FSLPARALLEL } {
+		if { $probtrack(mode) == "simple" } {
+		    puts "rm ${filebase}_coordinates.txt"
+		    exec rm ${filebase}_coordinates.txt
+		}
+		close $log
+		if { $copylog != "" } {
+		    puts "mv $logfile $copylog"
+		    exec mv $logfile $copylog
+		} else {
+		    puts "rm $logfile"
+		    exec rm $logfile
+		}
 	    }
 	}
 	registration {
