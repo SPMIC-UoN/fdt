@@ -241,9 +241,10 @@ proc fdt:dialog { w tclstartupfile } {
 
 
     frame  $w.data.seed.bcf
-    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.lrmask ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.lrmask -side top } ; $w.probtrack compute_size"
-    FileEntry $w.data.seed.bcf.lrmask -textvariable probtrack(lrmask) -label "Set Low-res mask:" -title  "Choose low resolution mask" -filetypes IMAGE 
-    pack $w.data.seed.bcf.bc -side top -anchor w
+    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
+    set probtrack(scale) 5
+    LabelSpinBox $w.data.seed.bcf.w -label "Scale" -textvariable probtrack(scale) -range {1 1000000 1 } 
+    pack $w.data.seed.bcf.bc -side left -anchor w
 
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -384,7 +385,7 @@ proc fdt:dialog { w tclstartupfile } {
     set probtrack(loopcheck_yn) 1
     checkbutton $w.options.loopcheck -text "Loopcheck" -variable probtrack(loopcheck_yn)
 
-    collapsible frame $w.advanced -title "Advanced Options"
+    collapsible frame $w.advanced -title "Advanced Options" -command "$w.probtrack compute_size; set dummy"
 
     set probtrack(nsteps) 2000
     LabelSpinBox $w.advanced.nsteps -label "Maximum number of steps" -textvariable probtrack(nsteps) -range {2 1000000 10 } -width 6
@@ -458,6 +459,7 @@ proc fdt:probtrack_mode { w } {
     global probtrack
 
     pack forget $w.data.seed.voxel $w.data.seed.ssf $w.data.seed.menu $w.data.seed.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
     switch -- $probtrack(mode) {
   	simple {
                      pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -469,14 +471,10 @@ proc fdt:probtrack_mode { w } {
                      pack $w.data.seed.ssf $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
                      pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
                      pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-
                      $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
-                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
   	}
 	network {
                      pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-                     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
 	}
     }
     $w.probtrack compute_size
@@ -502,7 +500,7 @@ proc fdt:select_tool { w } {
     }
 }
 proc fdt_monitor_short { w cmd } {
-    global debugging OSFLAVOUR
+    global debugging OSFLAVOUR FSLPARALLEL
 
     puts "$cmd"
 
@@ -571,9 +569,7 @@ proc fdt_monitor { w cmd } {
 
 proc fdt:apply { w dialog } {
 
-    global probtrack
-    global BINPATH
-    global FSLDIR
+    global probtrack BINPATH FSLDIR FSLPARALLEL
 
     switch -- $probtrack(tool) {
 	eddy_current {
@@ -651,26 +647,39 @@ proc fdt:apply { w dialog } {
 	    }
 	}
 	probtrack {
-	    global probtrack
+	    global probtrack env
 	    set errorStr ""
+            set FSLPARALLEL 0
+            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpost directory!" }
-	    if { $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
-            if { $probtrack(bcyn) && $probtrack(lrmask) == ""} { set errorStr "$errorStr You must specify a low res mask!" }
 	    set flags ""
 	    if { $probtrack(verbose_yn) == 1 } { set flags "$flags -V 1" }
 	    if { $probtrack(loopcheck_yn) == 1 } { set flags "$flags -l" }
 	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
+            if { $probtrack(pd) } { set flags "$flags --pd"  }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
              
-            if { $probtrack(pd) } { set flags "$flags --pd"  }
+	    if { $errorStr != "" } {
+       		MxPause $errorStr
+       		return
+      	    }
+	    set canwrite 1
+      	    if { [ file exists $probtrack(output) ] } {
+      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
+	    }
+       	    if { $canwrite } {
+       		puts "rm -rf $probtrack(output)"
+       		exec rm -rf $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+		exec mkdir -p $probtrack(output)
+       	    }
 
-	    set tn [open "| $BINPATH/tmpnam"]
-	    gets $tn filebase
-	    close $tn
+	    set filebase $probtrack(output)/tmp
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
@@ -690,7 +699,6 @@ proc fdt:apply { w dialog } {
 		set flags "$flags --stop=$probtrack(stop)"
 		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
-
 
 	    set flags "$flags --forcedir --opd -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask  --dir=$probtrack(output)" 
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
@@ -718,37 +726,21 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-                    set flags "$flags --seedref=$probtrack(reference) -o $probtrack(output)"
-                    set probtrack(reference2)  ${filebase}_coordinates.txt      
+                    set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
-		   if { $probtrack(bcyn) } { set flags "$flags --lrmask=$probtrack(lrmask) --omatrix2" }
-                   set probtrack(reference2) $probtrack(reference)  
+		     if { $probtrack(bcyn) } { 
+                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(bedpost_dir)/nodif_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
+                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+                       set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
+                   }
+                   set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
 	       network {
-		   set flags "$flags --network"
-                   set probtrack(mode) seedmask
-                   set probtrack(reference2) $probtrack(reference)  
+                   fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
+		   set flags "--network --mode=seedmask -x $probtrack(output)/masks.txt $flags"
 	       }
 	    }
-
-	    if { $errorStr != "" } {
-       		MxPause $errorStr
-       		return
-      	    }
-	    set canwrite 1
-      	    if { [ file exists $probtrack(output) ] } {
-      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
-	    }
-       	    if { $canwrite } {
-                puts "here"
-       		puts "rm -rf $probtrack(output)"
-       		exec rm -rf $probtrack(output)
-	        puts "mkdir -p $probtrack(output)"
-		exec mkdir -p $probtrack(output)
-       	    }
-
-            puts $probtrack(output)
 
        	    if { $canwrite } {
        		set copylog "fdt.log"
@@ -761,20 +753,45 @@ proc fdt:apply { w dialog } {
                     fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
+                
+                #TODO
 
-       		fdt_monitor_short $w "$FSLDIR/bin/probtrackx --mode=$probtrack(mode) -x $probtrack(reference2) $flags"
+	    
+		if { $FSLPARALLEL } {
+                    set script [open "${filebase}_script.sh" w]
+                    puts "${filebase}_script.sh"
+                    exec chmod 777 ${filebase}_script.sh
+                    puts $script "#!/bin/sh"
+                    puts $script "$FSLDIR/bin/probtrackx $flags"
+                    if { $probtrack(classify_yn) == 1 } {
+			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+                    puts $script "rm ${filebase}_coordinates.txt"
+                    puts $script "mv $logfile $copylog"
+                    puts $script "rm ${filebase}_script.sh"
+		    close $script
+		    exec batch -q long.q $script
+		} else {
+
+		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
+		    if { $probtrack(classify_yn) == 1 } {
+			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+		    }
        	    }
-	    if { $probtrack(mode) == "simple" } {
-	        puts "rm ${filebase}_coordinates.txt"
-	        exec rm ${filebase}_coordinates.txt
-	    }
-	    close $log
-	    if { $copylog != "" } {
-		puts "mv $logfile $copylog"
-		exec mv $logfile $copylog
-	    } else {
-		puts "rm $logfile"
-		exec rm $logfile
+            if { !$FSLPARALLEL } {
+		if { $probtrack(mode) == "simple" } {
+		    puts "rm ${filebase}_coordinates.txt"
+		    exec rm ${filebase}_coordinates.txt
+		}
+		close $log
+		if { $copylog != "" } {
+		    puts "mv $logfile $copylog"
+		    exec mv $logfile $copylog
+		} else {
+		    puts "rm $logfile"
+		    exec rm $logfile
+		}
 	    }
 	}
 	registration {
