@@ -18,14 +18,10 @@ fi
 
 Usage() {
     echo ""
-    echo "Usage: bedpostX <subject directory> [options]"
+    echo "Usage: bedpostX <subject directory> "
     echo ""
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
-    echo "options:"
-    echo "-n (number of fibres per voxel, default 2)"
-    echo "-w (ARD weight, more weight means less fibres killed per voxel, default 1)"
-    echo "-b (burnin period, default 1000)"
     echo ""
     exit
 }
@@ -45,23 +41,6 @@ make_absolute(){
 
 
 [ "$1" = "" ] && Usage
-
-
-#parse option arguments
-nfibres=2
-fudge=1
-burnin=1000
-while [ ! -z "$2" ]
-do
-  case "$2" in
-      -n) nfibres=$3;shift;;
-      -w) fudge=$3;shift;;
-      -b) burnin=$3;shift;;
-      *) break;;
-  esac
-  shift
-done
-
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
@@ -103,6 +82,7 @@ mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
+
 echo Queuing preprocessing stages
 preprocid=`qsub -M $mailto -V -q short.q \
     -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs \
@@ -110,11 +90,10 @@ preprocid=`qsub -M $mailto -V -q short.q \
     awk '{print $3}'`
 
 echo Queuing parallel processing stage
-echo I am using this file
 nslices=`avwval ${subjdir}/data dim3`
 bedpostid=`qsub -M $mailto -hold_jid $preprocid -V -q long.q -t 1-$nslices \
     -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs \
-    ${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin | \
+    ${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir | \
     awk '{print $3}' | awk -F. '{print $1}'`
 
 echo Queuing post processing stage
@@ -126,7 +105,7 @@ mergeid=`qsub -M $mailto -hold_jid $bedpostid -V -q short.q \
 echo
 echo Type ${subjdir}.bedpostX/monitor to show progress.
 cat <<EOM > ${subjdir}.bedpostX/monitor
-# #!/bin/sh
+#!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
 while [ \$finished -eq 0 ] ; do
@@ -147,7 +126,7 @@ chmod +x ${subjdir}.bedpostX/monitor
 
 echo Type ${subjdir}.bedpostX/cancel to terminate the task.
 cat <<EOC > ${subjdir}.bedpostX/cancel
-# #!/bin/sh
+#!/bin/sh
 qdel $mergeid $bedpostid $preprocid
 EOC
 chmod +x ${subjdir}.bedpostX/cancel

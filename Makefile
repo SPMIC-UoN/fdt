@@ -2,11 +2,11 @@ include $(FSLCONFDIR)/default.mk
 
 PROJNAME = fdt
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
-USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
+USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
  
-DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 #DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 
@@ -27,7 +27,6 @@ FMO=fdt_matrix_ops
 INDEXER=indexer
 TEST=testfile
 ORDVEC=reorder_dyadic_vectors
-DPM=dpm
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
@@ -47,7 +46,6 @@ FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 ORDVECOBJS=reorder_dyadic_vectors.o heap.o
-DPMOBJS=dpm.o dpmOptions.o
 
 SGEBEDPOST =sge_bedpost  sge_bedpost_postproc.sh  sge_bedpost_preproc.sh  sge_bedpost_single_slice.sh
 SGEBEDPOSTX=sge_bedpostX sge_bedpostX_postproc.sh sge_bedpostX_preproc.sh sge_bedpostX_single_slice.sh
@@ -115,9 +113,6 @@ ${TEST}:    	${TESTOBJS}
 
 ${ORDVEC}:    	${ORDVECOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ORDVECOBJS} ${DLIBS}
-
-${DPM}:    	${DPMOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DPMOBJS} ${DLIBS}
 
 
 
