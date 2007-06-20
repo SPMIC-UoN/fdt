@@ -391,7 +391,7 @@ proc fdt:dialog { w tclstartupfile } {
     LabelSpinBox $w.advanced.nsteps -label "Maximum number of steps" -textvariable probtrack(nsteps) -range {2 1000000 10 } -width 6
 
     set probtrack(steplength) 0.5
-    LabelSpinBox $w.advanced.steplength -label "Step length (mm)" -textvariable probtrack(steplength) -range {0 10000 0.1} 
+    LabelSpinBox $w.advanced.steplength -label "Step length (mm)" -textvariable probtrack(steplength) -range {0.001 10000.0 0.1} 
 
     set probtrack(modeuler_yn) 0
     checkbutton $w.advanced.modeuler -text "Use modified Euler streamlining" -variable probtrack(modeuler_yn)
@@ -777,6 +777,18 @@ proc fdt:apply { w dialog } {
 		    if { $probtrack(classify_yn) == 1 } {
 			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
 		    }
+		    set script [open "${filebase}_script.sh" w]
+                    puts "${filebase}_script.sh"
+                    exec chmod 777 ${filebase}_script.sh
+                    puts $script "#!/bin/sh"
+                    puts $script "$FSLDIR/bin/probtrackx $flags"
+		    if { $probtrack(classify_yn) == 1 } {
+			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+                    puts $script "rm ${filebase}_coordinates.txt"
+                    puts $script "mv $logfile $copylog"
+                    puts $script "rm ${filebase}_script.sh"
+		    close $script
 		    }
        	    }
             if { !$FSLPARALLEL } {
