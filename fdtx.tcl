@@ -765,7 +765,7 @@ proc fdt:apply { w dialog } {
                     puts $script "cd $probtrack(output)"
                     puts $script "$FSLDIR/bin/probtrackx $flags"
                     if { $probtrack(classify_yn) == 1 } {
-			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+			puts $script "$FSLDIR/bin/find_the_biggest seeds_to_* biggest >> fdt_seed_classification.txt"
 		    }
                     if { $probtrack(mode) == "simple" } {
                     puts $script "rm ${filebase}_coordinates.txt"
