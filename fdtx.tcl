@@ -679,7 +679,7 @@ proc fdt:apply { w dialog } {
 		exec mkdir -p $probtrack(output)
        	    }
 
-	    set filebase $probtrack(output)/tmp
+	    set filebase $probtrack(output)/fdtx
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
