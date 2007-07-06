@@ -762,15 +762,18 @@ proc fdt:apply { w dialog } {
                     puts "${filebase}_script.sh"
                     exec chmod 777 ${filebase}_script.sh
                     puts $script "#!/bin/sh"
+                    puts $script "cd $probtrack(output)"
                     puts $script "$FSLDIR/bin/probtrackx $flags"
                     if { $probtrack(classify_yn) == 1 } {
 			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
 		    }
+                    if { $probtrack(mode) == "simple" } {
                     puts $script "rm ${filebase}_coordinates.txt"
+		    }
                     puts $script "mv $logfile $copylog"
                     puts $script "rm ${filebase}_script.sh"
 		    close $script
-		    exec batch -q long.q $script
+		    exec batch -q long.q ${filebase}_script.sh
 		} else {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
@@ -865,7 +868,7 @@ proc fdt:apply { w dialog } {
     }
 
     if { $canwrite } { 
-	MxPause "  Done!  "
+	if { $FSLPARALLEL } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
 	update idletasks
     }
 
