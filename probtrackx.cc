@@ -39,7 +39,8 @@ int main ( int argc, char **argv ){
     if(fsl_imageexists(opts.mask2.value())){ twomasks();}
     else{ seedmask(); }
   }
-  else{ nmasks(); }
+  else if(opts.network.value()){ nmasks(); }
+  else {};
 
   //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
 
