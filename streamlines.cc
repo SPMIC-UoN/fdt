@@ -11,10 +11,10 @@ namespace TRACT{
     string tmp;
     if(fs){
       fs>>tmp;
-      while(!fs.eof()){
+      do{
 	masks.push_back(tmp);
 	fs>>tmp;
-      }
+      }while(!fs.eof());
     }
     else{
       cerr<<filename<<" does not exist"<<endl;
