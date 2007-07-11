@@ -57,8 +57,8 @@ namespace PARTICLE{
 	       const float& zdimin,
 	       const bool& hasjumpedin=false,
 	       const bool& simdiffin=false) : 
-	m_x(xin), m_y(yin), m_z(zin), m_rx(rxin), 
-	m_ry(ryin),m_rz(rzin),m_steplength(steplengthin),
+	m_x(xin), m_y(yin), m_z(zin), m_rx(rxin),m_ry(ryin),m_rz(rzin),m_rx_init(rxin), 
+	m_ry_init(ryin),m_rz_init(rzin),m_steplength(steplengthin),
 	m_xdim(xdimin),m_ydim(ydimin),m_zdim(zdimin),
 	m_has_jumped(hasjumpedin),m_simdiff(false){}
       Particle(){}
@@ -74,18 +74,23 @@ namespace PARTICLE{
 		 const float& zdimin=2,
 		 const bool& hasjumpedin=false,
 		 const bool& simdiffin=false){
+       
 	m_x=xin;
 	m_y=yin;
 	m_z=zin;
 	m_rx=rxin; 
 	m_ry=ryin;
 	m_rz=rzin;
+        m_rx_init=rxin;
+	m_ry_init=ryin;
+	m_rz_init=rzin;
 	m_steplength=steplengthin;
 	m_xdim=xdimin;
 	m_ydim=ydimin;
 	m_zdim=zdimin;
 	m_has_jumped=hasjumpedin;
 	m_simdiff=simdiffin;
+
       }
       
       

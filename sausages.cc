@@ -56,7 +56,7 @@ int main ( int argc, char **argv ){
    chunks.push_back(tmppair);
  }
  
- for(int chunkno=0;chunkno < chunks.size();chunkno++){
+ for(unsigned int chunkno=0;chunkno < chunks.size();chunkno++){
    for(int i=chunks[chunkno].first;i<=chunks[chunkno].second;i++){
      out(coord(i,0,0),coord(i,1,0),coord(i,2,0))=chunkno+1;
    }
