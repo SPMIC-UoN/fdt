@@ -9,7 +9,6 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <strstream>
 #define WANT_STREAM
 #define WANT_MATH
 //  #include "newmatap.h"
