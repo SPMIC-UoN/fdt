@@ -13,7 +13,7 @@ Usage() {
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
     echo ""
-    exit
+    exit 1
 }
 
 trap Clean_Exit 2
@@ -35,7 +35,7 @@ Clean_Exit(){
 		rm ${subjdir}.bedpost/logs/pid_${$}/${j}
 	    done
 	fi
-	ExitUnlock;
+	ExitUnlock 1;
 }
 
 Lock(){
@@ -45,6 +45,7 @@ Lock(){
 }
 
 ExitUnlock(){
+    returncode=$1
     if [ -f ${FSLLOCKDIR}/.bedpost.lock ];then
 	rm ${FSLLOCKDIR}/.bedpost.lock
     fi
@@ -60,7 +61,7 @@ ExitUnlock(){
 	rm -f ${subjdir}/nodif_brain_mask_slice_*
     fi
     
-    exit
+    exit $returncode
 }
 
 LockTest(){
@@ -92,13 +93,13 @@ make_absolute(){
 
 if [ `LockTest` -eq 0 ]; then
     echo "bedpost is currently being run - try again later"
-    exit
+    exit 1
 fi
 
 if [ "x${FSLMACHINELIST}" != "x" ];then
     if [ "x${FSLREMOTECALL}" = "x" ];then
 	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
-	exit
+	exit 1
     fi
 fi
 
@@ -114,32 +115,32 @@ echo subjectdir is $subjdir
 
 if [ ! -d $subjdir ]; then
 	echo "subject directory $1 not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ ! -f ${subjdir}/bvecs ]; then
 	echo "${subjdir}/bvecs not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ ! -f ${subjdir}/bvals ]; then
 	echo "${subjdir}/bvals not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
 	echo "${subjdir}/data not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
 	echo "${subjdir}/nodif not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	echo "${subjdir}/nodif_brain_mask not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 
@@ -228,7 +229,7 @@ echo 0 0 1 0 >> ${xfmdir}/eye.mat
 echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
 echo "DONE"
-ExitUnlock
+ExitUnlock 0
 
 
 
