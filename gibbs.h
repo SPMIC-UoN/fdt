@@ -5,17 +5,14 @@
 #if !defined(_GIBBS_H)
 #define _GIBBS_H
 
-#include "newmat.h"
-#include "newran.h"
-#include "miscmaths/miscmaths.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream.h>
 
-using namespace NEWMAT;
-using namespace NEWRAN;
+using namespace std;
 
 class GibbsSampler
 {
- private:
-  friend std::ostream& operator << (ostream& o,GibbsSampler& g);
  protected:
 
   int m_numiter;
@@ -24,25 +21,17 @@ class GibbsSampler
   int m_n;
   int m_d;
 
-  const Matrix& m_data;
-
  public:
-  GibbsSampler(const Matrix& data,int numiter,int burnin,int sampleevery):
-    m_numiter(numiter),m_burnin(burnin),m_sampleevery(sampleevery),m_data(data){
-    
-    m_n=data.Nrows();
-    m_d=data.Ncols();
-  }
+  GibbsSampler(int numiter,int burnin,int sampleevery):
+    m_numiter(numiter),m_burnin(burnin),m_sampleevery(sampleevery){}
   virtual ~GibbsSampler(){}
 
   virtual void init() = 0 ;
   virtual void record(const int) = 0;
   virtual void sample_parameters() = 0;
   virtual void sample_hyperparameters() = 0;
-  virtual void print(ostream&) = 0;
 
   void  run(){
-    Random::Set(rand() / float(RAND_MAX));
 
     int recordcount=0;
 
@@ -52,7 +41,7 @@ class GibbsSampler
       //cout<<"-----------"<<endl;
       sample_parameters();
       sample_hyperparameters();
-      //print();
+      
     }
 
     // m_numiter=2;
@@ -80,10 +69,6 @@ class GibbsSampler
 
 };
 
-std::ostream& operator << (ostream& o,GibbsSampler& g){
-  g.print(o);
-  return o;
-}
 
 
 #endif

@@ -28,11 +28,14 @@ class ccopsOptions {
   Option<string> inmatrix;
   Option<string> basename;
   Option<string> excl_mask;
-  Option<bool> reord1;
-  Option<bool> reord2;
+  Option<bool>  reord1;
+  Option<bool>  reord2;
   Option<float> connexity;
-  Option<int> bin;
+  Option<int>   bin;
   Option<float> power;
+  Option<string> mask;
+  Option<string> scheme;
+  Option<int>    kmeans;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -81,6 +84,15 @@ class ccopsOptions {
    power(string("-p,--power"), 1, 
 	 string("power to raise the correlation matrix to (default 1)"), 
 	 false, requires_argument),
+   mask(string("-m,--mask"), "", 
+	 string("brain mask used to output the clustered roi mask"), 
+	 false, requires_argument),
+   scheme(string("-s,--scheme"), "spectral", 
+	 string("Reordering algorithm. Can be either spectral (default) or dpm or kmeans"), 
+	 false, requires_argument),
+   kmeans(string("-K"), 2, 
+	  string("Number of clusters to be used in kmeans"), 
+	  false, requires_argument),
    options("ccops","")
    {
      
@@ -95,6 +107,9 @@ class ccopsOptions {
        options.add(connexity);
        options.add(bin);
        options.add(power);
+       options.add(mask);
+       options.add(scheme);
+       options.add(kmeans);
        
      }
      catch(X_OptionError& e) {

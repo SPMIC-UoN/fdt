@@ -19,6 +19,8 @@ class dpmOptions {
   ~dpmOptions() { delete gopt; }
 
   Option<bool>   help;
+  Option<bool>   verbose;
+
   Option<string> datafile;
   Option<string> logfile;
   Option<string> init_class;
@@ -52,20 +54,23 @@ class dpmOptions {
    help(string("-h,--help"), false,
 	string("display this message"),
 	false,no_argument),
+   verbose(string("-V,--verbose"), false,
+	string("display program outputs"),
+	false,no_argument),
    datafile(string("-d,--data"), string(""),
 	    string("data file"),
 	    true,requires_argument),
    logfile(string("-o,--out"), string(""),
 	    string("output file"),
 	    true, requires_argument),
-   init_class(string("--ic,--initclass"), "oneperdata",
+   init_class(string("--ic,--initclass"), "random",
 	    string("data labelling initialisation"),
 	    false, requires_argument),
    numclass(string("-k,--numclass"),-1,
 	    string("fix number of classes - default=infinite"),
 	    false,requires_argument),
    numiter(string("--ni,--numiter"),2000,
-	    string("number of iterations - default=2000"),
+	   string("number of iterations - default=2000"),
 	   false,requires_argument),
    burnin(string("--bi,--burnin"),1000,
 	  string("number of iterations before sampling - default=1000"),
@@ -74,11 +79,12 @@ class dpmOptions {
 	       string("sampling frequency - default=1"),
 	       false,requires_argument),
    options("dpm","dpm -d data -o logfile")
-   {
+     {
      
     
      try {
        options.add(help);
+       options.add(verbose);
        options.add(datafile);
        options.add(logfile);
        options.add(init_class);

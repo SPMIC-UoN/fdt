@@ -9,11 +9,13 @@
 #include "ccopsOptions.h"
 #include <vector>
 #include <algorithm>
+#include "dpm_gibbs.h"
 
 using namespace std;
 using namespace NEWIMAGE;
 using namespace NEWMAT;
 using namespace CCOPS;
+
   void spect_reord(SymmetricMatrix& A,ColumnVector& r,ColumnVector& y){
     SymmetricMatrix Q=-A;
       DiagonalMatrix t(Q.Nrows());
@@ -70,6 +72,117 @@ using namespace CCOPS;
       
   } 
 
+// calculate pca decomposition using the covariance method
+// X is the data dxn matrix with n observations (data points) and d variables (dimensions) 
+ReturnMatrix pcacov(Matrix& X,const float& perc){
+  int n=X.Nrows();
+  int d=X.Ncols();
+  // de-mean
+  cout<<"de-mean"<<endl;
+  ColumnVector Xmean(d);
+  for(int j=1;j<=d;j++)
+    Xmean(j) = X.Column(j).Sum()/n;
+  for(int j=1;j<=d;j++){
+    for(int i=1;i<=n;i++)
+      X(i,j) -= Xmean(j);
+  }
+
+  // calculate covariance
+  cout<<"covariance"<<endl;
+  SymmetricMatrix C(d);
+
+  if(d<n)
+    C << (X.t()*X)/n;
+  else
+    C << X*X.t()/n;
+
+  // eigenvalues
+  cout<<"eigenvalues"<<endl;
+  Matrix V;
+  DiagonalMatrix D;
+  EigenValues(C,D,V);
+
+  // select subset
+  cout<<"subset"<<endl;
+  float cumsum=0,total=D.Trace();
+  int dim=0;
+  for(int i=D.Nrows();i>=1;i--){
+    cumsum += D(i);
+    if(cumsum/total < perc){dim++;}
+    else{break;}
+  }
+  if(dim<=2)dim=2;
+
+  dim=5;
+
+  Matrix v(V.Nrows(),dim);
+  ColumnVector lam(dim);
+  for(int j=1;j<=dim;j++){
+    v.Column(j) = V.Column(V.Ncols()-j+1);
+    lam(j)=D(V.Ncols()-j+1);
+  }
+
+  //cout<<"zscores"<<endl;
+  // convert to z-scores
+  //for(int i=1;i<=d;i++)
+  //X.Row(i) /= sqrt(C(i,i));
+  // reconstruct data
+  cout<<"data"<<endl;
+  Matrix data(dim,n);
+
+  if(!(d<n)){
+    v = (X.t() * v);
+    for(int j=1;j<=dim;j++)
+      v.Column(j) /= sqrt(n*lam(j));
+  }
+  data = X*v;
+  
+
+  data.Release();
+  return data;
+}
+
+void dpm_reord(Matrix& A,ColumnVector& r,ColumnVector& y){
+  cout << "start dpm reordering" <<endl;
+  // pca preprocess
+  cout << "pca preprocessing" <<endl;
+  float perc=.90;
+  Matrix data;
+  OUT(A.Nrows());
+  OUT(A.Ncols());
+  write_ascii_matrix(A,"nonpreprocessed_data");
+  OUT(A.Nrows());
+  OUT(A.Ncols());
+  data = pcacov(A,perc);
+  write_ascii_matrix(data,"preprocessed_data");
+
+  // dpm
+  cout << "dpm clustering" <<endl;
+  int numiter=2000;
+  int burnin=1000;
+  int sampleevery=1;
+  DPM_GibbsSampler gs(data,numiter,burnin,sampleevery);
+  gs.init();
+  gs.run();
+  // save
+  int n = data.Nrows();
+  vector< pair<float,int> > myvec;
+  ColumnVector z(n);
+  z = gs.get_dataindex();
+  //z = gs.get_mldataindex();
+  for(int i=1;i<=n;i++){
+    pair<float,int> mypair;
+    mypair.first  = z(i);
+    mypair.second = i;
+    myvec.push_back(mypair);
+  }
+  sort(myvec.begin(),myvec.end());
+  r.ReSize(n);y.ReSize(n);
+  for(int i=1;i<=n;i++){
+    y(i)=myvec[i-1].first;
+    r(i)=myvec[i-1].second;
+  }
+}
 
 void rem_zrowcol(const Matrix& myOMmat,const Matrix& coordmat,const Matrix& tractcoordmat,const bool coordbool,const bool tractcoordbool,Matrix& newOMmat,Matrix& newcoordmat, Matrix& newtractcoordmat)
 {
@@ -304,6 +417,8 @@ int main ( int argc, char **argv ){
   string ip=opts.inmatrix.value();
   make_basename(ip);
   
+  srand(time(NULL));
+
   ColumnVector y1,r1,y2,r2;
   volume<int> myOM;
   volume<int> coordvol;
@@ -410,9 +525,9 @@ int main ( int argc, char **argv ){
 
  
   rem_zrowcol(myOMmat,mycoordmat,mytractcoordmat,coordbool,tractcoordbool,newOMmat,newcoordmat,newtractcoordmat);
-  //   cerr<<"NOW"<<endl;
-  //   cerr<<myOMmat.MaximumAbsoluteValue()<<endl;
-  //   cerr<<newOMmat.MaximumAbsoluteValue()<<endl;
+  //cerr<<"NOW"<<endl;
+  //cerr<<myOMmat.MaximumAbsoluteValue()<<endl;
+  //cerr<<newOMmat.MaximumAbsoluteValue()<<endl;
  
   //write_ascii_matrix("ncm",newcoordmat);
   // write_ascii_matrix("nctm",newtractcoordmat);
@@ -427,12 +542,12 @@ int main ( int argc, char **argv ){
 
 
   cerr<<"Computing correlation"<<endl;
-  SymmetricMatrix CtCt;
-  CtCt << corrcoef(newOMmat.t());
-  CtCt << CtCt+1;
+  SymmetricMatrix CtCt(newOMmat.Nrows());
+  //CtCt << corrcoef(newOMmat.t());
+  //CtCt << CtCt+1;
 
   // adding connexity constraint
-  if(!coordbool){
+  if(opts.connexity.value()!=0 && !coordbool){
     cerr<<"WARNING !! No coordinates provided. I cannot apply any connexity constraint."<<endl;
   }
   else{
@@ -467,7 +582,29 @@ int main ( int argc, char **argv ){
   }
   else{
     cerr<<"Starting First Reordering"<<endl;
-    spect_reord(CtCt,r1,y1);
+    if(opts.scheme.value()=="dpm"){
+      OUT(myOMmat.Ncols());
+      OUT(myOMmat.Nrows());
+      OUT(newOMmat.Ncols());
+      OUT(newOMmat.Nrows());
+      dpm_reord(newOMmat,r1,y1);
+      //Matrix A;
+      //A=CtCt;
+      //dpm_reord(A,r1,y1);
+    }
+    else if(opts.scheme.value()=="kmeans"){
+      int kk=opts.kmeans.value();
+      if(kk<=1){
+	cerr << "Error using kmeans. Number of clusters must be >=2" << endl;
+	return -1;
+      }
+      cout << "...  using kmeans" << endl;
+      //kmeans_reord(CtCt,r1,y1,kk);
+    }
+    else 
+      spect_reord(CtCt,r1,y1);
+    
+
    
    
     cerr<<"Permuting seed CC matrix"<<endl;
@@ -491,7 +628,18 @@ int main ( int argc, char **argv ){
     write_ascii_matrix(y1,base+"y1");
     save_volume(outCCvol,"reord_CC_"+base);
     save_volume(outcoords,"coords_for_reord_"+base);
- 
+    if(opts.scheme.value()=="dpm" || opts.scheme.value()=="kmeans"){
+      volume<int> mask;
+      read_volume(mask,opts.mask.value());
+      mask = 0;
+      for(int i=0;i<outcoords.xsize();i++){
+	mask(outcoords(i,0,0),
+	     outcoords(i,1,0),
+	     outcoords(i,2,0)) = (int)y1(i+1) + 1;
+      }
+      save_volume(mask,"reord_mask_"+base);
+    }
+
   }
 
   if(opts.reord2.value()){

@@ -4,14 +4,12 @@
 
 /*  CCOPYRIGHT  */
 
-#include <iostream>
-#include <cmath>
-
+#include <stdio.h>
 #include "dpm_gibbs.h"
 
-using namespace NEWMAT;
 using namespace DPM;
 using namespace Utilities;
+
 
 int main (int argc, char *argv[]){
 
