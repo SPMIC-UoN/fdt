@@ -1,18 +1,17 @@
 #!/bin/sh
 
-subjdir=$1
-
+#$ -cwd
+#$ -q short.q
 #$ -S /bin/sh
 #$ -V
 #$ -N bpx_postproc
 #$ -m ae
 
+subjdir=$1
 
 numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples |wc -w`
 
-
-fib=1;
-while [ $fib -le $numfib ];do
+for ((fib=1; fib<=$numfib; fib++));do
     ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_th${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/th${fib}samples`
     ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_ph${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/ph${fib}samples`
     ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_f${fib}samples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/f${fib}samples`
@@ -21,8 +20,6 @@ while [ $fib -le $numfib ];do
     ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_f${fib}samples -Tmean ${subjdir}.bedpostX/mean_f${fib}samples
 
     ${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpostX/merged_th${fib}samples ${subjdir}.bedpostX/merged_ph${fib}samples ${subjdir}.bedpostX/nodif_brain_mask ${subjdir}.bedpostX/dyads${fib}
-
-    fib=`echo "$fib +1"|bc`;
 done
 
 echo Removing intermediate files

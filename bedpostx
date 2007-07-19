@@ -5,10 +5,10 @@
 #   SHCOPYRIGHT
 
 if [ "x$SGE_ROOT" = "x" ] ; then
-  if [ -f /usr/local/share/sge-6.0/default/common/settings.sh ] ; then
-    . /usr/local/share/sge-6.0/default/common/settings.sh
-  else if [ -f /usr/local/sge-6/default/common/settings.sh ] ; then
-      . /usr/local/sge-6/default/common/settings.sh
+  if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
+    . /usr/local/share/sge/default/common/settings.sh
+  else if [ -f /usr/local/sge/default/common/settings.sh ] ; then
+      . /usr/local/sge/default/common/settings.sh
     else
       echo "bedpostX: Fatal error: couldn\'t locate SGE_ROOT\!"
       exit 255
@@ -27,7 +27,7 @@ Usage() {
     echo "-w (ARD weight, more weight means less fibres killed per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
     echo ""
-    exit
+    exit 1
 }
 
 make_absolute(){
@@ -104,35 +104,30 @@ mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
 echo Queuing preprocessing stages
-preprocid=`qsub -M $mailto -V -q short.q \
-    -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs \
-    ${FSLDIR}/bin/sge_bedpostX_preproc.sh ${subjdir} | \
-    awk '{print $3}'`
+preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/sge_bedpostX_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
-echo I am using this file
 nslices=`avwval ${subjdir}/data dim3`
-bedpostid=`qsub -M $mailto -hold_jid $preprocid -V -q long.q -t 1-$nslices \
-    -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs \
-    ${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin | \
-    awk '{print $3}' | awk -F. '{print $1}'`
+[ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+for ((slice=0; slice < $nslices; slice++)) ; do
+    echo "${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
+	>> ${subjdir}.bedpostX/commands.txt
+done
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-mergeid=`qsub -M $mailto -hold_jid $bedpostid -V -q short.q \
-    -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs \
-    ${FSLDIR}/bin/sge_bedpostX_postproc.sh $subjdir | \
-    awk '{print $3}'`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/sge_bedpostX_postproc.sh $subjdir`
 
 echo
 echo Type ${subjdir}.bedpostX/monitor to show progress.
 cat <<EOM > ${subjdir}.bedpostX/monitor
-# #!/bin/sh
+#!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
 while [ \$finished -eq 0 ] ; do
     nfin=0
     if [ -f \$logdir/bedpost.o$bedpostid.1 ] ; then
-      nfin=\`cat \$logdir/bedpostX.o$bedpostid.* |\
+      nfin=\`cat \$logdir/bedpostx.o$bedpostid.* |\
         grep Done | wc -w | awk '{print \$1}'\` 
     fi
     if [ \$nfin -eq $nslices ] ; then
@@ -145,9 +140,9 @@ done
 EOM
 chmod +x ${subjdir}.bedpostX/monitor
 
-echo Type ${subjdir}.bedpostX/cancel to terminate the task.
+echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
 cat <<EOC > ${subjdir}.bedpostX/cancel
-# #!/bin/sh
+#!/bin/sh
 qdel $mergeid $bedpostid $preprocid
 EOC
 chmod +x ${subjdir}.bedpostX/cancel

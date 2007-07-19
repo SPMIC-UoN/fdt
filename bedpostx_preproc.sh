@@ -1,11 +1,13 @@
 #!/bin/sh
 
-subjdir=$1
-
+#$ -cwd
+#$ -q short.q
 #$ -S /bin/sh
 #$ -V
 #$ -N bpx_preproc
-#$ -m a
+#$ -m as
+
+subjdir=$1
 
 echo Copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
