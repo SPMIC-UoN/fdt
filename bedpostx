@@ -9,10 +9,6 @@ if [ "x$SGE_ROOT" = "x" ] ; then
     . /usr/local/share/sge/default/common/settings.sh
   else if [ -f /usr/local/sge/default/common/settings.sh ] ; then
       . /usr/local/sge/default/common/settings.sh
-    else
-      echo "bedpostX: Fatal error: couldn\'t locate SGE_ROOT\!"
-      exit 255
-    fi
   fi
 fi
 
@@ -43,9 +39,7 @@ make_absolute(){
     echo ${dir_all}
 }
 
-
 [ "$1" = "" ] && Usage
-
 
 #parse option arguments
 nfibres=2
@@ -113,14 +107,16 @@ for ((slice=0; slice < $nslices; slice++)) ; do
     echo "${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx \
+-t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/sge_bedpostX_postproc.sh $subjdir`
 
-echo
-echo Type ${subjdir}.bedpostX/monitor to show progress.
-cat <<EOM > ${subjdir}.bedpostX/monitor
+if [ "x$SGE_ROOT" != "x" ]; then
+    echo
+    echo Type ${subjdir}.bedpostX/monitor to show progress.
+    cat <<EOM > ${subjdir}.bedpostX/monitor
 #!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
@@ -138,15 +134,16 @@ while [ \$finished -eq 0 ] ; do
     sleep 600;
 done
 EOM
-chmod +x ${subjdir}.bedpostX/monitor
+    chmod +x ${subjdir}.bedpostX/monitor
 
-echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
-cat <<EOC > ${subjdir}.bedpostX/cancel
+    echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
+    cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
 qdel $mergeid $bedpostid $preprocid
 EOC
-chmod +x ${subjdir}.bedpostX/cancel
+    chmod +x ${subjdir}.bedpostX/cancel
 
-echo
-echo You will get an email at the end of the post-processing stage.
-echo
+    echo
+    echo You will get an email at the end of the post-processing stage.
+    echo
+fi
