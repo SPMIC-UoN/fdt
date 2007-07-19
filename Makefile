@@ -49,11 +49,11 @@ TESTOBJS=testfile.o
 ORDVECOBJS=reorder_dyadic_vectors.o heap.o
 DPMOBJS=dpm.o dpmOptions.o
 
-SGEBEDPOST =sge_bedpost  sge_bedpost_postproc.sh  sge_bedpost_preproc.sh  sge_bedpost_single_slice.sh
-SGEBEDPOSTX=sge_bedpostX sge_bedpostX_postproc.sh sge_bedpostX_preproc.sh sge_bedpostX_single_slice.sh
+SGEBEDPOST = bedpost bedpost_datacheck
+SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_slice.sh
 
-SCRIPTS = eddy_correct bedpost bedpost_proc bedpost_cleanup bedpost_kill_all bedpost_kill_pid zeropad bedpost_datacheck bedpostX bedpostX_proc ${SGEBEDPOST} ${SGEBEDPOSTX}
-FSCRIPTS=correct_and_average ocmr_preproc bedpostX bedpostX_proc bedpostX_cleanup bedpostX_kill_all
+SCRIPTS = eddy_correct zeropad ${SGEBEDPOST} ${SGEBEDPOSTX}
+FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
