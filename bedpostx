@@ -106,7 +106,7 @@ for ((slice=0; slice < $nslices; slice++)) ; do
     echo "${FSLDIR}/bin/bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -q short.q -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_postproc.sh $subjdir`
