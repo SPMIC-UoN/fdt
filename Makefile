@@ -26,8 +26,7 @@ MDV=make_dyadic_vectors
 FMO=fdt_matrix_ops
 INDEXER=indexer
 TEST=testfile
-ORDVEC=reorder_dyadic_vectors
-DPM=dpm
+VECREG=vecreg
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
@@ -46,8 +45,7 @@ MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
-ORDVECOBJS=reorder_dyadic_vectors.o heap.o
-DPMOBJS=dpm.o dpmOptions.o
+VECREGOBJS=vecreg.o
 
 SGEBEDPOST = bedpost bedpost_datacheck
 SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_slice.sh
@@ -55,7 +53,8 @@ SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_
 SCRIPTS = eddy_correct zeropad ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
+XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg
+
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
 
 
@@ -111,12 +110,8 @@ ${INDEXER}:    	${INDEXEROBJS}
 ${TEST}:    	${TESTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
 
-
-${ORDVEC}:    	${ORDVECOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ORDVECOBJS} ${DLIBS}
-
-${DPM}:    	${DPMOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DPMOBJS} ${DLIBS}
+${VECREG}:    	${VECREGOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
 
 
 
