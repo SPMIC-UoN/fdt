@@ -65,26 +65,32 @@ done
 
 if [ ! -d $subjdir ]; then
 	echo "subject directory $1 not found"
+	exit 1
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
 	echo "${subjdir}/bvecs not found"
+	exit 1
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
 	echo "${subjdir}/bvals not found"
+	exit 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
 	echo "${subjdir}/data not found"
+	exit 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
 	echo "${subjdir}/nodif not found"
+	exit 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	echo "${subjdir}/nodif_brain_mask not found"
+	exit 1
 fi
 
 echo Making bedpostX directory structure
