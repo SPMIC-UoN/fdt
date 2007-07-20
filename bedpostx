@@ -5,11 +5,11 @@
 #   SHCOPYRIGHT
 
 if [ "x$SGE_ROOT" = "x" ] ; then
-  if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-    . /usr/local/share/sge/default/common/settings.sh
-  else if [ -f /usr/local/sge/default/common/settings.sh ] ; then
-      . /usr/local/sge/default/common/settings.sh
-  fi
+    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
+	. /usr/local/share/sge/default/common/settings.sh
+    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
+	. /usr/local/sge/default/common/settings.sh
+    fi
 fi
 
 Usage() {
@@ -41,6 +41,11 @@ make_absolute(){
 
 [ "$1" = "" ] && Usage
 
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+
+echo subjectdir is $subjdir
+
 #parse option arguments
 nfibres=2
 fudge=1
@@ -55,12 +60,6 @@ do
   esac
   shift
 done
-
-
-subjdir=`make_absolute $1`
-subjdir=`echo $subjdir | sed 's/\/$/$/g'`
-
-echo subjectdir is $subjdir
 
 #check that all required files exist
 
@@ -98,20 +97,19 @@ mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
 echo Queuing preprocessing stages
-preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/sge_bedpostX_preproc.sh ${subjdir}`
+preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
 nslices=`avwval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
 for ((slice=0; slice < $nslices; slice++)) ; do
-    echo "${FSLDIR}/bin/sge_bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
+    echo "${FSLDIR}/bin/bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx \
--t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -q short.q -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/sge_bedpostX_postproc.sh $subjdir`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_postproc.sh $subjdir`
 
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
