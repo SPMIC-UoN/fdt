@@ -169,7 +169,7 @@ int main(int argc, char** argv)
   //parse command line
   dtifitOptions& opts = dtifitOptions::getInstance();
   int success=opts.parse_command_line(argc,argv);
-  if(!success) return 0;
+  if(!success) return 1;
    if(opts.verbose.value()){
     cout<<"data file "<<opts.dtidatafile.value()<<endl;
     cout<<"mask file "<<opts.maskfile.value()<<endl;
