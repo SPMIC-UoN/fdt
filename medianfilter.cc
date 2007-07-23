@@ -15,7 +15,7 @@ int main(int argc, char **argv){
   if(argc!=3){
     cerr<<"Usage: medianfilter <input> <output>"<<endl;
     cerr<<"performs 26 neighbourhood median filtering"<<endl;
-    exit(0);
+    exit(1);
   }
   volume<float> volin,volout;
   read_volume(volin,argv[1]);
