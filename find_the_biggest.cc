@@ -13,7 +13,7 @@ int main ( int argc, char **argv ){
   if(argc<3){
     cerr<<"usage: find_the_biggest <lots of volumes> output"<<endl;
     cerr<<"output is index in order of inputs"<<endl;
-    exit(0);
+    exit(1);
   }
   vector<volume<float> > tmpvec;
   tmpvec.reserve(argc-2);
