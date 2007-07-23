@@ -13,7 +13,7 @@ int main ( int argc, char **argv ){
   if(argc<4){
     cerr<<"usage: make_dyadic_vectors <theta_vol> <phi_vol> [mask] <output>"<<endl;
     cerr<<"[mask] is optional"<<endl;
-    exit(0);
+    exit(1);
   }
 
   volume4D<float> ths,phs;
