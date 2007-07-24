@@ -12,7 +12,7 @@ using namespace NEWIMAGE;
 int main ( int argc, char **argv ){
   if(argc<3){
     cerr<<"usage:proj_thresh <lots of volumes> threshold"<<endl;
-    exit(0);
+    exit(1);
   }
   vector<volume<float> > tmpvec;
   //  vector<volume<float> > outvec;
