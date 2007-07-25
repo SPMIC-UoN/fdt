@@ -310,6 +310,7 @@ void mesh_lengths(){
   }
   ////////////////////////////////////
   float xst,yst,zst,x,y,z;
+  int ftype;
   int nparticles=opts.nparticles.value();
   int nsteps=opts.nsteps.value();
   ///////////////////////////////////
@@ -345,11 +346,10 @@ void mesh_lengths(){
   path=1;
 
   float tmp2;
-  float randtmp1,randtmp2,randtmp3;
   ColumnVector th_ph_f;
   
   Mesh mseeds;
-  int ftype=mseeds.load(opts.meshfile.value()); 
+  ftype=mseeds.load(opts.meshfile.value());
   mseeds.load_fs_label(opts.seedfile.value());
   ColumnVector mni_origin(3),fs_coord_mm(3),xyz_dti,xyz_seeds,dim_seeds(3);
   dim_seeds<<prob.xdim()<<prob.ydim()<<prob.zdim(); //In seedref space if exists. Else in dti space
