@@ -14,7 +14,7 @@ using namespace NEWIMAGE;
 using namespace NEWMAT;
 
 string matf2coordf(string matf){
-  int pos=matf.rfind("/");
+  size_t pos=matf.rfind("/");
   if(pos!=string::npos)
     matf.replace(pos,1,"/coords_for_");
   else
