@@ -9,7 +9,7 @@
 
 subjdir=$1
 
-numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples |wc -w`
+numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples | wc -w | awk '{print $1}'`
 
 for ((fib=1; fib<=$numfib; fib++));do
     ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_th${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/th${fib}samples`
