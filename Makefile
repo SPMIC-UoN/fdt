@@ -53,9 +53,9 @@ SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_
 SCRIPTS = eddy_correct zeropad ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg
+XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx indexer
 
 
 RUNTCLS = Fdt Fdtx
