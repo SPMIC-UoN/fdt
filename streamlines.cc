@@ -134,7 +134,7 @@ namespace TRACT{
 	  
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
-	  if( (*m_waymasks[wm])(x_s,y_s,z_s)>0 ) {
+	  if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
 	    m_passed_flags[wm]=true;
 	  }
 	}
@@ -264,7 +264,7 @@ namespace TRACT{
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
-	  if(m_seeds.value(Wx,Wy,Wz)>0)
+	  if(m_seeds.value(Wx,Wy,Wz)!=0)
 	    numseeds++;
       
     m_ConMat.reinitialize(numseeds,numseeds,1);
@@ -274,7 +274,7 @@ namespace TRACT{
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++){
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++){
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++){
-	  if(m_seeds(Wx,Wy,Wz)>0){
+	  if(m_seeds(Wx,Wy,Wz)!=0){
 	    m_CoordMat(myrow,0,0)=Wx;
 	    m_CoordMat(myrow,1,0)=Wy;
 	    m_CoordMat(myrow,2,0)=Wz;
@@ -296,13 +296,13 @@ namespace TRACT{
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
-	  if(m_seeds.value(Wx,Wy,Wz)>0)
+	  if(m_seeds.value(Wx,Wy,Wz)!=0)
 	    numseeds++;
     
     for(int Wz=m_lrmask.minz();Wz<=m_lrmask.maxz();Wz++)
       for(int Wy=m_lrmask.miny();Wy<=m_lrmask.maxy();Wy++)
 	for(int Wx=m_lrmask.minx();Wx<=m_lrmask.maxx();Wx++)
-	  if(m_lrmask.value(Wx,Wy,Wz)>0)
+	  if(m_lrmask.value(Wx,Wy,Wz)!=0)
 	    numnz++;
     
     
@@ -327,7 +327,7 @@ namespace TRACT{
     for(int Wz=m_lrmask.minz();Wz<=m_lrmask.maxz();Wz++)
       for(int Wy=m_lrmask.miny();Wy<=m_lrmask.maxy();Wy++)
 	for(int Wx=m_lrmask.minx();Wx<=m_lrmask.maxx();Wx++)
-	  if(m_lrmask(Wx,Wy,Wz)>0){
+	  if(m_lrmask(Wx,Wy,Wz)!=0){
 	    m_CoordMat_tract2(mytrow,0,0)=Wx;
 	    m_CoordMat_tract2(mytrow,1,0)=Wy;
 	    m_CoordMat_tract2(mytrow,2,0)=Wz;
@@ -338,7 +338,7 @@ namespace TRACT{
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
-	  if(m_seeds(Wx,Wy,Wz)>0){
+	  if(m_seeds(Wx,Wy,Wz)!=0){
 	    m_CoordMat2(myrow,0,0)=Wx;
 	    m_CoordMat2(myrow,1,0)=Wy;
 	    m_CoordMat2(myrow,2,0)=Wz;
@@ -439,7 +439,7 @@ namespace TRACT{
       for(unsigned int i=0;i<path.size();i++){
 	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	  if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
+	  if(m_targetmasks[m](x_s,y_s,z_s)!=0 && m_targflags[m]==0){
 	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)=m_seedcounts[m](xseedvox,yseedvox,zseedvox)+1;
 	    m_targflags[m]=1;
 	    //m_particle_numbers[m].push_back(particle_number);
@@ -455,8 +455,8 @@ namespace TRACT{
 	if(i>0)
 	  d+=sqrt((path[i]-path[i-1]).SumSquare());
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	  if(m_targetmasks[m](x_s,y_s,z_s)>0 && m_targflags[m]==0){
-	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=d;
+	  if(m_targetmasks[m](x_s,y_s,z_s)!=0 && m_targflags[m]==0){
+	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=(int)d;
 	    m_targflags[m]=1;
 	    //m_particle_numbers[m].push_back(particle_number);
 	  }
@@ -475,8 +475,8 @@ namespace TRACT{
     for(int Wz=m_prob.minz();Wz<=m_prob.maxz();Wz++){
       for(int Wy=m_prob.miny();Wy<=m_prob.maxy();Wy++){
 	for(int Wx=m_prob.minx();Wx<=m_prob.maxx();Wx++){
-	  if(m_seeds(Wx,Wy,Wz)>0){
-	    if(m_prob(Wx,Wy,Wz)>0){
+	  if(m_seeds(Wx,Wy,Wz)!=0){
+	    if(m_prob(Wx,Wy,Wz)!=0){
 	      m_ConMat(m_Conrow,Concol,0)=m_prob(Wx,Wy,Wz);
 	    }
 	    Concol++;
