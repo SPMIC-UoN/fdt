@@ -25,12 +25,10 @@ from bedpost: dyads1, dyads2, etc. <br>
 vecreg -i input_vector -o output_vector -r reference_image -t flirt_transform.mat<br>
 <b>using a warpfield</b><br>
 vecreg -i input_vector -o output_vector -r reference_image -w warp_field<br>
-<br>
-<b>more options</b><br>
 
-<pre>
-Usage: 
-vector_flirt -i &lt;input4Dvector&gt; -o &lt;output4D&gt; -t &lt;transformation&gt;
+<br><b>more options</b>
+<pre> 
+vecreg -i &lt;input4Dvector&gt; -o &lt;output4D&gt; -t &lt;transformation&gt;
 
 Compulsory arguments (You MUST set one or more of):
         -i,--input      filename of input vector
