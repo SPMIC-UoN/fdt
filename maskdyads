@@ -15,7 +15,7 @@ Usage() {
 d=`$FSLDIR/bin/remove_ext $1`
 f=$2
 t=0.05
-if [ "$3" != "" ]
+if [ "$3" != "" ]; then
     t=$3
 fi
 
