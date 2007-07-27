@@ -8,6 +8,7 @@ Usage() {
     echo ""
     echo "Usage: maskdyads dyads fsamples [thr]"
     echo "default value for thr is 0.05"
+    exit
 }
 
 [ "$1" = ""] && Usage
@@ -15,7 +16,8 @@ Usage() {
 d=`$FSLDIR/bin/remove_ext $1`
 f=$2
 t=0.05
-if [ "$3" != "" ]; then
+
+if [ "$3" != "" ] ; then
     t=$3
 fi
 
