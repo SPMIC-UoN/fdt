@@ -243,7 +243,7 @@ proc fdt:dialog { w tclstartupfile } {
     frame  $w.data.seed.bcf
     checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
     set probtrack(scale) 5
-    LabelSpinBox $w.data.seed.bcf.w -label "Scale" -textvariable probtrack(scale) -range {1 1000000 1 } 
+    LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
     pack $w.data.seed.bcf.bc -side left -anchor w
 
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
@@ -262,7 +262,7 @@ proc fdt:dialog { w tclstartupfile } {
     pack $w.data.seed.tb -in [$w.data.seed.target getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
     pack $w.data.seed.targets $w.data.seed.sb -in [$w.data.seed.target getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
     
-    TitleFrame  $w.data.targets -text "Targets"
+    TitleFrame  $w.data.targets -text "Optional Targets"
 
     proc fdt_add { w listbox filename } {
     set filename [ fix_cygwin_filename $filename ]
@@ -302,7 +302,7 @@ proc fdt:dialog { w tclstartupfile } {
     }
 
     frame $w.data.targets.wf    
-    checkbutton $w.data.targets.wf.sct -text "Set Waypoints" -variable probtrack(waypoint_yn)  -command " pack forget $w.data.targets.wf.tf ; if { \$probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } ; $w.probtrack compute_size"
+    checkbutton $w.data.targets.wf.sct -text "Waypoints masks" -variable probtrack(waypoint_yn)  -command " pack forget $w.data.targets.wf.tf ; if { \$probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } ; $w.probtrack compute_size"
     TitleFrame $w.data.targets.wf.tf -text "Waypoints"    
     listbox $w.data.targets.wf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.wf.tf.sb set"
     scrollbar $w.data.targets.wf.tf.sb -command "$w.data.targets.wf.tf.targets yview " 
@@ -320,17 +320,17 @@ proc fdt:dialog { w tclstartupfile } {
     option add *targets*Checkbutton*width 18
     option add *targets*Checkbutton*anchor w
     frame  $w.data.targets.ef
-    checkbutton $w.data.targets.ef.srt -text "Set Exclusion targets" -variable probtrack(exclude_yn)  -command " pack forget $w.data.targets.ef.rubbish ; if { \$probtrack(exclude_yn) } { pack $w.data.targets.ef.rubbish } ; $w.probtrack compute_size"
+    checkbutton $w.data.targets.ef.srt -text "Exclusion mask" -variable probtrack(exclude_yn)  -command " pack forget $w.data.targets.ef.rubbish ; if { \$probtrack(exclude_yn) } { pack $w.data.targets.ef.rubbish } ; $w.probtrack compute_size"
     FileEntry $w.data.targets.ef.rubbish -textvariable probtrack(exclude) -title "Select exclusion image" -filetypes IMAGE
     pack $w.data.targets.ef.srt -side left
 
     frame  $w.data.targets.sf
-    checkbutton $w.data.targets.sf.sst -text "Set Termination targets" -variable probtrack(terminate_yn)  -command " pack forget $w.data.targets.sf.stop ; if { \$probtrack(terminate_yn) } { pack $w.data.targets.sf.stop } ; $w.probtrack compute_size"
+    checkbutton $w.data.targets.sf.sst -text "Termination mask" -variable probtrack(terminate_yn)  -command " pack forget $w.data.targets.sf.stop ; if { \$probtrack(terminate_yn) } { pack $w.data.targets.sf.stop } ; $w.probtrack compute_size"
     FileEntry $w.data.targets.sf.stop -textvariable probtrack(stop) -title "Select termination image" -filetypes IMAGE
     pack $w.data.targets.sf.sst -side left
 
     frame $w.data.targets.cf    
-    checkbutton $w.data.targets.cf.sct -text "Set Classification targets" -variable probtrack(classify_yn)  -command " pack forget $w.data.targets.cf.tf ; if { \$probtrack(classify_yn) } { pack $w.data.targets.cf.tf } ; $w.probtrack compute_size"
+    checkbutton $w.data.targets.cf.sct -text "Classification targets" -variable probtrack(classify_yn)  -command " pack forget $w.data.targets.cf.tf ; if { \$probtrack(classify_yn) } { pack $w.data.targets.cf.tf } ; $w.probtrack compute_size"
     TitleFrame $w.data.targets.cf.tf -text "Classification"    
     listbox $w.data.targets.cf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.cf.tf.sb set"
     scrollbar $w.data.targets.cf.tf.sb -command "$w.data.targets.cf.tf.targets yview " 
@@ -730,9 +730,13 @@ proc fdt:apply { w dialog } {
 	       } 
                seedmask {
 		     if { $probtrack(bcyn) } { 
-                       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(bedpost_dir)/nodif_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
-                       fdt_monitor_short $w "${FSLDIR}/bin/avwmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+			 fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
+			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
+			 fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
                        set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
+			 fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
+			 fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
                    }
                    set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
