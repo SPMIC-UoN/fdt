@@ -61,7 +61,7 @@ void twomasks()
   
   
   counter.save();
-  
+  cout<<"finished"<<endl;
 }
 
 

@@ -50,4 +50,5 @@ void track(){
     counter.reset_prob();
   } //Close Seed number Loop
 
+  cout<<"finished"<<endl;
 }
