@@ -50,7 +50,7 @@ VECREGOBJS=vecreg.o
 SGEBEDPOST = bedpost bedpost_datacheck
 SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_slice.sh
 
-SCRIPTS = eddy_correct zeropad ${SGEBEDPOST} ${SGEBEDPOSTX}
+SCRIPTS = eddy_correct zeropad maskdyads ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres

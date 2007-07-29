@@ -50,5 +50,4 @@ void track(){
     counter.reset_prob();
   } //Close Seed number Loop
 
-  //counter.save_total(keeptot);
 }

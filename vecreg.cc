@@ -11,8 +11,8 @@
 
 using namespace Utilities;
 
-string title="vector_flirt (Version 1.0)\nVector Affine/non linear Tranformation with Orientation Preservation";
-string examples="vector_flirt -i <input4Dvector> -o <output4D> -t <transformation>";
+string title="vecreg (Version 1.0)\nVector Affine/non linear Tranformation with Orientation Preservation";
+string examples="vecreg -i <input4Dvector> -o <output4D> -t <transformation>";
 
 Option<bool> verbose(string("-v,--verbose"),false,
 		       string("switch on diagnostic messages"),

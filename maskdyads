@@ -22,7 +22,7 @@ if [ "$3" != "" ] ; then
 fi
 
 
-$FSLDIR/bin/avwmaths++ $f -thr $t -bin /tmp/grot
-$FSLDIR/bin/avwmaths++ $d -mul /tmp/grot ${d}_thr$t
+$FSLDIR/bin/fslmaths $f -thr $t -bin /tmp/grot
+$FSLDIR/bin/fslmaths $d -mul /tmp/grot ${d}_thr$t
 $FSLDIR/bin/imrm /tmp/grot
 

@@ -32,8 +32,11 @@ int main ( int argc, char **argv ){
   if(opts.verbose.value()>0){
     opts.status();
   }
-  if(opts.mode.value()=="simple")
+  if(opts.mode.value()=="simple"){
     track();
+    return 0;
+  }
+
   string tmpin=opts.seedfile.value();
   if(fsl_imageexists(opts.seedfile.value())){ 
     if(fsl_imageexists(opts.mask2.value())){ twomasks();}

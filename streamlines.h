@@ -93,7 +93,7 @@ namespace TRACT{
     Matrix m_I;
     vector<ColumnVector> m_path;
     
-    vector<volume<float> > m_seedcounts;
+    vector<volume<int> > m_seedcounts;
     vector<volume<int> > m_targetmasks;
     vector<string> m_targetmasknames;
     vector<int> m_targflags;
