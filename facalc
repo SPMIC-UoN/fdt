@@ -25,15 +25,15 @@ exit
 fi
 
 
-${FSLDIR}/bin/avwmaths ${bn}_L1 -add ${bn}_L2 -add ${bn}_L3 -div 3 tmpMD
-${FSLDIR}/bin/avwmaths ${bn}_L1 -sqr tmpL1sq
-${FSLDIR}/bin/avwmaths ${bn}_L2 -sqr tmpL2sq
-${FSLDIR}/bin/avwmaths ${bn}_L3 -sqr tmpL3sq
-${FSLDIR}/bin/avwmaths ${bn}_L1 -sub tmpMD -sqr tmpl1subsq
-${FSLDIR}/bin/avwmaths ${bn}_L2 -sub tmpMD -sqr tmpl2subsq
-${FSLDIR}/bin/avwmaths ${bn}_L3 -sub tmpMD -sqr tmpl3subsq
-${FSLDIR}/bin/avwmaths tmpL1sq -add tmpL2sq -add tmpL3sq denom
-${FSLDIR}/bin/avwmaths tmpl1subsq -add tmpl2subsq -add tmpl3subsq -mul 1.5 numer
-${FSLDIR}/bin/avwmaths numer -div denom -sqrt ${ob}_FA
+${FSLDIR}/bin/fslmaths ${bn}_L1 -add ${bn}_L2 -add ${bn}_L3 -div 3 tmpMD
+${FSLDIR}/bin/fslmaths ${bn}_L1 -sqr tmpL1sq
+${FSLDIR}/bin/fslmaths ${bn}_L2 -sqr tmpL2sq
+${FSLDIR}/bin/fslmaths ${bn}_L3 -sqr tmpL3sq
+${FSLDIR}/bin/fslmaths ${bn}_L1 -sub tmpMD -sqr tmpl1subsq
+${FSLDIR}/bin/fslmaths ${bn}_L2 -sub tmpMD -sqr tmpl2subsq
+${FSLDIR}/bin/fslmaths ${bn}_L3 -sub tmpMD -sqr tmpl3subsq
+${FSLDIR}/bin/fslmaths tmpL1sq -add tmpL2sq -add tmpL3sq denom
+${FSLDIR}/bin/fslmaths tmpl1subsq -add tmpl2subsq -add tmpl3subsq -mul 1.5 numer
+${FSLDIR}/bin/fslmaths numer -div denom -sqrt ${ob}_FA
 ${FSLDIR}/bin/imrm tmpMD tmpL1sq tmpL2sq tmpL3sq tmpl1subsq tmpl2subsq tmpl3subsq numer denom
 

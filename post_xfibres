@@ -20,13 +20,13 @@ numfib=`${FSLDIR}/bin/imglob -oneperimage *f*samples |wc -w`
 
 echo "$numfib fibres"
 fib=1;
-${FSLDIR}/bin/avwroi `${FSLDIR}/bin/imglob -oneperimage *f1samples` numfibs 0 1
-${FSLDIR}/bin/avwmaths numfibs -mul 0 numfibs
+${FSLDIR}/bin/fslroi `${FSLDIR}/bin/imglob -oneperimage *f1samples` numfibs 0 1
+${FSLDIR}/bin/fslmaths numfibs -mul 0 numfibs
 while [ $fib -le $numfib ];do
     echo $fib
-    ${FSLDIR}/bin/avwmaths `${FSLDIR}/bin/imglob -oneperimage *f${fib}samples` -Tmean mean_f${fib}samples
-    ${FSLDIR}/bin/avwmaths mean_f${fib}samples -thr $thresh -bin ${$}bin${fib}
-    ${FSLDIR}/bin/avwmaths numfibs -add ${$}bin${fib} numfibs
+    ${FSLDIR}/bin/fslmaths `${FSLDIR}/bin/imglob -oneperimage *f${fib}samples` -Tmean mean_f${fib}samples
+    ${FSLDIR}/bin/fslmaths mean_f${fib}samples -thr $thresh -bin ${$}bin${fib}
+    ${FSLDIR}/bin/fslmaths numfibs -add ${$}bin${fib} numfibs
     ${FSLDIR}/bin/make_dyadic_vectors `${FSLDIR}/bin/imglob -oneperimage *th${fib}samples` `${FSLDIR}/bin/imglob -oneperimage *ph${fib}samples` dyads${fib}
     fib=`echo "$fib +1"|bc`;
 done

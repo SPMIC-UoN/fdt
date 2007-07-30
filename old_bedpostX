@@ -171,16 +171,16 @@ mkdir -p ${subjdir}.bedpostX/diff_slices
 echo copying files to bedpostX directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
 ${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
-${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/nodif_brain
+${FSLDIR}/bin/fslmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/nodif_brain
 
 
 mkdir -p ${subjdir}.bedpostX/logs
 mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 
-nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
+nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 
-${FSLDIR}/bin/avwslice ${subjdir}/data
-${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+${FSLDIR}/bin/fslslice ${subjdir}/data
+${FSLDIR}/bin/fslslice ${subjdir}/nodif_brain_mask
 
 #for parallel processing, the following need to be setup elsewhere
 #FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
@@ -221,12 +221,12 @@ echo number of fibres $numfib
 
 fib=1;
 while [ $fib -le $numfib ];do
-    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_th${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/th${fib}samples`
-    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_ph${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/ph${fib}samples`
-    ${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpostX/merged_f${fib}samples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/f${fib}samples`
-    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_th${fib}samples -Tmean ${subjdir}.bedpostX/mean_th${fib}samples
-    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_ph${fib}samples -Tmean ${subjdir}.bedpostX/mean_ph${fib}samples
-    ${FSLDIR}/bin/avwmaths ${subjdir}.bedpostX/merged_f${fib}samples -Tmean ${subjdir}.bedpostX/mean_f${fib}samples
+    ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/merged_th${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/th${fib}samples`
+    ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/merged_ph${fib}samples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/ph${fib}samples`
+    ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/merged_f${fib}samples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_*/f${fib}samples`
+    ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/merged_th${fib}samples -Tmean ${subjdir}.bedpostX/mean_th${fib}samples
+    ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/merged_ph${fib}samples -Tmean ${subjdir}.bedpostX/mean_ph${fib}samples
+    ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/merged_f${fib}samples -Tmean ${subjdir}.bedpostX/mean_f${fib}samples
 
     ${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpostX/merged_th${fib}samples ${subjdir}.bedpostX/merged_ph${fib}samples ${subjdir}.bedpostX/nodif_brain_mask ${subjdir}.bedpostX/dyads${fib}
 

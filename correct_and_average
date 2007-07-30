@@ -38,10 +38,10 @@ b0_numbers=`cat $avgfile |grep -v '^ *$' |sed -n "${numlines}p"`;
 
 ab0=`echo $b0_numbers |awk '{print \$1}'`
 eddy_correct ${1} ${$}${1}_b0_correct $ab0
-total_vols=`avwval $1 dim4`;
+total_vols=`fslval $1 dim4`;
 vols_per_avg=`echo "10k $total_vols $numavgs / p"|dc -`;
-avwroi ${1} data 0 ${vols_per_avg};
-avwmaths data -mul 0 data;
+fslroi ${1} data 0 ${vols_per_avg};
+fslmaths data -mul 0 data;
 
 
 avg=1;scan=1;
@@ -54,15 +54,15 @@ while [ ${avg} -le ${numavgs} ]; do
 
 	echo $avg $scan $tmp $vols_per_avg
 	
-	avwroi ${$}${1}_b0_correct ${$}avg_${avg}_scan_${scan} $tmp;
+	fslroi ${$}${1}_b0_correct ${$}avg_${avg}_scan_${scan} $tmp;
     	scan=`expr $scan + 1`;
     done
-    avwmerge -t ${$}avg_${avg}_all `imglob -oneperimage ${$}avg_${avg}_scan_*`
-    avwmaths data  -add ${$}avg_${avg}_all data;
+    fslmerge -t ${$}avg_${avg}_all `imglob -oneperimage ${$}avg_${avg}_scan_*`
+    fslmaths data  -add ${$}avg_${avg}_all data;
     avg=`expr $avg + 1`;
     
 done
-avwmaths data -div ${numavgs} data;
+fslmaths data -div ${numavgs} data;
 rm ${$}*
 
 

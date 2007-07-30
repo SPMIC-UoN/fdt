@@ -22,9 +22,9 @@ if [ `${FSLDIR}/bin/imtest $input` -eq 0 ];then
     exit
 fi
 
-avwroi $input $output $ref 1
+fslroi $input $output $ref 1
 
-avwsplit $input
+fslsplit $input
 full_list=`${FSLDIR}/bin/imglob -oneperimage vol*`
 
 for i in $full_list ; do
@@ -33,7 +33,7 @@ for i in $full_list ; do
     ${FSLDIR}/bin/flirt -in $i -ref $output -nosearch -o $i -paddingsize 1 >> ${output}.ecclog
 done
 
-avwmerge -t $output $full_list
+fslmerge -t $output $full_list
 
 /bin/rm vol*
 

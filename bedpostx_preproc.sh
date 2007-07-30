@@ -12,11 +12,11 @@ subjdir=$1
 echo Copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
 ${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
-${FSLDIR}/bin/avwmaths\
+${FSLDIR}/bin/fslmaths\
  ${subjdir}/nodif\
  -mas ${subjdir}/nodif_brain_mask\
  ${subjdir}.bedpostX/nodif_brain
 
-${FSLDIR}/bin/avwslice ${subjdir}/data
-${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+${FSLDIR}/bin/fslslice ${subjdir}/data
+${FSLDIR}/bin/fslslice ${subjdir}/nodif_brain_mask
 echo Done

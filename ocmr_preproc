@@ -19,16 +19,16 @@ nlp=`echo *lp2d_* |wc -w`
 if [ $nep -gt 1 ];then 
     a1=`imglob -oneperimage images_?_*ep2d_*`
     a2=`imglob -oneperimage images_??_*ep2d_*`
-    avwmerge -t big4D $a1 $a2
+    fslmerge -t big4D $a1 $a2
 elif [ $nlp -gt 1 ];then 
     a1=`imglob -oneperimage images_?_*lp2d_*`
     a2=`imglob -oneperimage images_??_*lp2d_*`
-    avwmerge -t big4D $a1 $a2
+    fslmerge -t big4D $a1 $a2
 fi
 
 #nslices=${1}
-#zsize=`avwval big4D dim3`
-#tsize=`avwval big4D dim4`
+#zsize=`fslval big4D dim3`
+#tsize=`fslval big4D dim4`
 #tpts=`echo "10k $zsize $nslices /p "|dc -` 
 #afterdot=`echo $tpts | awk -F . '{print \$2}'`
 #foo=`echo $afterdot|grep  [123456798]`
@@ -37,15 +37,15 @@ fi
 #    exit 1
 #fi
 #tpts=`echo "$tpts \* $tsize" |bc"'
-#xsize=`avwval big4D dim1`
-#ysize=`avwval big4D dim2`
-#xvoxsize=`avwval big4D pixdim1`
-#yvoxsize=`avwval big4D pixdim2`
-#zvoxsize=`avwval big4D pixdim3`
-#datatype=`avwval big4D datatype`
+#xsize=`fslval big4D dim1`
+#ysize=`fslval big4D dim2`
+#xvoxsize=`fslval big4D pixdim1`
+#yvoxsize=`fslval big4D pixdim2`
+#zvoxsize=`fslval big4D pixdim3`
+#datatype=`fslval big4D datatype`
 
 
-#avwcreatehd $xsize $ysize $nslices $tpts $xvoxsize $yvoxsize $zvoxsize 0 0 0 0# $datatype big4D 
+#fslcreatehd $xsize $ysize $nslices $tpts $xvoxsize $yvoxsize $zvoxsize 0 0 0 0# $datatype big4D 
 
 
 

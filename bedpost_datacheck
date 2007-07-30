@@ -9,7 +9,7 @@ DIR=$1;
 for img in ${DIR}/data ${DIR}/nodif ${DIR}/nodif_brain_mask ;do
     if [ `${FSLDIR}/bin/imtest $img` -eq 1 ] ; then
 	echo $img
-	${FSLDIR}/bin/avwinfo $img;
+	${FSLDIR}/bin/fslinfo $img;
 	echo ""
     else
 	echo $img does not exist;
@@ -25,14 +25,14 @@ done
 
 if [ `${FSLDIR}/bin/imtest ${DIR}/data` -eq 1 -a `${FSLDIR}/bin/imtest ${DIR}/nodif_brain_mask` -eq 1 ];then
 
-    dx=`${FSLDIR}/bin/avwval ${DIR}/data dim1`
-    dy=`${FSLDIR}/bin/avwval ${DIR}/data dim2`
-    dz=`${FSLDIR}/bin/avwval ${DIR}/data dim3`
-    dt=`${FSLDIR}/bin/avwval ${DIR}/data dim4`
+    dx=`${FSLDIR}/bin/fslval ${DIR}/data dim1`
+    dy=`${FSLDIR}/bin/fslval ${DIR}/data dim2`
+    dz=`${FSLDIR}/bin/fslval ${DIR}/data dim3`
+    dt=`${FSLDIR}/bin/fslval ${DIR}/data dim4`
     
-    nbmx=`${FSLDIR}/bin/avwval ${DIR}/nodif_brain_mask dim1`
-    nbmy=`${FSLDIR}/bin/avwval ${DIR}/nodif_brain_mask dim2`
-    nbmz=`${FSLDIR}/bin/avwval ${DIR}/nodif_brain_mask dim3`
+    nbmx=`${FSLDIR}/bin/fslval ${DIR}/nodif_brain_mask dim1`
+    nbmy=`${FSLDIR}/bin/fslval ${DIR}/nodif_brain_mask dim2`
+    nbmz=`${FSLDIR}/bin/fslval ${DIR}/nodif_brain_mask dim3`
     
     
     if [ $dx -ne $nbmx -o  $dy -ne $nbmy -o $dz -ne $nbmz ];then 

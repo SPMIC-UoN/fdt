@@ -106,7 +106,7 @@ echo Queuing preprocessing stages
 preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
-nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
+nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
 for ((slice=0; slice < $nslices; slice++)) ; do
     echo "${FSLDIR}/bin/bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
