@@ -42,9 +42,9 @@ probtrackOptions* probtrackOptions::gopt = NULL;
 	modecheck(); // check all the correct options are set for this mode.
 	if(mode.value()!="simple"){  
 	  if(forcedir.value())
-	    logger.setthenmakeDir(logdir.value(),"probtrack.log");
+	    logger.setthenmakeDir(logdir.value(),"probtrackx.log");
 	  else
-	    logger.makeDir(logdir.value(),"probtrack.log");
+	    logger.makeDir(logdir.value(),"probtrackx.log");
 	  
 	  cout << "Log directory is: " << logger.getDir() << endl;
 	  
@@ -60,7 +60,7 @@ probtrackOptions* probtrackOptions::gopt = NULL;
     }
     catch(X_OptionError& e){
       cerr<<e.what()<<endl;
-      cerr<<"try: probtrack --help"<<endl;
+      cerr<<"try: probtrackx --help"<<endl;
       exit(0);
     }
     

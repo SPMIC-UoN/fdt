@@ -249,7 +249,7 @@ proc fdt:dialog { w tclstartupfile } {
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
 
-    TitleFrame $w.data.seed.target -text "Multiple Masks"    
+    TitleFrame $w.data.seed.target -text "Masks list"    
     listbox $w.data.seed.targets -height 6 -width 50 -yscrollcommand "$w.data.seed.sb set"
     scrollbar $w.data.seed.sb -command "$w.data.seed.targets yview " 
     frame $w.data.seed.tb
@@ -302,7 +302,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     frame $w.data.targets.wf    
     checkbutton $w.data.targets.wf.sct -text "Waypoints masks" -variable probtrack(waypoint_yn)  -command " pack forget $w.data.targets.wf.tf ; if { \$probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } ; $w.probtrack compute_size"
-    TitleFrame $w.data.targets.wf.tf -text "Waypoints"    
+    TitleFrame $w.data.targets.wf.tf -text "Waypoints list"    
     listbox $w.data.targets.wf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.wf.tf.sb set"
     scrollbar $w.data.targets.wf.tf.sb -command "$w.data.targets.wf.tf.targets yview " 
     frame $w.data.targets.wf.tf.tb
@@ -330,7 +330,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     frame $w.data.targets.cf    
     checkbutton $w.data.targets.cf.sct -text "Classification targets" -variable probtrack(classify_yn)  -command " pack forget $w.data.targets.cf.tf ; if { \$probtrack(classify_yn) } { pack $w.data.targets.cf.tf } ; $w.probtrack compute_size"
-    TitleFrame $w.data.targets.cf.tf -text "Classification"    
+    TitleFrame $w.data.targets.cf.tf -text "Targets list"    
     listbox $w.data.targets.cf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.cf.tf.sb set"
     scrollbar $w.data.targets.cf.tf.sb -command "$w.data.targets.cf.tf.targets yview " 
     frame $w.data.targets.cf.tf.tb

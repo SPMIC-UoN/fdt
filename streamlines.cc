@@ -630,11 +630,12 @@ namespace TRACT{
       fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
     }
     if(opts.randfib.value()){
-      float tmp=rand()/RAND_MAX;
-      if(tmp>0.5)
-	fibst=0;
-      else
-	fibst=1;// fix this for > 2 fibres
+      float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
+      fibst = (int)round(tmp);
+      //if(tmp>0.5)
+      //fibst=0;
+      //else
+      //fibst=1;// fix this for > 2 fibres
     }
     
     int nlines=0;

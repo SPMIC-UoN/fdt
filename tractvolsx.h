@@ -32,6 +32,7 @@ namespace TRACTVOLSX{
       bool init_sample;
       int fibst;
       bool usef;
+      
     public:
       //constructors::
       Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(1),usef(usefin){}
@@ -44,7 +45,7 @@ namespace TRACTVOLSX{
 	for(unsigned int m=0;m<fsamples.size();m++)
 	  delete fsamples[m];
       }
-      
+      inline int nfibres()const{return (int)thsamples.size();}
       
       void reset(const int& fibst_in){
 	init_sample=true;
