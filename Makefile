@@ -11,7 +11,7 @@ DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfs
 
 DTIFIT=dtifit
 CCOPS=ccops
-PT=probtrack
+PT=probtrack_old
 PTX=probtrackx
 FTB=find_the_biggest
 PJ=proj_thresh
@@ -26,7 +26,6 @@ FMO=fdt_matrix_ops
 INDEXER=indexer
 TEST=testfile
 VECREG=vecreg
-
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -49,17 +48,17 @@ VECREGOBJS=vecreg.o
 SGEBEDPOST = bedpost bedpost_datacheck
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh
 
-SCRIPTS = eddy_correct zeropad maskdyads ${SGEBEDPOST} ${SGEBEDPOSTX}
+SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres
+XFILES = dtifit ccops find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx indexer
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
 
 RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} 
+all: ${XFILES} ${FXFILES} probtrack_old
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}

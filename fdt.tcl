@@ -237,14 +237,13 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
     pack $w.data.seed.ssf.ssd -side top -anchor nw
 
-    
-
-
-    frame  $w.data.seed.bcf
-    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
-    set probtrack(scale) 5
-    LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
-    pack $w.data.seed.bcf.bc -side left -anchor w
+    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+	frame  $w.data.seed.bcf
+	checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
+	set probtrack(scale) 5
+	LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
+	pack $w.data.seed.bcf.bc -side left -anchor w
+    }
 
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -468,10 +467,13 @@ proc fdt:probtrack_mode { w } {
                      $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
-                     pack $w.data.seed.ssf $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
-                     pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-                     $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
+	    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+	    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
+	    }
+	    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+	    pack $w.data.targets.cf -in $w.data.targets.f -anchor w
+	    $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
   	}
 	network {
                      pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2

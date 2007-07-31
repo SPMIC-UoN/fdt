@@ -91,7 +91,6 @@ namespace FIBRE{
 	
 	m_f_prior=0;
 	compute_f_prior();
-	//cc	OUT("COCK1");
 	//cc	OUT(m_f_prior);
 	//cc	OUT(m_ardfudge);
 	m_lam_prior=0;
@@ -134,7 +133,6 @@ namespace FIBRE{
       
       m_f_prior=0;
       compute_f_prior();
-      //cc      OUT("COCK2");
       //cc      OUT(m_f_prior);
       //cc      OUT(m_ardfudge);
       m_lam_prior=0;
