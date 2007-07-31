@@ -14,7 +14,7 @@ fi
 
 Usage() {
     echo ""
-    echo "Usage: bedpostX <subject directory> [options]"
+    echo "Usage: bedpostx <subject directory> [options]"
     echo ""
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
@@ -93,7 +93,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	exit 1
 fi
 
-echo Making bedpostX directory structure
+echo Making bedpostx directory structure
 
 mkdir -p ${subjdir}.bedpostX/
 mkdir -p ${subjdir}.bedpostX/diff_slices
@@ -103,19 +103,19 @@ mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
 echo Queuing preprocessing stages
-preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_preproc.sh ${subjdir}`
+preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
 for ((slice=0; slice < $nslices; slice++)) ; do
-    echo "${FSLDIR}/bin/bedpostX_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
+    echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostX_postproc.sh $subjdir`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
 if [ "x$SGE_ROOT" != "x" ]; then
     echo

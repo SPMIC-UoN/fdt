@@ -5,7 +5,6 @@ PROJNAME = fdt
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
- 
 DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 #DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
@@ -48,7 +47,7 @@ TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 
 SGEBEDPOST = bedpost bedpost_datacheck
-SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_slice.sh
+SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh
 
 SCRIPTS = eddy_correct zeropad maskdyads ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
@@ -58,7 +57,7 @@ XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyad
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx indexer
 
 
-RUNTCLS = Fdt Fdtx
+RUNTCLS = Fdt
 
 all: ${XFILES} ${FXFILES} 
 
@@ -112,15 +111,4 @@ ${TEST}:    	${TESTOBJS}
 
 ${VECREG}:    	${VECREGOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
-
-
-
-
-
-
-
-
-
-
-
 

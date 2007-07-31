@@ -1,13 +1,11 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
+#   Copyright (C) 2007 University of Oxford
 #
 #   SHCOPYRIGHT
 
+echo
+echo "Error - bedpost has been superceded by bedpostx! Please instead run:"
+echo bedpostx $@ -n 1
+echo
 
-echo
-echo "Warning - bedpost has been deprecated! Please use bedpostX instead."
-[ -z "$@" ] && ${FSLDIR}/bin/bedpostX
-echo "Executing \"bedpostX $@ -n 1\" instead."
-echo
-${FSLDIR}/bin/bedpostX $@ -n 1

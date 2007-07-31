@@ -1,3 +1,4 @@
+
 #   FSL interface for FDT (BEDPOST and ProbTrack)
 #
 #   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney and Matthew Webster FMRIB Image Analysis Group
@@ -8,11 +9,12 @@
 
 #TO DO replace -filetypes * with -filetypes { } for directory selectors
 source [ file dirname [ info script ] ]/fslstart.tcl
+option add *FileEntry*Entry*width 35
 set TCLPATH [file dirname [ info script ] ]
 regsub tcl $TCLPATH bin BINPATH
 regsub tcl $TCLPATH doc/fdt HTMLPATH
 
-set VERSION "1.0a"
+set VERSION "2.0"
 
 proc mm_to_voxels { X Y Z mask } {
 
@@ -34,9 +36,6 @@ proc mm_to_voxels { X Y Z mask } {
 proc fdt:dialog { w tclstartupfile } {
 
     global eddy bedpost registration dtifit probtrack HTMLPATH FSLDIR VERSION INMEDX VARS
-
-    set LWIDTH 27
-    set PWD [ pwd ]
     set probtrack(tool) "probtrack"
 
     if [winfo exists $w] {
@@ -53,7 +52,7 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOST Estimation of diffusion parameters"  registration "Registration" probtrack "ProbTrack Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFit Reconstruct diffusion tensors" 
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrack "ProbTrackX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFit Reconstruct diffusion tensors" 
     $w.tool.menu.menu entryconfigure 4 -state disabled -background black
     pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 
@@ -77,7 +76,7 @@ proc fdt:dialog { w tclstartupfile } {
 	}
     }
 
-    FileEntry $w.registration.directory -textvariable registration(directory) -label "BEDPOST directory:" -title "Choose directory"  -width 35 -filetypes * -command "registration_set_directory $w" 
+    FileEntry $w.registration.directory -textvariable registration(directory) -label "BEDPOST directory:" -title "Choose directory" -filetypes * -command "registration_set_directory $w" 
 
     frame       $w.registration.struct
     checkbutton $w.registration.struct.yn -variable registration(struct_yn) -command "registration_packframe $w"
@@ -128,20 +127,20 @@ proc fdt:dialog { w tclstartupfile } {
 	set eddy(output) [ file join [file dirname $eddy(input)] data ]
     }    
 
-    FileEntry $w.ecc.input -textvariable eddy(input) -label "Diffusion weighted data:" -title "Choose diffusion weighted image"  -width 35 -filetypes IMAGE -command "ecc_update_files $w"
+    FileEntry $w.ecc.input -textvariable eddy(input) -label "Diffusion weighted data:" -title "Choose diffusion weighted image" -filetypes IMAGE -command "ecc_update_files $w"
 
-    FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -width 35 -filetypes IMAGE -command "ecc_update_files $w"
+    FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -filetypes IMAGE -command "ecc_update_files $w"
 
    set eddy(refnum) 0
    LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range {0 100 1 } -width 6 
 
     pack $w.ecc.input $w.ecc.output $w.ecc.refnum -side top -padx 3 -pady 3 -expand yes -anchor w
 
-    #------- DTIFit --------
+   #------- DTIFit --------
 
     frame $w.dtifit
 
-    FileEntry $w.dtifit.directory -textvariable dtifit(directory) -label  "Input directory:" -title "Choose directory" -width 35 -command "set_working_directory dtifit(cwd)"
+    FileEntry $w.dtifit.directory -textvariable dtifit(directory) -label  "Input directory:" -title "Choose directory" -command "set_working_directory dtifit(cwd)"
 
     proc dtifit_toggle_expert { w } {
 	global dtifit
@@ -174,93 +173,96 @@ proc fdt:dialog { w tclstartupfile } {
 	set_working_directory dtifit(cwd) $dtifit(input)
     }
     
-    set dtifit(cwd) $PWD
+    set dtifit(cwd) [ pwd ]
 
 #All the below orignally had -directory $dtifit(cwd) 
-    FileEntry $w.dtifit.expert.input -textvariable dtifit(input) -label  "Diffusion weighted data:" -title "Choose diffusion weighted image" -width 35 -filetypes IMAGE -command "dtifit_update_files $w" 
-    $w.dtifit.expert.input.labf configure -width $LWIDTH
-
-    FileEntry $w.dtifit.expert.mask -textvariable dtifit(mask) -label "BET binary brain mask:" -title "Choose BET brain mask file" -width 35 -filetypes IMAGE -command "set_working_directory dtifit(cwd)"
-    $w.dtifit.expert.mask.labf configure -width $LWIDTH
-    FileEntry $w.dtifit.expert.output -textvariable dtifit(output) -label "Output basename:" -title  "Choose output base name" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
-    $w.dtifit.expert.output.labf configure -width $LWIDTH
-    FileEntry $w.dtifit.expert.bvecs -textvariable dtifit(bvecs) -label "Gradient directions:" -title  "Choose bvecs file" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
-    $w.dtifit.expert.bvecs.labf configure -width $LWIDTH
-    FileEntry $w.dtifit.expert.bvals -textvariable dtifit(bvals) -label  "b values:" -title  "Choose bvals file" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
-    $w.dtifit.expert.bvals.labf configure -width $LWIDTH        
+    option add *dtifit.expert.FileEntry*labf*width 27
+    FileEntry $w.dtifit.expert.input -textvariable dtifit(input) -label  "Diffusion weighted data:" -title "Choose diffusion weighted image" -filetypes IMAGE -command "dtifit_update_files $w" 
+    FileEntry $w.dtifit.expert.mask -textvariable dtifit(mask) -label "BET binary brain mask:" -title "Choose BET brain mask file" -filetypes IMAGE -command "set_working_directory dtifit(cwd)"
+    FileEntry $w.dtifit.expert.output -textvariable dtifit(output) -label "Output basename:" -title  "Choose output base name" -filetypes * -command "set_working_directory dtifit(cwd)"
+    FileEntry $w.dtifit.expert.bvecs -textvariable dtifit(bvecs) -label "Gradient directions:" -title  "Choose bvecs file" -filetypes * -command "set_working_directory dtifit(cwd)"
+    FileEntry $w.dtifit.expert.bvals -textvariable dtifit(bvals) -label  "b values:" -title  "Choose bvals file" -command "set_working_directory dtifit(cwd)"
 
     pack $w.dtifit.expert.input $w.dtifit.expert.mask $w.dtifit.expert.output \
 	$w.dtifit.expert.bvecs $w.dtifit.expert.bvals \
-	-in $w.dtifit.expert -side top -padx 3 -pady 3 -expand yes -anchor w
-
-    pack $w.dtifit.directory $w.dtifit.expert_yn -in $w.dtifit \
 	-side top -padx 3 -pady 3 -expand yes -anchor w
+
+    pack $w.dtifit.directory $w.dtifit.expert_yn -side top -padx 3 -pady 3 -expand yes -anchor w
 
     #------- BEDPOST --------
 
     frame $w.bedpost
 
-    FileEntry $w.bedpost.directory -textvariable bedpost(directory) -label "Input directory:" -title "Choose directory" -width 35 -filetypes * -command "set_working_directory dtifit(cwd)"
+    FileEntry $w.bedpost.directory -textvariable bedpost(directory) -label "Input directory:" -title "Choose directory" -filetypes * -command "set_working_directory dtifit(cwd)"
+
+   collapsible frame $w.bedpost.advanced -title "Advanced Options"
+   set bedpost(nfibres) 2
+   set bedpost(weight)  1
+   set bedpost(burnin)  1000
+   LabelSpinBox  $w.bedpost.advanced.nfibres -label "Fibres  "  -textvariable bedpost(nfibres) -range {1 1000000000 1 } 
+   LabelSpinBox  $w.bedpost.advanced.weight  -label "Weight "  -textvariable bedpost(weight) -range {0.0 100000000.0 1 } 
+   LabelSpinBox  $w.bedpost.advanced.burnin  -label "Burn In"  -textvariable bedpost(burnin) -range {1 1000000000 1 } 
 
     set bedpost(ecc_yn) 0
+    pack $w.bedpost.advanced.nfibres $w.bedpost.advanced.weight $w.bedpost.advanced.burnin -in $w.bedpost.advanced.b -anchor w
+    pack $w.bedpost.directory $w.bedpost.advanced -side top -padx 3 -pady 3 -expand yes -anchor w
 
-    pack $w.bedpost.directory \
-	-in $w.bedpost -side top -padx 3 -pady 3 -expand yes -anchor w
-
-    #-------- ...ProbTrack... -------- 
-
+    #-------- ProbTrack -------- 
     NoteBook $w.probtrack -bd 2 -tabpady {5 10} -arcradius 3
     $w.probtrack insert 0 data -text "Data"
     $w.probtrack insert 1 options -text "Options"
-
-    #-------- ...Mode specific options... --------
-
-    set dataf [$w.probtrack getframe data]
+    #-------- Mode specific option --------
     frame $w.data
+    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOST directory" -title "Choose BEDPOST directory" -filetypes * -command "probtrack_update_files $w"
 
-    LabelFrame  $w.data.mode -text "Mode: "
+    TitleFrame  $w.data.seed -text "Seed Space"
+    optionMenu2 $w.data.seed.menu probtrack(mode) -command "fdt:probtrack_mode $w" simple "Single voxel" seedmask "Single mask" network "Multiple masks"
+    set probtrack(x) 0
+    set probtrack(y) 0
+    set probtrack(z) 0
+    set probtrack(units) vox
+    #Co-ordinate edit frame
+    frame $w.data.seed.voxel
+    LabelSpinBox $w.data.seed.voxel.x -label "X" -textvariable probtrack(x) -range {-1000000 1000000 1 } 
+    LabelSpinBox $w.data.seed.voxel.y -label "Y" -textvariable probtrack(y) -range {-1000000 1000000 1 } 
+    LabelSpinBox $w.data.seed.voxel.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } 
+    radiobutton $w.data.seed.voxel.vox -text "vox" -value vox -variable probtrack(units)
+    radiobutton $w.data.seed.voxel.mm  -text "mm"  -value mm  -variable probtrack(units)
+    FileEntry $w.data.seed.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
 
-    if { [ file exists [ file join $FSLDIR bin reord_OM ] ] } {
-        optionMenu2 $w.data.mode.menu probtrack(mode) -command "fdt:probtrack_mode $w" xtitlex "Path distribution estimation" simple "  Single seed voxel" all "  Seed mask" maska "  Seed mask and waypoint masks" masks "  Two masks - symmetric" xutilssx "--------------------------------------------" seeds "Connectivity-based seed classification" xmatrixx "--------------------------------------------" mat1 "Matrix 1" mat2 "Matrix 2" mskmat "Mask matrix"
-      $w.data.mode.menu.menu entryconfigure 0 -state disabled -background black
-      $w.data.mode.menu.menu entryconfigure 5 -state disabled -background black
-      $w.data.mode.menu.menu entryconfigure 7 -state disabled -background black
-    } else {
-    optionMenu2 $w.data.mode.menu probtrack(mode) -command "fdt:probtrack_mode $w" xtitlex "Path distribution estimation" simple "  Single seed voxel" all "  Seed mask" maska "  Seed mask and waypoint masks" masks "  Two masks - symmetric" xutilssx  "--------------------------------------------" seeds "Connectivity-based seed classification"
-     
-     $w.data.mode.menu.menu entryconfigure 0 -state disabled -background black
-     $w.data.mode.menu.menu entryconfigure 5 -state disabled -background black
+    option add *seed*FileEntry*labf*width 24
 
-    }
-    pack $w.data.mode.menu
+    frame  $w.data.seed.ssf
+    checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " pack forget $w.data.seed.ssf.xfm  ; if { \$probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm } ; $w.probtrack compute_size"
+    FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
+    pack $w.data.seed.ssf.ssd -side top -anchor nw
 
-    set probtrack(xfm) ""
-    set probtrack(basename) "merged"
-    set probtrack(mask) "nodif_brain_mask"
+    
 
-    proc probtrack_update_files { w filename } {
-	global probtrack
-	global FSLDIR
 
-	if { ($probtrack(bedpost_dir) != "") && ($probtrack(seed) != "") } {
-	    set probtrack(dir) \
-		[ file join $probtrack(bedpost_dir) [ file tail [ exec $FSLDIR/bin/remove_ext $probtrack(seed) ] ] ]
-	}
-    }
+    frame  $w.data.seed.bcf
+    checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
+    set probtrack(scale) 5
+    LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
+    pack $w.data.seed.bcf.bc -side left -anchor w
 
-    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOST directory" -title "Choose BEDPOST directory" -width 35 -filetypes * -command "probtrack_update_files $w"
+    pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
+    pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
 
-    TitleFrame $w.data.target -text "Target list"    
-    listbox $w.data.targets -height 6 -width 40 -yscrollcommand "$w.data.sb set"
-    scrollbar $w.data.sb -command "$w.data.targets yview " 
-    frame $w.data.tb
-    button $w.data.tb.add -text "Add..."  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.targets} {}" 
-    button $w.data.tb.del -text "Remove"  -command "fdt_sub $w $w.data.targets" 
-    button $w.data.tb.imp -text "Load list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets} {}"
-    button $w.data.tb.exp -text "Save list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets} {}"
-    pack $w.data.tb.add $w.data.tb.del $w.data.tb.imp $w.data.tb.exp -side left
-    pack $w.data.tb -in [$w.data.target getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
-    pack $w.data.targets $w.data.sb -in [$w.data.target getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
+    TitleFrame $w.data.seed.target -text "Multiple Masks"    
+    listbox $w.data.seed.targets -height 6 -width 50 -yscrollcommand "$w.data.seed.sb set"
+    scrollbar $w.data.seed.sb -command "$w.data.seed.targets yview " 
+    frame $w.data.seed.tb
+    button $w.data.seed.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.seed.targets} {}" 
+    button $w.data.seed.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.seed.targets" 
+    button $w.data.seed.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.seed.targets} {}"
+    button $w.data.seed.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.seed.targets} {}"
+    pack $w.data.seed.tb.add $w.data.seed.tb.del $w.data.seed.tb.imp $w.data.seed.tb.exp -side left
+    pack $w.data.seed.tb -in [$w.data.seed.target getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
+    pack $w.data.seed.targets $w.data.seed.sb -in [$w.data.seed.target getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
+    
+    TitleFrame  $w.data.targets -text "Optional Targets"
 
     proc fdt_add { w listbox filename } {
     set filename [ fix_cygwin_filename $filename ]
@@ -299,143 +301,108 @@ proc fdt:dialog { w tclstartupfile } {
     close $fd
     }
 
-    TitleFrame $w.data.seedspace -text "Seed space"
-    FileEntry $w.data.seed -textvariable probtrack(seed) -label "Seed image:" -title "Choose seed image" -width 35 -filetypes IMAGE -command "probtrack_update_files $w"
-    FileEntry $w.data.seed2 -textvariable probtrack(seed2) -label "Target image:" -title "Choose target image" -width 35 -filetypes IMAGE -command "probtrack_update_files $w"
- 
-    TitleFrame $w.data.waypoint -text "Waypoint masks"
-    listbox $w.data.waypoints -height 6 -width 40 -yscrollcommand "$w.data.waypoint.sb set"
-    scrollbar $w.data.waypoint.sb -command "$w.data.waypoints yview "
-    frame $w.data.waybut
-    button $w.data.waybut.add -text "Add..."  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.waypoints} {}" 
-    button $w.data.waybut.del -text "Remove"  -command "fdt_sub $w $w.data.waypoints" 
-    button $w.data.waybut.imp -text "Load list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.waypoints} {}"
-    button $w.data.waybut.exp -text "Save list..." -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.waypoints} {}" 
-    pack $w.data.waybut.add $w.data.waybut.del $w.data.waybut.imp $w.data.waybut.exp -in $w.data.waybut -side left
-    pack $w.data.waybut -in [$w.data.waypoint getframe ] -side bottom -expand yes -fill x -anchor w -padx 3 -pady 3
-    pack $w.data.waypoints $w.data.waypoint.sb -in [$w.data.waypoint getframe ] -side left -expand yes -fill y -anchor w -padx 3 -pady 3
+    frame $w.data.targets.wf    
+    checkbutton $w.data.targets.wf.sct -text "Waypoints masks" -variable probtrack(waypoint_yn)  -command " pack forget $w.data.targets.wf.tf ; if { \$probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } ; $w.probtrack compute_size"
+    TitleFrame $w.data.targets.wf.tf -text "Waypoints"    
+    listbox $w.data.targets.wf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.wf.tf.sb set"
+    scrollbar $w.data.targets.wf.tf.sb -command "$w.data.targets.wf.tf.targets yview " 
+    frame $w.data.targets.wf.tf.tb
+    button $w.data.targets.wf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.targets.wf.tf.targets} {}"
+    button $w.data.targets.wf.tf.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.targets.wf.tf.targets" 
+    button $w.data.targets.wf.tf.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets.wf.tf.targets} {}"
+    button $w.data.targets.wf.tf.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets.wf.tf.targets} {}"
+    pack $w.data.targets.wf.tf.tb.add $w.data.targets.wf.tf.tb.del $w.data.targets.wf.tf.tb.imp $w.data.targets.wf.tf.tb.exp -side left
+    pack $w.data.targets.wf.tf.tb -in [$w.data.targets.wf.tf getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
+    pack $w.data.targets.wf.tf.targets $w.data.targets.wf.tf.sb -in [$w.data.targets.wf.tf getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
+    pack  $w.data.targets.wf.sct -side top -anchor nw
+    pack $w.data.targets.wf 
+  
+    option add *targets*Checkbutton*width 18
+    option add *targets*Checkbutton*anchor w
+    frame  $w.data.targets.ef
+    checkbutton $w.data.targets.ef.srt -text "Exclusion mask" -variable probtrack(exclude_yn)  -command " pack forget $w.data.targets.ef.rubbish ; if { \$probtrack(exclude_yn) } { pack $w.data.targets.ef.rubbish } ; $w.probtrack compute_size"
+    FileEntry $w.data.targets.ef.rubbish -textvariable probtrack(exclude) -title "Select exclusion image" -filetypes IMAGE
+    pack $w.data.targets.ef.srt -side left
 
-    set probtrack(x) 0
-    set probtrack(y) 0
-    set probtrack(z) 0
-    set probtrack(units) vox
+    frame  $w.data.targets.sf
+    checkbutton $w.data.targets.sf.sst -text "Termination mask" -variable probtrack(terminate_yn)  -command " pack forget $w.data.targets.sf.stop ; if { \$probtrack(terminate_yn) } { pack $w.data.targets.sf.stop } ; $w.probtrack compute_size"
+    FileEntry $w.data.targets.sf.stop -textvariable probtrack(stop) -title "Select termination image" -filetypes IMAGE
+    pack $w.data.targets.sf.sst -side left
 
-    #Co-ordinate edit frame
-    LabelFrame   $w.data.seedxyz -text "Seed:"
-    LabelSpinBox $w.data.seedxyz.x -label "X" -textvariable probtrack(x) -range {-1000000 1000000 1 } -width 6
-    LabelSpinBox $w.data.seedxyz.y -label "Y" -textvariable probtrack(y) -range {-1000000 1000000 1 } -width 6
-    LabelSpinBox $w.data.seedxyz.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } -width 6
-    radiobutton $w.data.seedxyz.vox -text "vox" -value vox -variable probtrack(units)
-    radiobutton $w.data.seedxyz.mm  -text "mm"  -value mm  -variable probtrack(units)
-    pack $w.data.seedxyz.x $w.data.seedxyz.y $w.data.seedxyz.z $w.data.seedxyz.vox $w.data.seedxyz.mm -side left -padx 2 -pady 0 
+    frame $w.data.targets.cf    
+    checkbutton $w.data.targets.cf.sct -text "Classification targets" -variable probtrack(classify_yn)  -command " pack forget $w.data.targets.cf.tf ; if { \$probtrack(classify_yn) } { pack $w.data.targets.cf.tf } ; $w.probtrack compute_size"
+    TitleFrame $w.data.targets.cf.tf -text "Classification"    
+    listbox $w.data.targets.cf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.cf.tf.sb set"
+    scrollbar $w.data.targets.cf.tf.sb -command "$w.data.targets.cf.tf.targets yview " 
+    frame $w.data.targets.cf.tf.tb
+    button $w.data.targets.cf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] IMAGE {Select File} {fdt_add $w $w.data.targets.cf.tf.targets} {}"
+    button $w.data.targets.cf.tf.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.targets.cf.tf.targets" 
+    button $w.data.targets.cf.tf.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets.cf.tf.targets} {}"
+    button $w.data.targets.cf.tf.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets.cf.tf.targets} {}"
+    pack $w.data.targets.cf.tf.tb.add $w.data.targets.cf.tf.tb.del $w.data.targets.cf.tf.tb.imp $w.data.targets.cf.tf.tb.exp -side left
+    pack $w.data.targets.cf.tf.tb -in [$w.data.targets.cf.tf getframe ] -side bottom  -expand yes -fill x -anchor w -padx 3 -pady 3
+    pack $w.data.targets.cf.tf.targets $w.data.targets.cf.tf.sb -in [$w.data.targets.cf.tf getframe ] -side left  -expand yes -fill y -anchor w -padx 3 -pady 3
+    pack  $w.data.targets.cf.sct -side top -anchor nw
+    pack $w.data.targets.cf 
 
-    proc probtrack_toggle_reference { w } {
+
+    pack $w.data.targets.wf $w.data.targets.ef $w.data.targets.sf $w.data.targets.cf -in $w.data.targets.f -anchor w
+
+
+
+
+    set probtrack(xfm) ""
+    set probtrack(basename) "merged"
+    set probtrack(mask) "nodif_brain_mask"
+
+    proc probtrack_update_files { w filename } {
 	global probtrack
+	global FSLDIR
 
-	if { $probtrack(usereference_yn) } { 
-	    if { $probtrack(mode) == "simple" } {
-		pack $w.data.reference $w.data.xfm -in [$w.data.seedspace getframe ] \
-		    -side top -after $w.data.usereference_yn -padx 3 -pady 3
-	    } else {
-		pack $w.data.xfm -in [$w.data.seedspace getframe ] \
-		    -side top -after $w.data.usereference_yn -padx 3 -pady 3
-	    }
-	} else { 
-	    pack forget $w.data.reference
-	    pack forget $w.data.xfm
- 	}
-        $w.probtrack compute_size
-    }
-
-    checkbutton $w.data.usereference_yn -text "Seed space is not diffusion" \
-	-variable probtrack(usereference_yn) \
-	-command "probtrack_toggle_reference $w"
-
-    FileEntry $w.data.reference -textvariable probtrack(reference) -label "Seed space reference image:" -title "Choose reference image" -width 35 -filetypes IMAGE 
-
-    FileEntry $w.data.xfm -textvariable probtrack(xfm) -label "Seed to diff-space transform:" -title "Select seed-space to DTI-space transformation matrix" -width 35 -filetypes *.mat
-
-    proc probtrack_toggle_exclude { w } {
-	global probtrack
-
-	if { $probtrack(exclude_yn) } { 
-	    pack $w.data.exclude -in [$w.data.seedspace getframe ] \
-		-side top -after $w.data.exclude_yn -padx 3 -pady 3
-	} else { 
-	    pack forget $w.data.exclude
+	if { ($probtrack(bedpost_dir) != "") && ($probtrack(reference) != "") } {
+	    set probtrack(output) \
+		[ file join $probtrack(bedpost_dir) [ file tail [ exec $FSLDIR/bin/remove_ext $probtrack(reference) ] ] ]
 	}
-        $w.probtrack compute_size
     }
 
-    checkbutton $w.data.exclude_yn -text "Use exclusion mask" -variable probtrack(exclude_yn) \
-	-command "probtrack_toggle_exclude $w"
+    FileEntry $w.data.dir -textvariable probtrack(output) -label  "Output directory:" -title  "Name the output directory" -filetypes *
 
-    FileEntry $w.data.exclude -textvariable probtrack(exclude) -label "Exclusion mask:" -title "Select exclusion mask image" -width 35 -filetypes IMAGE 
+    pack $w.data.directory $w.data.seed $w.data.targets $w.data.dir -padx 3 -pady 3 -anchor nw
 
-    pack $w.data.seed $w.data.usereference_yn $w.data.exclude_yn -in\
-	[$w.data.seedspace getframe ] -padx 3 -pady 3 -side top -anchor w
-
-    probtrack_toggle_reference $w
-    probtrack_toggle_exclude $w
-
-    FileEntry $w.data.lrmask -textvariable probtrack(lrmask) -label "Low resolution mask:" -title  "Choose low resolution mask" -width 35 -filetypes IMAGE 
-
-    pack $w.data.lrmask \
-	-in [$w.data.seedspace getframe ] \
-	-side top -padx 3 -pady 3 -anchor w
-
-    TitleFrame $w.data.output -text "Ouput"
-
-   FileEntry $w.data.dir -textvariable probtrack(dir) -label  "Output directory:" -title  "Name the output directory" -width 35 -filetypes *
-
-   FileEntry $w.data.out -textvariable probtrack(output) -label "Output:" -title "Choose output file name" -width 35 -filetypes IMAGE
-
-    pack $w.data.out $w.data.dir -in [$w.data.output getframe ] -side top -expand yes -fill x -padx 3 -pady 3 -anchor w
-
-    pack $w.data.mode $w.data.directory $w.data.target $w.data.seedspace $w.data.output \
-	-in $w.data -side top -padx 3 -pady 3 -anchor nw
-
-    pack $w.data -in $dataf -side top -padx 3 -pady 3 -anchor nw -expand yes -fill both
+    pack $w.data -in  [$w.probtrack getframe data] -padx 3 -pady 3 -anchor nw -expand yes -fill both
 
     #-------- ...Options... --------
-
-    set optionsf [$w.probtrack getframe options]
-
     TitleFrame $w.options -text "Basic Options"
 
-    checkbutton $w.options.verbose \
-	    -text "Verbose" \
-	    -variable probtrack(verbose_yn)
+    checkbutton $w.options.verbose -text "Verbose" -variable probtrack(verbose_yn)
     
     set probtrack(nparticles) 5000
     LabelSpinBox $w.options.nparticles -label  "Number of samples" -textvariable probtrack(nparticles) -range {1 1e24 100 } -width 6 
 
     set probtrack(curvature) 0.2
-    LabelSpinBox $w.options.curvature -label "Curvature threshold" -textvariable probtrack(curvature) -range {0.0 1.0 0.01 } -width 4
+    LabelSpinBox $w.options.curvature -label "Curvature threshold" -textvariable probtrack(curvature) -range {0.0 1.0 0.01 }
 
     set probtrack(loopcheck_yn) 1
-    checkbutton $w.options.loopcheck \
-	-text "Loopcheck" \
-	-variable probtrack(loopcheck_yn)
+    checkbutton $w.options.loopcheck -text "Loopcheck" -variable probtrack(loopcheck_yn)
 
-    collapsible frame $w.advanced -title "Advanced Options"
+    collapsible frame $w.advanced -title "Advanced Options" -command "$w.probtrack compute_size; set dummy"
 
     set probtrack(nsteps) 2000
     LabelSpinBox $w.advanced.nsteps -label "Maximum number of steps" -textvariable probtrack(nsteps) -range {2 1000000 10 } -width 6
 
     set probtrack(steplength) 0.5
-    LabelSpinBox $w.advanced.steplength -label "Step length (mm)" -textvariable probtrack(steplength) -range {0 10000 0.1} -width 4
+    LabelSpinBox $w.advanced.steplength -label "Step length (mm)" -textvariable probtrack(steplength) -range {0.001 10000.0 0.1} 
 
     set probtrack(modeuler_yn) 0
-    checkbutton $w.advanced.modeuler \
-	-text "Use modified Euler streamlining" \
-	-variable probtrack(modeuler_yn)
+    checkbutton $w.advanced.modeuler -text "Use modified Euler streamlining" -variable probtrack(modeuler_yn)
 
-    pack \
-	$w.advanced.modeuler \
-	$w.advanced.nsteps \
-	$w.advanced.steplength \
-	-in $w.advanced.b -side top -pady 3 -padx 6 -anchor nw
+    set probtrack(pd) 0
+    checkbutton $w.advanced.pd -text "Use Distance correction" -variable probtrack(pd)
+
+    set probtrack(usef_yn) 0
+    checkbutton $w.advanced.usef -text "Use anisotropy to constrain tracking" -variable probtrack(usef_yn)
+
+    pack $w.advanced.modeuler $w.advanced.nsteps $w.advanced.steplength $w.advanced.usef $w.advanced.pd -in $w.advanced.b  -side top -pady 3 -padx 6 -anchor nw
 
     pack \
 	$w.options.nparticles \
@@ -444,7 +411,7 @@ proc fdt:dialog { w tclstartupfile } {
 	$w.options.loopcheck \
 	-in [$w.options getframe ] -side top -pady 3 -padx 6 -anchor nw
 
-    pack $w.options $w.advanced -in $optionsf -side top -pady 3 -padx 6 -anchor nw -expand yes -fill both
+    pack $w.options $w.advanced -in [$w.probtrack getframe options] -side top -pady 3 -padx 6 -anchor nw -expand yes -fill both
 
     #-------- Buttons --------
 
@@ -491,46 +458,25 @@ proc fdt:dialog { w tclstartupfile } {
 proc fdt:probtrack_mode { w } {
     global probtrack
 
-    set seedspacef [$w.data.seedspace getframe ]
-
-    pack forget $w.data.target
-    pack forget $w.data.lrmask
-    pack forget $w.data.usereference_yn
-    pack forget $w.data.reference
-    pack forget $w.data.seed2
-    pack forget $w.data.waypoint
-    pack forget $w.data.seedxyz
-    pack forget $w.data.out
-    pack $w.data.seed $w.data.usereference_yn $w.data.xfm -in $seedspacef -side top \
-	-before $w.data.exclude_yn -padx 3 -pady 3 -anchor nw
-    $w.data.seed configure -label "Seed image:"
-    pack $w.data.dir -in [$w.data.output getframe ] -side top -padx 3 -pady 3 -anchor nw
+    pack forget $w.data.seed.voxel $w.data.seed.ssf $w.data.seed.menu $w.data.seed.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
     switch -- $probtrack(mode) {
   	simple {
- 	    pack $w.data.seedxyz -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.usereference_yn -anchor nw
-	    pack $w.data.reference -in $seedspacef -side top -padx 3 -pady 3 -before $w.data.xfm -anchor nw
-	    pack $w.data.out -in [$w.data.output getframe] -side top -padx 3 -pady 3 -anchor nw
-  	    pack forget $w.data.dir
-	    pack forget $w.data.seed
+                     pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+                     $w.data.seed.reference configure -label "Seed reference image:" -title "Choose reference image" 
+                     $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
+    	}
+	seedmask {
+                     pack $w.data.seed.ssf $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+                     pack $w.data.targets.cf -in $w.data.targets.f -anchor w
+                     $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
   	}
-	maska {
-	    pack $w.data.waypoint -in $w.data -side top -padx 3 -pady 3 -after $w.data.seedspace -anchor nw
+	network {
+                     pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
 	}
-	masks {
-	    pack $w.data.seed2 -in $seedspacef -side top -after $w.data.seed
-	    $w.data.seed  configure -label "Mask image 1:"
-	    $w.data.seed2 configure -label "Mask image 2:"
-	}
-  	seeds {
-  	    pack $w.data.target -in $w.data -side top -padx 3 -pady 3 -after $w.data.seedspace -anchor nw
-  	}
-  	mat2 {
-  	    pack $w.data.lrmask -in $seedspacef \
- 		-side top -padx 3 -pady 3 -after $w.data.xfm -anchor nw
-  	}
     }
-    probtrack_toggle_reference $w
-    probtrack_toggle_exclude $w
     $w.probtrack compute_size
 }
 
@@ -554,7 +500,7 @@ proc fdt:select_tool { w } {
     }
 }
 proc fdt_monitor_short { w cmd } {
-    global debugging OSFLAVOUR
+    global debugging OSFLAVOUR FSLPARALLEL
 
     puts "$cmd"
 
@@ -623,9 +569,7 @@ proc fdt_monitor { w cmd } {
 
 proc fdt:apply { w dialog } {
 
-    global probtrack
-    global BINPATH
-    global FSLDIR
+    global probtrack BINPATH FSLDIR FSLPARALLEL
 
     switch -- $probtrack(tool) {
 	eddy_current {
@@ -698,69 +642,76 @@ proc fdt:apply { w dialog } {
 		}
 	    }
 	    if { $canwrite } {
-		puts "bedpost $bedpost(directory)"
-		fdt_monitor $w "${FSLDIR}/bin/bedpost $bedpost(directory)"
+		puts "bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
+		fdt_monitor $w "${FSLDIR}/bin/bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
 	    }
 	}
 	probtrack {
-	    global probtrack
-
+	    global probtrack env
 	    set errorStr ""
+            set FSLPARALLEL 0
+            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpost directory!" }
-	    if { $probtrack(usereference_yn) && $probtrack(xfm) == "" } { set errorStr "$errorStr You must specify the seed-diff transform!" }
+	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
-
+            if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
+	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
 	    set flags ""
 	    if { $probtrack(verbose_yn) == 1 } { set flags "$flags -V 1" }
 	    if { $probtrack(loopcheck_yn) == 1 } { set flags "$flags -l" }
-#	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
+	    if { $probtrack(usef_yn) == 1 } { set flags "$flags -f" }
 	    if { $probtrack(modeuler_yn) == 1 } { set flags "$flags --modeuler" }
+            if { $probtrack(pd) } { set flags "$flags --pd"  }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
+             
+	    if { $errorStr != "" } {
+       		MxPause $errorStr
+       		return
+      	    }
+	    set canwrite 1
+      	    if { [ file exists $probtrack(output) ] } {
+      		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
+	    }
+       	    if { $canwrite } {
+       		puts "rm -rf $probtrack(output)"
+       		exec rm -rf $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+		exec mkdir -p $probtrack(output)
+       	    }
 
-	    set tn [open "| $BINPATH/tmpnam"]
-	    gets $tn filebase
-	    close $tn
+	    set filebase $probtrack(output)/fdtx
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
 	    set copylog ""
-	    set ssopts ""
+
 	    if { $probtrack(usereference_yn) } {
-		set ssopts "--xfm=$probtrack(xfm)"
+		set flags "$flags --xfm=$probtrack(xfm)"
+      		puts $log "set probtrack(xfm) $probtrack(xfm)"
 	    }
+
 	    if { $probtrack(exclude_yn) == 1 } {
-		set ssopts "$ssopts --rubbish=$probtrack(exclude)"
+		set flags "$flags --avoid=$probtrack(exclude)"
 		puts $log "set probtrack(exclude) $probtrack(exclude)"
 	    }
-	    set basics "--forcedir -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask"	    
 
-    	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn \
-			       curvature nsteps steplength nparticles} {
-		puts $log "set probtrack($entry) $probtrack($entry)"
+	    if { $probtrack(terminate_yn) == 1 } {
+		set flags "$flags --stop=$probtrack(stop)"
+		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
 
-	    switch -- $probtrack(mode) {
-		simple {
-		    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
-		    if { $probtrack(usereference_yn) && $probtrack(reference) == "" } { 
-			set errorStr "$errorStr You must specify a seed space reference image!" 
-		    }
-		    if { $probtrack(usereference_yn) == 1 } {
-			set ssopts "--xfm=$probtrack(xfm) --seedref=$probtrack(reference)"
-			puts $log "set probtrack(reference) $probtrack(reference)"
-			puts $log "set probtrack(xfm) $probtrack(xfm)"
-		    } else {
-			set ssopts ""
-		    }
-		    if { $probtrack(exclude_yn) == 1 } {
-			set ssopts "$ssopts --rubbish=$probtrack(exclude)"
-		    }
+	    set flags "$flags --forcedir --opd -s $probtrack(bedpost_dir)/merged -m $probtrack(bedpost_dir)/nodif_brain_mask  --dir=$probtrack(output)" 
+    	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
+		puts $log "set probtrack($entry) $probtrack($entry)"
+	    }
+            switch $probtrack(mode) {
+	       simple { 
 		    set fd [ open "${filebase}_coordinates.txt" w ]
+		    set x $probtrack(x)
+		    set y $probtrack(y)
+		    set z $probtrack(z)
 		    if { $probtrack(units) == "mm" } {
-			set x $probtrack(x)
-			set y $probtrack(y)
-			set z $probtrack(z)
-			if { $probtrack(usereference_yn) && $probtrack(reference) != "" } {
+			if { $probtrack(reference) != "" } {
 			    mm_to_voxels x y z $probtrack(reference)
 			} else {
 			    mm_to_voxels x y z [ file join $probtrack(bedpost_dir) nodif_brain_mask ]
@@ -775,219 +726,91 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-		    puts $log "set probtrack(output) $probtrack(output)"
+                    set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
+	       } 
+               seedmask {
+		     if { $probtrack(bcyn) } { 
+			 fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
+			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
+			 fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+                       set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
+			 fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
+			 fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
+                   }
+                   set flags "--mode=seedmask -x $probtrack(reference) $flags"  
+	       }
+	       network {
+                   fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
+		   set flags "--network --mode=seedmask -x $probtrack(output)/masks.txt $flags"
+	       }
+	    }
 
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
+       	    if { $canwrite } {
+       		set copylog "fdt.log"
 
-		    set canwrite 1
-		    if { [ file exists $probtrack(output) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(output)"
-			    exec rm -rf $probtrack(output)
-			}
+	        if { $probtrack(waypoint_yn) == 1 } {
+                    fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
+                    set flags "$flags --waypoints=$probtrack(output)/waypoints.txt "
+	        } 
+	        if { $probtrack(classify_yn) == 1 } {
+                    fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
+                    set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
+                }
+                
+                #TODO
+
+	    
+		if { $FSLPARALLEL } {
+                    set script [open "${filebase}_script.sh" w]
+                    puts "${filebase}_script.sh"
+                    exec chmod 777 ${filebase}_script.sh
+                    puts $script "#!/bin/sh"
+                    puts $script "cd $probtrack(output)"
+                    puts $script "$FSLDIR/bin/probtrackx $flags"
+                    if { $probtrack(classify_yn) == 1 } {
+			puts $script "$FSLDIR/bin/find_the_biggest seeds_to_* biggest >> fdt_seed_classification.txt"
 		    }
-		    if { $canwrite } {
-			set copylog "fdt.log"
-			fdt_monitor_short $w "$FSLDIR/bin/probtrack --mode=simple -x ${filebase}_coordinates.txt $basics $ssopts $flags -o $probtrack(output)"
+                    if { $probtrack(mode) == "simple" } {
+                    puts $script "rm ${filebase}_coordinates.txt"
 		    }
+                    puts $script "mv $logfile $copylog"
+                    puts $script "rm ${filebase}_script.sh"
+		    close $script
+		    exec batch -q long.q ${filebase}_script.sh
+		} else {
+
+		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
+		    if { $probtrack(classify_yn) == 1 } {
+			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+		    set script [open "${filebase}_script.sh" w]
+                    puts "${filebase}_script.sh"
+                    exec chmod 777 ${filebase}_script.sh
+                    puts $script "#!/bin/sh"
+                    puts $script "$FSLDIR/bin/probtrackx $flags"
+		    if { $probtrack(classify_yn) == 1 } {
+			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+		    }
+                    puts $script "rm ${filebase}_coordinates.txt"
+                    puts $script "mv $logfile $copylog"
+                    puts $script "rm ${filebase}_script.sh"
+		    close $script
+		    }
+       	    }
+            if { !$FSLPARALLEL } {
+		if { $probtrack(mode) == "simple" } {
 		    puts "rm ${filebase}_coordinates.txt"
 		    exec rm ${filebase}_coordinates.txt
 		}
-		all {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=seedmask -x $probtrack(seed) $basics $ssopts $flags -o fdt_paths --dir=$probtrack(dir)"
-		    }
+		close $log
+		if { $copylog != "" } {
+		    puts "mv $logfile $copylog"
+		    exec mv $logfile $copylog
+		} else {
+		    puts "rm $logfile"
+		    exec rm $logfile
 		}
-		masks {
-		    if { $probtrack(seed2) == "" } { set errorStr "$errorStr You must select a target image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(seed2) $probtrack(seed2)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=twomasks_symm --seed=$probtrack(seed) --mask2=$probtrack(seed2) $basics $ssopts $flags -o fdt_paths --dir=$probtrack(dir)"
-		    }
-		}
-		maska {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			puts $log "$w.data.watpoints load \"$probtrack(dir)/waypoints.txt\""
-			$w.data.waypoints save "$probtrack(dir)/waypoints.txt"
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=waypoints --seed=$probtrack(seed) --mask2=${probtrack(dir)}/waypoints.txt $basics $ssopts $flags -o fdt_paths --dir=$probtrack(dir)"
-		    }
-		}
-		seeds {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			puts $log "$w.data.targets load \"$probtrack(dir)/targets.txt\""
-			$w.data.targets save "$probtrack(dir)/targets.txt"
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=seeds_to_targets -x $probtrack(seed) $basics $ssopts $flags --targetmasks=${probtrack(dir)}/targets.txt --dir=$probtrack(dir)"
-		    }
-		}
-		mat1 {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=matrix1 -x $probtrack(seed) $basics $ssopts $flags -o fdt_matrix --dir=$probtrack(dir)"
-		    }
-		}
-		mat2 {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $probtrack(lrmask) == "" } { set errorStr "$errorStr You must specify the low resolution mask!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-		    puts $log "set probtrack(lrmask) $probtrack(lrmask)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=matrix2 -x $probtrack(seed) $basics $ssopts --lrmask=$probtrack(lrmask) $flags -o fdt_matrix --dir=$probtrack(dir)"
-		    }
-		}
-		mskmat {
-		    if { $probtrack(seed) == ""  } { set errorStr "$errorStr You must specify a seed image!" }
-		    if { $probtrack(dir) == ""  } { set errorStr "$errorStr You must specify the output directory!" }
-		    if { $errorStr != "" } {
-			MxPause $errorStr
-			return
-		    }
-		    puts $log "set probtrack(seed) $probtrack(seed)"
-		    puts $log "set probtrack(dir) $probtrack(dir)"
-
-		    set canwrite 1
-		    if { [ file exists $probtrack(dir) ] } {
-			set canwrite [  YesNoWidget "Overwrite $probtrack(dir)?" Yes No ]
-			if { $canwrite } {
-			    puts "rm -rf $probtrack(dir)"
-			    exec rm -rf $probtrack(dir)
-			}
-		    }
-		    if { $canwrite } {
-			puts "mkdir -p $probtrack(dir)"
-			exec mkdir -p $probtrack(dir)
-			set copylog "$probtrack(dir)/fdt.log"
-			fdt_monitor $w "$FSLDIR/bin/probtrack --mode=maskmatrix -x $probtrack(seed) $basics $ssopts $flags -o fdt_matrix --dir=$probtrack(dir)"
-		    }
-		}
-	    }
-	    close $log
-	    if { $copylog != "" } {
-		puts "mv $logfile $copylog"
-		exec mv $logfile $copylog
-	    } else {
-		puts "rm $logfile"
-		exec rm $logfile
 	    }
 	}
 	registration {
@@ -1049,7 +872,7 @@ proc fdt:apply { w dialog } {
     }
 
     if { $canwrite } { 
-	MxPause "  Done!  "
+	if { $FSLPARALLEL } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
 	update idletasks
     }
 
