@@ -52,7 +52,7 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrack "ProbTrackX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFit Reconstruct diffusion tensors" 
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrack "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
     $w.tool.menu.menu entryconfigure 4 -state disabled -background black
     pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 

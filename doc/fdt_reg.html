@@ -10,21 +10,12 @@ href="../fsl.css"><TITLE>FSL</TITLE></HEAD>
 <p>If tractography results are to be stored in any space other than diffusion
 space then registration must be run.
 
-<p>Registration within Fdt uses <a href="http://www.fmrib.ox.ac.uk/fsl/flirt/index.html" target="_top">flirt</a>. Registration can only be
-applied after Bedpost has been run.  Typically, registration will be run
-between three spaces:
-<ul><li>Diffusion space (using the nodif_brain image in the Bedpost directory)</li>
-<li>Structural space (using the struct image in the Bedpost
-directory, e.g., the space of a high resolution T1-weighted image of
-the same subject)</li>
-<li>Standard space (by default, the MNI152 brain stored within $FSLDIR/data/standard)</li></ul>
+<p>Registration within Fdt uses <a href="http://www.fmrib.ox.ac.uk/fsl/flirt/index.html" target="_top">flirt</a>. Registration can only be applied after <b>bedpostx</b> has been run.  Typically, registration will be run between three spaces:
+<ul><li>Diffusion space (using the nodif_brain image in the bedpostX directory)</li>
+<li>Structural space (using the struct image in the bedpostX directory, e.g., the space of a high resolution T1-weighted image of the same subject)</li>
+<li>Standard space (by default, the MNI152 brain stored within $FSLDIR/etc/standard)</li></ul>
 
-<p>Note that struct must have had <a href="http://www.fmrib.ox.ac.uk/fsl/bet/index.html" target="_top">bet</a> applied.  The nodif_brain image should be
-the brain extracted version of the nodif image that is automatically stored in
-the Bedpost directory.  The user will
-have to manually apply bet to this image after running bedpost and before
-running registration.  (it is important that the user check the quality of bet
-results on these images and adjust the settings in bet where appropriate).
+<p>Note that struct must have had <a href="http://www.fmrib.ox.ac.uk/fsl/bet/index.html" target="_top">bet</a> applied.  The nodif_brain image should be the brain extracted version of the nodif image that is automatically stored in the bedpostX directory.  The user will have to manually apply bet to this image after running <b>bedpostx</b> and before running registration.  (it is important that the user check the quality of bet results on these images and adjust the settings in bet where appropriate).
 
 <p>Transformation matrices, and their inverses, will be derived from diffusion to structural space and
 from structural to standard space.  Relevant matrices will be concatenated to
@@ -43,4 +34,4 @@ derived using 6 degrees of fredom, the mutual information cost
 function and normal search; transformations matrices between structural and standard space
 are derived using 12 degrees of freedom, the correlation ratio cost
 function and normal search.  These parameters may be adjusted if required
-using the drop down menus in the reigistration panel.
+using the drop down menus in the registration panel.

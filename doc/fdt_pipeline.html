@@ -17,12 +17,12 @@ would consist of:
 <li>Any study or scanner-specific pre-processing (e.g., averaging of multiple
 acquisitions, removal of images affected by large artifacts).  This would be
 done manually by the user.</li>
-<li><a href="fdt_eddy.html">Eddy current correction</a> using FDT (around 3 minutes per volume).</li>
-<li><a href="fdt_dtifit.html">DTIFit</a> - Fitting of diffusion tensors on corrected data using dtifit within FDT to check data quality (1 minute)
-<li><a href="fdt_bedpost.html">Bedpost</a> - Fitting of the probabilistic diffusion model on corrected data 
+<li><a href="fdt_eddy.html">eddy current correction</a> using FDT (around 3 minutes per volume).</li>
+<li><a href="fdt_dtifit.html">dtifit</a> - Fitting of diffusion tensors on corrected data using dtifit within FDT to check data quality (1 minute)
+<li><a href="fdt_bedpostx.html">bedpostx</a> - Fitting of the probabilistic diffusion model on corrected data 
 (20 hours, or less if parallelised)</li>
-<li><a href="fdt_reg.html">Registration</a> -  (3-6 minutes) </li>
-<li><a href="fdt_probtrack.html">ProbTrack</a> - Probabilistic tractography run on the outputs of bedpost (endless.. - depends very much on what the
+<li><a href="fdt_reg.html">registration</a> -  (3-6 minutes) </li>
+<li><a href="fdt_probtrackx.html">probtrackx</a> - Probabilistic tractography run on the outputs of bedpost (endless.. - depends very much on what the
 user wishes to do.  Generating a connectivity distribution from a single voxel
 of interest takes about 10 seconds)</li>
 <li>Further post-processing of ProbTrack outputs can be carried out if
