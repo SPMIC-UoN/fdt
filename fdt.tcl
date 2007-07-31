@@ -645,6 +645,13 @@ proc fdt:apply { w dialog } {
 	    }
 	    if { $canwrite } {
 		puts "bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
+                
+                set filebase $bedpost(directory)/bedpostcom
+	        set logfile "${filebase}_log.tcl"
+	        set log [open "$logfile" w]
+	        puts $log "bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
+                close $log
+
 		fdt_monitor $w "${FSLDIR}/bin/bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
 	    }
 	}
