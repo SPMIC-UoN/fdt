@@ -1,9 +1,9 @@
 
-#   FSL interface for FDT (BEDPOST and ProbTrack)
+#   FSL interface for FDT (BEDPOSTX and PROBTRACKX)
 #
-#   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney and Matthew Webster FMRIB Image Analysis Group
+#   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney, Matthew Webster and Saad Jbabdi FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006 University of Oxford
+#   Copyright (C) 2007 University of Oxford
 #
 #   TCLCOPYRIGHT
 
@@ -76,7 +76,7 @@ proc fdt:dialog { w tclstartupfile } {
 	}
     }
 
-    FileEntry $w.registration.directory -textvariable registration(directory) -label "BEDPOST directory:" -title "Choose directory" -filetypes * -command "registration_set_directory $w" 
+    FileEntry $w.registration.directory -textvariable registration(directory) -label "BEDPOSTX directory:" -title "Choose directory" -filetypes * -command "registration_set_directory $w" 
 
     frame       $w.registration.struct
     checkbutton $w.registration.struct.yn -variable registration(struct_yn) -command "registration_packframe $w"
@@ -213,7 +213,7 @@ proc fdt:dialog { w tclstartupfile } {
     $w.probtrack insert 1 options -text "Options"
     #-------- Mode specific option --------
     frame $w.data
-    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOST directory" -title "Choose BEDPOST directory" -filetypes * -command "probtrack_update_files $w"
+    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOSTX directory" -title "Choose BEDPOSTX directory" -filetypes * -command "probtrack_update_files $w"
 
     TitleFrame  $w.data.seed -text "Seed Space"
     optionMenu2 $w.data.seed.menu probtrack(mode) -command "fdt:probtrack_mode $w" simple "Single voxel" seedmask "Single mask" network "Multiple masks"
@@ -637,9 +637,9 @@ proc fdt:apply { w dialog } {
 
 	    set canwrite 1
 	    if { [file exists ${bedpost(directory)}.bedpost ] } {
-		set canwrite [ YesNoWidget "Overwrite ${bedpost(directory)}.bedpost?" Yes No ]
+		set canwrite [ YesNoWidget "Overwrite ${bedpost(directory)}.bedpostX?" Yes No ]
 		if { $canwrite } {
-		    puts "rm -rf ${bedpost(directory)}.bedpost"
+		    puts "rm -rf ${bedpost(directory)}.bedpostX"
 		    catch { exec rm -rf ${bedpost(directory)}.bedpost } errmsg
 		}
 	    }
@@ -660,7 +660,7 @@ proc fdt:apply { w dialog } {
 	    set errorStr ""
             set FSLPARALLEL 0
             if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
-	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpost directory!" }
+	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
@@ -826,7 +826,7 @@ proc fdt:apply { w dialog } {
 	    global registration
 
 	    set errorStr ""
-	    if { $registration(directory) == ""  } { set errorStr "You must specify the bedpost directory!" }
+	    if { $registration(directory) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $registration(struct_yn) && $registration(struct_image) == ""  } { set errorStr "$errorStr You must specify the structural image!" }
 	    if { $registration(standard_yn) && $registration(standard_image) == ""  } { set errorStr "$errorStr You must specify the standard image!" }
 	    if { $errorStr != "" } {
