@@ -45,8 +45,8 @@ INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 
-SGEBEDPOST = bedpost bedpost_datacheck
-SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh
+SGEBEDPOST = bedpost 
+SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
 SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
@@ -58,7 +58,7 @@ FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
 RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} probtrack_old
+all: ${XFILES} ${FXFILES} probtrack_old 
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
