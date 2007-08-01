@@ -13,7 +13,6 @@ Usage() {
 
 [ "$3" = "" ] && Usage
 
-echo cock
 
 input=`${FSLDIR}/bin/remove_ext ${1}`
 output=`${FSLDIR}/bin/remove_ext ${2}`
