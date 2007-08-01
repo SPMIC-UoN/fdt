@@ -17,7 +17,7 @@ Usage() {
     echo "Usage: bedpostx <subject directory> [options]"
     echo ""
     echo "expects to find bvals and bvecs in subject directory"
-    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo "expects to find data and nodif_brain_mask in subject directory"
     echo "options:"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less fibres killed per voxel, default 1)"
@@ -80,11 +80,6 @@ fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
 	echo "${subjdir}/data not found"
-	exit 1
-fi
-
-if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
-	echo "${subjdir}/nodif not found"
 	exit 1
 fi
 
