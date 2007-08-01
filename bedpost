@@ -6,6 +6,10 @@
 
 echo
 echo "Error - bedpost has been superceded by bedpostx! Please instead run:"
-echo bedpostx $@ -n 1
+if [ "$1" != "" ];then
+    echo bedpostx $@ -n 1
+else
+    echo bedpostx \<dir\> -n 1
+fi
 echo
 
