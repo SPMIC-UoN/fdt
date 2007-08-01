@@ -20,8 +20,7 @@ href="../fsl.css"><TITLE>FSL</TITLE></HEAD>
 <b>Input directory:</b> Use the browse button to select an input directory. That directory must contain the following files:
 <ul>
 <li><b>data</b>: A 4D series of data volumes.  This will include diffusion-weighted volumes and volume(s) with no diffusion weighting.</li>
-<li><b>nodif</b>: 3D volume with no diffusion weighting.</li>
-<li><b>nodif_brain_mask</b>: 3D binary brain mask volume derived from running <a href="../bet2/index.html" target="_top">bet</a> on nodif.</li>
+<li><b>nodif_brain_mask</b>: 3D binary brain mask volume derived from running <a href="../bet2/index.html" target="_top">bet</a> on nodif (i.e. on a volume with no diffusion weighting).</li>
 <li><b>bvecs</b>:  A text file containing a list of gradient directions applied during diffusion weighted volumes. The order of entries in this file must match the order of volumes in <b>data</b>.
 <br>
 The format is<pre>
@@ -59,8 +58,6 @@ anisotropy  </li>
 <ul><li>Note that in each voxel, fibres are ordered according to a decreasing mean f-value</li></ul>
 <li><b>dyads&#60;i&#62;</b> - Mean of PDD distribution in vector form.
  Note that this file can be loaded into fslview for easy <a href="fdt_display.html">viewing of diffusion directions</a></li>
-<li><b>nodif</b> - Single volume with no diffusion weighting -
-copied from input directory </li>
 <li><b>nodif_brain</b> - brain extracted version of nodif - copied
 from input directory</li>
 <li><b>nodif_brain_mask</b> - binary mask created from nodif_brain -
