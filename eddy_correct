@@ -13,6 +13,8 @@ Usage() {
 
 [ "$3" = "" ] && Usage
 
+echo cock
+
 input=`${FSLDIR}/bin/remove_ext ${1}`
 output=`${FSLDIR}/bin/remove_ext ${2}`
 ref=${3}
@@ -25,7 +27,7 @@ fi
 fslroi $input $output $ref 1
 
 fslsplit $input
-full_list=`${FSLDIR}/bin/imglob -oneperimage vol*`
+full_list=`${FSLDIR}/bin/imglob -oneperimage vol????.*`
 
 for i in $full_list ; do
     echo processing $i
@@ -35,5 +37,5 @@ done
 
 fslmerge -t $output $full_list
 
-/bin/rm vol*
+/bin/rm vol????.*
 
