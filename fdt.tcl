@@ -881,7 +881,7 @@ proc fdt:apply { w dialog } {
     }
 
     if { $canwrite } { 
-	if { $FSLPARALLEL && { $probtrack(tool) == "bedpost" || $probtrack(tool)=="probtrack" } } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
+	if { { $FSLPARALLEL == 1 } && { $probtrack(tool) == "bedpost" || $probtrack(tool)=="probtrack" } } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
 	update idletasks
     }
 
