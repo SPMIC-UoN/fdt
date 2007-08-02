@@ -36,7 +36,7 @@ proc mm_to_voxels { X Y Z mask } {
 proc fdt:dialog { w tclstartupfile } {
 
     global eddy bedpost registration dtifit probtrack HTMLPATH FSLDIR VERSION INMEDX VARS
-    set probtrack(tool) "probtrack"
+    set probtrack(tool) "probtrackx"
 
     if [winfo exists $w] {
         wm deiconify $w
@@ -52,7 +52,7 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrack "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpostx "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrackx "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
     $w.tool.menu.menu entryconfigure 4 -state disabled -background black
     pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 
@@ -489,9 +489,9 @@ proc fdt:select_tool { w } {
     pack forget $w.bedpost
     pack forget $w.registration
     pack forget $w.dtifit
-    if {$probtrack(tool) == "bedpost"} { 
+    if {$probtrack(tool) == "bedpostx"} { 
 	pack $w.bedpost -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$probtrack(tool) == "probtrack"}  { 
+    } elseif {$probtrack(tool) == "probtrackx"}  { 
 	pack $w.probtrack -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     } elseif {$probtrack(tool) == "dtifit"}  { 
 	pack $w.dtifit -in $w.opts -side top -padx 3 -pady 3 -anchor nw
@@ -625,7 +625,7 @@ proc fdt:apply { w dialog } {
 		fdt_monitor_short $w "${FSLDIR}/bin/dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
 	    }
 	}
-	bedpost {
+	bedpostx {
 	    global bedpost
 
 	    set errorStr ""
@@ -655,7 +655,7 @@ proc fdt:apply { w dialog } {
 		fdt_monitor $w "${FSLDIR}/bin/bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
 	    }
 	}
-	probtrack {
+	probtrackx {
 	    global probtrack env
 	    set errorStr ""
             set FSLPARALLEL 0
@@ -881,7 +881,7 @@ proc fdt:apply { w dialog } {
     }
 
     if { $canwrite } { 
-	if { { $FSLPARALLEL == 1 } && { $probtrack(tool) == "bedpost" || $probtrack(tool)=="probtrack" } } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
+	if { $FSLPARALLEL == 1  && [ string match *x* $probtrack(tool) ]} { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
 	update idletasks
     }
 
