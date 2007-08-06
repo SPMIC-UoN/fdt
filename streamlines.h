@@ -69,6 +69,7 @@ namespace TRACT{
 	pop_waymasks();
     }
 
+
     inline int nfibres() const {return vols.nfibres();}
     inline const float get_x_seed() const {return m_x_s_init;}
     inline const float get_y_seed() const {return m_y_s_init;}

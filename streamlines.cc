@@ -201,17 +201,9 @@ namespace TRACT{
     
     bool accept_path=true;
     if(m_passed_flags.size()!=0){
-      if(!opts.network.value()){
-	for(unsigned int i=0; i<m_passed_flags.size();i++)
-	  if(!m_passed_flags[i])
-	    accept_path=false;
-      }
-      else{
-	accept_path=false;
-	for(unsigned int i=0; i<m_passed_flags.size();i++)
-	  if(m_passed_flags[i])
-	    accept_path=true;
-      }
+      for(unsigned int i=0; i<m_passed_flags.size();i++)
+	if(!m_passed_flags[i])
+	  accept_path=false;
     }   
     if(rubbish_passed)
       accept_path=false;
@@ -627,7 +619,7 @@ namespace TRACT{
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
     if(fibst == -1){
-      fibst=m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+      fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
     }
     if(opts.randfib.value()){
       float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);

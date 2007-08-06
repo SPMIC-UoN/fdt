@@ -42,17 +42,18 @@ void nmasks()
   Counter counter(seeds[0],stline);
   counter.initialise();
   Seedmanager seedmanager(counter);
+  
 
-  for(unsigned int i=0;i<seeds.size();i++){
-    stline.clear_waymasks();
+  for(unsigned int i=0;i<seeds.size();i++){ 
     tmpvol=0;
-    for(unsigned int j=0;j<seeds.size();j++){
+    for(unsigned int j=0;j<seeds.size();j++)
       if(j!=i)
-	tmpvol += seeds[j];
-      //	stline.add_waymask(seeds[j]);
-    }
+	tmpvol+=seeds[j];
+    if(i<=1)
+      stline.pop_waymasks();
     stline.add_waymask(tmpvol);
 
+    cout << "Tracking from mask " << i+1 << endl;
     for(int z=0;z<seeds[i].zsize();z++){
       for(int y=0;y<seeds[i].ysize();y++){
 	for(int x=0;x<seeds[i].xsize();x++){
