@@ -187,7 +187,7 @@ class probtrackxOptions {
 	 string("Use anisotropy to constrain tracking"), 
 	 false, no_argument),
   randfib(string("--randfib"), false, 
-	 string("Select randomly from the first two fibres when seeding"), 
+	 string("Select randomly from one of the fibres"), 
 	 false, no_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 

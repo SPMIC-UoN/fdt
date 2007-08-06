@@ -688,7 +688,7 @@ proc fdt:apply { w dialog } {
 		exec mkdir -p $probtrack(output)
        	    }
 
-	    set filebase $probtrack(output)/fdtx
+	    set filebase $probtrack(output)/fdt
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
@@ -738,15 +738,17 @@ proc fdt:apply { w dialog } {
                     set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
-		     if { $probtrack(bcyn) } { 
-			 fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
-			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
-			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
-			 fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
-                       set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
-			 fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
-			 fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
-                   }
+		   if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+		       if { $probtrack(bcyn) } { 
+			   fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
+			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
+			   fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+			   set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
+			   fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
+			   fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
+		       }
+		   }
                    set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
 	       network {
