@@ -106,7 +106,7 @@ proc fdt:dialog { w tclstartupfile } {
     set registration(standard_yn) 1
     set registration(standard_dof) 12
     set registration(standard_search) 90
-    set registration(standard_image) [ file join ${FSLDIR} etc standard avg152T1_brain ]
+    set registration(standard_image) [ file join ${FSLDIR} data standard MNI152_T1_2mm_brain ]
 
     pack $w.registration.directory $w.registration.struct $w.registration.standard -side top -padx 3 -pady 3 -anchor w
 
