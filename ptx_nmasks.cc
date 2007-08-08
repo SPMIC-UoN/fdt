@@ -49,7 +49,7 @@ void nmasks()
     for(unsigned int j=0;j<seeds.size();j++)
       if(j!=i)
 	tmpvol+=seeds[j];
-    if(i<=1)
+    if(i>=1)
       stline.pop_waymasks();
     stline.add_waymask(tmpvol);
 
