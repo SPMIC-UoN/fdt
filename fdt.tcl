@@ -1,4 +1,3 @@
-
 #   FSL interface for FDT (BEDPOSTX and PROBTRACKX)
 #
 #   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney, Matthew Webster and Saad Jbabdi FMRIB Image Analysis Group
@@ -216,7 +215,12 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOSTX directory" -title "Choose BEDPOSTX directory" -filetypes * -command "probtrack_update_files $w"
 
     TitleFrame  $w.data.seed -text "Seed Space"
-    optionMenu2 $w.data.seed.menu probtrack(mode) -command "fdt:probtrack_mode $w" simple "Single voxel" seedmask "Single mask" network "Multiple masks"
+    frame $w.data.seed.menuf
+ 
+    optionMenu2 $w.data.seed.menuf.menu probtrack(mode) -command "fdt:probtrack_mode $w" simple "Single voxel" seedmask "Single mask" network "Multiple masks"
+    FileEntry $w.data.seed.menuf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
+    pack $w.data.seed.menuf.menu $w.data.seed.menuf.reference -side left -anchor w -pady 2
+
     set probtrack(x) 0
     set probtrack(y) 0
     set probtrack(z) 0
@@ -228,12 +232,14 @@ proc fdt:dialog { w tclstartupfile } {
     LabelSpinBox $w.data.seed.voxel.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } 
     radiobutton $w.data.seed.voxel.vox -text "vox" -value vox -variable probtrack(units)
     radiobutton $w.data.seed.voxel.mm  -text "mm"  -value mm  -variable probtrack(units)
-    FileEntry $w.data.seed.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
+    
 
     option add *seed*FileEntry*labf*width 24
 
     frame  $w.data.seed.ssf
-    checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " pack forget $w.data.seed.ssf.xfm  ; if { \$probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm } ; $w.probtrack compute_size"
+    set probtrack(mode) simple
+    set probtrack(mode2) simple
+    checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " fdt:probtrack_mode $w "
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
     pack $w.data.seed.ssf.ssd -side top -anchor nw
 
@@ -244,10 +250,11 @@ proc fdt:dialog { w tclstartupfile } {
 	LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
 	pack $w.data.seed.bcf.bc -side left -anchor w
     }
-
+    pack $w.data.seed.menuf -in $w.data.seed.f -side top -anchor w -pady 2
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
-    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+    
+
 
     TitleFrame $w.data.seed.target -text "Masks list"    
     listbox $w.data.seed.targets -height 6 -width 50 -yscrollcommand "$w.data.seed.sb set"
@@ -442,7 +449,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     $w.probtrack raise data 
     fdt:select_tool $w 
-    set probtrack(mode) simple
+    
     fdt:probtrack_mode $w
 
     update idletasks
@@ -457,13 +464,14 @@ proc fdt:dialog { w tclstartupfile } {
 proc fdt:probtrack_mode { w } {
     global probtrack
 
-    pack forget $w.data.seed.voxel $w.data.seed.ssf $w.data.seed.menu $w.data.seed.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.menuf.menu $w.data.seed.menuf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
     switch -- $probtrack(mode) {
   	simple {
                      pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
-                     $w.data.seed.reference configure -label "Seed reference image:" -title "Choose reference image" 
+                     pack $w.data.seed.menuf.menu -side left -anchor w -pady 2
+	             if { $probtrack(usereference_yn) } { pack $w.data.seed.menuf.reference -side left -anchor w -pady 2 }
+                     $w.data.seed.menuf.reference configure -label "Seed reference image:" -title "Choose reference image" 
                      $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
@@ -471,14 +479,16 @@ proc fdt:probtrack_mode { w } {
 	    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
 		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
 	    }
-	    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+	    pack $w.data.seed.menuf.menu $w.data.seed.menuf.reference -side left -anchor w -pady 2
 	    pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-	    $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
+	    $w.data.seed.menuf.reference configure -label "Mask image:" -title "Choose mask image" 
   	}
 	network {
-                     pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack  $w.data.seed.target $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack  $w.data.seed.menuf.menu -side bottom -anchor w -pady 2
 	}
     }
+ if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side left -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
