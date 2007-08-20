@@ -21,5 +21,5 @@ ${FSLDIR}/bin/xfibres\
  --mask=$subjdir/nodif_brain_mask_slice_$slicezp\
  -b $subjdir/bvals -r $subjdir/bvecs\
  --forcedir --logdir=$subjdir.bedpostX/diff_slices/data_slice_$slicezp\
- --fudge=$fudge --nj=5000 --bi=$bi --se=100 --upe=24 --nfibres=$nfibres > $subjdir.bedpostX/logs/log$slicezp  && echo Done
+ --fudge=$fudge --nj=1250 --bi=$bi --se=25 --upe=24 --nfibres=$nfibres > $subjdir.bedpostX/logs/log$slicezp  && echo Done
 
