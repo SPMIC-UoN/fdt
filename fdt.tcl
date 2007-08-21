@@ -803,21 +803,9 @@ proc fdt:apply { w dialog } {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
 		    if { $probtrack(classify_yn) == 1 } {
-			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* biggest >> $probtrack(output)/fdt_seed_classification.txt"
 		    }
-		    set script [open "${filebase}_script.sh" w]
-                    puts "${filebase}_script.sh"
-                    exec chmod 777 ${filebase}_script.sh
-                    puts $script "#!/bin/sh"
-                    puts $script "$FSLDIR/bin/probtrackx $flags"
-		    if { $probtrack(classify_yn) == 1 } {
-			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
-		    }
-                    puts $script "rm ${filebase}_coordinates.txt"
-                    puts $script "mv $logfile $copylog"
-                    puts $script "rm ${filebase}_script.sh"
-		    close $script
-		    }
+		}
        	    }
             if { !$FSLPARALLEL } {
 		if { $probtrack(mode) == "simple" } {
