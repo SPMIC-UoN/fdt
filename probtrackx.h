@@ -8,3 +8,4 @@
 #include "ptx_seedmask.h"
 #include "ptx_twomasks.h"
 #include "ptx_nmasks.h"
+#include "ptx_meshmask.h"

@@ -43,7 +43,8 @@ int main ( int argc, char **argv ){
     else{ seedmask(); }
   }
   else if(opts.network.value()){ nmasks(); }
-  else {};
+  else if(opts.meshfile.value()!=""){meshmask();}
+  else {cout << "exit without doing anything"<<endl;return 0;};
 
   //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
 

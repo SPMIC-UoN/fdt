@@ -204,7 +204,7 @@ namespace TRACTVOLSX{
 	return th_ph_f;
       }
 
-      ColumnVector dimensions(){
+      ColumnVector dimensions() const{
 	ColumnVector dims(3);
 	dims << (*thsamples[0]).xdim() <<(*thsamples[0]).ydim() << (*thsamples[0]).zdim();
 	return dims;
