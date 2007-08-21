@@ -74,7 +74,7 @@ namespace TRACT{
   }
   
   
-  bool Streamliner::streamline(const float& x_init,const float& y_init,const float& z_init, const ColumnVector& dim_seeds,const int& fibst){ 
+  bool Streamliner::streamline(const float& x_init,const float& y_init,const float& z_init, const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir){ 
     
     //fibst tells tractvolsx which fibre to start with if there are more than one..
     //x_init etc. are in seed space...
@@ -92,6 +92,10 @@ namespace TRACT{
     m_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
+    if(opts.meshfile.value()!="")
+      m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
+    
+
     int partlength=0;
     bool rubbish_passed=false;
     bool stop_flag=false;
@@ -100,7 +104,9 @@ namespace TRACT{
     for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
       m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
     }
-    
+
+    Matrix DTI_to_Seeds(4,4);
+    DTI_to_Seeds = m_Seeds_to_DTI.i();
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
 	///////////////////////////////////
@@ -126,7 +132,7 @@ namespace TRACT{
 	
 	x=m_part.x();y=m_part.y();z=m_part.z();
 	xyz_dti <<x<<y<<z;
-	xyz_seeds=vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,m_Seeds_to_DTI.i());
+	xyz_seeds=vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,DTI_to_Seeds);
 	int x_s =(int)round((float)xyz_seeds(1));
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
@@ -614,8 +620,13 @@ namespace TRACT{
   
   }
   
-  // this function now returns the total number of pathways that survived a streamlining (SJ)
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
+    ColumnVector dir(3);
+    dir=0;
+    return run(x,y,z,onewayonly,fibst,dir);
+  }
+  // this function now returns the total number of pathways that survived a streamlining (SJ)
+  int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst,const ColumnVector& dir){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
     if(fibst == -1){
@@ -628,7 +639,7 @@ namespace TRACT{
       //fibst=0;
       //else
       //fibst=1;// fix this for > 2 fibres
-    }
+    } 
     
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
@@ -638,7 +649,7 @@ namespace TRACT{
       m_stline.reset();
       bool forwardflag=false,backwardflag=false;
       if(!onewayonly){
-	if(m_stline.streamline(x,y,z,m_seeddims,fibst)){ //returns whether to count the streamline or not
+	if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();
@@ -646,7 +657,7 @@ namespace TRACT{
 	}
 	m_stline.reverse();
       }
-      if(m_stline.streamline(x,y,z,m_seeddims,fibst)){
+      if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){
 	backwardflag=true;
 	m_counter.count_streamline();
 	//nlines++; //count twice ?

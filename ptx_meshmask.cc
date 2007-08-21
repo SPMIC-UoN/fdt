@@ -18,7 +18,6 @@ void meshmask()
 { 
   probtrackxOptions& opts =probtrackxOptions::getInstance();
 
-
   // load seed mesh
   Mesh mseeds;
   mseeds.load(opts.meshfile.value());
@@ -33,7 +32,6 @@ void meshmask()
   seeds=0;
 
 
-
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();
   Streamliner stline;
@@ -41,39 +39,43 @@ void meshmask()
   counter.initialise();
   Seedmanager seedmanager(counter);
 
-  Matrix Seeds_to_DTI;
-  if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
-  }
-  else{
-    Seeds_to_DTI=Identity(4);
-  }
-  ColumnVector mni_origin(3),fs_coord_mm(3),xyz_dti;
-  mni_origin << 92 << 128 << 37;
+
+  ColumnVector fs_coord_mm(4),xyz_vox,seeddim(3);
+  seeddim << seeds.xdim() << seeds.ydim() << seeds.zdim();
+  ColumnVector dir(3);
+  int keeptotal=0;
+
   for(vector<Mpoint*>::iterator i = mseeds._points.begin();i!=mseeds._points.end();i++){
     if((*i)->get_value() > 0){
-      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z; 
-      xyz_dti=mni_to_imgvox(fs_coord_mm,mni_origin,Seeds_to_DTI,counter.get_streamline().get_vols().dimensions());
-      float x=xyz_dti(1);float y=xyz_dti(2);float z=xyz_dti(3);
+
+      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z << 1.0; 
+      xyz_vox = seeds.qform_mat().i()*fs_coord_mm;
+
+      float x=xyz_vox(1);float y=xyz_vox(2);float z=xyz_vox(3);
 
       seeds(round(x),round(y),round(z)) = 1;
+    
+      cout <<"run"<<endl;
+      dir << (*i)->local_normal().X << (*i)->local_normal().Y << (*i)->local_normal().Z;
+      keeptotal += seedmanager.run(round(x),round(y),round(z),true,-1,dir); 
+	
     }
   }
 
+  //return;
 
-
-  int keeptotal=0;
-  for(int z=0;z<seeds.zsize();z++){
-    cout <<"sl "<<z<<endl;
-    for(int y=0;y<seeds.ysize();y++){
-      for(int x=0;x<seeds.xsize();x++){
-	if(seeds(x,y,z)>0){
-	  cout <<"run"<<endl;
-	  keeptotal += seedmanager.run(x,y,z); 
-	}
-      }
-    }
-  }
+//   for(int z=0;z<seeds.zsize();z++){
+//     cout <<"sl "<<z<<endl;
+//     for(int y=0;y<seeds.ysize();y++){
+//       for(int x=0;x<seeds.xsize();x++){
+// 	if(seeds(x,y,z)>0){
+// 	  cout <<"run"<<endl;
+// 	  dir << (*i)->local_normal().X << (*i)->local_normal().Y << (*i)->local_normal().Z;
+// 	  keeptotal += seedmanager.run(x,y,z,true,-1,dir); 
+// 	}
+//       }
+//     }
+//   }
 
   counter.save_total(keeptotal);  
   counter.save();
