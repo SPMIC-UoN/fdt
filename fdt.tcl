@@ -803,7 +803,7 @@ proc fdt:apply { w dialog } {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
 		    if { $probtrack(classify_yn) == 1 } {
-			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* biggest >> $probtrack(output)/fdt_seed_classification.txt"
+			exec sh -c "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* biggest >> $probtrack(output)/fdt_seed_classification.txt"
 		    }
 		}
        	    }
