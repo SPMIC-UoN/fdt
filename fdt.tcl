@@ -486,7 +486,9 @@ proc fdt:probtrack_mode { w } {
                      pack  $w.data.seed.target $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
 	}
     }
- if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
+    if { $probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } 
+    if { $probtrack(classify_yn) } { pack $w.data.targets.cf.tf }
+    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
@@ -705,16 +707,19 @@ proc fdt:apply { w dialog } {
 
 	    if { $probtrack(usereference_yn) } {
 		set flags "$flags --xfm=$probtrack(xfm)"
+      		puts $log "set probtrack(usereference_yn) $probtrack(usereference_yn)"
       		puts $log "set probtrack(xfm) $probtrack(xfm)"
 	    }
 
 	    if { $probtrack(exclude_yn) == 1 } {
 		set flags "$flags --avoid=$probtrack(exclude)"
+		puts $log "set probtrack(exclude_yn) $probtrack(exclude_yn)"
 		puts $log "set probtrack(exclude) $probtrack(exclude)"
 	    }
 
 	    if { $probtrack(terminate_yn) == 1 } {
 		set flags "$flags --stop=$probtrack(stop)"
+		puts $log "set probtrack(terminate_yn) $probtrack(terminate_yn)"
 		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
 
@@ -766,23 +771,26 @@ proc fdt:apply { w dialog } {
 	       network {
                    fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
 		   set flags "--network --mode=seedmask -x $probtrack(output)/masks.txt $flags"
+		   puts $log  " $w.data.seed.targets insert end [  $w.data.seed.targets get 0 end ]"
 	       }
 	    }
-
+	    puts $log "set probtrack(reference) $probtrack(reference)"
+	    puts $log "set probtrack(output) $probtrack(output)"
        	    if { $canwrite } {
        		set copylog "fdt.log"
 
 	        if { $probtrack(waypoint_yn) == 1 } {
                     fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
+		    puts $log "set probtrack(waypoint_yn) $probtrack(waypoint_yn)"
+                    puts $log " $w.data.targets.wf.tf.targets insert end [  $w.data.targets.wf.tf.targets get 0 end ]"
                     set flags "$flags --waypoints=$probtrack(output)/waypoints.txt "
 	        } 
 	        if { $probtrack(classify_yn) == 1 } {
                     fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
+		    puts $log "set probtrack(classify_yn) $probtrack(classify_yn)"
+		    puts $log " $w.data.targets.cf.tf.targets insert end [  $w.data.targets.cf.tf.targets get 0 end ]"
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
-                
-                #TODO
-
 	    
 		if { $FSLPARALLEL } {
                     set script [open "${filebase}_script.sh" w]
