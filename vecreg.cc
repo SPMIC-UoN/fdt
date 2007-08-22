@@ -244,8 +244,18 @@ int do_vecreg(){
   if(maskfile.value()!="")
     read_volume(mask,maskfile.value());
   else{
+    mask.reinitialize(ivol[0].xsize(),ivol[0].ysize(),ivol[0].zsize());
     copybasicproperties(ivol,mask);
-    mask=1;
+    for(int z=0;z<mask.zsize();z++)
+      for(int y=0;y<mask.ysize();y++)
+	for(int x=0;x<mask.xsize();x++){
+	  if(ivol(x,y,z,0)*ivol(x,y,z,0)
+	     +ivol(x,y,z,1)*ivol(x,y,z,1)
+	     +ivol(x,y,z,2)*ivol(x,y,z,2) != 0)
+	    mask(x,y,z) = 1;
+	  else
+	    mask(x,y,z) = 0;
+	}
   }
 
   ///////////////////////
