@@ -669,7 +669,8 @@ proc fdt:apply { w dialog } {
             set FSLPARALLEL 0
             if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
-	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
@@ -727,6 +728,9 @@ proc fdt:apply { w dialog } {
 		    set x $probtrack(x)
 		    set y $probtrack(y)
 		    set z $probtrack(z)
+		   if { ! $probtrack(usereference_yn) } {
+                       set probtrack(reference) [ file join $probtrack(bedpost_dir) nodif_brain_mask ]
+		   }
 		    if { $probtrack(units) == "mm" } {
 			if { $probtrack(reference) != "" } {
 			    mm_to_voxels x y z $probtrack(reference)
