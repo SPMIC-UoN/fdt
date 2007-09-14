@@ -103,11 +103,38 @@ preprocid=`${FSLDIR}/bin/fsl_sub -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/be
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+if [ "x$SGE_ROOT" = "x" ]; then
+# 
+# Need to set off a backgrounded monitoring task
+# 
+    cat <<EOM > ${subjdir}.bedpostX/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpostX/logs
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    if [ -f \$logdir/bedpostx.o*.1 ] ; then
+      nfin=\`cat \$logdir/bedpostx.o* |\
+        grep Done | wc -w | awk '{print \$1}'\` 
+    fi
+    if [ \$nfin -eq $nslices ] ; then
+        finished=1
+    fi
+
+    echo "\$nfin slices processed"
+    sleep 600;
+done
+EOM
+    chmod +x ${subjdir}.bedpostX/monitor
+    ${subjdir}.bedpostX/monitor&
+    monitorpid=$!
+fi
 for ((slice=0; slice < $nslices; slice++)) ; do
     echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+[ "x$SGE_ROOT" = "x" ] && kill $monitorpid
 
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -F -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
@@ -121,7 +148,7 @@ finished=0
 logdir=${subjdir}.bedpostX/logs
 while [ \$finished -eq 0 ] ; do
     nfin=0
-    if [ -f \$logdir/bedpost.o$bedpostid.1 ] ; then
+    if [ -f \$logdir/bedpostx.o$bedpostid.1 ] ; then
       nfin=\`cat \$logdir/bedpostx.o$bedpostid.* |\
         grep Done | wc -w | awk '{print \$1}'\` 
     fi
