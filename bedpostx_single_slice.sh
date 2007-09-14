@@ -5,7 +5,7 @@
 #$ -S /bin/sh
 #$ -V
 #$ -N bedpostx
-#$ -m a
+#$ -m n
 #$ -o $1.bedpostX/logs -e $1.bedpostX/logs
 
 subjdir=$1
