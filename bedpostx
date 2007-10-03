@@ -50,12 +50,16 @@ echo subjectdir is $subjdir
 nfibres=2
 fudge=1
 burnin=1000
+njumps=1250
+sampleevery=25
 while [ ! -z "$2" ]
 do
   case "$2" in
       -n) nfibres=$3;shift;;
       -w) fudge=$3;shift;;
       -b) burnin=$3;shift;;
+      -j) njumps=$3;shift;;
+      -s) sampleevery=$3;shift;;
       *) break;;
   esac
   shift
@@ -130,7 +134,7 @@ EOM
     monitorpid=$!
 fi
 for ((slice=0; slice < $nslices; slice++)) ; do
-    echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $slice" \
+    echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
