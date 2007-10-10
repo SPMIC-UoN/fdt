@@ -808,7 +808,7 @@ proc fdt:apply { w dialog } {
                     puts $script "mv $logfile $copylog"
                     puts $script "rm ${filebase}_script.sh"
 		    close $script
-		    exec batch -q long.q ${filebase}_script.sh
+		    exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
 		} else {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
