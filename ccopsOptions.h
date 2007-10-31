@@ -35,7 +35,7 @@ class ccopsOptions {
   Option<float> power;
   Option<string> mask;
   Option<string> scheme;
-  Option<int>    kmeans;
+  Option<int>    nclusters;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -88,9 +88,9 @@ class ccopsOptions {
 	 string("brain mask used to output the clustered roi mask"), 
 	 false, requires_argument),
    scheme(string("-s,--scheme"), "spectral", 
-	 string("Reordering algorithm. Can be either spectral (default) or dpm or kmeans"), 
+	 string("Reordering algorithm. Can be either spectral (default) or kmeans"), 
 	 false, requires_argument),
-   kmeans(string("-K"), 2, 
+   nclusters(string("-k,--nclusters"), 2, 
 	  string("Number of clusters to be used in kmeans"), 
 	  false, requires_argument),
    options("ccops","")
@@ -109,7 +109,7 @@ class ccopsOptions {
        options.add(power);
        options.add(mask);
        options.add(scheme);
-       options.add(kmeans);
+       options.add(nclusters);
        
      }
      catch(X_OptionError& e) {
