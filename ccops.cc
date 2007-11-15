@@ -596,7 +596,10 @@ int main ( int argc, char **argv ){
     // save clustering if kmeans used
     if(opts.scheme.value() == "kmeans"){
       volume<int> mask;
-      read_volume(mask,opts.mask.value());
+      if(opts.mask.value() == "")
+	read_volume(mask,"fdt_paths");
+      else
+	read_volume(mask,opts.mask.value());
       mask = 0;
       for(int i=0;i<outcoords.xsize();i++){
 	mask(outcoords(i,0,0),
@@ -604,32 +607,32 @@ int main ( int argc, char **argv ){
 	     outcoords(i,2,0)) = (int)y1(i+1) + 1;
       }
       save_volume(mask,"reord_mask_"+base);
-
+      
       // save tractspace clustering if specified
-	volume<int> outmask,tractmask;
-	read_volume(tractmask,"lookup_tractspace_fdt_matrix2");
-	outmask=tractmask;
-	copybasicproperties(tractmask,outmask);
-	
-	outmask=0;
-	for(int z=0;z<tractmask.zsize();z++)
-	  for(int y=0;y<tractmask.ysize();y++)
-	    for(int x=0;x<tractmask.xsize();x++){
-	      int j=tractmask(x,y,z);
-	      ColumnVector vals(myOM.xsize());
-	      for(int i=0;i<myOM.xsize();i++){
-		vals(i+1) = myOM(i,j,0);
-	      }
-	      if(vals.MaximumAbsoluteValue()==0)continue;
-	      int index;
-	      vals.Maximum1(index);
-	      outmask(x,y,z) = (int)y1(index);
+      volume<int> outmask,tractmask;
+      read_volume(tractmask,"lookup_tractspace_fdt_matrix2");
+      outmask=tractmask;
+      copybasicproperties(tractmask,outmask);
+      
+      outmask=0;
+      for(int z=0;z<tractmask.zsize();z++)
+	for(int y=0;y<tractmask.ysize();y++)
+	  for(int x=0;x<tractmask.xsize();x++){
+	    int j=tractmask(x,y,z);
+	    ColumnVector vals(myOM.xsize());
+	    for(int i=0;i<myOM.xsize();i++){
+	      vals(i+1) = myOM(i,j,0);
 	    }
+	    if(vals.MaximumAbsoluteValue()==0)continue;
+	    int index;
+	    vals.Maximum1(index);
+	      outmask(x,y,z) = (int)y1(index);
+	  }
 	save_volume(outmask,"tract_clustering_"+base);
 	
-
+	
     }
- 
+    
   }
 
   if(opts.reord2.value()){
