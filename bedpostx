@@ -135,9 +135,12 @@ EOM
     ${subjdir}.bedpostX/monitor&
     monitorpid=$!
 fi
-for ((slice=0; slice < $nslices; slice++)) ; do
+slice=0
+while [ $slice -le $nslices ]
+do
     echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
 	>> ${subjdir}.bedpostX/commands.txt
+    slice=$(($slice + 1))
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 [ "x$SGE_ROOT" = "x" ] && kill $monitorpid
