@@ -101,10 +101,10 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,const Matrix& Amat,const ColumnVector& S)
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
 {
   //Initialise the parameters using traditional DTI analysis
-  ColumnVector logS(S.Nrows()),Dvec(7);
+  ColumnVector logS(S.Nrows());
   SymmetricMatrix tens;   //Basser's Diffusion Tensor;
   //  DiagonalMatrix Dd;   //eigenvalues
   Matrix Vd;   //eigenvectors
@@ -223,6 +223,8 @@ int main(int argc, char** argv)
   volume4D<float> V1(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
+  volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
+
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
   copybasicproperties(data[0],l2);
@@ -233,8 +235,9 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],V1[0]);
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
+  copybasicproperties(data[0],Delements[0]);
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
-  l1=0;l2=0;l3=0;MD=0;FA=0;S0=0;V1=0;V2=0;V3=0;
+  l1=0;l2=0;l3=0;MD=0;FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
@@ -243,6 +246,7 @@ int main(int argc, char** argv)
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   Matrix Amat = form_Amat(r,b);
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
+  ColumnVector Dvec(7); Dvec=0;
   for(int k = minz; k < maxz; k++){
     cout<<k<<" slices processed"<<endl;
       for(int j=miny; j < maxy; j++){
@@ -253,7 +257,7 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,Dvec,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
@@ -269,7 +273,12 @@ int main(int argc, char** argv)
 	    V3(i-minx,j-miny,k-minz,0)=evec3(1);
 	    V3(i-minx,j-miny,k-minz,1)=evec3(2);
 	    V3(i-minx,j-miny,k-minz,2)=evec3(3);
-	    
+	    Delements(i-minx,j-miny,k-minz,0)=Dvec(1);
+	    Delements(i-minx,j-miny,k-minz,1)=Dvec(2);
+	    Delements(i-minx,j-miny,k-minz,2)=Dvec(3);
+	    Delements(i-minx,j-miny,k-minz,3)=Dvec(4);
+	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
+	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
 
 
 
@@ -309,6 +318,7 @@ int main(int argc, char** argv)
     string v2file=opts.ofile.value()+"_V2";
     string v3file=opts.ofile.value()+"_V3";
     string MDfile=opts.ofile.value()+"_MD";
+    string tensfile=opts.ofile.value()+"_tensor";
     if(opts.littlebit.value()){
       fafile+="littlebit";
       s0file+="littlebit";
@@ -319,6 +329,7 @@ int main(int argc, char** argv)
       v2file+="littlebit";
       v3file+="littlebit";
       MDfile+="littlebit";
+      tensfile+="littlebit";
     }
   
     save_volume(FA,fafile,tempinfo);
@@ -331,6 +342,9 @@ int main(int argc, char** argv)
     save_volume4D(V2,v2file,tempinfo);
     save_volume4D(V3,v3file,tempinfo);
 
+    if(opts.savetensor.value())
+      save_volume4D(Delements,tensfile,tempinfo);
+    
   return 0;
 }
 

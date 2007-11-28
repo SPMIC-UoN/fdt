@@ -33,6 +33,7 @@ class dtifitOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<bool> littlebit;
+  Option<bool> savetensor;
   Option<int> z_min;
   Option<int> z_max;
   Option<int> y_min;
@@ -84,6 +85,9 @@ class dtifitOptions {
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
 	     false, no_argument),
+   savetensor(string("--save_tensor"), false, 
+	     string("Save the elements of the tensor"), 
+	     false, no_argument),
    z_min(string("-z,--zmin"), 0, 
 	 string("min z"), 
 	 false, requires_argument),
@@ -115,6 +119,7 @@ class dtifitOptions {
        options.add(bvecsfile);
        options.add(bvalsfile);
        options.add(littlebit);
+       options.add(savetensor);
        options.add(z_min);
        options.add(z_max);
        options.add(y_min);
