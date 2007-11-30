@@ -1,12 +1,5 @@
 #!/bin/sh
 
-#$ -cwd
-#$ -q short.q
-#$ -S /bin/sh
-#$ -V
-#$ -N bpx_preproc
-#$ -m as
-
 subjdir=$1
 
 echo Copying files to bedpost directory

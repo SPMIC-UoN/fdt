@@ -1,13 +1,5 @@
 #!/bin/sh
 
-#$ -cwd 
-#$ -q long.q
-#$ -S /bin/sh
-#$ -V
-#$ -N bedpostx
-#$ -m n
-#$ -o $1.bedpostX/logs -e $1.bedpostX/logs
-
 subjdir=$1
 nfibres=$2
 fudge=$3
@@ -15,7 +7,6 @@ bi=$4
 njumps=$5
 sampleevery=$6
 slice=$7
-
 
 slicezp=`${FSLDIR}/bin/zeropad $slice 4`
 

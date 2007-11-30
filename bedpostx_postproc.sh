@@ -1,12 +1,5 @@
 #!/bin/sh
 
-#$ -cwd
-#$ -q short.q
-#$ -S /bin/sh
-#$ -V
-#$ -N bpx_postproc
-#$ -m ae
-
 subjdir=$1
 
 numfib=`${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples | wc -w | awk '{print $1}'`
