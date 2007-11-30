@@ -2,7 +2,7 @@
 
 subjdir=$1
 
-echo Copying files to bedpost directory
+echo Copying files to bedpost directory - ya cock
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
 ${FSLDIR}/bin/imcp ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
 ${FSLDIR}/bin/fslmaths\
