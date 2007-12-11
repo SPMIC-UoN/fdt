@@ -27,6 +27,7 @@ class ccopsOptions {
   Option<bool> help;
   Option<string> inmatrix;
   Option<string> basename;
+  Option<string> directory;
   Option<string> excl_mask;
   Option<bool>  reord1;
   Option<bool>  reord2;
@@ -60,12 +61,15 @@ class ccopsOptions {
    help(string("-h,--help"), false,
 	string("display this message"),
 	false, no_argument),
-   inmatrix(string("-i,--in"), string(""),
+   inmatrix(string("-i,--in"), string("fdt_matrix2"),
 	       string("input matrix"),
-	       true, requires_argument),  
+	       false, requires_argument),  
    basename(string("-b,--basename"), string(""),
 	       string("Output basename"),
 	       true, requires_argument),
+   directory(string("-d,--dir"), string(""),
+	       string("Tractography Results Directory"),
+	       false, requires_argument),
    excl_mask(string("-x"), string(""),
 	     string("exclusion mask (in tract space johannes)"),
 	     false, requires_argument),  
@@ -101,6 +105,7 @@ class ccopsOptions {
        options.add(help);
        options.add(inmatrix);
        options.add(basename);
+       options.add(directory);
        options.add(excl_mask);
        options.add(reord1);
        options.add(reord2);

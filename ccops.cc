@@ -395,6 +395,10 @@ int main ( int argc, char **argv ){
   ccopsOptions& opts = ccopsOptions::getInstance();
   int success=opts.parse_command_line(argc,argv);
   if(!success) return 1;
+  if(opts.inmatrix.value()=="" && opts.directory.value()==""){
+    cerr << "Specify either input matrix or tractography directory" << endl;
+    return 1;
+  }
   string ip=opts.inmatrix.value();
   make_basename(ip);
   
@@ -403,8 +407,9 @@ int main ( int argc, char **argv ){
   volume<int> coordvol;
   volume<int> tractcoordvol;
   bool coordbool=false,tractcoordbool=false;
-  read_volume(myOM,ip);
-  
+  //  read_volume(myOM,ip);
+  read_volume(myOM,opts.directory.value()+"/"+opts.inmatrix.value());
+
   Matrix myOMmat(myOM.xsize(),myOM.ysize());
   Matrix mycoordmat,mytractcoordmat;
   Matrix newOMmat,newcoordmat,newtractcoordmat;
@@ -426,7 +431,7 @@ int main ( int argc, char **argv ){
   // write_ascii_matrix(newOMmat.t(),"preprecock");
   //Checking for and loading up Seed Coordinates
 
-  string coordname="coords_for_"+ip;
+  string coordname=opts.directory.value()+"/coords_for_"+ip;
   if(fsl_imageexists(coordname)){
     read_volume(coordvol,coordname);
     coordbool=true;
@@ -442,7 +447,7 @@ int main ( int argc, char **argv ){
   }
 
   //Checking For and Loading Up Tract coordinates
-  string trcoordname="tract_space_coords_for_"+ip;
+  string trcoordname=opts.directory.value()+"/tract_space_coords_for_"+ip;
   if(fsl_imageexists(trcoordname)){
     read_volume(tractcoordvol,trcoordname);
     tractcoordbool=true;
@@ -467,7 +472,7 @@ int main ( int argc, char **argv ){
   if(opts.excl_mask.value()!=""){
     volume<int> lookup_tract;
     volume<int> excl;
-    read_volume(lookup_tract,"lookup_tractspace_"+ip);
+    read_volume(lookup_tract,opts.directory.value()+"/lookup_tractspace_"+ip);
     string exname=opts.excl_mask.value();
     make_basename(exname);
     read_volume(excl,exname);
@@ -555,8 +560,8 @@ int main ( int argc, char **argv ){
       } 
     }
    
-    save_volume(outCCvol,"CC_"+base);
-    save_volume(outcoords,"coords_for_"+base);
+    save_volume(outCCvol,opts.directory.value()+"/CC_"+base);
+    save_volume(outcoords,opts.directory.value()+"/coords_for_"+base);
 
   }
   else{
@@ -588,16 +593,16 @@ int main ( int argc, char **argv ){
       } 
     }
    
-    write_ascii_matrix(r1,base+"r1");
-    write_ascii_matrix(y1,base+"y1");
-    save_volume(outCCvol,"reord_CC_"+base);
-    save_volume(outcoords,"coords_for_reord_"+base);
+    write_ascii_matrix(r1,opts.directory.value()+"/"+base+"r1");
+    write_ascii_matrix(y1,opts.directory.value()+"/"+base+"y1");
+    save_volume(outCCvol,opts.directory.value()+"/reord_CC_"+base);
+    save_volume(outcoords,opts.directory.value()+"/coords_for_reord_"+base);
 
     // save clustering if kmeans used
     if(opts.scheme.value() == "kmeans"){
       volume<int> mask;
       if(opts.mask.value() == "")
-	read_volume(mask,"fdt_paths");
+	read_volume(mask,opts.directory.value()+"/fdt_paths");
       else
 	read_volume(mask,opts.mask.value());
       mask = 0;
@@ -606,11 +611,11 @@ int main ( int argc, char **argv ){
 	     outcoords(i,1,0),
 	     outcoords(i,2,0)) = (int)y1(i+1) + 1;
       }
-      save_volume(mask,"reord_mask_"+base);
+      save_volume(mask,opts.directory.value()+"/reord_mask_"+base);
       
       // save tractspace clustering if specified
       volume<int> outmask,tractmask;
-      read_volume(tractmask,"lookup_tractspace_fdt_matrix2");
+      read_volume(tractmask,opts.directory.value()+"/lookup_tractspace_fdt_matrix2");
       outmask=tractmask;
       copybasicproperties(tractmask,outmask);
       
@@ -628,7 +633,7 @@ int main ( int argc, char **argv ){
 	    vals.Maximum1(index);
 	      outmask(x,y,z) = (int)y1(index);
 	  }
-	save_volume(outmask,"tract_clustering_"+base);
+      save_volume(outmask,opts.directory.value()+"/tract_clustering_"+base);
 	
 	
     }
@@ -650,8 +655,8 @@ int main ( int argc, char **argv ){
       return(-1);
     }
  
-    write_ascii_matrix(r2,base+"r2");
-    write_ascii_matrix(y2,base+"y2");
+    write_ascii_matrix(r2,opts.directory.value()+"/"+base+"r2");
+    write_ascii_matrix(y2,opts.directory.value()+"/"+base+"y2");
 
     volume<int> outvol(newOMmat.Nrows(),newOMmat.Ncols(),1);
     volume<int> outtractcoords(newtractcoordmat.Nrows(),3,1);
@@ -672,8 +677,8 @@ int main ( int argc, char **argv ){
 	outtractcoords(i,2,0)=(int)newtractcoordmat(int(r2(i+1)),3);
       } 
     }
-    save_volume(outvol,"reord_"+base);
-    save_volume(outtractcoords,"tract_space_coords_for_reord_"+base);
+    save_volume(outvol,opts.directory.value()+"/reord_"+base);
+    save_volume(outtractcoords,opts.directory.value()+"/tract_space_coords_for_reord_"+base);
   }
   return 0;
 }
