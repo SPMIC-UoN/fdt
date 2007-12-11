@@ -61,7 +61,7 @@ probtrackOptions* probtrackOptions::gopt = NULL;
     catch(X_OptionError& e){
       cerr<<e.what()<<endl;
       cerr<<"try: probtrack --help"<<endl;
-      exit(0);
+      exit(2);
     }
     
     
