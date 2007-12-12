@@ -241,8 +241,8 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
     FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
     pack $w.data.seed.ssf.ssd -side top -anchor nw
-
-    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+    if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
+        puts "here"
 	frame  $w.data.seed.bcf
 	checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
 	set probtrack(scale) 5
@@ -460,7 +460,7 @@ proc fdt:dialog { w tclstartupfile } {
 }
 
 proc fdt:probtrack_mode { w } {
-    global probtrack
+    global probtrack FSLDIR
 
     pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
@@ -474,7 +474,7 @@ proc fdt:probtrack_mode { w } {
 	seedmask {
 	    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
             pack forget $w.data.seed.ssf.ssd
-	    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+	    if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
 		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
 	    }
 	    pack $w.data.targets.cf -in $w.data.targets.f -anchor w
@@ -755,15 +755,20 @@ proc fdt:apply { w dialog } {
                     set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
-		   if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+		   if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
 		       if { $probtrack(bcyn) } { 
-			   fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
-			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+
+                           if { $probtrack(xfm) != "" } {
+			       fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
+			       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+			   } else {
+			       fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init ${FSLDIR}/etc/flirtsch/ident.mat -out $probtrack(output)/tmp_brain_mask"
+			   }
 			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
 			   fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
 			   set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
 			   fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
-			   fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
+			   if  { [ file exists $probtrack(output)/tmp_xfm_mat ] } { fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat" }
 		       }
 		   }
                    set flags "--mode=seedmask -x $probtrack(reference) $flags"  
