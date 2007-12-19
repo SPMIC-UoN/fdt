@@ -61,7 +61,7 @@ namespace TRACT{
       }
     } 
     if(opts.seeds_to_dti.value()!=""){
-      read_ascii_matrix(m_Seeds_to_DTI,opts.seeds_to_dti.value());
+      m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
     }
     else{
       m_Seeds_to_DTI=Identity(4);

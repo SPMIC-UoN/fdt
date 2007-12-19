@@ -140,7 +140,7 @@ void mesh_matrix2(){
   
   Matrix Seeds_to_DTI;
   if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     Seeds_to_DTI=Identity(4);
@@ -330,7 +330,7 @@ void mesh_lengths(){
   }
   
   Matrix Seeds_to_DTI;
-  read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value()); // Here seeds_to_dti should take the standard volume to diff space 
+  Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value()); // Here seeds_to_dti should take the standard volume to diff space 
   
   float lcrat=5;
   volume4D<float> loopcheck((int)ceil(mask.xsize()/lcrat)+1,(int)ceil(mask.ysize()/lcrat)+1,(int)ceil(mask.zsize()/lcrat)+1,3);

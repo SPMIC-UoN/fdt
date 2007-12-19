@@ -35,7 +35,7 @@ void track(){
   if(opts.seedref.value()!=""){
     read_volume(prob,opts.seedref.value());
     beenhere=prob*0;
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     prob=mask;

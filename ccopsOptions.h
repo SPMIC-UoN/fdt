@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
+#include "commonopts.h"
 using namespace Utilities;
 
 namespace CCOPS {

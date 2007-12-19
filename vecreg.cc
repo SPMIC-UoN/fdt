@@ -219,7 +219,7 @@ int do_vecreg(){
   volumeinfo vinfo;
 
   if((matrix.set())){
-    read_ascii_matrix(Aff,matrix.value());
+    Aff = read_ascii_matrix(matrix.value());
   }
   if((warp.set())){
     if(verbose.value()) cerr << "Loading warpfield" << endl;

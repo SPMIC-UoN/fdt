@@ -90,7 +90,7 @@ void seeds_to_targets()
   
   Matrix Seeds_to_DTI;
   if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     Seeds_to_DTI=Identity(4);

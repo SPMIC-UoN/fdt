@@ -152,7 +152,7 @@ void matrix2(){
   
   Matrix Seeds_to_DTI;
   if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     Seeds_to_DTI=Identity(4);
@@ -386,7 +386,7 @@ void matrix1(){
   
   Matrix Seeds_to_DTI;
   if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     Seeds_to_DTI=Identity(4);
@@ -605,7 +605,7 @@ void maskmatrix(){
 
   Matrix Seeds_to_DTI;
   if(opts.seeds_to_dti.value()!=""){
-    read_ascii_matrix(Seeds_to_DTI,opts.seeds_to_dti.value());
+    Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
   }
   else{
     Seeds_to_DTI=Identity(4);
