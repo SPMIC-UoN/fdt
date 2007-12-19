@@ -29,15 +29,23 @@ void track(){
   else{
     read_volume(seedref,opts.maskfile.value());
   }
-  
+
   Streamliner stline;
   Counter counter(seedref,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);
-  
-  
+    
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
   
+  // convert coordinates from nifti (external) to newimage (internal)
+  //   conventions - Note: for radiological files this should do nothing
+  for (int n=1; n<=Seeds.Nrows(); n++) {
+    ColumnVector v(4);
+    v << Seeds(n,1) << Seeds(n,2) << Seeds(n,3) << 1.0;
+    v = seedref.niftivox2newimagevox_mat() * v;
+    Seeds(n,1) = v(1);  Seeds(n,2) = v(2);  Seeds(n,3) = v(3);
+  }
+
   int keeptot=0;
   for(int SN=1; SN<=Seeds.Nrows();SN++){
     float xst=Seeds(SN,1);
