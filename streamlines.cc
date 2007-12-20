@@ -606,18 +606,37 @@ namespace TRACT{
       save_volume(m_seedcounts[m],logger.appendDir("seeds_to_"+tmpname));
     }
   }
-  
+    
+  // the following is a helper function for save_matrix*
+  //  to convert between nifti coords (external) and newimage coord (internal)
+  void applycoordchange(volume<int>& coordvol, const Matrix& old2new_mat)
+  {
+    for (int n=0; n<=coordvol.maxx(); n++) {
+      ColumnVector v(4);
+      v << coordvol(n,0,0) << coordvol(n,1,0) << coordvol(n,2,0) << 1.0;
+      v = old2new_mat * v;
+      coordvol(n,0,0) = MISCMATHS::round(v(1));
+      coordvol(n,1,0) = MISCMATHS::round(v(2));
+      coordvol(n,2,0) = MISCMATHS::round(v(3));
+    }
+  }
+
   void Counter::save_matrix1(){
     save_volume(m_ConMat,logger.appendDir("fdt_matrix1"));
+    applycoordchange(m_CoordMat, m_seeds.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat,logger.appendDir("coords_for_fdt_matrix1"));
+    applycoordchange(m_CoordMat, m_seeds.niftivox2newimagevox_mat());
   }
 
   void Counter::save_matrix2(){
     save_volume(m_ConMat2,logger.appendDir("fdt_matrix2"));
+    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));
+    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat());
+    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
+    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat());
     save_volume4D(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
-  
   }
   
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
