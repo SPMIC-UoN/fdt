@@ -56,7 +56,7 @@ FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
 RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} probtrack_old 
+all: ${XFILES} ${FXFILES} 
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
