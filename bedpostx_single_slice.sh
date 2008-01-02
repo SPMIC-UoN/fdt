@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo ya cock
-
 subjdir=$1
 nfibres=$2
 fudge=$3
