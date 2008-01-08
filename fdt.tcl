@@ -242,7 +242,6 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
     pack $w.data.seed.ssf.ssd -side top -anchor nw
     if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
-        puts "here"
 	frame  $w.data.seed.bcf
 	checkbutton $w.data.seed.bcf.bc -text "Blind Classification:" -variable probtrack(bcyn)  -command " pack forget $w.data.seed.bcf.w ; if { \$probtrack(bcyn) } { pack $w.data.seed.bcf.w  -side left} ; $w.probtrack compute_size"
 	set probtrack(scale) 5
