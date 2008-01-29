@@ -330,8 +330,8 @@ public:
 	vec(3)= m_dyadic_vectors[f](3,voxbest);
 	cart2sph(vec,th,ph);
 	if(f==0)
-	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,false);//no a.r.d. on first fibre
-	//mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,true);//a.r.d. on first fibre
+	  // mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,false);//no a.r.d. on first fibre
+	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,opts.all_ard.value());//is all_ard, then turn ard on here
 	else
 	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,true);
 
@@ -529,8 +529,8 @@ class xfibresVoxelManager{
     m_multifibre.set_d(D);
     m_multifibre.set_S0(S0);
     if(opts.nfibres.value()>0){
-      m_multifibre.addfibre(th,ph,f,1,false);//no a.r.d. on first fibre
-      //m_multifibre.addfibre(th,ph,f,1,true);// a.r.d. on first fibre
+      //      m_multifibre.addfibre(th,ph,f,1,false);//no a.r.d. on first fibre
+      m_multifibre.addfibre(th,ph,f,1,opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
       for(int i=2; i<=opts.nfibres.value(); i++){
 	 m_multifibre.addfibre();
       }
