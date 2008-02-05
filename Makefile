@@ -46,7 +46,7 @@ VECREGOBJS=vecreg.o
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
-SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX}
+SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} my_bedpostx my_bedpostx_single_slice.sh
 FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
