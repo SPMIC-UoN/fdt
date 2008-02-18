@@ -1,5 +1,11 @@
 #include <cmath>
 #include <stdlib.h>
+
+
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS           // To allow us to use .sampling_mat()
+#endif
+
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
 

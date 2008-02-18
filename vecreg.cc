@@ -8,6 +8,8 @@
 
 #include "vecreg.h"
 #include "utils/options.h"
+#include "warpfns/fnirt_file_reader.h"
+#include "warpfns/warpfns.h"
 
 using namespace Utilities;
 
@@ -128,7 +130,7 @@ void sjgradient(const volume<float>& im,volume4D<float>& grad){
 
 
 void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
-		   const volume<float>& refvol,volume4D<float>& warp,
+		   const volume<float>& refvol,volume4D<float>& warpvol,
 		   const volume<float>& mask){
 
   ColumnVector X_seed(3),X_target(3);
@@ -138,24 +140,31 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
   //float nxx=(float)tens.xsize()/2.0,nyy=(float)tens.ysize()/2.0,nzz=(float)tens.zsize()/2.0;
   //float nx=(float)oV1.xsize()/2.0,ny=(float)oV1.ysize()/2.0,nz=(float)oV1.zsize()/2.0;
 
-  // transform mm warp to voxel warp
+  
+  // read warp field created by Jesper
+  FnirtFileReader ffr(warp.value());
+  warpvol=ffr.FieldAsNewimageVolume4D(true);
+  //  convertwarp_abs2rel(warpvol);
+  //  convertwarp_rel2abs(warpvol);
+
+// transform mm warp to voxel warp
   // the warpfield here has been transfomed by MJ's script
-  for(int z=0;z<warp[0].zsize();z++)
-    for(int y=0;y<warp[0].ysize();y++)
-      for(int x=0;x<warp[0].xsize();x++){
-	warp[0](x,y,z) /= dx;
-	warp[1](x,y,z) /= dy;
-	warp[2](x,y,z) /= dz;
-      }
+  // for(int z=0;z<warpvol[0].zsize();z++)
+//     for(int y=0;y<warpvol[0].ysize();y++)
+//       for(int x=0;x<warpvol[0].xsize();x++){
+// 	warpvol[0](x,y,z) /= dx;
+// 	warpvol[1](x,y,z) /= dy;
+// 	warpvol[2](x,y,z) /= dz;
+//       }
  
 
   // compute transformation jacobian
   volume4D<float> jx(mask.xsize(),mask.ysize(),mask.zsize(),3);
   volume4D<float> jy(mask.xsize(),mask.ysize(),mask.zsize(),3);
   volume4D<float> jz(mask.xsize(),mask.ysize(),mask.zsize(),3);
-  sjgradient(warp[0],jx);
-  sjgradient(warp[1],jy);
-  sjgradient(warp[2],jz);
+  sjgradient(warpvol[0],jx);
+  sjgradient(warpvol[1],jy);
+  sjgradient(warpvol[2],jz);
 
 
   ColumnVector V_seed(3),V_target(3);
@@ -166,10 +175,20 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
   for(int z=0;z<oV1.zsize();z++)
     for(int y=0;y<oV1.ysize();y++)
        for(int x=0;x<oV1.xsize();x++){
+	 
+	//  X_seed << round(x+warpvol[0](x,y,z))
+// 		<< round(y+warpvol[1](x,y,z))
+// 		<< round(z+warpvol[2](x,y,z));
+// 	 X_seed << round(warpvol[0](x,y,z))
+// 		<< round(warpvol[1](x,y,z))
+// 		<< round(warpvol[2](x,y,z));
 
-	 X_seed << round(x+warp[0](x,y,z))
-		<< round(y+warp[1](x,y,z))
-		<< round(z+warp[2](x,y,z));
+
+	 X_target << x << y << z;
+	 X_seed = NewimageCoord2NewimageCoord(warpvol,false,oV1[0],mask,X_target);
+
+	 //OUT(X_seed.t());
+
 	 if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
 	   continue;
 	 }
