@@ -24,7 +24,10 @@ Option<bool> help(string("-h,--help"),false,
 		       false,no_argument);
 Option<string> ivector(string("-i,--input"),string(""),
 		       string("filename of input vector"),
-		       true,requires_argument);
+		       false,requires_argument);
+Option<string> itensor(string("--tensor"),string(""),
+		       string("full tensor"),
+		       false,requires_argument);
 Option<string> ovector(string("-o,--output"),string(""),
 		       string("filename of output registered vector"),
 		       true,requires_argument);
@@ -44,6 +47,96 @@ Option<string> maskfile(string("-m,--mask"),string(""),
 		       string("brain mask in input space"),
 		       false,requires_argument);
 ////////////////////////////////////////////////////////
+
+ReturnMatrix rodrigues(const float& angle,ColumnVector& w){
+  Matrix W(3,3),R(3,3);
+
+  w/=sqrt(w.SumSquare()); // normalise w
+  W <<  0.0  << -w(3) << -w(2)
+    <<  w(3) << 0.0   << -w(1)
+    << -w(2) << w(1)  <<  0.0;
+  
+  R << 1.0 << 0.0 << 0.0
+    << 0.0 << 1.0 << 0.0
+    << 0.0 << 0.0 << 1.0;
+  R += (sin(angle)*W + (1-cos(angle))*(W*W));
+
+  R.Release();
+  return R;
+}
+ReturnMatrix rodrigues(const float& s,const float& c,ColumnVector& w){
+  Matrix W(3,3),R(3,3);
+
+  w /= sqrt(w.SumSquare()); // normalise w
+  W <<  0.0  << -w(3) <<  w(2)
+    <<  w(3) <<  0.0  << -w(1)
+    << -w(2) <<  w(1) <<  0.0;
+  
+  R << 1.0 << 0.0 << 0.0
+    << 0.0 << 1.0 << 0.0
+    << 0.0 << 0.0 << 1.0;
+  R += (s*W + (1-c)*(W*W));
+
+
+  R.Release();
+  return R;
+}
+ReturnMatrix rodrigues(const ColumnVector& n1,const ColumnVector& n2){
+  ColumnVector w(3);
+  
+  w=cross(n1,n2);
+
+  if(w.SumSquare()==0){
+    Matrix R(3,3);
+    R << 1.0 << 0.0 << 0.0
+      << 0.0 << 1.0 << 0.0
+      << 0.0 << 0.0 << 1.0;
+    R.Release();
+    return R;
+  }
+  else{
+    //float nn1=sqrt(n1.SumSquare());
+    //float nn2=sqrt(n2.SumSquare());
+    float ca=dot(n1,n2);
+    float sa=sqrt(cross(n1,n2).SumSquare());
+
+    return rodrigues(sa,ca,w);
+  }
+
+}
+ReturnMatrix ppd(const Matrix& F,const ColumnVector& e1, const ColumnVector& e2){
+  ColumnVector n1(3),n2(3),Pn2(3);
+  Matrix R(3,3),R1(3,3),R2(3,3);
+
+  n1=F*e1;n1=n1/sqrt(n1.SumSquare());
+  n2=F*e2;n2=n2/sqrt(n2.SumSquare());
+
+  R1=rodrigues(e1,n1);
+
+  Pn2=cross(n1,n2);
+  Pn2=n2-dot(n1,n2)*n1;Pn2=Pn2/sqrt(Pn2.SumSquare());
+  R2=rodrigues(R1*e2/sqrt((R1*e2).SumSquare()),Pn2);
+  R=R2*R1;
+
+  //OUT(R.Determinant());
+
+  R.Release();
+  return R;
+}
+ReturnMatrix ppd(const Matrix& F,ColumnVector& e1){
+  ColumnVector n1(3);
+  Matrix R(3,3);
+
+  e1/=sqrt(e1.SumSquare());
+
+  n1=F*e1;
+  n1=n1/sqrt(n1.SumSquare());
+
+  R=rodrigues(e1,n1);
+
+  R.Release();
+  return R;
+}
 
 
 void vecreg_aff(const volume4D<float>& tens,
@@ -97,6 +190,23 @@ void vecreg_aff(const volume4D<float>& tens,
 	oV1(x,y,z,0)=V_target(1);
 	oV1(x,y,z,1)=V_target(2);
 	oV1(x,y,z,2)=V_target(3);
+
+
+	
+	// create tensor
+	if(ivector.unset()){
+	  R=ppd(F,v.Column(1),v.Column(2));
+	  Tens << R*Tens*R.t();
+	  
+	  oV1(x,y,z,0)=Tens(1,1);
+	  oV1(x,y,z,1)=Tens(2,1);
+	  oV1(x,y,z,2)=Tens(3,1);
+	  oV1(x,y,z,3)=Tens(2,2);
+	  oV1(x,y,z,4)=Tens(3,2);
+	  oV1(x,y,z,5)=Tens(3,3);
+	  
+	}
+	
       }
   
 }
@@ -168,6 +278,8 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 
 
   ColumnVector V_seed(3),V_target(3);
+  ColumnVector V1_seed(3),V2_seed(3);
+  ColumnVector V1_target(3),V2_target(3),V3_target(3);
   Matrix R(3,3),I(3,3);I<<1<<0<<0<<0<<1<<0<<0<<0<<1;
   Matrix F(3,3),Jw(3,3),u(3,3),v(3,3);
   DiagonalMatrix d(3);  
@@ -194,15 +306,12 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 }
 	
 	 // compute interpolated tensor
-	 Tens << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	      << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	      << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	      << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	      << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	      << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 // compute first eigenvector
-	 EigenValues(Tens,d,v);
-	 V_seed = v.Column(3);
+	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
 
 	 // Local Jacobian of the backward warpfield
 	 Jw <<   jx(x,y,z,0) <<  jx(x,y,z,1) << jx(x,y,z,2)
@@ -213,17 +322,68 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 F = (I + Jw).i();
 	 
 	 // reorient according to affine reorientation scheme
-	 SVD(F*F.t(),d,u,v);
-	 R=(u*sqrt(d)*v.t()).i()*F;
+	 //SVD(F*F.t(),d,u,v);
+	 //R=(u*sqrt(d)*v.t()).i()*F;
+	 //OUT(R*R.t());
+	 //OUT(R);
+
+
+	 // compute first eigenvector
+	 EigenValues(Tens,d,v);
+	 V_seed = v.Column(3);
+
+
+
 
 	 //R=ppd(F,V_seed);
-	 
+	 //OUT(R*R.t());
+	 //OUT(R);
+	 //cout << "===="<<endl;
+
+
 	 V_target=R*V_seed;
 	 V_target/=sqrt(V_target.SumSquare());
+
+	 //v = R*v;
+	 //Tens << d(1,1)*v.Column(1)*v.Column(1).t() +
+	 //      d(2,2)*v.Column(2)*v.Column(2).t() +
+	 //      d(3,3)*v.Column(3)*v.Column(3).t();
+
+	 if(ivector.set()){
+	   oV1(x,y,z,0)=V_target(1);
+	   oV1(x,y,z,1)=V_target(2);
+	   oV1(x,y,z,2)=V_target(3);
+	 }
+	 // create tensor
+	 if(ivector.unset()){
+	   R=ppd(F,v.Column(3),v.Column(2));
+	   //OUT(R.Determinant());
+	   Tens << R*Tens*R.t();
+	   //EigenValues(Tens,d,v);
+	   //oV1(x,y,z,0)=v(1,3);
+	   //oV1(x,y,z,1)=v(2,3);
+	   //oV1(x,y,z,2)=v(3,3);
+	   
+
+	   // OUT(Tens);
+// 	   OUT(V_target);
+// 	   OUT(d);
+// 	   EigenValues(Tens,d,v);
+// 	   OUT(d);
+// 	   OUT(v);
+// 	   cout<<"=========="<<endl;
+// 	   OUT(Tens);
+
+	   oV1(x,y,z,0)=Tens(1,1);
+	   oV1(x,y,z,1)=Tens(2,1);
+	   oV1(x,y,z,2)=Tens(3,1);
+	   oV1(x,y,z,3)=Tens(2,2);
+	   oV1(x,y,z,4)=Tens(3,2);
+	   oV1(x,y,z,5)=Tens(3,3);
+
+	 }
 	 
-	 oV1(x,y,z,0)=V_target(1);
-	 oV1(x,y,z,1)=V_target(2);
-	 oV1(x,y,z,2)=V_target(3);
+
        }
   
   
@@ -245,11 +405,17 @@ int do_vecreg(){
     read_volume4D(warpvol,warp.value());
   }
   if(verbose.value()) cerr << "Loading volumes" << endl;
-  read_volume4D(ivol,ivector.value());
+  if(ivector.set())
+    read_volume4D(ivol,ivector.value());
+  else
+    read_volume4D(ivol,itensor.value());
   read_volume(refvol,ref.value(),vinfo);
 
-  
-  volume4D<float> ovol(refvol.xsize(),refvol.ysize(),refvol.zsize(),3);
+  volume4D<float> ovol;
+  if(ivector.set())
+    ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),3);
+  else
+    ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),6);
   copybasicproperties(refvol,ovol);
 
   // set interpolation method
@@ -281,16 +447,20 @@ int do_vecreg(){
   // tensor for interpolation
   volume4D<float> tens(ivol.xsize(),ivol.ysize(),ivol.zsize(),6);
   copybasicproperties(ivol,tens);
-  for(int z=0;z<ivol.zsize();z++) 
-    for(int y=0;y<ivol.ysize();y++)  
-      for(int x=0;x<ivol.xsize();x++){
-	tens(x,y,z,0)=ivol(x,y,z,0)*ivol(x,y,z,0);
-	tens(x,y,z,1)=ivol(x,y,z,1)*ivol(x,y,z,0);
-	tens(x,y,z,2)=ivol(x,y,z,1)*ivol(x,y,z,1);
-	tens(x,y,z,3)=ivol(x,y,z,2)*ivol(x,y,z,0);
-	tens(x,y,z,4)=ivol(x,y,z,2)*ivol(x,y,z,1);
-	tens(x,y,z,5)=ivol(x,y,z,2)*ivol(x,y,z,2);
-      }
+  if(ivector.set())
+    for(int z=0;z<ivol.zsize();z++) 
+      for(int y=0;y<ivol.ysize();y++)  
+	for(int x=0;x<ivol.xsize();x++){
+	  tens(x,y,z,0)=ivol(x,y,z,0)*ivol(x,y,z,0);
+	  tens(x,y,z,1)=ivol(x,y,z,1)*ivol(x,y,z,0);
+	  tens(x,y,z,2)=ivol(x,y,z,2)*ivol(x,y,z,0);
+	  tens(x,y,z,3)=ivol(x,y,z,1)*ivol(x,y,z,1);
+	  tens(x,y,z,4)=ivol(x,y,z,2)*ivol(x,y,z,1);
+	  tens(x,y,z,5)=ivol(x,y,z,2)*ivol(x,y,z,2);
+	}
+  else{
+    tens=ivol;
+  }
 
   //time_t _time=time(NULL);
   if(matrix.set()){
@@ -319,6 +489,7 @@ int main(int argc,char *argv[]){
     options.add(verbose);
     options.add(help);
     options.add(ivector);
+    options.add(itensor);
     options.add(ovector);
     options.add(ref);
     options.add(matrix);
@@ -346,6 +517,19 @@ int main(int argc,char *argv[]){
 	   << "Please Specify either --affine OR --warpfield"
 	   << endl << endl;
       exit(EXIT_FAILURE);
+    }
+    if(ivector.unset()){
+      if(itensor.unset()){
+	cerr << endl;
+	cerr << "Please entre either an input vector or a tensor" << endl << endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+    if(ivector.set()){
+      if(itensor.set()){
+	cerr << endl;
+	cerr << "Warning: warping the input vector, and ignoring the tensor" << endl << endl;
+      }
     }
   }
   catch(X_OptionError& e) {
