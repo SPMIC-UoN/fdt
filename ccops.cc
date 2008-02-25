@@ -586,13 +586,18 @@ int main ( int argc, char **argv ){
    
     if(coordbool){
       cout<<"Permuting Seed Coordinates"<<endl;
+//       OUT(r1.Maximum());
+//       OUT(r1.Minimum());
+//       OUT(newcoordmat.Ncols());
+//       OUT(newcoordmat.Nrows());
+
       for(int i=0;i<outcoords.xsize();i++){
 	outcoords(i,0,0)=(int)newcoordmat(int(r1(i+1)),1);
 	outcoords(i,1,0)=(int)newcoordmat(int(r1(i+1)),2);
 	outcoords(i,2,0)=(int)newcoordmat(int(r1(i+1)),3);
       } 
     }
-   
+    cout<<"done."<<endl;
     write_ascii_matrix(r1,opts.directory.value()+"/"+base+"r1");
     write_ascii_matrix(y1,opts.directory.value()+"/"+base+"y1");
     save_volume(outCCvol,opts.directory.value()+"/reord_CC_"+base);
@@ -613,27 +618,27 @@ int main ( int argc, char **argv ){
       }
       save_volume(mask,opts.directory.value()+"/reord_mask_"+base);
       
-      // save tractspace clustering if specified
-      volume<int> outmask,tractmask;
-      read_volume(tractmask,opts.directory.value()+"/lookup_tractspace_fdt_matrix2");
-      outmask=tractmask;
-      copybasicproperties(tractmask,outmask);
+      // // save tractspace clustering if specified
+//       volume<int> outmask,tractmask;
+//       read_volume(tractmask,opts.directory.value()+"/lookup_tractspace_fdt_matrix2");
+//       outmask=tractmask;
+//       copybasicproperties(tractmask,outmask);
       
-      outmask=0;
-      for(int z=0;z<tractmask.zsize();z++)
-	for(int y=0;y<tractmask.ysize();y++)
-	  for(int x=0;x<tractmask.xsize();x++){
-	    int j=tractmask(x,y,z);
-	    ColumnVector vals(myOM.xsize());
-	    for(int i=0;i<myOM.xsize();i++){
-	      vals(i+1) = myOM(i,j,0);
-	    }
-	    if(vals.MaximumAbsoluteValue()==0)continue;
-	    int index;
-	    vals.Maximum1(index);
-	      outmask(x,y,z) = (int)y1(index);
-	  }
-      save_volume(outmask,opts.directory.value()+"/tract_clustering_"+base);
+//       outmask=0;
+//       for(int z=0;z<tractmask.zsize();z++)
+// 	for(int y=0;y<tractmask.ysize();y++)
+// 	  for(int x=0;x<tractmask.xsize();x++){
+// 	    int j=tractmask(x,y,z);
+// 	    ColumnVector vals(myOM.xsize());
+// 	    for(int i=0;i<myOM.xsize();i++){
+// 	      vals(i+1) = myOM(i,j,0);
+// 	    }
+// 	    if(vals.MaximumAbsoluteValue()==0)continue;
+// 	    int index;
+// 	    vals.Maximum1(index);
+// 	      outmask(x,y,z) = (int)y1(index);
+// 	  }
+//       save_volume(outmask,opts.directory.value()+"/tract_clustering_"+base);
 	
 	
     }
