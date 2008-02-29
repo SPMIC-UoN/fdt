@@ -6,7 +6,6 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${I
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
 DLIBS = -lwarpfns -lbasisfield -lshapeModel -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
-#DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 ARCHFLAGS =
 ARCHLDFLAGS =
 
@@ -26,6 +25,7 @@ FMO=fdt_matrix_ops
 INDEXER=indexer
 TEST=testfile
 VECREG=vecreg
+KURTOSIS=kurtosis
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -43,6 +43,8 @@ FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
+KURTOSISOBJS=kurtosis.o dtifitOptions.o
+
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -109,4 +111,8 @@ ${TEST}:    	${TESTOBJS}
 
 ${VECREG}:    	${VECREGOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
+
+
+${KURTOSIS}:   ${KURTOSISOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
 
