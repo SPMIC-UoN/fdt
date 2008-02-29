@@ -106,7 +106,7 @@ public:
   float evaluate(const ColumnVector& x) const{
     float res=0;
     res = ( m_A + m_B*x(7) + m_C*x.SubMatrix(1,6,1,1)
-	    + m_D*x.SubMatrix(8,22,1,1)*(x(1)+x(4)+x(6))*(x(1)+x(4)+x(6))/9 ).SumSquare();
+	    + m_D*x.SubMatrix(8,22,1,1)*(x(1)+x(4)+x(6))*(x(1)+x(4)+x(6))/9).SumSquare();
 
     return res;
   }
@@ -161,11 +161,6 @@ public:
 
 };
 
-inline float PI() { return  3.14159265358979;}
-inline float min(float a,float b){
-  return a<b ? a:b;}
-inline float max(float a,float b){
-  return a>b ? a:b;}
 inline Matrix Anis()
 { 
   Matrix A(3,3);
@@ -174,41 +169,6 @@ inline Matrix Anis()
     << 0 << 0 << 0;
   return A;
 }
-
-inline Matrix Is()
-{ 
-  Matrix I(3,3);
-  I << 1 << 0 << 0
-    << 0 << 1 << 0
-    << 0 << 0 << 1;
-  return I;
-}
-
-inline ColumnVector Cross(const ColumnVector& A,const ColumnVector& B)
-{
-  ColumnVector res(3);
-  res << A(2)*B(3)-A(3)*B(2)
-      << A(3)*B(1)-A(1)*B(3)
-      << A(1)*B(2)-B(1)*A(2);
-  return res;
-}
-
-inline Matrix Cross(const Matrix& A,const Matrix& B)
-{
-  Matrix res(3,1);
-  res << A(2,1)*B(3,1)-A(3,1)*B(2,1)
-      << A(3,1)*B(1,1)-A(1,1)*B(3,1)
-      << A(1,1)*B(2,1)-B(1,1)*A(2,1);
-  return res;
-}
-
-float mod(float a, float b){
-  while(a>b){a=a-b;}
-  while(a<0){a=a+b;}
-  return a;
-}
-
-
 
 Matrix form_Amat(const Matrix& r,const Matrix& b)
 {
@@ -239,88 +199,10 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
   return tens;
 }
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
-{
-  //Initialise the parameters using traditional DTI analysis
-  ColumnVector logS(S.Nrows());
-  SymmetricMatrix tens;   //Basser's Diffusion Tensor;
-  //  DiagonalMatrix Dd;   //eigenvalues
-  Matrix Vd;   //eigenvectors
-  DiagonalMatrix Ddsorted(3);
-  float mDd, fsquared;
-
-  for ( int i = 1; i <= S.Nrows(); i++)
-    {
-      if(S(i)>0){
-	logS(i)=log(S(i));
-      }
-      else{
-	logS(i)=0;
-      }
-      //      logS(i)=(S(i)/S0)>0.01 ? log(S(i))-log(S0):log(0.01);
-    }
-
-  Dvec = -pinv(Amat)*logS;
-  if(  Dvec(7) >  -maxlogfloat ){
-    s0=exp(-Dvec(7));
-  }
-  else{
-    s0=S.MaximumAbsoluteValue();
-  }
-  for ( int i = 1; i <= S.Nrows(); i++)
-    {
-      if(s0<S.Sum()/S.Nrows()){ s0=S.MaximumAbsoluteValue();  }
-      logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
-    }
-  Dvec = -pinv(Amat)*logS;
-  s0=exp(-Dvec(7));
-  if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
-  tens = vec2tens(Dvec);
-  EigenValues(tens,Dd,Vd);
-  mDd = Dd.Sum()/Dd.Nrows();
-  int maxind = Dd(1) > Dd(2) ? 1:2;   //finding max,mid and min eigenvalues
-  maxind = Dd(maxind) > Dd(3) ? maxind:3;
-  int midind;
-  if( (Dd(1)>=Dd(2) && Dd(2)>=Dd(3)) || (Dd(1)<=Dd(2) && Dd(2)<=Dd(3)) ){midind=2;}
-  else if( (Dd(2)>=Dd(1) && Dd(1)>=Dd(3)) || (Dd(2)<=Dd(1) && Dd(1)<=Dd(3)) ){midind=1;}
-  else {midind=3;}
-  int minind = Dd(1) < Dd(2) ? 1:2;   //finding maximum eigenvalue
-  minind = Dd(minind) < Dd(3) ? minind:3;
-  Ddsorted << Dd(maxind) << Dd(midind) << Dd(minind);
-  Dd=Ddsorted;
-  evec1 << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
-  evec2 << Vd(1,midind) << Vd(2,midind) << Vd(3,midind);
-  evec3 << Vd(1,minind) << Vd(2,minind) << Vd(3,minind);
-
-  float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
-  float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
- 
-  if(denom>0) fsquared=numer/denom;
-  else fsquared=0;
-  if(fsquared>0){f=sqrt(fsquared);}
-  else{f=0;}
-
-}
-
 void kurtosisfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2, ColumnVector& evec3,
 		 float& f,float& s0,ColumnVector& Dvec, float& mk, ColumnVector& tens4, 
 		 const Matrix& Amat,const Matrix& Kmat,const ColumnVector& S,const Matrix& bvals,const Matrix& bvecs){
 
-  // initialise second-order tensor with simple tensor fit
-  // tensorfit(Dd,evec1,evec2,evec3,f,s0,Dvec,Amat,S);
-  //SymmetricMatrix tens;
-  //tens = vec2tens(Dvec);
-
-//   // initialise Kurtosis using Linear fit
-//   ColumnVector v(S.Nrows());
-//   for(int i=1;i<=S.Nrows();i++){
-//   float bDi = bvals(1,i)*(bvecs.Column(i).t()*tens*bvecs.Column(i)).AsScalar();
-//   if(bDi>0)
-//     v(i) = 6*(log(S(i)/s0)+bDi)/(bDi*bDi);
-//   else
-//     v(i) = 0;
-//   }
-//   tens4 = pinv(Kmat) * v;
 
   // calculate DT and KT using non-linear fitting
   KurtosisNonlinCF KNL(S,bvals,bvecs);
@@ -370,7 +252,8 @@ void kurtosisfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2, Col
       mk+=vec(i)/(bvecs.Column(i).t()*tens*bvecs.Column(i)).AsScalar();
   }
   mk *= mDd*mDd;
-  //OUT(mk);
+  mk /= float(S.Nrows());
+  
 }
 
 int main(int argc, char** argv)
