@@ -179,23 +179,23 @@ void vecreg_aff(const volume4D<float>& tens,
 	     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3))
 	     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
 	     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-  
-	// compute first eigenvector
-	EigenValues(Tens,d,v);
-	V_seed = v.Column(3);
-
-	// rotate vector
-	V_target=R*V_seed;
-	V_target/=sqrt(V_target.SumSquare());
-	oV1(x,y,z,0)=V_target(1);
-	oV1(x,y,z,1)=V_target(2);
-	oV1(x,y,z,2)=V_target(3);
 
 
+	if(ivector.set()){
+	  // compute first eigenvector
+	  EigenValues(Tens,d,v);
+	  V_seed = v.Column(3);
+	  
+	  // rotate vector
+	  V_target=R*V_seed;
+	  V_target/=sqrt(V_target.SumSquare());
+	  oV1(x,y,z,0)=V_target(1);
+	  oV1(x,y,z,1)=V_target(2);
+	  oV1(x,y,z,2)=V_target(3);
+	}
 	
 	// create tensor
 	if(ivector.unset()){
-	  R=ppd(F,v.Column(1),v.Column(2));
 	  Tens << R*Tens*R.t();
 	  
 	  oV1(x,y,z,0)=Tens(1,1);
@@ -254,18 +254,6 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
   // read warp field created by Jesper
   FnirtFileReader ffr(warp.value());
   warpvol=ffr.FieldAsNewimageVolume4D(true);
-  //  convertwarp_abs2rel(warpvol);
-  //  convertwarp_rel2abs(warpvol);
-
-// transform mm warp to voxel warp
-  // the warpfield here has been transfomed by MJ's script
-  // for(int z=0;z<warpvol[0].zsize();z++)
-//     for(int y=0;y<warpvol[0].ysize();y++)
-//       for(int x=0;x<warpvol[0].xsize();x++){
-// 	warpvol[0](x,y,z) /= dx;
-// 	warpvol[1](x,y,z) /= dy;
-// 	warpvol[2](x,y,z) /= dz;
-//       }
  
 
   // compute transformation jacobian
@@ -288,18 +276,11 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
     for(int y=0;y<oV1.ysize();y++)
        for(int x=0;x<oV1.xsize();x++){
 	 
-	//  X_seed << round(x+warpvol[0](x,y,z))
-// 		<< round(y+warpvol[1](x,y,z))
-// 		<< round(z+warpvol[2](x,y,z));
-// 	 X_seed << round(warpvol[0](x,y,z))
-// 		<< round(warpvol[1](x,y,z))
-// 		<< round(warpvol[2](x,y,z));
 
 
 	 X_target << x << y << z;
 	 X_seed = NewimageCoord2NewimageCoord(warpvol,false,oV1[0],mask,X_target);
 
-	 //OUT(X_seed.t());
 
 	 if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
 	   continue;
@@ -321,35 +302,19 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 // compute local forward affine transformation	
 	 F = (I + Jw).i();
 	 
-	 // reorient according to affine reorientation scheme
-	 //SVD(F*F.t(),d,u,v);
-	 //R=(u*sqrt(d)*v.t()).i()*F;
-	 //OUT(R*R.t());
-	 //OUT(R);
-
-
-	 // compute first eigenvector
-	 EigenValues(Tens,d,v);
-	 V_seed = v.Column(3);
-
-
-
-
-	 //R=ppd(F,V_seed);
-	 //OUT(R*R.t());
-	 //OUT(R);
-	 //cout << "===="<<endl;
-
-
-	 V_target=R*V_seed;
-	 V_target/=sqrt(V_target.SumSquare());
-
-	 //v = R*v;
-	 //Tens << d(1,1)*v.Column(1)*v.Column(1).t() +
-	 //      d(2,2)*v.Column(2)*v.Column(2).t() +
-	 //      d(3,3)*v.Column(3)*v.Column(3).t();
 
 	 if(ivector.set()){
+	   // reorient according to affine reorientation scheme
+	   SVD(F*F.t(),d,u,v);
+	   R=(u*sqrt(d)*v.t()).i()*F;
+
+	   // compute first eigenvector
+	   EigenValues(Tens,d,v);
+	   V_seed = v.Column(3);
+	 
+	   V_target=R*V_seed;
+	   V_target/=sqrt(V_target.SumSquare());
+
 	   oV1(x,y,z,0)=V_target(1);
 	   oV1(x,y,z,1)=V_target(2);
 	   oV1(x,y,z,2)=V_target(3);
@@ -357,22 +322,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 // create tensor
 	 if(ivector.unset()){
 	   R=ppd(F,v.Column(3),v.Column(2));
-	   //OUT(R.Determinant());
 	   Tens << R*Tens*R.t();
-	   //EigenValues(Tens,d,v);
-	   //oV1(x,y,z,0)=v(1,3);
-	   //oV1(x,y,z,1)=v(2,3);
-	   //oV1(x,y,z,2)=v(3,3);
-	   
-
-	   // OUT(Tens);
-// 	   OUT(V_target);
-// 	   OUT(d);
-// 	   EigenValues(Tens,d,v);
-// 	   OUT(d);
-// 	   OUT(v);
-// 	   cout<<"=========="<<endl;
-// 	   OUT(Tens);
 
 	   oV1(x,y,z,0)=Tens(1,1);
 	   oV1(x,y,z,1)=Tens(2,1);
