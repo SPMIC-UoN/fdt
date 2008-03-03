@@ -41,7 +41,7 @@ Option<string> warp(string("-w,--warpfield"),string(""),
 		       string("filename of 4D warp field for nonlinear registration"),
 		       false,requires_argument);
 Option<string> interpmethod(string("--interp"),"",
-		       string("interpolation method : nearestneighbour (default) or trilinear or sinc"),
+		       string("interpolation method : nearestneighbour, trilinear (default) or sinc"),
 		       false,requires_argument);
 Option<string> maskfile(string("-m,--mask"),string(""),
 		       string("brain mask in input space"),
