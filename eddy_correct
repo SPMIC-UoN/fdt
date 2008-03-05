@@ -26,7 +26,7 @@ fi
 fslroi $input $output $ref 1
 
 fslsplit $input
-full_list=`${FSLDIR}/bin/imglob -oneperimage vol????.*`
+full_list=`${FSLDIR}/bin/imglob vol????.*`
 
 for i in $full_list ; do
     echo processing $i

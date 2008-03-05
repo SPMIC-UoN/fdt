@@ -198,9 +198,9 @@ done
 ##this will have to change..
 echo "Merging outputs into 4D files"
 
-${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
-${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
-${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
 ${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
 ${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
 ${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples

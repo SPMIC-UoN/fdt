@@ -57,7 +57,7 @@ while [ ${avg} -le ${numavgs} ]; do
 	fslroi ${$}${1}_b0_correct ${$}avg_${avg}_scan_${scan} $tmp;
     	scan=`expr $scan + 1`;
     done
-    fslmerge -t ${$}avg_${avg}_all `imglob -oneperimage ${$}avg_${avg}_scan_*`
+    fslmerge -t ${$}avg_${avg}_all `imglob ${$}avg_${avg}_scan_*`
     fslmaths data  -add ${$}avg_${avg}_all data;
     avg=`expr $avg + 1`;
     

@@ -17,12 +17,12 @@ nep=`echo *ep2d_* |wc -w`
 nlp=`echo *lp2d_* |wc -w`
 
 if [ $nep -gt 1 ];then 
-    a1=`imglob -oneperimage images_?_*ep2d_*`
-    a2=`imglob -oneperimage images_??_*ep2d_*`
+    a1=`imglob images_?_*ep2d_*`
+    a2=`imglob images_??_*ep2d_*`
     fslmerge -t big4D $a1 $a2
 elif [ $nlp -gt 1 ];then 
-    a1=`imglob -oneperimage images_?_*lp2d_*`
-    a2=`imglob -oneperimage images_??_*lp2d_*`
+    a1=`imglob images_?_*lp2d_*`
+    a2=`imglob images_??_*lp2d_*`
     fslmerge -t big4D $a1 $a2
 fi
 
