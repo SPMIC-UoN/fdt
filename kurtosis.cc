@@ -28,25 +28,50 @@ const int maxint=1000000000;
 ReturnMatrix form_Kmat(const Matrix& r){
   Matrix K(r.Ncols(),15);
 
-  for(int j=1;j<=r.Ncols();j++){
-    float x=r(1,j),y=r(2,j),z=r(3,j);
-    K(j,1) = MISCMATHS::pow(x,4);
-    K(j,2) = MISCMATHS::pow(y,4);
-    K(j,3) = MISCMATHS::pow(z,4);
-    K(j,4) = 4*MISCMATHS::pow(x,3)*y;
-    K(j,5) = 4*MISCMATHS::pow(x,3)*z;
-    K(j,6) = 4*MISCMATHS::pow(y,3)*x;
-    K(j,7) = 4*MISCMATHS::pow(y,3)*z;
-    K(j,8) = 4*MISCMATHS::pow(z,3)*x;
-    K(j,9) = 4*MISCMATHS::pow(z,3)*y;
-    K(j,10) = 6*MISCMATHS::pow(x,2)*MISCMATHS::pow(y,2);
-    K(j,11) = 6*MISCMATHS::pow(x,2)*MISCMATHS::pow(z,2);
-    K(j,12) = 6*MISCMATHS::pow(y,2)*MISCMATHS::pow(z,2);
-    K(j,13) = 12*MISCMATHS::pow(x,2)*y*z;
-    K(j,14) = 12*MISCMATHS::pow(y,2)*x*z;
-    K(j,15) = 12*MISCMATHS::pow(z,2)*x*y;
-    j+=1;
+  Matrix ind(15,4);
+  ind << 1 << 1 << 1 << 1
+      << 2 << 2 << 2 << 2
+      << 3 << 3 << 3 << 3
+      << 1 << 1 << 1 << 2
+      << 1 << 1 << 1 << 3
+      << 1 << 2 << 2 << 2
+      << 2 << 2 << 2 << 3
+      << 1 << 3 << 3 << 3
+      << 2 << 3 << 3 << 3
+      << 1 << 1 << 2 << 2
+      << 1 << 1 << 3 << 3
+      << 2 << 2 << 3 << 3
+      << 1 << 1 << 2 << 3
+      << 1 << 2 << 2 << 3
+      << 1 << 2 << 3 << 3;
+
+  for(int i=1;i<=15;i++){
+    for(int j=1;j<=r.Ncols();j++){
+      K(j,i) = r((int)ind(i,1),j) * r((int)ind(i,2),j) * r((int)ind(i,3),j) * r((int)ind(i,4),j);
+    }
   }
+
+ //  for(int j=1;j<=r.Ncols();j++){
+//     float x=r(1,j),y=r(2,j),z=r(3,j);
+//     K(j,1) = MISCMATHS::pow(x,4);
+//     K(j,2) = MISCMATHS::pow(y,4);
+//     K(j,3) = MISCMATHS::pow(z,4);
+//     K(j,4) = 4*MISCMATHS::pow(x,3)*y;
+//     K(j,5) = 4*MISCMATHS::pow(x,3)*z;
+//     K(j,6) = 4*MISCMATHS::pow(y,3)*x;
+//     K(j,7) = 4*MISCMATHS::pow(y,3)*z;
+//     K(j,8) = 4*MISCMATHS::pow(z,3)*x;
+//     K(j,9) = 4*MISCMATHS::pow(z,3)*y;
+//     K(j,10) = 6*MISCMATHS::pow(x,2)*MISCMATHS::pow(y,2);
+//     K(j,11) = 6*MISCMATHS::pow(x,2)*MISCMATHS::pow(z,2);
+//     K(j,12) = 6*MISCMATHS::pow(y,2)*MISCMATHS::pow(z,2);
+//     K(j,13) = 12*MISCMATHS::pow(x,2)*y*z;
+//     K(j,14) = 12*MISCMATHS::pow(y,2)*x*z;
+//     K(j,15) = 12*MISCMATHS::pow(z,2)*x*y;
+//     j+=1;
+//   }
+
+
   K.Release();
   return K;
 }
@@ -95,9 +120,11 @@ public:
       m_C(i,6) = -bvals(1,i)*bvecs(3,i)*bvecs(3,i);
 
       for(int j=1;j<=15;j++)
-	m_D(i,j) = (bvals(1,i)*bvals(1,i)/6) * K(i,j);
+	m_D(i,j) = (bvals(1,i)*bvals(1,i)/6) * K(i,j) / 9;
 
     }
+
+    //        m_D=0;
     
   }
 
@@ -106,7 +133,10 @@ public:
   float evaluate(const ColumnVector& x) const{
     float res=0;
     res = ( m_A + m_B*x(7) + m_C*x.SubMatrix(1,6,1,1)
-	    + m_D*x.SubMatrix(8,22,1,1)*(x(1)+x(4)+x(6))*(x(1)+x(4)+x(6))/9).SumSquare();
+	    + m_D*x.SubMatrix(8,22,1,1)*(x(1)+x(4)+x(6))*(x(1)+x(4)+x(6))).SumSquare();
+
+    OUT(x.t());
+    OUT(res);
 
     return res;
   }
@@ -114,7 +144,7 @@ public:
     ColumnVector sj_g(x.Nrows());
     //    ColumnVector sj_gg;
     
-    //    sj_gg = MISCMATHS::gradient(x,*this,1e-4);
+    //  sj_gg = MISCMATHS::gradient(x,*this,1e-4);
  
     ColumnVector sj_d(6);
     ColumnVector sj_w(15);
@@ -124,22 +154,26 @@ public:
     double sj_t2=sj_t*sj_t;
 
     ColumnVector sj_func(m_n);
-    sj_func = m_A + m_B*x(7) + m_C*sj_d + m_D*sj_w*sj_t*sj_t/9;
+    sj_func = m_A + m_B*x(7) + m_C*sj_d + m_D*sj_w*sj_t2;
 
-    sj_g(1) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,1,1)+2*sj_t/9*m_D*sj_w).Sum();
-    sj_g(2) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,2,2)).Sum();
-    sj_g(3) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,3,3)).Sum();
-    sj_g(4) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,4,4)+2*sj_t/9*m_D*sj_w).Sum();
-    sj_g(5) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,5,5)).Sum();
-    sj_g(6) = 2*NEWMAT::SP(sj_func,m_C.SubMatrix(1,m_n,6,6)+2*sj_t/9*m_D*sj_w).Sum();
+    sj_g(1) = 2*NEWMAT::SP(sj_func,m_C.Column(1)+2*sj_t*m_D*sj_w).Sum();
+    sj_g(2) = 2*NEWMAT::SP(sj_func,m_C.Column(2)).Sum();
+    sj_g(3) = 2*NEWMAT::SP(sj_func,m_C.Column(3)).Sum();
+    sj_g(4) = 2*NEWMAT::SP(sj_func,m_C.Column(4)+2*sj_t*m_D*sj_w).Sum();
+    sj_g(5) = 2*NEWMAT::SP(sj_func,m_C.Column(5)).Sum();
+    sj_g(6) = 2*NEWMAT::SP(sj_func,m_C.Column(6)+2*sj_t*m_D*sj_w).Sum();
 
     sj_g(7) = 2*NEWMAT::SP(sj_func,m_B).Sum();
  
-    for(int sj_i=1,sj_j=8;sj_j<=x.Nrows();sj_i++,sj_j++)
-      sj_g(sj_j) = 2*NEWMAT::SP(sj_func,sj_t2/9*m_D.SubMatrix(1,m_n,sj_i,sj_i)).Sum();
+    for(int i=1,j=8;j<=x.Nrows();i++,j++)
+      sj_g(j) = 2*NEWMAT::SP(sj_func,sj_t2*m_D.Column(i)).Sum();
 
-    sj_g.Release();
-    return sj_g;
+    OUT(sj_g.t());
+
+     sj_g.Release();
+     return sj_g;
+     //    sj_gg.Release();
+     //return sj_gg;
 
   }
 
@@ -207,6 +241,8 @@ void kurtosisfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2, Col
   // calculate DT and KT using non-linear fitting
   KurtosisNonlinCF KNL(S,bvals,bvecs);
   ColumnVector xmin(22);
+  xmin=0.0;
+  xmin << .002 << 0 << 0 << .001 << 0 << .001 << 1000 << .5 << 0.5 << 0.1 << 0 << 0 << 0 << 0 << 0 << 0 <<0<<0<<0<<0<<0<<0;
   KNL.minimize(xmin);
 
 
