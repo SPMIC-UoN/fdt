@@ -6,8 +6,6 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${I
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
 DLIBS = -lwarpfns -lbasisfield -lshapeModel -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
-ARCHFLAGS =
-ARCHLDFLAGS =
 
 DTIFIT=dtifit
 CCOPS=ccops
