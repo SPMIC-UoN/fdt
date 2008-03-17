@@ -20,8 +20,8 @@ void nmasks()
 
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();
-  vector< volume<int> > seeds;
-  volume<int> tmpvol;
+  vector< volume<float> > seeds;
+  volume<float> tmpvol;
   vector<string> masknames;
 
   if(fsl_imageexists(opts.seedfile.value())){

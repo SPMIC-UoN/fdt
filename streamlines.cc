@@ -51,7 +51,7 @@ namespace TRACT{
       }
 
       for( unsigned int m = 0; m < masknames.size(); m++ ){
-	volume<int>* tmpptr =new volume<int>;
+	volume<float>* tmpptr =new volume<float>;
 	if(opts.verbose.value()>0)
 	  cout<<masknames[m]<<endl;
 	read_volume(*tmpptr,masknames[m]);
@@ -648,17 +648,23 @@ namespace TRACT{
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst,const ColumnVector& dir){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
-    if(fibst == -1){
-      fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+    if(opts.fibst.set()){
+      fibst=opts.fibst.value()-1;
+      OUT(fibst);
+   }
+    else{
+      if(fibst == -1){
+	fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
     }
-    if(opts.randfib.value()){
-      float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
-      fibst = (int)round(tmp);
-      //if(tmp>0.5)
-      //fibst=0;
-      //else
-      //fibst=1;// fix this for > 2 fibres
-    } 
+      if(opts.randfib.value()){
+	float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
+	fibst = (int)round(tmp);
+	//if(tmp>0.5)
+	//fibst=0;
+	//else
+	//fibst=1;// fix this for > 2 fibres
+      } 
+    }
     
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){

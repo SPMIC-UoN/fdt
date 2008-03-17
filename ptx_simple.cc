@@ -22,7 +22,7 @@ void track(){
     logger.makeDir("particles","particle0",true,false);
   }
   
-  volume<int> seedref;
+  volume<float> seedref;
   if(opts.seedref.value()!=""){
     read_volume(seedref,opts.seedref.value());
   }

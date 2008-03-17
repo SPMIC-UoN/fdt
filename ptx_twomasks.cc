@@ -20,7 +20,7 @@ void twomasks()
 
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();
-  volume<int> seeds,seeds2;
+  volume<float> seeds,seeds2;
   read_volume(seeds,opts.seedfile.value());
   read_volume(seeds2,opts.mask2.value());
 

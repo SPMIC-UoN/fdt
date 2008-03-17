@@ -25,7 +25,7 @@ void meshmask()
   mseeds.load_fs_label(opts.seedfile.value());
 
   // internally create seed mask in voxel space
-  volume<int> seeds;
+  volume<float> seeds;
   if(opts.seedref.value()!="")
     read_volume(seeds,opts.seedref.value());
   else
