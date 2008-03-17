@@ -62,6 +62,7 @@ class probtrackxOptions {
   Option<bool> loopcheck;
   Option<bool> usef;
   Option<bool> randfib;
+  Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
   void parse_command_line(int argc, char** argv,Log& logger);
@@ -190,6 +191,9 @@ class probtrackxOptions {
   randfib(string("--randfib"), false, 
 	 string("Select randomly from one of the fibres"), 
 	 false, no_argument),
+  fibst(string("--fibst"),1, 
+	 string("Force a starting fibre for tracking (default=1)"), 
+	 false, requires_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
@@ -235,6 +239,7 @@ class probtrackxOptions {
        options.add(loopcheck);
        options.add(usef);
        options.add(randfib);
+       options.add(fibst);
        options.add(modeuler);
        options.add(rseed);
      }
