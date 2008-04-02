@@ -748,36 +748,36 @@ namespace FIBRE{
 
     void jump( bool can_use_ard=true ){
       
-      if(!propose_d()){
-	compute_prior();
-	compute_likelihood();
-	compute_energy();
-	if(test_energy()){
-	  accept_d();
-	}
-	else{
-	  reject_d();
-	  restore_energy();
-	}
-      }
-      else{ 
-	reject_d();
-      }
+      /* if(!propose_d()){ */
+/* 	compute_prior(); */
+/* 	compute_likelihood(); */
+/* 	compute_energy(); */
+/* 	if(test_energy()){ */
+/* 	  accept_d(); */
+/* 	} */
+/* 	else{ */
+/* 	  reject_d(); */
+/* 	  restore_energy(); */
+/* 	} */
+/*       } */
+/*       else{  */
+/* 	reject_d(); */
+/*       } */
       
-      if(!propose_S0()){
-	compute_prior();
-	compute_likelihood();
-	compute_energy();
-	if(test_energy())
-	  accept_S0();
-	else{
-	  reject_S0();
-	  restore_energy();
-	}
-      }
-      else{
-	reject_S0();
-      } 
+/*       if(!propose_S0()){ */
+/* 	compute_prior(); */
+/* 	compute_likelihood(); */
+/* 	compute_energy(); */
+/* 	if(test_energy()) */
+/* 	  accept_S0(); */
+/* 	else{ */
+/* 	  reject_S0(); */
+/* 	  restore_energy(); */
+/* 	} */
+/*       } */
+/*       else{ */
+/* 	reject_S0(); */
+/*       }  */
       
       for(unsigned int f=0;f<m_fibres.size();f++){
 	//cout<<"pre th"<<m_fibres[f].get_th()<<endl;	
