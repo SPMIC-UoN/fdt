@@ -103,7 +103,8 @@ namespace TRACTVOLSX{
       }
       
       
-      ColumnVector sample(const float& x,const float& y,const float&z,const float& r_x,const float& r_y,const float& r_z){
+      ColumnVector sample(const float& x,const float& y,const float&z,const float& r_x,const float& r_y,const float& r_z,
+			  float& prefer_x=0,float& prefer_y=0,float& prefer_z=0){
 
 	////////Probabilistic interpolation
 	int cx =(int) ceil(x),fx=(int) floor(x);
@@ -148,8 +149,6 @@ namespace TRACTVOLSX{
 	  newz=cz;
  
 	ColumnVector th_ph_f(3);	
-	
-	
 	float samp=rand(); samp/=RAND_MAX;
 	samp=round(samp*((*thsamples[0]).tsize()-1));
 	float theta=0,phi=0;
@@ -162,12 +161,14 @@ namespace TRACTVOLSX{
 	    init_sample=false;
 	  }
 	  else{
-	    
+	    if(fabs(prefer_x)+fabs(prefer_y)+fabs(prefer_z)==0){
+	      prefer_x=r_x;prefer_y=r_y;prefer_z=r_z;
+	    }
 	    for(unsigned int fib=0;fib<thsamples.size();fib++){
 	      if((*fsamples[fib])(int(newx),int(newy),int(newz),int(samp))>opts.fibthresh.value()){
 		float phtmp=(*phsamples[fib])(int(newx),int(newy),int(newz),int(samp));
 		float thtmp=(*thsamples[fib])(int(newx),int(newy),int(newz),int(samp));
-		dottmp=fabs(sin(thtmp)*cos(phtmp)*r_x + sin(thtmp)*sin(phtmp)*r_y + cos(thtmp)*r_z);
+		dottmp=fabs(sin(thtmp)*cos(phtmp)*prefer_x + sin(thtmp)*sin(phtmp)*prefer_y + cos(thtmp)*prefer_z);
 		if(dottmp>dotmax){
 		  dotmax=dottmp;
 		  theta=thtmp;

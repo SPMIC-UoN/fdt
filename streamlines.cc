@@ -40,6 +40,9 @@ namespace TRACT{
     if(opts.stopfile.value()!=""){
       read_volume(m_stop,opts.stopfile.value());
     }
+    if(opts.prefdirfile.value()!=""){
+      read_volume4D(m_prefdir,opts.prefdirfile.value());
+    }
  
     vector<string> masknames;
     if(opts.waypoints.value()!=""){
@@ -137,7 +140,12 @@ namespace TRACT{
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
 	
-	  
+	float pref_x=0,pref_y=0,pref_z=0;
+	if(opts.prefdirfile.value()!=""){
+	  pref_x = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),0);
+	  pref_y = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),1);
+	  pref_z = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),2); 
+	}
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
 	  if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
@@ -166,11 +174,11 @@ namespace TRACT{
 	}	  
 	  
 	if(opts.skipmask.value() == ""){
-	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
+	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 	}
 	else{
 	  if(m_skipmask(x_s,y_s,z_s)==0)
-	    th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
+	    th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 	}
 	  
 	  
@@ -188,7 +196,7 @@ namespace TRACT{
 		{
 		  ColumnVector test_th_ph_f;
 		  m_part.testjump(th_ph_f(1),th_ph_f(2));
-		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz());
+		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 		  m_part.jump(test_th_ph_f(1),test_th_ph_f(2));
 		}
 	    }

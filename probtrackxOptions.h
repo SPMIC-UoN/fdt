@@ -44,6 +44,7 @@ class probtrackxOptions {
   Option<string> outfile;
   Option<string> rubbishfile;
   Option<string> stopfile;
+  Option<string> prefdirfile;
   Option<string> seeds_to_dti;
   FmribOption<string> skipmask;
   Option<string> seedref;
@@ -138,6 +139,9 @@ class probtrackxOptions {
    stopfile(string("--stop"), string(""),
 	       string("Stop tracking at locations given by this mask file"),
 	       false, requires_argument),
+   prefdirfile(string("--prefdir"), string(""),
+	       string("prefered orientation preset in a 4D mask"),
+	       false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
 		string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
    skipmask(string("--no_integrity"), string(""),
@@ -230,6 +234,7 @@ class probtrackxOptions {
        options.add(outfile);
        options.add(rubbishfile);
        options.add(stopfile);
+       options.add(prefdirfile);
        options.add(seeds_to_dti);
        options.add(nparticles);
        options.add(nsteps);

@@ -29,6 +29,7 @@ namespace TRACT{
     volume<int> m_skipmask;
     volume<int> m_rubbish;
     volume<int> m_stop;
+    volume4D<float> m_prefdir;
     volume4D<float> m_loopcheck;
     vector<volume<float>* > m_waymasks;
     vector<bool> m_passed_flags;
