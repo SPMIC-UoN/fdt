@@ -67,7 +67,7 @@ namespace TRACT{
       m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
     }
     else{
-      m_Seeds_to_DTI=Identity(4);
+      m_Seeds_to_DTI=IdentityMatrix(4);
     }
     vols.initialise(opts.basename.value());
     m_path.reserve(opts.nparticles.value());

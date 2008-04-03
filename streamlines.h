@@ -130,7 +130,7 @@ namespace TRACT{
       m_beenhere.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
       m_seedsdim.ReSize(3);
       m_seedsdim << m_seeds.xdim() <<m_seeds.ydim() <<m_seeds.zdim();
-      m_I=Identity(4);
+      m_I=IdentityMatrix(4);
       
     }
     
