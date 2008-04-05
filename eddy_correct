@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
+#   Copyright (C) 2004-8 University of Oxford
 #
 #   SHCOPYRIGHT
 
@@ -13,7 +13,6 @@ Usage() {
 
 [ "$3" = "" ] && Usage
 
-
 input=`${FSLDIR}/bin/remove_ext ${1}`
 output=`${FSLDIR}/bin/remove_ext ${2}`
 ref=${3}
@@ -25,8 +24,8 @@ fi
 
 fslroi $input $output $ref 1
 
-fslsplit $input
-full_list=`${FSLDIR}/bin/imglob vol????.*`
+fslsplit $input ${output}_tmp
+full_list=`${FSLDIR}/bin/imglob ${output}_tmp????.*`
 
 for i in $full_list ; do
     echo processing $i
@@ -36,5 +35,7 @@ done
 
 fslmerge -t $output $full_list
 
-/bin/rm vol????.*
+/bin/rm ${output}_tmp????.*
+
+
 
