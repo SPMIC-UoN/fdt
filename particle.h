@@ -194,9 +194,9 @@ namespace PARTICLE{
 	  float tmp=rand(); tmp/=RAND_MAX;
 	  sign=tmp > 0.5 ? 1:-1;
 	}
-	m_testx = m_x+sign*m_steplength/2/m_xdim*rx_new;
-	m_testy = m_y+sign*m_steplength/2/m_ydim*ry_new;
-	m_testz = m_z+sign*m_steplength/2/m_zdim*rz_new;
+	m_testx = m_x+sign*m_steplength/m_xdim*rx_new;
+	m_testy = m_y+sign*m_steplength/m_ydim*ry_new;
+	m_testz = m_z+sign*m_steplength/m_zdim*rz_new;
 	
 	if(init){
 	  m_rx_init=m_rx;
