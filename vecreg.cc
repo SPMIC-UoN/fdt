@@ -321,7 +321,10 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 }
 	 // create tensor
 	 if(ivector.unset()){
-	   R=ppd(F,v.Column(3),v.Column(2));
+	   SVD(F*F.t(),d,u,v);
+	   R=(u*sqrt(d)*v.t()).i()*F;
+
+	   //	   R=ppd(F,v.Column(3),v.Column(2));
 	   Tens << R*Tens*R.t();
 
 	   oV1(x,y,z,0)=Tens(1,1);
