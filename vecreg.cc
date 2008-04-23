@@ -86,7 +86,13 @@ ReturnMatrix rodrigues(const ColumnVector& n1,const ColumnVector& n2){
   
   w=cross(n1,n2);
 
-  if(w.SumSquare()==0){
+  if(w.MaximumAbsoluteValue()>0){
+    float ca=dot(n1,n2);
+    float sa=sqrt(cross(n1,n2).SumSquare());
+    
+    return rodrigues(sa,ca,w);
+  }
+  else{
     Matrix R(3,3);
     R << 1.0 << 0.0 << 0.0
       << 0.0 << 1.0 << 0.0
@@ -94,22 +100,17 @@ ReturnMatrix rodrigues(const ColumnVector& n1,const ColumnVector& n2){
     R.Release();
     return R;
   }
-  else{
-    //float nn1=sqrt(n1.SumSquare());
-    //float nn2=sqrt(n2.SumSquare());
-    float ca=dot(n1,n2);
-    float sa=sqrt(cross(n1,n2).SumSquare());
-
-    return rodrigues(sa,ca,w);
-  }
-
 }
 ReturnMatrix ppd(const Matrix& F,const ColumnVector& e1, const ColumnVector& e2){
   ColumnVector n1(3),n2(3),Pn2(3);
   Matrix R(3,3),R1(3,3),R2(3,3);
 
-  n1=F*e1;n1=n1/sqrt(n1.SumSquare());
-  n2=F*e2;n2=n2/sqrt(n2.SumSquare());
+  n1=F*e1;
+  if(n1.MaximumAbsoluteValue()>0)
+    n1/=sqrt(n1.SumSquare());
+  n2=F*e2;
+  if(n2.MaximumAbsoluteValue()>0)
+    n2/=sqrt(n2.SumSquare());
 
   R1=rodrigues(e1,n1);
 
@@ -117,8 +118,6 @@ ReturnMatrix ppd(const Matrix& F,const ColumnVector& e1, const ColumnVector& e2)
   Pn2=n2-dot(n1,n2)*n1;Pn2=Pn2/sqrt(Pn2.SumSquare());
   R2=rodrigues(R1*e2/sqrt((R1*e2).SumSquare()),Pn2);
   R=R2*R1;
-
-  //OUT(R.Determinant());
 
   R.Release();
   return R;
@@ -246,7 +245,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
   ColumnVector X_seed(3),X_target(3);
   
   //float dxx=tens.xdim(),dyy=tens.ydim(),dzz=tens.zdim();
-  float dx=oV1.xdim(),dy=oV1.ydim(),dz=oV1.zdim();
+  //float dx=oV1.xdim(),dy=oV1.ydim(),dz=oV1.zdim();
   //float nxx=(float)tens.xsize()/2.0,nyy=(float)tens.ysize()/2.0,nzz=(float)tens.zsize()/2.0;
   //float nx=(float)oV1.xsize()/2.0,ny=(float)oV1.ysize()/2.0,nz=(float)oV1.zsize()/2.0;
 
@@ -305,15 +304,16 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 
 	 if(ivector.set()){
 	   // reorient according to affine reorientation scheme
-	   SVD(F*F.t(),d,u,v);
-	   R=(u*sqrt(d)*v.t()).i()*F;
+	   //SVD(F*F.t(),d,u,v);
+	   //R=(u*sqrt(d)*v.t()).i()*F;
 
 	   // compute first eigenvector
 	   EigenValues(Tens,d,v);
 	   V_seed = v.Column(3);
 	 
-	   V_target=R*V_seed;
-	   V_target/=sqrt(V_target.SumSquare());
+	   V_target=F*V_seed;
+	   if(V_target.MaximumAbsoluteValue()>0)
+	     V_target/=sqrt(V_target.SumSquare());
 
 	   oV1(x,y,z,0)=V_target(1);
 	   oV1(x,y,z,1)=V_target(2);
@@ -321,10 +321,11 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 }
 	 // create tensor
 	 if(ivector.unset()){
-	   SVD(F*F.t(),d,u,v);
-	   R=(u*sqrt(d)*v.t()).i()*F;
+	   //SVD(F*F.t(),d,u,v);
+	   //R=(u*sqrt(d)*v.t()).i()*F;
 
-	   //	   R=ppd(F,v.Column(3),v.Column(2));
+	   EigenValues(Tens,d,v);
+	   R=ppd(F,v.Column(3),v.Column(2));
 	   Tens << R*Tens*R.t();
 
 	   oV1(x,y,z,0)=Tens(1,1);
