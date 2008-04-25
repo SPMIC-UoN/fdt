@@ -171,13 +171,13 @@ void vecreg_aff(const volume4D<float>& tens,
 	  continue;
 	}
 
-	// compute interpolated tensor
-	Tens << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	     << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	     << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-	     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 // compute interpolated tensor
+	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
 
 
 	if(ivector.set()){
@@ -187,7 +187,9 @@ void vecreg_aff(const volume4D<float>& tens,
 	  
 	  // rotate vector
 	  V_target=R*V_seed;
-	  V_target/=sqrt(V_target.SumSquare());
+	  if(V_target.MaximumAbsoluteValue()>0)
+	    V_target/=sqrt(V_target.SumSquare());
+
 	  oV1(x,y,z,0)=V_target(1);
 	  oV1(x,y,z,1)=V_target(2);
 	  oV1(x,y,z,2)=V_target(3);
