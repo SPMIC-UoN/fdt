@@ -101,7 +101,7 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
 {
   //Initialise the parameters using traditional DTI analysis
   ColumnVector logS(S.Nrows());
@@ -153,6 +153,13 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   evec1 << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
   evec2 << Vd(1,midind) << Vd(2,midind) << Vd(3,midind);
   evec3 << Vd(1,minind) << Vd(2,minind) << Vd(3,minind);
+
+  float e1=Dd(maxind)-mDd, e2=Dd(midind)-mDd, e3=Dd(minind)-mDd;
+  float n = (e1 + e2 - 2*e3)*(2*e1 - e2 - e3)*(e1 - 2*e2 + e3);
+  float d = (e1*e1 + e2*e2 + e3*e3 - e1*e2 - e2*e3 - e1*e3);
+  d = sqrt(MAX(0, d));
+  d = 2*d*d*d;
+  mode = MIN(MAX(d ? n/d : 0.0, -1),1);
 
   float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
   float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
@@ -220,6 +227,7 @@ int main(int argc, char** argv)
   volume<float> MD(maxx-minx,maxy-miny,maxz-minz);
   volume<float> FA(maxx-minx,maxy-miny,maxz-minz);
   volume<float> S0(maxx-minx,maxy-miny,maxz-minz);
+  volume<float> MODE(maxx-minx,maxy-miny,maxz-minz);
   volume4D<float> V1(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
@@ -232,6 +240,7 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],MD);
   copybasicproperties(data[0],FA);
   copybasicproperties(data[0],S0);
+  copybasicproperties(data[0],MODE);
   copybasicproperties(data[0],V1[0]);
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
@@ -242,7 +251,7 @@ int main(int argc, char** argv)
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
-  float fa,s0;
+  float fa,s0,mode;
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   Matrix Amat = form_Amat(r,b);
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
@@ -257,13 +266,14 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,Dvec,Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
 	    MD(i-minx,j-miny,k-minz)=(evals(1)+evals(2)+evals(3))/3;
 	    FA(i-minx,j-miny,k-minz)=fa;
 	    S0(i-minx,j-miny,k-minz)=s0;
+	    MODE(i-minx,j-miny,k-minz)=mode;
 	    V1(i-minx,j-miny,k-minz,0)=evec1(1);
 	    V1(i-minx,j-miny,k-minz,1)=evec1(2);
 	    V1(i-minx,j-miny,k-minz,2)=evec1(3);
@@ -318,6 +328,7 @@ int main(int argc, char** argv)
     string v2file=opts.ofile.value()+"_V2";
     string v3file=opts.ofile.value()+"_V3";
     string MDfile=opts.ofile.value()+"_MD";
+    string MOfile=opts.ofile.value()+"_MO";
     string tensfile=opts.ofile.value()+"_tensor";
     if(opts.littlebit.value()){
       fafile+="littlebit";
@@ -329,18 +340,30 @@ int main(int argc, char** argv)
       v2file+="littlebit";
       v3file+="littlebit";
       MDfile+="littlebit";
+      MOfile+="littlebit";
       tensfile+="littlebit";
     }
+
+
+
   
+    FslSetCalMinMax(&tempinfo,0,1);
     save_volume(FA,fafile,tempinfo);
+
+    FslSetCalMinMax(&tempinfo,0,S0.max());
     save_volume(S0,s0file,tempinfo);
+
+    FslSetCalMinMax(&tempinfo,-1,1);
+    save_volume(MODE,MOfile,tempinfo);
+    save_volume4D(V1,v1file,tempinfo);
+    save_volume4D(V2,v2file,tempinfo);
+    save_volume4D(V3,v3file,tempinfo);
+
+    FslSetCalMinMax(&tempinfo,0,l1.max());
     save_volume(l1,l1file,tempinfo);
     save_volume(l2,l2file,tempinfo);
     save_volume(l3,l3file,tempinfo);
     save_volume(MD,MDfile,tempinfo);
-    save_volume4D(V1,v1file,tempinfo);
-    save_volume4D(V2,v2file,tempinfo);
-    save_volume4D(V3,v3file,tempinfo);
 
     if(opts.savetensor.value())
       save_volume4D(Delements,tensfile,tempinfo);
