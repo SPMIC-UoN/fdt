@@ -795,7 +795,7 @@ proc fdt:apply { w dialog } {
 		    puts $log " $w.data.targets.cf.tf.targets insert end [  $w.data.targets.cf.tf.targets get 0 end ]"
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
-	    
+		close $log
 		if { $FSLPARALLEL } {
                     set script [open "${filebase}_script.sh" w]
                     puts "${filebase}_script.sh"
@@ -826,7 +826,6 @@ proc fdt:apply { w dialog } {
 		    puts "rm ${filebase}_coordinates.txt"
 		    exec rm ${filebase}_coordinates.txt
 		}
-		close $log
 		if { $copylog != "" } {
 		    puts "mv $logfile $copylog"
 		    exec mv $logfile $copylog
