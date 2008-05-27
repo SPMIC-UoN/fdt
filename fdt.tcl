@@ -23,10 +23,9 @@ proc mm_to_voxels { X Y Z mask } {
     upvar $Y cY
     upvar $Z cZ
 
-
-    set vcX [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - | awk '{print \$1}'" ]    
-    set vcY [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - | awk '{print \$2}'" ] 
-    set vcZ [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - | awk '{print \$3}'" ] 	
+    set vcX [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - 2>/dev/null | awk '{print \$1}'" ]    
+    set vcY [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - 2>/dev/null | awk '{print \$2}'" ] 
+    set vcZ [ exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox - 2>/dev/null | awk '{print \$3}'" ] 
     set cX $vcX
     set cY $vcY
     set cZ $vcZ
