@@ -68,7 +68,7 @@ class ccopsOptions {
    basename(string("-b,--basename"), string(""),
 	       string("Output basename"),
 	       true, requires_argument),
-   directory(string("-d,--dir"), string(""),
+   directory(string("-d,--dir"), string("."),
 	       string("Tractography Results Directory"),
 	       false, requires_argument),
    excl_mask(string("-x"), string(""),
