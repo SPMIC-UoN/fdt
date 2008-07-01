@@ -614,7 +614,7 @@ int main ( int argc, char **argv ){
       for(int i=0;i<outcoords.xsize();i++){
 	mask(outcoords(i,0,0),
 	     outcoords(i,1,0),
-	     outcoords(i,2,0)) = (int)y1(i+1) + 1;
+	     outcoords(i,2,0)) = (int)y1(i+1);
       }
       save_volume(mask,opts.directory.value()+"/reord_mask_"+base);
       
