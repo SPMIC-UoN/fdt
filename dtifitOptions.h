@@ -34,6 +34,7 @@ class dtifitOptions {
   Option<string> maskfile;
   Option<string> bvecsfile;
   Option<string> bvalsfile;
+  Option<string> cni; //confounds of no interest. 
   Option<bool> littlebit;
   Option<bool> savetensor;
   Option<int> z_min;
@@ -84,6 +85,9 @@ class dtifitOptions {
    bvalsfile(string("-b,--bvals"), string("bvals"),
 	     string("b values file"),
 	     true, requires_argument), 
+   cni(string("--cni"), string(""),
+	     string("counfound regressors"),
+	     false, requires_argument), 
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
 	     false, no_argument),
@@ -120,6 +124,7 @@ class dtifitOptions {
        options.add(maskfile);
        options.add(bvecsfile);
        options.add(bvalsfile);
+       options.add(cni);
        options.add(littlebit);
        options.add(savetensor);
        options.add(z_min);

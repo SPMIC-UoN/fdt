@@ -89,6 +89,51 @@ Matrix form_Amat(const Matrix& r,const Matrix& b)
   }
   return A;
 }
+
+
+Matrix form_Amat(const Matrix& r,const Matrix& b, const Matrix & cni )
+{
+  //cni are confound regressors of no interest
+  Matrix A(r.Ncols(),7 + cni.Ncols());
+  Matrix A_noconf(r.Ncols(),7);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+    
+    A_noconf(i,1) = tmpmat(1,1);
+    A_noconf(i,2) = 2*tmpmat(1,2);
+    A_noconf(i,3) = 2*tmpmat(1,3);
+    A_noconf(i,4) = tmpmat(2,2);
+    A_noconf(i,5) = 2*tmpmat(2,3);
+    A_noconf(i,6) = tmpmat(3,3);
+    A_noconf(i,7) = 1;
+    
+    for( int col=1;col<=cni.Ncols();col++){
+      A(i,col+7)=cni(i,col);
+    }
+  }
+  
+  
+  Matrix tmp1=(A_noconf.t()*A_noconf).i();
+  Matrix tmp2=(A.t()*A).i();
+  cout<<"Efficiency loss due to confounds: xx xy xz yy yz zz"<<endl;
+  for( int el=1;el<=6;el++)
+    cout <<tmp2(el,el)/tmp1(el,el)<<" ";
+  cout<<endl;
+
+  return A;
+}
+
+
 inline SymmetricMatrix vec2tens(ColumnVector& Vec){
   SymmetricMatrix tens(3);
   tens(1,1)=Vec(1);
@@ -252,8 +297,15 @@ int main(int argc, char** argv)
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
   float fa,s0,mode;
+  Matrix Amat, cni; 
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
-  Matrix Amat = form_Amat(r,b);
+  if(opts.cni.value()!=""){
+    cni=read_ascii_matrix(opts.cni.value());
+    Amat = form_Amat(r,b,cni);
+  }
+  else{
+    Amat = form_Amat(r,b);
+  }
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   ColumnVector Dvec(7); Dvec=0;
   for(int k = minz; k < maxz; k++){
