@@ -188,15 +188,15 @@ probtrackxOptions* probtrackxOptions::gopt = NULL;
   
   void probtrackxOptions::status()
   {
-    cerr<<"basename   "<<basename.value()<<endl;
-    cerr<<"maskfile   "<<maskfile.value()<<endl;
-    cerr<<"seeds      "<<seedfile.value()<<endl;
-    cerr<<"output     "<<outfile.value()<<endl;
-    cerr<<"verbose    "<<verbose.value()<<endl;
-    cerr<<"nparticles "<<nparticles.value()<<endl;
-    cerr<<"nsteps     "<<nsteps.value()<<endl;
-    cerr<<"usef       "<<usef.value()<<endl;
-    cerr<<"rseed      "<<rseed.value()<<endl; 
+    cout<<"basename   "<<basename.value()<<endl;
+    cout<<"maskfile   "<<maskfile.value()<<endl;
+    cout<<"seeds      "<<seedfile.value()<<endl;
+    cout<<"output     "<<outfile.value()<<endl;
+    cout<<"verbose    "<<verbose.value()<<endl;
+    cout<<"nparticles "<<nparticles.value()<<endl;
+    cout<<"nsteps     "<<nsteps.value()<<endl;
+    cout<<"usef       "<<usef.value()<<endl;
+    cout<<"rseed      "<<rseed.value()<<endl; 
   }
   
 }
