@@ -97,7 +97,7 @@ namespace TRACT{
     vector<ColumnVector> m_path;
     
     vector<volume<int> > m_seedcounts;
-    vector<volume<int> > m_targetmasks;
+    vector<volume<float> > m_targetmasks;
     vector<string> m_targetmasknames;
     vector<int> m_targflags;
     //vector<vector<int> > m_particle_numbers;

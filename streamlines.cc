@@ -261,8 +261,8 @@ namespace TRACT{
   
   void Counter::initialise_seedcounts(){
     
-    volume<int> tmp;
-    //vector<int> tmpvec;
+    volume<float> tmp;
+    volume<int> tmpint;
     read_masks(m_targetmasknames,opts.targetfile.value());
     m_targflags.resize(m_targetmasknames.size(),0);
     //m_particle_numbers.resize(m_targetmasknames.size());
@@ -272,8 +272,9 @@ namespace TRACT{
     for(unsigned int m=0;m<m_targetmasknames.size();m++){
       read_volume(tmp,m_targetmasknames[m]);
       m_targetmasks.push_back(tmp);
-      tmp=0;
-      m_seedcounts.push_back(tmp);
+      copyconvert(tmp,tmpint);
+      tmpint=0;
+      m_seedcounts.push_back(tmpint);
       //m_particle_numbers.push_back(tmpvec);
     }
   }
