@@ -4,8 +4,6 @@
 
 #include "ptx_meshmask.h"
 #include "streamlines.h"
-#include "shapeModel/shapeModel.h"
-using namespace shapemodel;
 using namespace std;
 using namespace NEWIMAGE;
 using namespace TRACT;
@@ -46,19 +44,6 @@ void meshmask()
 	    <<  0 << 1 << 0 <<  (seeds.ysize()-1)/2
 	    <<  0 << 0 << 0 << 1;
 
-// shapeModel * model1 = new shapeModel;
-// model1->load_vtk(opts.meshfile.value(),1);
-
-//  model1->meshReg(&mseeds, mm_to_vox);
-//  model1->setShapeMesh(0,mseeds);
-//  model1->setImageParameters(seeds.xsize(),seeds.ysize(),seeds.zsize(),seeds.xdim(),seeds.ydim(), seeds.zdim());
-
-//  Mesh m = model1->getTranslatedMesh(0);
-
-//   for(vector<Mpoint*>::iterator i = m._points.begin();i!=m._points.end();i++){
-//     cout<<(*i)->get_coord().X<<" "<<(*i)->get_coord().Y<<" "<<(*i)->get_coord().Z<<endl; 
-
-//   }
   ColumnVector fs_coord_mm(4),xyz_vox,seeddim(3);
   seeddim << seeds.xdim() << seeds.ydim() << seeds.zdim();
   ColumnVector dir(3);
