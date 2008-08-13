@@ -156,9 +156,9 @@ namespace TRACT{
 	
 	float pref_x=0,pref_y=0,pref_z=0;
 	if(opts.prefdirfile.value()!=""){
-	  pref_x = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),0);
-	  pref_y = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),1);
-	  pref_z = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),2); 
+	  pref_x = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),0);
+	  pref_y = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),1);
+	  pref_z = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),2); 
 	}
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
@@ -576,6 +576,15 @@ namespace TRACT{
     // save total number of particles that made it through the streamlining
     ColumnVector keeptotvec(1);
     keeptotvec(1)=keeptotal;
+    write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
+
+  }
+  void Counter::save_total(const vector<int>& keeptotal){
+    
+    // save total number of particles that made it through the streamlining
+    ColumnVector keeptotvec(keeptotal.size());
+    for (int i=1;i<=(int)keeptotal.size();i++)
+      keeptotvec(i)=keeptotal[i-1];
     write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
 
   }

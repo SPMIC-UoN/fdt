@@ -35,12 +35,16 @@ void twomasks()
   counter.initialise();
   Seedmanager seedmanager(counter);
   
-  stline.add_waymask(seeds2);  
+  vector<int> keeptotal(2);
+
+  stline.add_waymask(seeds2);
+  keeptotal[0] = 0;
+  cout << "tracking from first seed" << endl;
   for(int z=0;z<seeds.zsize();z++){
     for(int y=0;y<seeds.ysize();y++){
       for(int x=0;x<seeds.xsize();x++){
 	if(seeds(x,y,z)>0){
-	  seedmanager.run(x,y,z,false,-1); 
+	  keeptotal[0] += seedmanager.run(x,y,z,false,-1); 
 	}
       }
     }
@@ -48,18 +52,21 @@ void twomasks()
   stline.pop_waymasks();
   
   stline.add_waymask(seeds);
-  cout<<"added"<<endl;
+  keeptotal[1] = 0;
+  cout << "tracking from second seed" << endl;
   for(int z=0;z<seeds2.zsize();z++){
     for(int y=0;y<seeds2.ysize();y++){
       for(int x=0;x<seeds2.xsize();x++){
-	if(seeds2(x,y,z)>0){
-	  seedmanager.run(x,y,z,false,seeds2(x,y,z)-1); 
+	if(seeds2(x,y,z)>0){	  
+	  keeptotal[1] += seedmanager.run(x,y,z,false,-1); 
+	  //keeptotal[1] += seedmanager.run(x,y,z,false,seeds2(x,y,z)-1); 
 	}
       }
     }
   }
   
-  
+
+  counter.save_total(keeptotal);
   counter.save();
   cout<<"finished"<<endl;
 }

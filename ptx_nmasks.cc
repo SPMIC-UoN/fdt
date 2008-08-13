@@ -44,7 +44,10 @@ void nmasks()
   Seedmanager seedmanager(counter);
   
 
+  vector<int> keeptotal(seeds.size());
   for(unsigned int i=0;i<seeds.size();i++){ 
+
+    // add all other seeds as waypoint masks
     tmpvol=0;
     for(unsigned int j=0;j<seeds.size();j++)
       if(j!=i)
@@ -53,18 +56,21 @@ void nmasks()
       stline.pop_waymasks();
     stline.add_waymask(tmpvol);
 
+    // start tracking
     cout << "Tracking from mask " << i+1 << endl;
+    keeptotal[i] = 0;
     for(int z=0;z<seeds[i].zsize();z++){
       for(int y=0;y<seeds[i].ysize();y++){
 	for(int x=0;x<seeds[i].xsize();x++){
 	  if(seeds[i](x,y,z)!=0){
-	    seedmanager.run(x,y,z,false,-1); 
+	    keeptotal[i] += seedmanager.run(x,y,z,false,-1); 
 	  }
 	}
       }
     } 
   }
   
+  counter.save_total(keeptotal);
   counter.save();
   
   cout<<"finished"<<endl;

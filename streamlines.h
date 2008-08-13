@@ -175,6 +175,7 @@ namespace TRACT{
     void update_maskmatrix(){} //not written yet
     
     void save_total(const int& keeptotal);
+    void save_total(const vector<int>& keeptotal);
     void save();
     void save_pathdist();
     void save_pathdist(string add);
