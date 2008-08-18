@@ -5,7 +5,7 @@ PROJNAME = fdt
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
-DLIBS = -lwarpfns -lbasisfield -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 DTIFIT=dtifit
 CCOPS=ccops
@@ -15,7 +15,6 @@ PJ=proj_thresh
 MED=medianfilter
 ROM=reord_OM
 SAUS=sausages
-DIFF_PVM=diff_pvm
 XFIBRES=xfibres
 RV=replacevols
 MDV=make_dyadic_vectors
@@ -33,7 +32,6 @@ PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
-DIFF_PVMOBJS=diff_pvm.o diff_pvmoptions.o
 XFIBOBJS=xfibres.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
@@ -47,10 +45,10 @@ KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
-SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} my_bedpostx my_bedpostx_single_slice.sh
+SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
+XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
@@ -85,9 +83,6 @@ ${ROM}:    	${ROMOBJS}
 
 ${SAUS}:    	${SAUSOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SAUSOBJS} ${DLIBS}
-
-${DIFF_PVM}:    	${DIFF_PVMOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DIFF_PVMOBJS} ${DLIBS}
 
 ${XFIBRES}:    	${XFIBOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS} ${DLIBS}

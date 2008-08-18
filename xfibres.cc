@@ -11,8 +11,6 @@
 #include <iomanip>
 #define WANT_STREAM
 #define WANT_MATH
-//  #include "newmatap.h"
-//  #include "newmatio.h"
 #include <string>
 #include <math.h>
 #include "utils/log.h"
@@ -24,12 +22,8 @@
 #include "fibre.h"
 #include "xfibresoptions.h"
 
-//#include "bint/model.h"
-//#include "bint/lsmcmcmanager.h"
-//#include "bint/lslaplacemanager.h"
-
 using namespace FIBRE;
-using namespace  Xfibres;
+using namespace Xfibres;
 using namespace Utilities;
 using namespace NEWMAT;
 using namespace NEWIMAGE;
