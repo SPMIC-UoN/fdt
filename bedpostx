@@ -119,11 +119,16 @@ finished=0
 logdir=${subjdir}.bedpostX/logs
 while [ \$finished -eq 0 ] ; do
     nfin=0
-    if [ -f \$logdir/bedpostx.o*.1 ] ; then
-      nfin=\`cat \$logdir/bedpostx.o* |\
-        grep Done | wc -w | awk '{print \$1}'\` 
-    fi
-    if [ \$nfin -eq $nslices ] ; then
+    slice=0
+    while [ "\$slice" -le $nslices ];do
+        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
+        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
+          nfin=\$((\$nfin + 1))
+        fi
+        slice=\$((\$slice + 1))
+    done
+
+    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
     fi
 
@@ -138,8 +143,13 @@ fi
 slice=0
 while [ $slice -lt $nslices ]
 do
-    echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
-	>> ${subjdir}.bedpostX/commands.txt
+    slicezp=`$FSLDIR/bin/zeropad $slice 4`
+    if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads2.nii.gz ];then
+	echo "slice $slice has already been processed"
+    else
+	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
+	    >> ${subjdir}.bedpostX/commands.txt
+    fi
     slice=$(($slice + 1))
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
@@ -157,11 +167,16 @@ finished=0
 logdir=${subjdir}.bedpostX/logs
 while [ \$finished -eq 0 ] ; do
     nfin=0
-    if [ -f \$logdir/bedpostx.o$bedpostid.1 ] ; then
-      nfin=\`cat \$logdir/bedpostx.o$bedpostid.* |\
-        grep Done | wc -w | awk '{print \$1}'\` 
-    fi
-    if [ \$nfin -eq $nslices ] ; then
+    slice=0
+    while [ "\$slice" -le $nslices ];do
+        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
+        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
+          nfin=\$((\$nfin + 1))
+        fi
+        slice=\$((\$slice + 1))
+    done
+
+    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
     fi
 
