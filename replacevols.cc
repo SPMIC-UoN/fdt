@@ -41,7 +41,7 @@ int read_avg_file (vector<vector<int> >& avgs,const string fname){
 	int start;
 	int length;
 	mylinestr >> startstr;
-	if(isnum(startstr)){
+	if(isNumber(startstr)){
 	  nobbsize=true;
 	  start = atoi(startstr.c_str());
 	  mylinestr >> length;
