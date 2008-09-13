@@ -186,11 +186,6 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
   tens = vec2tens(Dvec);
   
-  // find closest positive matrix for the Frobenius norm
-  Matrix svd_U,svd_V;
-  DiagonalMatrix svd_D;
-  SVD(tens,svd_D,svd_U,svd_V);
-  tens << (tens+svd_V*svd_D*svd_V.t())/2;
 
   EigenValues(tens,Dd,Vd);
   mDd = Dd.Sum()/Dd.Nrows();
@@ -286,7 +281,7 @@ int main(int argc, char** argv)
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
-  volume4D<float> cni_cope;
+//   volume4D<float> cni_cope;
 
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
@@ -313,8 +308,8 @@ int main(int argc, char** argv)
   if(opts.cni.value()!=""){
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
-    cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
-    copybasicproperties(data[0],cni_cope[0]);
+//     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
+//     copybasicproperties(data[0],cni_cope[0]);
   }
   else{
     Amat = form_Amat(r,b);
@@ -355,10 +350,10 @@ int main(int argc, char** argv)
 	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
 	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
 	    
-	    if(opts.cni.value()!=""){
-	      for(int iter=0;iter<cni.Ncols();iter++)
-		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
-	    }
+// 	    if(opts.cni.value()!=""){
+// 	      for(int iter=0;iter<cni.Ncols();iter++)
+// 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
+// 	    }
 
 
 
@@ -436,14 +431,14 @@ int main(int argc, char** argv)
       save_volume4D(Delements,tensfile,tempinfo);
     
 
-    if(opts.cni.value()!=""){
-      string cnifile=opts.ofile.value()+"_cnicope";
-      if(opts.littlebit.value()){
-	cnifile+="littlebit";
-      }
-      FslSetCalMinMax(&tempinfo,0,cni_cope.max());
-      save_volume4D(cni_cope,cnifile,tempinfo);
-    }
+//     if(opts.cni.value()!=""){
+//       string cnifile=opts.ofile.value()+"_cnicope";
+//       if(opts.littlebit.value()){
+// 	cnifile+="littlebit";
+//       }
+//       FslSetCalMinMax(&tempinfo,0,cni_cope.max());
+//       save_volume4D(cni_cope,cnifile,tempinfo);
+//     }
 
 
 
