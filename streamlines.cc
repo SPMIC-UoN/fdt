@@ -8,10 +8,11 @@ namespace TRACT{
     // A and B contain th, ph f. 
     float th,ph;
     ColumnVector rA(3), rB(3);
-    rA<< sin(A(1))*cos(A(2)) <<sin(A(1))*sin(A(2)) <<cos(A(1));
-    rB<< sin(B(1))*cos(B(2)) <<sin(B(1))*sin(B(2)) <<cos(B(1));
+
+    rA << (sin(A(1))*cos(A(2))) << (sin(A(1))*sin(A(2))) << (cos(A(1)));
+    rB << (sin(B(1))*cos(B(2))) << (sin(B(1))*sin(B(2))) << (cos(B(1)));
     
-    if(SP(rA,rB).AsScalar()>0)
+    if(sum(SP(rA,rB)).AsScalar()>0)
       cart2sph((rA+rB)/2,th,ph);
     else
       cart2sph((rA-rB)/2,th,ph);
@@ -209,10 +210,12 @@ namespace TRACT{
 	      else
 		{
 		  ColumnVector test_th_ph_f;
+		  
 		  m_part.testjump(th_ph_f(1),th_ph_f(2));
 		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 		  test_th_ph_f=mean_sph_pol(th_ph_f,test_th_ph_f);
 		  m_part.jump(test_th_ph_f(1),test_th_ph_f(2));
+		  
 		}
 	    }
 	    
