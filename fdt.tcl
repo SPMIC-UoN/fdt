@@ -780,8 +780,7 @@ proc fdt:apply { w dialog } {
 	    puts $log "set probtrack(reference) $probtrack(reference)"
 	    puts $log "set probtrack(output) $probtrack(output)"
        	    if { $canwrite } {
-       		set copylog "fdt.log"
-
+       		set copylog "$probtrack(output)/fdt.log"
 	        if { $probtrack(waypoint_yn) == 1 } {
                     fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
 		    puts $log "set probtrack(waypoint_yn) $probtrack(waypoint_yn)"
