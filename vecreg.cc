@@ -351,7 +351,6 @@ int do_vecreg(){
   volume4D<float> ivol,warpvol;
   volume<float> refvol,mask;
   Matrix Aff(4,4);
-  volumeinfo vinfo;
 
   if((matrix.set())){
     Aff = read_ascii_matrix(matrix.value());
@@ -365,7 +364,7 @@ int do_vecreg(){
     read_volume4D(ivol,ivector.value());
   else
     read_volume4D(ivol,itensor.value());
-  read_volume(refvol,ref.value(),vinfo);
+  read_volume(refvol,ref.value());
 
   volume4D<float> ovol;
   if(ivector.set())
