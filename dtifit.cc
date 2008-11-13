@@ -146,7 +146,7 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat,const ColumnVector& S)
 {
   //Initialise the parameters using traditional DTI analysis
   ColumnVector logS(S.Nrows());
@@ -181,6 +181,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
     }
   Dvec = -pinv(Amat)*logS;
+  sse = (Amat*Dvec+logS).SumSquare();
   
   s0=exp(-Dvec(7));
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
@@ -281,7 +282,8 @@ int main(int argc, char** argv)
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
-//   volume4D<float> cni_cope;
+  volume4D<float> cni_cope;
+  volume<float> sse;
 
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
@@ -302,18 +304,25 @@ int main(int argc, char** argv)
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
-  float fa,s0,mode;
+  float fa,s0,mode,sseval;
   Matrix Amat, cni; 
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   if(opts.cni.value()!=""){
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
-//     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
-//     copybasicproperties(data[0],cni_cope[0]);
+    cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
+    copybasicproperties(data[0],cni_cope[0]);
+    cni_cope=0;
   }
   else{
     Amat = form_Amat(r,b);
   }
+  if(opts.sse.value()){
+    sse.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    copybasicproperties(data[0],sse);
+    sse=0;
+  }
+
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   ColumnVector Dvec(7); Dvec=0;
   for(int k = minz; k < maxz; k++){
@@ -326,7 +335,7 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
@@ -350,11 +359,13 @@ int main(int argc, char** argv)
 	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
 	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
 	    
-// 	    if(opts.cni.value()!=""){
-// 	      for(int iter=0;iter<cni.Ncols();iter++)
-// 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
-// 	    }
-
+ 	    if(opts.cni.value()!=""){
+ 	      for(int iter=0;iter<cni.Ncols();iter++)
+ 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
+ 	    }
+	    if(opts.sse.value()){
+	      sse(i-minx,j-miny,k-minz)=sseval;
+	    }
 
 
 //	    EigenValues(dyad,dyad_D,dyad_V);
@@ -431,15 +442,22 @@ int main(int argc, char** argv)
       save_volume4D(Delements,tensfile,tempinfo);
     
 
-//     if(opts.cni.value()!=""){
-//       string cnifile=opts.ofile.value()+"_cnicope";
-//       if(opts.littlebit.value()){
-// 	cnifile+="littlebit";
-//       }
-//       FslSetCalMinMax(&tempinfo,0,cni_cope.max());
-//       save_volume4D(cni_cope,cnifile,tempinfo);
-//     }
-
+    if(opts.cni.value()!=""){
+      string cnifile=opts.ofile.value()+"_cnicope";
+      if(opts.littlebit.value()){
+	cnifile+="littlebit";
+      }
+      FslSetCalMinMax(&tempinfo,0,cni_cope.max());
+      save_volume4D(cni_cope,cnifile,tempinfo);
+    }
+    if(opts.sse.value()){
+      string ssefile=opts.ofile.value()+"_sse";
+      if(opts.littlebit.value()){
+	ssefile+="littlebit";
+      }
+      FslSetCalMinMax(&tempinfo,0,sse.max());
+      save_volume(sse,ssefile,tempinfo);
+    }
 
 
   return 0;
