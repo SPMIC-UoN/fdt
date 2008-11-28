@@ -709,19 +709,21 @@ namespace TRACT{
       
       m_stline.reset();
       bool forwardflag=false,backwardflag=false;
+      bool counted=false;
       if(!onewayonly){
 	if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();
-	  nlines++;
+	  nlines++;counted=true;
 	}
 	m_stline.reverse();
       }
       if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){
 	backwardflag=true;
 	m_counter.count_streamline();
-	//nlines++; //count twice ?
+	if(!counted)nlines++; // the other half has is counted here
+
       }
      
       m_counter.clear_streamline(forwardflag,backwardflag); 
