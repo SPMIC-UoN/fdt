@@ -168,6 +168,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
     }
 
   Dvec = -pinv(Amat)*logS;
+  
   if(  Dvec(7) >  -maxlogfloat ){
     s0=exp(-Dvec(7));
   }
@@ -180,9 +181,12 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
     }
   Dvec = -pinv(Amat)*logS;
+  
   s0=exp(-Dvec(7));
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
   tens = vec2tens(Dvec);
+  
+
   EigenValues(tens,Dd,Vd);
   mDd = Dd.Sum()/Dd.Nrows();
   int maxind = Dd(1) > Dd(2) ? 1:2;   //finding max,mid and min eigenvalues
@@ -277,6 +281,8 @@ int main(int argc, char** argv)
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
+//   volume4D<float> cni_cope;
+
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
@@ -302,6 +308,8 @@ int main(int argc, char** argv)
   if(opts.cni.value()!=""){
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
+//     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
+//     copybasicproperties(data[0],cni_cope[0]);
   }
   else{
     Amat = form_Amat(r,b);
@@ -341,7 +349,11 @@ int main(int argc, char** argv)
 	    Delements(i-minx,j-miny,k-minz,3)=Dvec(4);
 	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
 	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
-
+	    
+// 	    if(opts.cni.value()!=""){
+// 	      for(int iter=0;iter<cni.Ncols();iter++)
+// 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
+// 	    }
 
 
 
@@ -396,8 +408,6 @@ int main(int argc, char** argv)
       tensfile+="littlebit";
     }
 
-
-
   
     FslSetCalMinMax(&tempinfo,0,1);
     save_volume(FA,fafile,tempinfo);
@@ -420,6 +430,18 @@ int main(int argc, char** argv)
     if(opts.savetensor.value())
       save_volume4D(Delements,tensfile,tempinfo);
     
+
+//     if(opts.cni.value()!=""){
+//       string cnifile=opts.ofile.value()+"_cnicope";
+//       if(opts.littlebit.value()){
+// 	cnifile+="littlebit";
+//       }
+//       FslSetCalMinMax(&tempinfo,0,cni_cope.max());
+//       save_volume4D(cni_cope,cnifile,tempinfo);
+//     }
+
+
+
   return 0;
 }
 
