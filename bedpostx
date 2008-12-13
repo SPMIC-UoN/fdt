@@ -20,7 +20,7 @@ Usage() {
     echo "expects to find data and nodif_brain_mask in subject directory"
     echo "options:"
     echo "-n (number of fibres per voxel, default 2)"
-    echo "-w (ARD weight, more weight means less fibres killed per voxel, default 1)"
+    echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
     echo "-j (number of jumps, default 1250)"
     echo "-s (sample every, default 25)"
