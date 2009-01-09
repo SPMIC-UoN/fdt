@@ -17,8 +17,7 @@ int main ( int argc, char **argv ){
   }
 
   volume4D<float> ths,phs;
-  volumeinfo tempinfo;
-  read_volume4D(ths,argv[1],tempinfo);
+  read_volume4D(ths,argv[1]);
   read_volume4D(phs,argv[2]);
   volume<float> mask;
   string oname;
@@ -77,7 +76,7 @@ int main ( int argc, char **argv ){
     }
   }
   
-  save_volume4D(dyadic_vecs,oname,tempinfo);
+  save_volume4D(dyadic_vecs,oname);
 }
 
 

@@ -332,9 +332,8 @@ int main(int argc, char** argv)
 
   volume4D<float> data;
   volume<int> mask;
-  volumeinfo tempinfo;
   if(opts.verbose.value()) cout<<"reading data"<<endl;
-  read_volume4D(data,opts.dtidatafile.value(),tempinfo);
+  read_volume4D(data,opts.dtidatafile.value());
   if(opts.verbose.value()) cout<<"reading mask"<<endl;
   read_volume(mask,opts.maskfile.value());
   if(opts.verbose.value()) cout<<"ok"<<endl;
@@ -461,20 +460,20 @@ int main(int argc, char** argv)
       kurtosisfile+="littlebit";
     }
   
-    save_volume(FA,fafile,tempinfo);
-    save_volume(S0,s0file,tempinfo);
-    save_volume(l1,l1file,tempinfo);
-    save_volume(l2,l2file,tempinfo);
-    save_volume(l3,l3file,tempinfo);
-    save_volume(MD,MDfile,tempinfo);
-    save_volume4D(V1,v1file,tempinfo);
-    save_volume4D(V2,v2file,tempinfo);
-    save_volume4D(V3,v3file,tempinfo);
-    save_volume(MK,MKfile,tempinfo);
+    save_volume(FA,fafile);
+    save_volume(S0,s0file);
+    save_volume(l1,l1file);
+    save_volume(l2,l2file);
+    save_volume(l3,l3file);
+    save_volume(MD,MDfile);
+    save_volume4D(V1,v1file);
+    save_volume4D(V2,v2file);
+    save_volume4D(V3,v3file);
+    save_volume(MK,MKfile);
 
     if(opts.savetensor.value()){
-      save_volume4D(Delements,tensfile,tempinfo);
-      save_volume4D(KurtTens,kurtosisfile,tempinfo);
+      save_volume4D(Delements,tensfile);
+      save_volume4D(KurtTens,kurtosisfile);
     }
       
     

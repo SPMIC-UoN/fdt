@@ -257,9 +257,8 @@ int main(int argc, char** argv)
   if(b.Nrows()>1) b=b.t();
   volume4D<float> data;
   volume<int> mask;
-  volumeinfo tempinfo;
   if(opts.verbose.value()) cout<<"reading data"<<endl;
-  read_volume4D(data,opts.dtidatafile.value(),tempinfo);
+  read_volume4D(data,opts.dtidatafile.value());
   if(opts.verbose.value()) cout<<"reading mask"<<endl;
   read_volume(mask,opts.maskfile.value());
   if(opts.verbose.value()) cout<<"ok"<<endl;
@@ -419,47 +418,48 @@ int main(int argc, char** argv)
       tensfile+="littlebit";
     }
 
-  
-    FslSetCalMinMax(&tempinfo,0,1);
-    save_volume(FA,fafile,tempinfo);
+    FA.setDisplayMaximumMinimum(1,0);
+    save_volume(FA,fafile);
+    S0.setDisplayMaximumMinimum(S0.max(),0);
+    save_volume(S0,s0file);
+    MODE.setDisplayMaximumMinimum(1,-1);
+    save_volume(MODE,MOfile);
+    V1.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V1,v1file);
+    V2.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V2,v2file);
+    V3.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V3,v3file);
+    l1.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l1,l1file);
+    l2.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l2,l2file);
+    l3.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l3,l3file);
+    MD.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(MD,MDfile);
 
-    FslSetCalMinMax(&tempinfo,0,S0.max());
-    save_volume(S0,s0file,tempinfo);
-
-    FslSetCalMinMax(&tempinfo,-1,1);
-    save_volume(MODE,MOfile,tempinfo);
-    save_volume4D(V1,v1file,tempinfo);
-    save_volume4D(V2,v2file,tempinfo);
-    save_volume4D(V3,v3file,tempinfo);
-
-    FslSetCalMinMax(&tempinfo,0,l1.max());
-    save_volume(l1,l1file,tempinfo);
-    save_volume(l2,l2file,tempinfo);
-    save_volume(l3,l3file,tempinfo);
-    save_volume(MD,MDfile,tempinfo);
-
-    if(opts.savetensor.value())
-      save_volume4D(Delements,tensfile,tempinfo);
-    
+    if(opts.savetensor.value()) {
+      Delements.setDisplayMaximumMinimum(l1.max(),0);
+      save_volume4D(Delements,tensfile);
+    }
 
     if(opts.cni.value()!=""){
       string cnifile=opts.ofile.value()+"_cnicope";
       if(opts.littlebit.value()){
 	cnifile+="littlebit";
       }
-      FslSetCalMinMax(&tempinfo,0,cni_cope.max());
-      save_volume4D(cni_cope,cnifile,tempinfo);
+      cni_cope.setDisplayMaximumMinimum(cni_cope.max(),0);
+      save_volume4D(cni_cope,cnifile);
     }
     if(opts.sse.value()){
       string ssefile=opts.ofile.value()+"_sse";
       if(opts.littlebit.value()){
 	ssefile+="littlebit";
       }
-      FslSetCalMinMax(&tempinfo,0,sse.max());
-      save_volume(sse,ssefile,tempinfo);
+      sse.setDisplayMaximumMinimum(sse.max(),0);
+      save_volume(sse,ssefile);
     }
-
-
   return 0;
 }
 
