@@ -262,6 +262,13 @@ int main(int argc, char** argv)
   if(opts.verbose.value()) cout<<"reading mask"<<endl;
   read_volume(mask,opts.maskfile.value());
   if(opts.verbose.value()) cout<<"ok"<<endl;
+
+  // check that the entries have the same dimensions
+  if( b.Ncols() != r.Ncols() ){ cerr << "Error: bvecs and bvals don't have the same number of entries" << endl; return(-1);}
+  if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
+  if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
+
+
   int minx=opts.littlebit.value() ? opts.x_min.value():0;
   int maxx=opts.littlebit.value() ? opts.x_max.value():mask.xsize();
   int miny=opts.littlebit.value() ? opts.y_min.value():0;
