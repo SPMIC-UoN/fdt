@@ -23,6 +23,7 @@ INDEXER=indexer
 TEST=testfile
 VECREG=vecreg
 KURTOSIS=kurtosis
+PVMFIT=pvmfit
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -40,7 +41,7 @@ INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
-
+PVMFITOBJS=pvmfit.o pvmfitOptions.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -109,3 +110,5 @@ ${VECREG}:    	${VECREGOBJS}
 ${KURTOSIS}:   ${KURTOSISOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
 
+${PVMFIT}:    	${PVMFITOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PVMFITOBJS} ${DLIBS}
