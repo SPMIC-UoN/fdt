@@ -24,7 +24,7 @@ for bv in ${DIR}/bvals ${DIR}/bvecs;do
     cat $bv|wc -w
 done
 
-if [ `${FSLDIR}/bin/imtest ${DIR}/data` -eq 1 -a `${FSLDIR}/bin/imtest ${DIR}/nodif_brain_mask` -eq 1 ];then
+if [ `${FSLDIR}/bin/imtest ${DIR}/data` -eq 1 ] && [ `${FSLDIR}/bin/imtest ${DIR}/nodif_brain_mask` -eq 1 ];then
 
     dx=`${FSLDIR}/bin/fslval ${DIR}/data dim1`
     dy=`${FSLDIR}/bin/fslval ${DIR}/data dim2`
@@ -36,7 +36,7 @@ if [ `${FSLDIR}/bin/imtest ${DIR}/data` -eq 1 -a `${FSLDIR}/bin/imtest ${DIR}/no
     nbmz=`${FSLDIR}/bin/fslval ${DIR}/nodif_brain_mask dim3`
     
     
-    if [ $dx -ne $nbmx -o  $dy -ne $nbmy -o $dz -ne $nbmz ];then 
+    if [ $dx -ne $nbmx ] || [ $dy -ne $nbmy ] || [ $dz -ne $nbmz ];then 
 	echo "data dimensions do not match mask dimensions"
     fi
     
