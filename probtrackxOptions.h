@@ -66,6 +66,8 @@ class probtrackxOptions {
   Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
+
+
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
   void modehelp();

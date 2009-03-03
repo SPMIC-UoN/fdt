@@ -89,6 +89,18 @@ namespace TRACT{
     m_x_s_init=0;
     m_y_s_init=0;
     m_z_s_init=0;
+
+    // create rotdir for cases where seeding from a freesurfer mesh
+    Matrix F(3,3),u(3,3),v(3,3);
+    DiagonalMatrix d(3);
+    F << -m_Seeds_to_DTI(1,1) << m_Seeds_to_DTI(1,3) << -m_Seeds_to_DTI(1,2)
+      << -m_Seeds_to_DTI(2,1) << m_Seeds_to_DTI(2,3) << -m_Seeds_to_DTI(2,2)
+      << -m_Seeds_to_DTI(3,1) << m_Seeds_to_DTI(3,3) << -m_Seeds_to_DTI(3,2);
+    
+    SVD(F*F.t(),d,u,v);
+    m_rotdir.ReSize(3,3);
+    m_rotdir = (u*sqrt(d)*v.t()).i()*F;
+
   }
   
   
@@ -105,15 +117,22 @@ namespace TRACT{
     ColumnVector xyz_dti;
     ColumnVector th_ph_f;
     float xst,yst,zst,x,y,z,tmp2;
+
+
     xyz_dti=vox_to_vox(xyz_seeds,dim_seeds,vols.dimensions(),m_Seeds_to_DTI);    
+
     xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3);
     m_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
-    if(opts.meshfile.value()!="")
-      m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
-    
 
+    if(opts.meshfile.value()!=""){
+      // rotate dir using seeds_to_dti*mm_to_vox
+      ColumnVector rotdir(3);
+      rotdir = m_rotdir*dir;
+      m_part.set_dir(rotdir(1),rotdir(2),rotdir(3));//Set the start dir so that we track inwards from cortex
+    }
+    
     int partlength=0;
     bool rubbish_passed=false;
     bool stop_flag=false;
@@ -312,18 +331,30 @@ namespace TRACT{
   }
   
   void Counter::initialise_matrix2(){
+    
     m_Conrow2=0;
     read_volume(m_lrmask,opts.lrmask.value());
     m_beenhere2.reinitialize(m_lrmask.xsize(),m_lrmask.ysize(),m_lrmask.zsize());
     m_lrdim.ReSize(3);
     m_lrdim<<m_lrmask.xdim()<<m_lrmask.ydim()<<m_lrmask.zdim();
     int numseeds=0,numnz=0;
+    if(opts.meshfile.value()==""){
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
 	  if(m_seeds.value(Wx,Wy,Wz)!=0)
 	    numseeds++;
-    
+    }
+    else{
+      ifstream fs(opts.seedfile.value().c_str());
+      if(fs){
+	char buffer[1024];
+	fs.getline(buffer,1024);
+	fs >>numseeds;
+	cout<<numseeds<<endl;
+      }
+      
+    }
     for(int Wz=m_lrmask.minz();Wz<=m_lrmask.maxz();Wz++)
       for(int Wy=m_lrmask.miny();Wy<=m_lrmask.maxy();Wy++)
 	for(int Wx=m_lrmask.minx();Wx<=m_lrmask.maxx();Wx++)
@@ -358,7 +389,7 @@ namespace TRACT{
 	    m_CoordMat_tract2(mytrow,2,0)=Wz;
 	    mytrow++;
 	  }
-      
+    
     int myrow=0;
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
@@ -522,7 +553,9 @@ namespace TRACT{
     if(!opts.pathdist.value())
       for(unsigned int i=0;i<path.size();i++){
 	ColumnVector xyz_seeds=path[i];
+	//do something here
 	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
+	
 	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
 	int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
 	if(Concol2!=0){
@@ -557,7 +590,9 @@ namespace TRACT{
     if(forwardflag){
       for(unsigned int i=0;i<m_path.size();i++){
 	ColumnVector xyz_seeds=m_path[i];
+
 	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
+
 	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
 	m_beenhere2(x_lr,y_lr,z_lr)=0;
       }
@@ -566,7 +601,9 @@ namespace TRACT{
       const vector<ColumnVector>& path=m_stline.get_path_ref();
       for(unsigned int i=0;i<path.size();i++){
 	ColumnVector xyz_seeds=path[i];
+
 	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
+
 	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
 	m_beenhere2(x_lr,y_lr,z_lr)=0;
       }  
@@ -728,6 +765,7 @@ namespace TRACT{
      
       m_counter.clear_streamline(forwardflag,backwardflag); 
     }
+
     m_counter.count_seed();
     
     return nlines;

@@ -35,6 +35,7 @@ namespace TRACT{
     vector<bool> m_passed_flags;
     vector<bool> m_own_waymasks;
     Matrix m_Seeds_to_DTI;
+    Matrix m_rotdir;
     Tractvolsx vols;
     float m_lcrat;
     float m_x_s_init;
