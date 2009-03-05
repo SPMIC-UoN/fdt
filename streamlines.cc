@@ -299,6 +299,33 @@ namespace TRACT{
       m_seedcounts.push_back(tmpint);
       //m_particle_numbers.push_back(tmpvec);
     }
+
+    // where we save the seed counts in text files
+    if(opts.seedcountastext.value()){
+      
+      int numseeds=0;
+      if(opts.meshfile.value()==""){
+	for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
+	  for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
+	    for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
+	      if(m_seeds.value(Wx,Wy,Wz)!=0)
+		numseeds++;
+      }
+      else{
+	ifstream fs(opts.seedfile.value().c_str());
+	if(fs){
+	  char buffer[1024];
+	  fs.getline(buffer,1024);
+	  fs >>numseeds;
+	  cout<<numseeds<<endl;
+	}
+      }
+
+      m_SeedCountMat.ReSize(numseeds,m_targetmasknames.size());
+      m_SeedCountMat=0;
+      m_SeedRow=1;
+    }
+
   }
   
 
@@ -426,6 +453,9 @@ namespace TRACT{
     if(opts.matrix2out.value()){
       next_matrix2_row();
     }
+    if(opts.seedcountastext.value()){
+      m_SeedRow++;
+    }
   }
   
     
@@ -499,6 +529,10 @@ namespace TRACT{
 	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)=m_seedcounts[m](xseedvox,yseedvox,zseedvox)+1;
 	    m_targflags[m]=1;
 	    //m_particle_numbers[m].push_back(particle_number);
+
+	    if(opts.seedcountastext.value())
+	      m_SeedCountMat(m_SeedRow,m+1) += 1;
+	    
 	  }
 	}
       }
@@ -515,6 +549,10 @@ namespace TRACT{
 	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=(int)d;
 	    m_targflags[m]=1;
 	    //m_particle_numbers[m].push_back(particle_number);
+	    
+	    if(opts.seedcountastext.value())
+	      m_SeedCountMat(m_SeedRow,m+1) += d;
+
 	  }
 	}
 	
@@ -678,6 +716,11 @@ namespace TRACT{
       
       save_volume(m_seedcounts[m],logger.appendDir("seeds_to_"+tmpname));
     }
+
+    if(opts.seedcountastext.value()){
+      write_ascii_matrix(m_SeedCountMat,logger.appendDir("matrix_seeds_to_all_targets"));
+    }
+
   }
     
   // the following is a helper function for save_matrix*

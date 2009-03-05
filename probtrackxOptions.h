@@ -66,7 +66,7 @@ class probtrackxOptions {
   Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
-
+  Option<bool> seedcountastext;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -206,6 +206,9 @@ class probtrackxOptions {
    rseed(string("--rseed"), 12345,
 	 string("Random seed"),
 	 false, requires_argument), 
+   seedcountastext(string("--seedcountastext"), false,
+	 string("Output seed-to-target counts as a text file"),
+	 false, no_argument), 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
      
@@ -249,6 +252,7 @@ class probtrackxOptions {
        options.add(fibst);
        options.add(modeuler);
        options.add(rseed);
+       options.add(seedcountastext);
      }
      catch(X_OptionError& e) {
        options.usage();
