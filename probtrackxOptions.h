@@ -67,6 +67,7 @@ class probtrackxOptions {
   Option<bool> modeuler;
   Option<int> rseed;
   Option<bool> seedcountastext;
+  FmribOption<bool> splitmatrix2;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -203,12 +204,15 @@ class probtrackxOptions {
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
-   rseed(string("--rseed"), 12345,
-	 string("Random seed"),
-	 false, requires_argument), 
-   seedcountastext(string("--seedcountastext"), false,
-	 string("Output seed-to-target counts as a text file (useful when seeding from a mesh)"),
-	 false, no_argument), 
+  rseed(string("--rseed"), 12345,
+	string("Random seed"),
+	false, requires_argument), 
+  seedcountastext(string("--seedcountastext"), false,
+		  string("Output seed-to-target counts as a text file (useful when seeding from a mesh)"),
+		  false, no_argument), 
+  splitmatrix2(string("--splitmatrix2"), false,
+		  string("split matrix 2 (in case it is too big)"),
+		  false, no_argument), 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
      
@@ -253,6 +257,7 @@ class probtrackxOptions {
        options.add(modeuler);
        options.add(rseed);
        options.add(seedcountastext);
+       options.add(splitmatrix2);
      }
      catch(X_OptionError& e) {
        options.usage();

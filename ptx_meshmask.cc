@@ -19,9 +19,11 @@ void meshmask()
   probtrackxOptions& opts =probtrackxOptions::getInstance();
 
   // load seed mesh
+  cout<<"loading mesh files"<<endl;
   Mesh mseeds;
   mseeds.load(opts.meshfile.value());
   mseeds.load_fs_label(opts.seedfile.value());
+  cout<<"mesh files loaded"<<endl;
 
   // internally create seed mask in voxel space
   volume<float> seeds;
