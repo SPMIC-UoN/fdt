@@ -203,8 +203,8 @@ namespace TRACT{
 	  if(m_stop(x_s,y_s,z_s)!=0){
 	    stop_flag=true;
 	  }
-	  else
-	    if(stop_flag)break;
+	  //else
+	  if(stop_flag)break;
 	}	  
 	  
 	if(opts.skipmask.value() == ""){
@@ -378,7 +378,7 @@ namespace TRACT{
 	char buffer[1024];
 	fs.getline(buffer,1024);
 	fs >>numseeds;
-	cout<<numseeds<<endl;
+	cout<<"numseeds="<<numseeds<<endl;
       }
       
     }
@@ -397,7 +397,10 @@ namespace TRACT{
       cerr<<" Although, it must stay in line with the seeds"<<endl;
       exit(-1);
     }
+
     m_ConMat2.reinitialize(numseeds,numnz,1);
+    OUT(m_ConMat2.xsize());
+
     m_CoordMat2.reinitialize(numseeds,3,1);
     m_CoordMat_tract2.reinitialize(numnz,3,1);
     
@@ -745,14 +748,56 @@ namespace TRACT{
   }
 
   void Counter::save_matrix2(){
-    save_volume(m_ConMat2,logger.appendDir("fdt_matrix2"));
-    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat().i());
-    save_volume(m_CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));
-    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat());
-    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
-    save_volume(m_CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
-    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat());
-    save_volume4D(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
+    if(!opts.splitmatrix2.value()){
+      save_volume(m_ConMat2,logger.appendDir("fdt_matrix2"));
+      applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat().i());
+      save_volume(m_CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));
+      applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat());
+      applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
+      save_volume(m_CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
+      applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat());
+      save_volume4D(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
+    }
+    else{
+      cout << "saving matrix2 into splitted files" << endl;
+
+      int nsplits = 10;
+      while( float(m_ConMat2.xsize()/nsplits) >= 32767 ){
+	  nsplits++;
+      }
+
+      int nrows = std::floor(float(m_ConMat2.xsize()/nsplits))+1;
+      volume<int> tmpmat;
+
+      applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat().i());
+
+      for(int i=1;i<=nsplits;i++){
+	int first_row = (i-1)*nrows+1;
+	int last_row  = i*nrows > m_ConMat2.xsize() ? m_ConMat2.xsize() : i*nrows;
+	if(first_row > m_ConMat2.xsize()) break;
+
+	// set limits
+	m_ConMat2.setROIlimits(first_row-1,m_ConMat2.miny(),m_ConMat2.minz(),last_row-1,m_ConMat2.maxy(),m_ConMat2.maxz());
+	m_ConMat2.activateROI();
+	tmpmat = m_ConMat2.ROI();
+	save_volume(tmpmat,logger.appendDir("fdt_matrix2_"+num2str(i)));
+
+	m_CoordMat2.setROIlimits(first_row-1,m_CoordMat2.miny(),m_CoordMat2.minz(),last_row-1,m_CoordMat2.maxy(),m_CoordMat2.maxz());
+	m_CoordMat2.activateROI();
+	tmpmat = m_CoordMat2.ROI();
+	save_volume(tmpmat,logger.appendDir("coords_for_fdt_matrix2_"+num2str(i)));
+
+
+      }
+
+      applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat());
+      save_volume4D(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
+
+      applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat());
+      applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
+      save_volume(m_CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
+
+    }
   }
   
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
