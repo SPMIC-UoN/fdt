@@ -36,7 +36,7 @@ void meshmask()
 
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();
-  Streamliner stline;
+  Streamliner stline(seeds);
   Counter counter(seeds,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);

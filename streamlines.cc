@@ -1,5 +1,6 @@
 #include "streamlines.h"
-
+#include "warpfns/fnirt_file_reader.h"
+#include "warpfns/warpfns.h"
 
 
 namespace TRACT{
@@ -38,8 +39,8 @@ namespace TRACT{
   }
   
   
-  Streamliner::Streamliner():opts(probtrackxOptions::getInstance()),logger(LogSingleton::getInstance()),
-			     vols(opts.usef.value()){
+  Streamliner::Streamliner(const volume<float>& seeds):opts(probtrackxOptions::getInstance()),logger(LogSingleton::getInstance()),
+						       vols(opts.usef.value()),m_seeds(seeds){
     
     read_volume(m_mask,opts.maskfile.value());
     m_part.initialise(0,0,0,0,0,0,opts.steplength.value(),m_mask.xdim(),m_mask.ydim(),m_mask.zdim(),false);
@@ -77,13 +78,32 @@ namespace TRACT{
 	m_passed_flags.push_back(false);
 	m_own_waymasks.push_back(true);
       }
-    } 
+    }
+
+    // Allow for either matrix transform (12dof affine) or nonlinear (warpfield)
+    m_Seeds_to_DTI = IdentityMatrix(4);
+    m_DTI_to_Seeds = IdentityMatrix(4);
+
+    m_IsNonlinXfm = false;
     if(opts.seeds_to_dti.value()!=""){
-      m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
+      if(!fsl_imageexists(opts.seeds_to_dti.value())){
+	m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
+	m_DTI_to_Seeds = m_Seeds_to_DTI.i();
+      }
+      else{
+	m_IsNonlinXfm = true;
+	FnirtFileReader ffr(opts.seeds_to_dti.value());
+	m_Seeds_to_DTI_warp = ffr.FieldAsNewimageVolume4D(true);
+	if(opts.dti_to_seeds.value()==""){
+	  cerr << "Error: DTI -> Seeds transform needed" << endl;
+	  exit(1);
+	}
+	FnirtFileReader iffr(opts.dti_to_seeds.value());
+	m_DTI_to_Seeds_warp = iffr.FieldAsNewimageVolume4D(true);
+      }
     }
-    else{
-      m_Seeds_to_DTI=IdentityMatrix(4);
-    }
+    
+    
     vols.initialise(opts.basename.value());
     m_path.reserve(opts.nparticles.value());
     m_x_s_init=0;
@@ -118,8 +138,12 @@ namespace TRACT{
     ColumnVector th_ph_f;
     float xst,yst,zst,x,y,z,tmp2;
 
-
-    xyz_dti=vox_to_vox(xyz_seeds,dim_seeds,vols.dimensions(),m_Seeds_to_DTI);    
+    // find xyz in dti space
+    if(!m_IsNonlinXfm)
+      xyz_dti = vox_to_vox(xyz_seeds,dim_seeds,vols.dimensions(),m_Seeds_to_DTI);    
+    else{
+      xyz_dti = NewimageCoord2NewimageCoord(m_DTI_to_Seeds_warp,false,m_seeds,m_mask,xyz_seeds);
+    }
 
     xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3);
     m_path.clear();
@@ -142,8 +166,6 @@ namespace TRACT{
       m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
     }
 
-    Matrix DTI_to_Seeds(4,4);
-    DTI_to_Seeds = m_Seeds_to_DTI.i();
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
 	///////////////////////////////////
@@ -169,7 +191,14 @@ namespace TRACT{
 	
 	x=m_part.x();y=m_part.y();z=m_part.z();
 	xyz_dti <<x<<y<<z;
-	xyz_seeds=vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,DTI_to_Seeds);
+	// now find xyz in seeds space
+	if(!m_IsNonlinXfm)
+	  xyz_seeds = vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,m_DTI_to_Seeds);    
+	else{
+	  xyz_seeds = NewimageCoord2NewimageCoord(m_Seeds_to_DTI_warp,false,m_mask,m_seeds,xyz_dti);
+	}
+
+
 	int x_s =(int)round((float)xyz_seeds(1));
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
@@ -812,11 +841,11 @@ namespace TRACT{
     if(opts.fibst.set()){
       fibst=opts.fibst.value()-1;
       OUT(fibst);
-   }
+    }
     else{
       if(fibst == -1){
 	fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
-    }
+      }
       if(opts.randfib.value()){
 	float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
 	fibst = (int)round(tmp);

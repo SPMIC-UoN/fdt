@@ -22,7 +22,7 @@ void seedmask()
   //  Log& logger = LogSingleton::getInstance();
   volume<float> seeds;
   read_volume(seeds,opts.seedfile.value());
-  Streamliner stline;
+  Streamliner stline(seeds);
   Counter counter(seeds,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);

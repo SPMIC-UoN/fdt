@@ -46,6 +46,7 @@ class probtrackxOptions {
   Option<string> stopfile;
   Option<string> prefdirfile;
   Option<string> seeds_to_dti;
+  Option<string> dti_to_seeds;
   FmribOption<string> skipmask;
   Option<string> seedref;
   Option<string> mask2;
@@ -146,7 +147,11 @@ class probtrackxOptions {
 	       string("prefered orientation preset in a 4D mask"),
 	       false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
-		string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
+		string("Transform taking seed space to DTI space (either FLIRT matrix or FNIRT warpfield) - default is identity"),
+		false, requires_argument),
+   dti_to_seeds(string("--invxfm"), string(""),
+		string("Transform taking DTI space to seed space (compulsory when using a warpfield for seeds_to_dti)"),
+		false, requires_argument),
    skipmask(string("--no_integrity"), string(""),
 	   string("no explanation needed"),
 	   false, requires_argument),
@@ -245,6 +250,7 @@ class probtrackxOptions {
        options.add(stopfile);
        options.add(prefdirfile);
        options.add(seeds_to_dti);
+       options.add(dti_to_seeds);
        options.add(nparticles);
        options.add(nsteps);
        options.add(c_thr);

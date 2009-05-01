@@ -30,7 +30,7 @@ void twomasks()
   seeds2=NEWIMAGE::abs(seeds2);
   seeds2.binarise(0,seeds2.max()+1,exclusive);
 
-  Streamliner stline;
+  Streamliner stline(seeds);
   Counter counter(seeds,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);

@@ -38,7 +38,7 @@ void nmasks()
     seeds.push_back(tmpvol);
   }
 
-  Streamliner stline;
+  Streamliner stline(seeds[0]);
   Counter counter(seeds[0],stline);
   counter.initialise();
   Seedmanager seedmanager(counter);

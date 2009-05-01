@@ -30,7 +30,7 @@ void track(){
     read_volume(seedref,opts.maskfile.value());
   }
 
-  Streamliner stline;
+  Streamliner stline(seedref);
   Counter counter(seedref,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);

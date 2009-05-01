@@ -1,10 +1,16 @@
 #include <fstream>
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
 #include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "meshclass/meshclass.h"
 #include "probtrackxOptions.h"
 #include "particle.h"
 #include "tractvolsx.h"
+
+
+
 
 using namespace std;
 using namespace NEWIMAGE;
@@ -35,15 +41,23 @@ namespace TRACT{
     vector<bool> m_passed_flags;
     vector<bool> m_own_waymasks;
     Matrix m_Seeds_to_DTI;
+    Matrix m_DTI_to_Seeds;
+    volume4D<float> m_Seeds_to_DTI_warp;
+    volume4D<float> m_DTI_to_Seeds_warp;
+    bool m_IsNonlinXfm;
     Matrix m_rotdir;
     Tractvolsx vols;
     float m_lcrat;
     float m_x_s_init;
     float m_y_s_init;
     float m_z_s_init;
+
+    // we need this class to know about seed space
+    const volume<float>& m_seeds;
+
   public:
     //Constructors
-    Streamliner();
+    Streamliner(const volume<float>&);
     ~Streamliner(){
       for(unsigned int i=0;i<m_waymasks.size();i++)
 	if(m_own_waymasks[i]) delete m_waymasks[i];
