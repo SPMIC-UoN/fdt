@@ -44,6 +44,9 @@ namespace TRACT{
     Matrix m_DTI_to_Seeds;
     volume4D<float> m_Seeds_to_DTI_warp;
     volume4D<float> m_DTI_to_Seeds_warp;
+    volume4D<float> m_jacx;
+    volume4D<float> m_jacy;
+    volume4D<float> m_jacz;
     bool m_IsNonlinXfm;
     Matrix m_rotdir;
     Tractvolsx vols;
@@ -99,6 +102,9 @@ namespace TRACT{
       m_part.restart_reverse();
     }
     bool streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
+
+    void rotdir(const ColumnVector& dir,ColumnVector& rotdir,const float& x,const float& y,const float& z);
+
 
   };
 

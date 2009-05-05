@@ -37,7 +37,33 @@ namespace TRACT{
       exit(0);
     }
   }
+  void sjgradient(const volume<float>& im,volume4D<float>& grad){
   
+  grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
+  copybasicproperties(im,grad[0]);
+
+  int fx,fy,fz,bx,by,bz;
+  float dx,dy,dz; 
+  for (int z=0; z<grad.zsize(); z++){
+    fz = z ==(grad.zsize()-1) ? 0 :  1;
+    bz = z == 0              ? 0 : -1;
+    dz = (fz==0 || bz==0)    ? 1.0 :  2.0;
+    for (int y=0; y<grad.ysize(); y++){
+      fy = y ==(grad.ysize()-1) ? 0 :  1;
+      by = y == 0              ? 0 : -1;
+      dy = (fy==0 || by==0)    ? 1.0 :  2.0;
+      for (int x=0; x<grad.xsize(); x++){
+	fx = x ==(grad.xsize()-1) ? 0 :  1;
+	bx = x == 0              ? 0 : -1;
+	dx = (fx==0 || bx==0)    ? 1.0 :  2.0;
+	grad[0](x,y,z) = (im(x+fx,y,z) - im(x+bx,y,z))/dx;
+	grad[1](x,y,z) = (im(x,y+fy,z) - im(x,y+by,z))/dy;
+	grad[2](x,y,z) = (im(x,y,z+fz) - im(x,y,z+bz))/dz;
+      }
+    }
+  }
+
+}
   
   Streamliner::Streamliner(const volume<float>& seeds):opts(probtrackxOptions::getInstance()),logger(LogSingleton::getInstance()),
 						       vols(opts.usef.value()),m_seeds(seeds){
@@ -79,16 +105,31 @@ namespace TRACT{
 	m_own_waymasks.push_back(true);
       }
     }
-
+    
+    
     // Allow for either matrix transform (12dof affine) or nonlinear (warpfield)
     m_Seeds_to_DTI = IdentityMatrix(4);
     m_DTI_to_Seeds = IdentityMatrix(4);
+    m_rotdir = IdentityMatrix(3);
+
 
     m_IsNonlinXfm = false;
     if(opts.seeds_to_dti.value()!=""){
       if(!fsl_imageexists(opts.seeds_to_dti.value())){
 	m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
 	m_DTI_to_Seeds = m_Seeds_to_DTI.i();
+
+	// set rotation matrix
+	Matrix F(3,3),u(3,3),v(3,3);
+	DiagonalMatrix d(3);
+	F << -m_Seeds_to_DTI(1,1) << m_Seeds_to_DTI(1,3) << -m_Seeds_to_DTI(1,2)
+	  << -m_Seeds_to_DTI(2,1) << m_Seeds_to_DTI(2,3) << -m_Seeds_to_DTI(2,2)
+	  << -m_Seeds_to_DTI(3,1) << m_Seeds_to_DTI(3,3) << -m_Seeds_to_DTI(3,2);
+	
+	SVD(F*F.t(),d,u,v);
+	m_rotdir.ReSize(3,3);
+	m_rotdir = (u*sqrt(d)*v.t()).i()*F;
+
       }
       else{
 	m_IsNonlinXfm = true;
@@ -100,6 +141,12 @@ namespace TRACT{
 	}
 	FnirtFileReader iffr(opts.dti_to_seeds.value());
 	m_DTI_to_Seeds_warp = iffr.FieldAsNewimageVolume4D(true);
+
+	// now calculate the jacobian of this transformation (useful for rotating vectors)
+	sjgradient(m_Seeds_to_DTI_warp[0],m_jacx);
+	sjgradient(m_Seeds_to_DTI_warp[1],m_jacy);
+	sjgradient(m_Seeds_to_DTI_warp[2],m_jacz);
+
       }
     }
     
@@ -110,16 +157,7 @@ namespace TRACT{
     m_y_s_init=0;
     m_z_s_init=0;
 
-    // create rotdir for cases where seeding from a freesurfer mesh
-    Matrix F(3,3),u(3,3),v(3,3);
-    DiagonalMatrix d(3);
-    F << -m_Seeds_to_DTI(1,1) << m_Seeds_to_DTI(1,3) << -m_Seeds_to_DTI(1,2)
-      << -m_Seeds_to_DTI(2,1) << m_Seeds_to_DTI(2,3) << -m_Seeds_to_DTI(2,2)
-      << -m_Seeds_to_DTI(3,1) << m_Seeds_to_DTI(3,3) << -m_Seeds_to_DTI(3,2);
     
-    SVD(F*F.t(),d,u,v);
-    m_rotdir.ReSize(3,3);
-    m_rotdir = (u*sqrt(d)*v.t()).i()*F;
 
   }
   
@@ -146,26 +184,21 @@ namespace TRACT{
     }
 
     xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3);
-    m_path.clear();
+    //m_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
-
-    if(opts.meshfile.value()!=""){
-      // rotate dir using seeds_to_dti*mm_to_vox
-      ColumnVector rotdir(3);
-      rotdir = m_rotdir*dir;
-      m_part.set_dir(rotdir(1),rotdir(2),rotdir(3));//Set the start dir so that we track inwards from cortex
-    }
+    m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
     
     int partlength=0;
     bool rubbish_passed=false;
     bool stop_flag=false;
     //bool has_goneout=false;
       //NB - this only goes in one direction!!
-    for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
-      m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
-    }
-
+    if(opts.waypoints.value()!="")
+      for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
+	m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
+      }
+      
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
 	///////////////////////////////////
@@ -210,16 +243,17 @@ namespace TRACT{
 	  pref_z = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),2); 
 	}
 	//update every passed_flag
-	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
-	  if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
-	    m_passed_flags[wm]=true;
+	if(opts.waypoints.value()!="")
+	  for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
+	    if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
+	      m_passed_flags[wm]=true;
+	    }
 	  }
-	}
+
+
 	m_path.push_back(xyz_seeds);
-	//	  m_path(it,1)=x_s; 
-	//	  m_path(it,2)=y_s;
-	//	  m_path(it,3)=z_s;
 	partlength++;
+	
 	
 
 	if(opts.rubbishfile.value()!=""){
@@ -290,6 +324,27 @@ namespace TRACT{
 
     return accept_path;
   }
+
+  void Streamliner::rotdir(const ColumnVector& dir,ColumnVector& rotdir,
+			   const float& x,const float& y,const float& z){
+    if(!m_IsNonlinXfm){
+      rotdir = m_rotdir*dir;       
+    }
+    else{
+      ColumnVector xyz_dti(3),xyz_seeds(3);
+      xyz_seeds << x << y << z;
+      xyz_dti = NewimageCoord2NewimageCoord(m_DTI_to_Seeds_warp,false,m_seeds,m_mask,xyz_seeds);
+
+      Matrix F(3,3),Jw(3,3);
+      Jw << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),2)
+	 << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),2)
+	 << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),2);
+	 	 
+      F = (IdentityMatrix(3) + Jw).i();
+      rotdir = F*dir;
+    }
+  }
+
   
   
   void Counter::initialise(){
@@ -828,7 +883,7 @@ namespace TRACT{
 
     }
   }
-  
+
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
     ColumnVector dir(3);
     dir=0;
@@ -856,6 +911,10 @@ namespace TRACT{
       } 
     }
     
+    // now re-orient dir using xfm transform
+    ColumnVector rotdir(3);
+    m_stline.rotdir(dir,rotdir,x,y,z);
+
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
       if(opts.verbose.value()>1)
@@ -865,7 +924,7 @@ namespace TRACT{
       bool forwardflag=false,backwardflag=false;
       bool counted=false;
       if(!onewayonly){
-	if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){ //returns whether to count the streamline or not
+	if(m_stline.streamline(x,y,z,m_seeddims,fibst,rotdir)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();
@@ -873,9 +932,12 @@ namespace TRACT{
 	}
 	m_stline.reverse();
       }
-      if(m_stline.streamline(x,y,z,m_seeddims,fibst,dir)){
+    
+      if(m_stline.streamline(x,y,z,m_seeddims,fibst,rotdir)){
+	
 	backwardflag=true;
 	m_counter.count_streamline();
+	
 	if(!counted)nlines++; // the other half has is counted here
 
       }
