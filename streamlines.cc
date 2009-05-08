@@ -184,7 +184,7 @@ namespace TRACT{
     }
 
     xst=xyz_dti(1);yst=xyz_dti(2);zst=xyz_dti(3);
-    //m_path.clear();
+    m_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
     m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
