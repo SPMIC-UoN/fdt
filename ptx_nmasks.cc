@@ -31,6 +31,11 @@ void nmasks()
   else
     read_masks(masknames,opts.seedfile.value());
 
+  if(opts.s2tout.value()){
+    cerr << "Seed_to_target not available in multiple seed tractography" << endl;
+    exit(0);
+  }
+
   for(unsigned int m=0;m<masknames.size();m++){
     read_volume(tmpvol,masknames[m]);
     tmpvol=NEWIMAGE::abs(tmpvol);
