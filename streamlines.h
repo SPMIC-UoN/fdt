@@ -32,6 +32,8 @@ namespace TRACT{
     Particle m_part;
     vector<ColumnVector> m_path;
     volume<int> m_mask;
+
+
     volume<int> m_skipmask;
     volume<int> m_rubbish;
     volume<int> m_stop;
@@ -40,6 +42,7 @@ namespace TRACT{
     vector<volume<float>* > m_waymasks;
     vector<bool> m_passed_flags;
     vector<bool> m_own_waymasks;
+
     Matrix m_Seeds_to_DTI;
     Matrix m_DTI_to_Seeds;
     volume4D<float> m_Seeds_to_DTI_warp;
@@ -49,6 +52,7 @@ namespace TRACT{
     volume4D<float> m_jacz;
     bool m_IsNonlinXfm;
     Matrix m_rotdir;
+
     Tractvolsx vols;
     float m_lcrat;
     float m_x_s_init;
@@ -117,14 +121,19 @@ namespace TRACT{
     Matrix m_I;
     vector<ColumnVector> m_path;
     
-    vector<volume<int> > m_seedcounts;
+    vector<ColumnVector> m_seedcounts;
     Matrix m_SeedCountMat;
     int    m_SeedRow;
 
-    vector<volume<float> > m_targetmasks;
+    Matrix m_targetmasks;
     vector<string> m_targetmasknames;
     vector<int> m_targflags;
-    //vector<vector<int> > m_particle_numbers;
+
+
+    volume<int> m_seeds_vol2mat;
+    Matrix      m_seeds_mat2vol;
+    volume<int> m_targets_vol2mat;
+    Matrix      m_targets_mat2vol;
 
     
     volume<int> m_ConMat;

@@ -37,33 +37,66 @@ namespace TRACT{
       exit(0);
     }
   }
-  void sjgradient(const volume<float>& im,volume4D<float>& grad){
-  
-  grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
-  copybasicproperties(im,grad[0]);
-
-  int fx,fy,fz,bx,by,bz;
-  float dx,dy,dz; 
-  for (int z=0; z<grad.zsize(); z++){
-    fz = z ==(grad.zsize()-1) ? 0 :  1;
-    bz = z == 0              ? 0 : -1;
-    dz = (fz==0 || bz==0)    ? 1.0 :  2.0;
-    for (int y=0; y<grad.ysize(); y++){
-      fy = y ==(grad.ysize()-1) ? 0 :  1;
-      by = y == 0              ? 0 : -1;
-      dy = (fy==0 || by==0)    ? 1.0 :  2.0;
-      for (int x=0; x<grad.xsize(); x++){
-	fx = x ==(grad.xsize()-1) ? 0 :  1;
-	bx = x == 0              ? 0 : -1;
-	dx = (fx==0 || bx==0)    ? 1.0 :  2.0;
-	grad[0](x,y,z) = (im(x+fx,y,z) - im(x+bx,y,z))/dx;
-	grad[1](x,y,z) = (im(x,y+fy,z) - im(x,y+by,z))/dy;
-	grad[2](x,y,z) = (im(x,y,z+fz) - im(x,y,z+bz))/dz;
+  void imgradient(const volume<float>& im,volume4D<float>& grad){
+    
+    grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
+    copybasicproperties(im,grad[0]);
+    
+    int fx,fy,fz,bx,by,bz;
+    float dx,dy,dz; 
+    for (int z=0; z<grad.zsize(); z++){
+      fz = z ==(grad.zsize()-1) ? 0 :  1;
+      bz = z == 0              ? 0 : -1;
+      dz = (fz==0 || bz==0)    ? 1.0 :  2.0;
+      for (int y=0; y<grad.ysize(); y++){
+	fy = y ==(grad.ysize()-1) ? 0 :  1;
+	by = y == 0              ? 0 : -1;
+	dy = (fy==0 || by==0)    ? 1.0 :  2.0;
+	for (int x=0; x<grad.xsize(); x++){
+	  fx = x ==(grad.xsize()-1) ? 0 :  1;
+	  bx = x == 0              ? 0 : -1;
+	  dx = (fx==0 || bx==0)    ? 1.0 :  2.0;
+	  grad[0](x,y,z) = (im(x+fx,y,z) - im(x+bx,y,z))/dx;
+	  grad[1](x,y,z) = (im(x,y+fy,z) - im(x,y+by,z))/dy;
+	  grad[2](x,y,z) = (im(x,y,z+fz) - im(x,y,z+bz))/dz;
+	}
       }
     }
+    
+  }
+  void imlookup(const volume<float>& im,volume<int>& vol2mat,Matrix& mat2vol){
+    vol2mat.reinitialize(im.xsize(),im.ysize(),im.zsize());
+    vol2mat = 0;
+
+    int nrows=0;
+    for(int Wz=im.minz();Wz<=im.maxz();Wz++)
+      for(int Wy=im.miny();Wy<=im.maxy();Wy++)
+	for(int Wx=im.minx();Wx<=im.maxx();Wx++)
+	  if(im(Wx,Wy,Wz)!=0){
+	    nrows++;
+	  }
+    mat2vol.ReSize(nrows,3);
+    nrows=0;
+    for(int Wz=im.minz();Wz<=im.maxz();Wz++)
+      for(int Wy=im.miny();Wy<=im.maxy();Wy++)
+	for(int Wx=im.minx();Wx<=im.maxx();Wx++)
+	  if(im(Wx,Wy,Wz)!=0){
+	    nrows++;
+	    mat2vol(nrows,1) = Wx;
+	    mat2vol(nrows,2) = Wy;
+	    mat2vol(nrows,3) = Wz;
+	    
+	    vol2mat(Wx,Wy,Wz) = nrows;
+
+	  }
+  }
+  
+  void  imfill(volume<float>& im,const ColumnVector& vec,const Matrix& lookup){
+    im = 0;
+    for(int i=1;i<=vec.Nrows();i++)
+      im(lookup(i,1),lookup(i,2),lookup(i,3)) = vec(i);
   }
 
-}
   
   Streamliner::Streamliner(const volume<float>& seeds):opts(probtrackxOptions::getInstance()),logger(LogSingleton::getInstance()),
 						       vols(opts.usef.value()),m_seeds(seeds){
@@ -143,9 +176,9 @@ namespace TRACT{
 	m_DTI_to_Seeds_warp = iffr.FieldAsNewimageVolume4D(true);
 
 	// now calculate the jacobian of this transformation (useful for rotating vectors)
-	sjgradient(m_Seeds_to_DTI_warp[0],m_jacx);
-	sjgradient(m_Seeds_to_DTI_warp[1],m_jacy);
-	sjgradient(m_Seeds_to_DTI_warp[2],m_jacz);
+	imgradient(m_Seeds_to_DTI_warp[0],m_jacx);
+	imgradient(m_Seeds_to_DTI_warp[1],m_jacy);
+	imgradient(m_Seeds_to_DTI_warp[2],m_jacz);
 
       }
     }
@@ -187,7 +220,13 @@ namespace TRACT{
     m_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
-    m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
+    
+    //m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
+
+    if(opts.meshfile.value()!=""){ 
+      m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex 
+    }
+
     
     int partlength=0;
     bool rubbish_passed=false;
@@ -199,8 +238,10 @@ namespace TRACT{
 	m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
       }
       
+
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
+
 	///////////////////////////////////
 	//loopchecking
 	///////////////////////////////////
@@ -231,7 +272,7 @@ namespace TRACT{
 	  xyz_seeds = NewimageCoord2NewimageCoord(m_Seeds_to_DTI_warp,false,m_mask,m_seeds,xyz_dti);
 	}
 
-
+	
 	int x_s =(int)round((float)xyz_seeds(1));
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
@@ -250,7 +291,7 @@ namespace TRACT{
 	    }
 	  }
 
-
+	
 	m_path.push_back(xyz_seeds);
 	partlength++;
 	
@@ -259,6 +300,7 @@ namespace TRACT{
 	if(opts.rubbishfile.value()!=""){
 	  if(m_rubbish(x_s,y_s,z_s)!=0){
 	    rubbish_passed=true;
+	    
 	    break;
 	  }
 	}
@@ -267,7 +309,10 @@ namespace TRACT{
 	    stop_flag=true;
 	  }
 	  //else
-	  if(stop_flag)break;
+	  if(stop_flag){
+	    
+	    break;
+	  }
 	}	  
 	  
 	if(opts.skipmask.value() == ""){
@@ -282,6 +327,7 @@ namespace TRACT{
 	tmp2=rand(); tmp2/=RAND_MAX;
 	if(th_ph_f(3)>tmp2){
 	  if(!m_part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value())){
+	    
 	    break;
 	  }
 	    
@@ -307,7 +353,8 @@ namespace TRACT{
 	  
 	  
       }
-	
+
+      
     } // Close Step Number Loop
     if(opts.loopcheck.value()){
       m_loopcheck=0;
@@ -348,6 +395,10 @@ namespace TRACT{
   
   
   void Counter::initialise(){
+    // set lookup table for seed mask
+
+    imlookup(m_seeds,m_seeds_vol2mat,m_seeds_mat2vol);
+   
     if(opts.simpleout.value()||opts.matrix1out.value()){
       initialise_path_dist();
     }
@@ -364,47 +415,63 @@ namespace TRACT{
       initialise_maskmatrix();
     }
   }
+
   
   void Counter::initialise_seedcounts(){
     
-    volume<float> tmp;
+    // store only nonzero values of the target masks
+    volume<float> tmptarget,alltargets;
     volume<int> tmpint;
+    int numseeds;
+    numseeds = m_seeds_mat2vol.Nrows();
+    
+    ColumnVector scounter(numseeds);
+    scounter=0;
+
     read_masks(m_targetmasknames,opts.targetfile.value());
     m_targflags.resize(m_targetmasknames.size(),0);
-    //m_particle_numbers.resize(m_targetmasknames.size());
-    //tmpvec.reserve(opts.nparticles.value());
     cout<<"Number of masks "<<m_targetmasknames.size()<<endl;
-    //are they initialised to zero?
+    cout << "loading target masks - stage 1" << endl;
+
+    alltargets.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
+    alltargets = 0;
     for(unsigned int m=0;m<m_targetmasknames.size();m++){
-      read_volume(tmp,m_targetmasknames[m]);
-      m_targetmasks.push_back(tmp);
-      copyconvert(tmp,tmpint);
-      tmpint=0;
-      m_seedcounts.push_back(tmpint);
-      //m_particle_numbers.push_back(tmpvec);
+      cout << m+1 << endl;
+      read_volume(tmptarget,m_targetmasknames[m]);
+      alltargets += tmptarget;
+      m_seedcounts.push_back(scounter);
+    }
+    imlookup(alltargets,m_targets_vol2mat,m_targets_mat2vol);
+
+    cout << "loading target masks - stage 2" << endl;
+    m_targetmasks.ReSize(m_targets_mat2vol.Nrows(),m_targetmasknames.size());
+    m_targetmasks = 0;
+    for(unsigned int m=0;m<m_targetmasknames.size();m++){
+      cout << m+1 << endl;
+      read_volume(tmptarget,m_targetmasknames[m]);
+      
+      for(int Wz=tmptarget.minz();Wz<=tmptarget.maxz();Wz++)
+	for(int Wy=tmptarget.miny();Wy<=tmptarget.maxy();Wy++)
+	  for(int Wx=tmptarget.minx();Wx<=tmptarget.maxx();Wx++){
+	    if(tmptarget.value(Wx,Wy,Wz)!=0){
+	      m_targetmasks( m_targets_vol2mat(Wx,Wy,Wz), m+1 ) = 1;
+	    }
+	  }
+      
     }
 
     // where we save the seed counts in text files
     if(opts.seedcountastext.value()){
-      
-      int numseeds=0;
-      if(opts.meshfile.value()==""){
-	for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
-	  for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
-	    for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
-	      if(m_seeds.value(Wx,Wy,Wz)!=0)
-		numseeds++;
-      }
-      else{
+      if(!fsl_imageexists(opts.seedfile.value()) && opts.meshfile.value()!=""){
+	numseeds=0;
 	ifstream fs(opts.seedfile.value().c_str());
 	if(fs){
 	  char buffer[1024];
 	  fs.getline(buffer,1024);
 	  fs >>numseeds;
-	  cout<<numseeds<<endl;
+	  //cout<<"numseeds="<<numseeds<<endl;
 	}
       }
-
       m_SeedCountMat.ReSize(numseeds,m_targetmasknames.size());
       m_SeedCountMat=0;
       m_SeedRow=1;
@@ -449,7 +516,7 @@ namespace TRACT{
     m_lrdim.ReSize(3);
     m_lrdim<<m_lrmask.xdim()<<m_lrmask.ydim()<<m_lrmask.zdim();
     int numseeds=0,numnz=0;
-    if(opts.meshfile.value()==""){
+    if(fsl_imageexists(opts.seedfile.value()) && opts.meshfile.value()==""){
     for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
       for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
 	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
@@ -586,6 +653,7 @@ namespace TRACT{
   }
 
   void Counter::reset_beenhere(const bool& forwardflag,const bool& backwardflag){
+    
     if(forwardflag){
       for(unsigned int i=0;i<m_path.size();i++){
 	int x_s=int(round(float(m_path[i](1)))),y_s=int(round(float(m_path[i](2)))),z_s=int(round(float(m_path[i](3))));
@@ -603,24 +671,24 @@ namespace TRACT{
   
   
   void Counter::update_seedcounts(){
+
     const vector<ColumnVector>& path=m_stline.get_path_ref();
     int xseedvox=int(round(m_stline.get_x_seed()));
     int yseedvox=int(round(m_stline.get_y_seed()));
     int zseedvox=int(round(m_stline.get_z_seed()));
 
+
     if(!opts.pathdist.value()){
       for(unsigned int i=0;i<path.size();i++){
 	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	  if(m_targetmasks[m](x_s,y_s,z_s)!=0 && m_targflags[m]==0){
-	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)=m_seedcounts[m](xseedvox,yseedvox,zseedvox)+1;
-	    m_targflags[m]=1;
-	    //m_particle_numbers[m].push_back(particle_number);
-
-	    if(opts.seedcountastext.value())
-	      m_SeedCountMat(m_SeedRow,m+1) += 1;
-	    
-	  }
+	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
+	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
+	      m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += 1;
+	      m_targflags[m]=1;
+	      if(opts.seedcountastext.value())
+		m_SeedCountMat(m_SeedRow,m+1) += 1;	    
+	    }
 	}
       }
     }
@@ -632,20 +700,20 @@ namespace TRACT{
 	if(i>0)
 	  d+=sqrt((path[i]-path[i-1]).SumSquare());
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
-	  if(m_targetmasks[m](x_s,y_s,z_s)!=0 && m_targflags[m]==0){
-	    m_seedcounts[m](xseedvox,yseedvox,zseedvox)+=(int)d;
-	    m_targflags[m]=1;
-	    //m_particle_numbers[m].push_back(particle_number);
-	    
-	    if(opts.seedcountastext.value())
-	      m_SeedCountMat(m_SeedRow,m+1) += d;
-
-	  }
+	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
+	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
+	      m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += d;
+	      m_targflags[m]=1;
+	      
+	      if(opts.seedcountastext.value())
+		m_SeedCountMat(m_SeedRow,m+1) += d;
+	      
+	    }
 	}
 	
       }
     }
-    
+
   }
   
 
@@ -755,6 +823,7 @@ namespace TRACT{
   }
 
   void Counter::save(){
+    cout << "now saving various outputs" << endl;
     if(opts.simpleout.value()){
       save_pathdist();
     }
@@ -785,6 +854,9 @@ namespace TRACT{
   }
 
   void Counter::save_seedcounts(){
+    volume<float> seedcounts;
+    seedcounts.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
+
     for(unsigned int m=0;m<m_targetmasknames.size();m++){
       string tmpname=m_targetmasknames[m];
       
@@ -801,7 +873,9 @@ namespace TRACT{
       //only take things after the last pos
       tmpname=tmpname.substr(lastpos+1,tmpname.length()-lastpos-1);
       
-      save_volume(m_seedcounts[m],logger.appendDir("seeds_to_"+tmpname));
+      imfill(seedcounts,m_seedcounts[m],m_seeds_mat2vol);
+
+      save_volume(seedcounts,logger.appendDir("seeds_to_"+tmpname));
     }
 
     if(opts.seedcountastext.value()){
@@ -913,7 +987,8 @@ namespace TRACT{
     
     // now re-orient dir using xfm transform
     ColumnVector rotdir(3);
-    m_stline.rotdir(dir,rotdir,x,y,z);
+    //m_stline.rotdir(dir,rotdir,x,y,z);
+    rotdir=dir;
 
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
