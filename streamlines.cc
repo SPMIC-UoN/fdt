@@ -94,7 +94,7 @@ namespace TRACT{
   void  imfill(volume<float>& im,const ColumnVector& vec,const Matrix& lookup){
     im = 0;
     for(int i=1;i<=vec.Nrows();i++)
-      im(lookup(i,1),lookup(i,2),lookup(i,3)) = vec(i);
+      im((int)lookup(i,1),(int)lookup(i,2),(int)lookup(i,3)) = vec(i);
   }
 
   
@@ -383,9 +383,9 @@ namespace TRACT{
       xyz_dti = NewimageCoord2NewimageCoord(m_DTI_to_Seeds_warp,false,m_seeds,m_mask,xyz_seeds);
 
       Matrix F(3,3),Jw(3,3);
-      Jw << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacx(xyz_dti(1),xyz_dti(2),xyz_dti(3),2)
-	 << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacy(xyz_dti(1),xyz_dti(2),xyz_dti(3),2)
-	 << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),0) << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),1) << m_jacz(xyz_dti(1),xyz_dti(2),xyz_dti(3),2);
+      Jw << m_jacx((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),0) << m_jacx((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),1) << m_jacx((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),2)
+	 << m_jacy((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),0) << m_jacy((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),1) << m_jacy((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),2)
+	 << m_jacz((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),0) << m_jacz((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),1) << m_jacz((int)xyz_dti(1),(int)xyz_dti(2),(int)xyz_dti(3),2);
 	 	 
       F = (IdentityMatrix(3) + Jw).i();
       rotdir = F*dir;
