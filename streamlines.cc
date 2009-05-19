@@ -221,8 +221,6 @@ namespace TRACT{
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
     
-    //m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex
-
     if(opts.meshfile.value()!=""){ 
       m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex 
     }
@@ -843,6 +841,7 @@ namespace TRACT{
   }
   
   void Counter::save_pathdist(){  
+    m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
     save_volume(m_prob,logger.appendDir("fdt_paths"));
   }
   
@@ -850,6 +849,7 @@ namespace TRACT{
     string thisout=opts.outfile.value();
     make_basename(thisout);
     thisout+=add;
+    m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
     save_volume(m_prob,thisout);
   }
 
@@ -875,6 +875,7 @@ namespace TRACT{
       
       imfill(seedcounts,m_seedcounts[m],m_seeds_mat2vol);
 
+      seedcounts.setDisplayMaximumMinimum(opts.nparticles.value(),0);
       save_volume(seedcounts,logger.appendDir("seeds_to_"+tmpname));
     }
 
