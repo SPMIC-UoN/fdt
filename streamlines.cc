@@ -481,12 +481,22 @@ namespace TRACT{
   void Counter::initialise_matrix1(){
     m_Conrow=0;
     int numseeds=0;
-    for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
-      for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
-	for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
-	  if(m_seeds.value(Wx,Wy,Wz)!=0)
-	    numseeds++;
-      
+    if(fsl_imageexists(opts.seedfile.value()) && opts.meshfile.value()==""){
+      for(int Wz=m_seeds.minz();Wz<=m_seeds.maxz();Wz++)
+	for(int Wy=m_seeds.miny();Wy<=m_seeds.maxy();Wy++)
+	  for(int Wx=m_seeds.minx();Wx<=m_seeds.maxx();Wx++)
+	    if(m_seeds.value(Wx,Wy,Wz)!=0)
+	      numseeds++;
+    }
+    else{
+      ifstream fs(opts.seedfile.value().c_str());
+      if(fs){
+	char buffer[1024];
+	fs.getline(buffer,1024);
+	fs >>numseeds;
+	cout<<"numseeds="<<numseeds<<endl;
+      }
+    }
     m_ConMat.reinitialize(numseeds,numseeds,1);
     m_CoordMat.reinitialize(numseeds,3,1);
     int myrow=0;
@@ -856,6 +866,7 @@ namespace TRACT{
   void Counter::save_seedcounts(){
     volume<float> seedcounts;
     seedcounts.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
+    copybasicproperties(m_seeds,seedcounts);
 
     for(unsigned int m=0;m<m_targetmasknames.size();m++){
       string tmpname=m_targetmasknames[m];
