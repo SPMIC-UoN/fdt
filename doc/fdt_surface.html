@@ -36,17 +36,17 @@ tkregister2 --mov $SUBJECTS_DIR/john/mri/orig.mgz --targ $SUBJECTS_DIR/john/mri/
 convert_xfm -omat struct2freesurfer.mat -inverse freesurfer2struct.mat
 </code>
 <br><br>
-Now for transforming FA to struct, we can either calculate a linear transformation (with FLIRT), or a nonlinear warpfield (with FNIRT). This second option is only recommended when the FA data is of good quality (e.g. at least 2mm isotropic resolution).<br>
+Now for transforming FA to struct, we can either calculate a linear transformation (with FLIRT), or a nonlinear warpfield (with FNIRT). This second option is only recommended when the FA data is of good quality (e.g. at least 2mm isotropic resolution). The structural image needs to be brain extracted (e.g. with BET), and we assume it is called <code>struct_brain.nii.gz</code><br>
 Alignment using FLIRT:<br><br>
 <code>
-flirt -in dti_FA -ref struct -omat fa2struct.mat <br>
+flirt -in dti_FA -ref struct_brain -omat fa2struct.mat <br>
 convert_xfm -omat struct2fa.mat -inverse fa2struct.mat
 </code>
 <br><br>
 And using FNIRT (still need to run FLIRT first!):<br><br>
 <code>
-flirt -in dti_FA -ref struct -omat fa2struct.mat <br>
-fnirt --in=dti_FA --ref=struct --aff=fa2struct.mat --cout=fa2struct_warp
+flirt -in dti_FA -ref struct_brain -omat fa2struct.mat <br>
+fnirt --in=dti_FA --ref=struct_brain --aff=fa2struct.mat --cout=fa2struct_warp
 invwarp -w fa2struct_warp -o struct2fa_warp -r dti_FA
 </code>
 <br><br>
