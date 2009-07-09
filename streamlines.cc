@@ -558,7 +558,8 @@ namespace TRACT{
     }
 
     m_ConMat2.reinitialize(numseeds,numnz,1);
-    OUT(m_ConMat2.xsize());
+    m_ConMat2 = 0;
+    //OUT(m_ConMat2.xsize());
 
     m_CoordMat2.reinitialize(numseeds,3,1);
     m_CoordMat_tract2.reinitialize(numnz,3,1);
@@ -751,7 +752,7 @@ namespace TRACT{
     //run this one every streamline - not every voxel..
     const vector<ColumnVector>& path=m_stline.get_path_ref();
 
-    if(!opts.pathdist.value())
+    if(!opts.pathdist.value()){
       for(unsigned int i=0;i<path.size();i++){
 	ColumnVector xyz_seeds=path[i];
 	//do something here
@@ -767,6 +768,7 @@ namespace TRACT{
 	}
 	
       }
+    }
     else{
       int d=1;
       for(unsigned int i=0;i<path.size();i++){
