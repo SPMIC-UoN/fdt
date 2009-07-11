@@ -92,23 +92,48 @@ void do_kmeans(const Matrix& data,ColumnVector& y,const int k){
   ColumnVector nmeans(k);
   means=0;
   nmeans=0;
-  // initialise random
-  vector< pair<float,int> > rindex(n);
-  randomise(rindex);
-  vector<pair<float,int> >::iterator riter;
-  int nn=0,cl=1,nperclass=(int)(float(n)/float(k));
-  for(riter=rindex.begin();riter!=rindex.end();++riter){
-    means.Column(cl) += data.Row((*riter).second).t();
-    nmeans(cl) += 1;
-    y((*riter).second)=cl;
-    nn++;
-    if(nn>=nperclass && cl<k){
-      nn=0;
-      cl++;
+  
+  // // initialise random
+//   vector< pair<float,int> > rindex(n);
+//   randomise(rindex);
+//   vector<pair<float,int> >::iterator riter;
+//   int nn=0,cl=1,nperclass=(int)(float(n)/float(k));
+//   for(riter=rindex.begin();riter!=rindex.end();++riter){
+//     means.Column(cl) += data.Row((*riter).second).t();
+//     nmeans(cl) += 1;
+//     y((*riter).second)=cl;
+//     nn++;
+//     if(nn>=nperclass && cl<k){
+//       nn=0;
+//       cl++;
+//     }
+//   }
+//   for(int m=1;m<=k;m++)
+//     means.Column(m) /= nmeans(m);
+
+
+// initialise with far-away trick
+// start with a random class centre. then each new class centre is
+  // as far as possible from the cog of the previous classes
+  means.Column(1) = data.Row(round(rand()/float(RAND_MAX)*float(n-1))+1).t();
+  ColumnVector cog(d);
+  for(int cl=2;cl<=k;cl++){
+    cog = sum(means.SubMatrix(1,d,1,cl-1),2);
+    
+    int maxi=1;float dist=0,maxdist=0;
+    for(int i=1;i<=n;i++){
+      float cdist=0,mindist=-1;int minc=1;
+      for(int prevcl=cl-1;prevcl>=1;prevcl--){
+	cdist = (means.Column(prevcl)-data.Row(i).t()).SumSquare();
+	if(mindist==-1 || cdist<mindist){mindist=cdist;minc=prevcl;}
+      }
+      dist = mindist;
+      if(dist>=maxdist){maxdist=dist;maxi=i;}
     }
+    means.Column(cl)=data.Row(maxi).t();
   }
-  for(int m=1;m<=k;m++)
-    means.Column(m) /= nmeans(m);
+
+
   
   // iterate
   for(int iter=0;iter<numiter;iter++){
@@ -144,6 +169,9 @@ void do_kmeans(const Matrix& data,ColumnVector& y,const int k){
   
 }
 
+
+
+
 void kmeans_reord(const Matrix& A,ColumnVector& r,ColumnVector& y,const int k){
   do_kmeans(A,y,k);
  
@@ -164,6 +192,120 @@ void kmeans_reord(const Matrix& A,ColumnVector& r,ColumnVector& y,const int k){
     r(i)=myvec2[i-1].second;
   } 
 }
+
+void do_fuzzy(const Matrix& data,Matrix& u,const int k){
+  int numiter     = 200;
+  float fuzziness = 2;
+
+  int n = data.Nrows();
+  int d = data.Ncols();
+  Matrix means(d,k),newmeans(d,k);
+  ColumnVector nmeans(k);
+  means=0;
+  nmeans=0;
+  
+  // initialise with far-away trick
+  // start with a random class centre. then each new class centre is
+  // as far as possible from the cog of the previous classes
+  means.Column(1) = data.Row(round(rand()/float(RAND_MAX)*float(n-1))+1).t();
+  ColumnVector cog(d);
+  for(int cl=2;cl<=k;cl++){
+    cog = sum(means.SubMatrix(1,d,1,cl-1),2);    
+    int maxi=1;float dist=0,maxdist=0;
+    for(int i=1;i<=n;i++){
+      float cdist=0,mindist=-1;int minc=1;
+      for(int prevcl=cl-1;prevcl>=1;prevcl--){
+	cdist = (means.Column(prevcl)-data.Row(i).t()).SumSquare();
+	if(mindist==-1 || cdist<mindist){mindist=cdist;minc=prevcl;}
+      }
+      dist = mindist;
+      if(dist>=maxdist){maxdist=dist;maxi=i;}
+    }
+    means.Column(cl)=data.Row(maxi).t();
+  }
+
+  // iterate
+  for(int iter=0;iter<numiter;iter++){
+    // loop over datapoints and attribute z for closest mean
+    newmeans=0.0;
+    nmeans=0;
+    for(int i=1;i<=n;i++){
+      float mindist=-1,dist=0;
+      int mm=1;
+      for(int m=1;m<=k;m++){
+	dist = (means.Column(m)-data.Row(i).t()).SumSquare();
+	if( mindist==-1 || dist<mindist){
+	  mindist=dist;
+	  mm = m;
+	}
+      }
+      //y(i) = mm;
+      newmeans.Column(mm) += data.Row(i).t();
+      nmeans(mm) += 1;
+    }
+    
+    // compute means
+    for(int m=1;m<=k;m++){
+      if(nmeans(m)!=0)
+	newmeans.Column(m) /= nmeans(m);
+      means.Column(m) = newmeans.Column(m);
+    }
+  }
+
+  // now use this to calculate u
+  u.ReSize(n,k);
+  u=0.0;
+  for(int i=1;i<=n;i++){
+    for(int j=1;j<=k;j++){
+      float xi_cj = (data.Row(i) - means.Column(j).t()).SumSquare();
+      if(xi_cj==0){u.Row(i)=0.01/float(k-1);u(i,j)=0.99;break;}
+      float xi_cl;
+      for(int l=1;l<=k;l++){
+	xi_cl = (data.Row(i) - means.Column(l).t()).SumSquare();
+	u(i,j) += std::exp(std::log(xi_cj/xi_cl)/(fuzziness-1));
+      }
+      u(i,j) = 1/u(i,j);
+    }
+  }
+  
+
+}
+
+
+void fuzzy_reord(const Matrix& A,Matrix& u,ColumnVector& r,ColumnVector& y,const int k){
+  do_fuzzy(A,u,k);
+  OUT(u);
+
+  float junk;
+  int index;
+  y.ReSize(A.Nrows());
+  r.ReSize(A.Nrows());
+  for(int i=1;i<=A.Nrows();i++){
+    junk = u.Row(i).Maximum1(index);
+    y(i) = index;
+  }
+ 
+  vector< pair<float,int> > myvec2;
+  for(int i=1;i<=A.Nrows();i++){
+    pair<int,int> mypair;
+    mypair.first=y(i);
+    mypair.second=i;
+    myvec2.push_back(mypair);
+  }  
+  
+  sort(myvec2.begin(),myvec2.end());
+  r.ReSize(A.Nrows());
+  y.ReSize(A.Nrows());
+  
+  
+  for(int i=1;i<=A.Nrows();i++){
+    y(i)=myvec2[i-1].first;
+    r(i)=myvec2[i-1].second;
+  } 
+  
+}
+
+
 
 void rem_zrowcol(const Matrix& myOMmat,const Matrix& coordmat,const Matrix& tractcoordmat,const bool coordbool,const bool tractcoordbool,Matrix& newOMmat,Matrix& newcoordmat, Matrix& newtractcoordmat)
 {
@@ -403,6 +545,7 @@ int main ( int argc, char **argv ){
   make_basename(ip);
   
   ColumnVector y1,r1,y2,r2;
+  Matrix U;
   volume<int> myOM;
   volume<int> coordvol;
   volume<int> tractcoordvol;
@@ -571,6 +714,8 @@ int main ( int argc, char **argv ){
       spect_reord(CtCt,r1,y1);
     else if(opts.scheme.value()=="kmeans")
       kmeans_reord(CtCt,r1,y1,opts.nclusters.value());
+    else if(opts.scheme.value()=="fuzzy")
+      fuzzy_reord(CtCt,U,r1,y1,opts.nclusters.value());
     else{
       cerr << "unkown reordering scheme" << endl;
       return(-1);
@@ -597,14 +742,14 @@ int main ( int argc, char **argv ){
 	outcoords(i,2,0)=(int)newcoordmat(int(r1(i+1)),3);
       } 
     }
-    cout<<"done."<<endl;
+    cout<<"Saving results"<<endl;
     write_ascii_matrix(r1,opts.directory.value()+"/"+base+"r1");
     write_ascii_matrix(y1,opts.directory.value()+"/"+base+"y1");
     save_volume(outCCvol,opts.directory.value()+"/reord_CC_"+base);
     save_volume(outcoords,opts.directory.value()+"/coords_for_reord_"+base);
 
     // save clustering if kmeans used
-    if(opts.scheme.value() == "kmeans"){
+    if(opts.scheme.value() == "kmeans" || opts.scheme.value()=="fuzzy"){
       volume<int> mask;
       if(opts.mask.value() == "")
 	read_volume(mask,opts.directory.value()+"/fdt_paths");
@@ -616,30 +761,28 @@ int main ( int argc, char **argv ){
 	     outcoords(i,1,0),
 	     outcoords(i,2,0)) = (int)y1(i+1);
       }
+      mask.setDisplayMaximumMinimum(y1.Maximum(),0);
       save_volume(mask,opts.directory.value()+"/reord_mask_"+base);
       
-      // // save tractspace clustering if specified
-//       volume<int> outmask,tractmask;
-//       read_volume(tractmask,opts.directory.value()+"/lookup_tractspace_fdt_matrix2");
-//       outmask=tractmask;
-//       copybasicproperties(tractmask,outmask);
-      
-//       outmask=0;
-//       for(int z=0;z<tractmask.zsize();z++)
-// 	for(int y=0;y<tractmask.ysize();y++)
-// 	  for(int x=0;x<tractmask.xsize();x++){
-// 	    int j=tractmask(x,y,z);
-// 	    ColumnVector vals(myOM.xsize());
-// 	    for(int i=0;i<myOM.xsize();i++){
-// 	      vals(i+1) = myOM(i,j,0);
-// 	    }
-// 	    if(vals.MaximumAbsoluteValue()==0)continue;
-// 	    int index;
-// 	    vals.Maximum1(index);
-// 	      outmask(x,y,z) = (int)y1(index);
-// 	  }
-//       save_volume(outmask,opts.directory.value()+"/tract_clustering_"+base);
+      // save memberships if fuzzy clustering used
+      if(opts.scheme.value() == "fuzzy"){
+	volume<float> umask;
+	umask.reinitialize(mask.xsize(),mask.ysize(),mask.zsize());
+	OUT(U);
+	for(int cl=1;cl<=opts.nclusters.value();cl++){
+	  umask=0;
+	  for(int i=0;i<outcoords.xsize();i++){
+	    //if((int)y1(i+1) == cl){
+	      umask(outcoords(i,0,0),
+		    outcoords(i,1,0),
+		    outcoords(i,2,0)) = U(r1(i+1),cl);
+	      //}
+	  }
+	  umask.setDisplayMaximumMinimum(1,0);
+	  save_volume(umask,opts.directory.value()+"/reord_membership_class"+num2str(cl)+"_"+base);
+	}
 	
+      }
 	
     }
     
@@ -685,6 +828,8 @@ int main ( int argc, char **argv ){
     save_volume(outvol,opts.directory.value()+"/reord_"+base);
     save_volume(outtractcoords,opts.directory.value()+"/tract_space_coords_for_reord_"+base);
   }
+
+  cout << "Done." << endl;
   return 0;
 }
  
