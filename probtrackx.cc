@@ -44,7 +44,11 @@ int main ( int argc, char **argv ){
   }
   else if(opts.network.value()){ nmasks(); }
   else if(opts.meshfile.value()!=""){meshmask();}
-  else {cout << "exit without doing anything"<<endl;return 0;};
+  else {
+    cout << "No seed mask detected! exit without doing anything"<<endl;
+    cout << "If you are seeding from a list of coordinates, use --mode=simple"<<endl;
+    return 0;
+  };
 
   //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
 
