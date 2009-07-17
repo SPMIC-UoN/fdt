@@ -306,11 +306,7 @@ namespace TRACT{
 	  if(m_stop(x_s,y_s,z_s)!=0){
 	    stop_flag=true;
 	  }
-	  //else
-	  if(stop_flag){
-	    
-	    break;
-	  }
+	  if(stop_flag)break;
 	}	  
 	  
 	if(opts.skipmask.value() == ""){
@@ -531,7 +527,7 @@ namespace TRACT{
 	  if(m_seeds.value(Wx,Wy,Wz)!=0)
 	    numseeds++;
     }
-    else{
+    else if(opts.meshfile.value()!=""){
       ifstream fs(opts.seedfile.value().c_str());
       if(fs){
 	char buffer[1024];
@@ -540,6 +536,16 @@ namespace TRACT{
 	cout<<"numseeds="<<numseeds<<endl;
       }
       
+    }
+    else if(opts.mode.value()=="simple"){
+      Matrix seeds = read_ascii_matrix(opts.seedfile.value());
+      if(seeds.Ncols()!=3 && seeds.Nrows()==3)
+	seeds=seeds.t();
+      numseeds = seeds.Nrows();
+    }
+    else{
+      cerr << "Warning: matrix2 mode unavailable. " << endl;
+      cerr << "Either provide a seed mask, or a seed mesh (from freesurfer), or use --mode=simple if using a list of seed points. " << endl;
     }
     for(int Wz=m_lrmask.minz();Wz<=m_lrmask.maxz();Wz++)
       for(int Wy=m_lrmask.miny();Wy<=m_lrmask.maxy();Wy++)
@@ -854,7 +860,7 @@ namespace TRACT{
   
   void Counter::save_pathdist(){  
     m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
-    save_volume(m_prob,logger.appendDir("fdt_paths"));
+    save_volume(m_prob,logger.appendDir(opts.outfile.value()));
   }
   
   void Counter::save_pathdist(string add){  //for simple mode
@@ -862,7 +868,7 @@ namespace TRACT{
     make_basename(thisout);
     thisout+=add;
     m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
-    save_volume(m_prob,thisout);
+    save_volume(m_prob,logger.appendDir(thisout));
   }
 
   void Counter::save_seedcounts(){

@@ -40,7 +40,7 @@ probtrackxOptions* probtrackxOptions::gopt = NULL;
 
       else{
 	modecheck(); // check all the correct options are set for this mode.
-	if(mode.value()!="simple"){  
+	//if(mode.value()!="simple"){  
 	  if(forcedir.value())
 	    logger.setthenmakeDir(logdir.value(),"probtrackx.log");
 	  else
@@ -52,7 +52,7 @@ probtrackxOptions* probtrackxOptions::gopt = NULL;
 	  for(int a = 0; a < argc; a++)
 	    logger.str() << argv[a] << " ";
 	  logger.str() << endl << "---------------------------------------------" << endl << endl;
-	}
+	  //}
 	
       }
     

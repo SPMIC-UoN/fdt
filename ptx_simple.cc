@@ -36,6 +36,8 @@ void track(){
   Seedmanager seedmanager(counter);
     
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
+  if(Seeds.Ncols()!=3 && Seeds.Nrows()==3)
+	Seeds=Seeds.t();
   
   // convert coordinates from nifti (external) to newimage (internal)
   //   conventions - Note: for radiological files this should do nothing
@@ -52,11 +54,14 @@ void track(){
     float yst=Seeds(SN,2);
     float zst=Seeds(SN,3);
     keeptot += seedmanager.run(xst,yst,zst,false,0);
-    string add="_"+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
+    //string add="_"+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     
-    counter.save_pathdist(add);
-    counter.reset_prob();
+    //counter.save_pathdist(add);
+
+    //counter.reset_prob();
   } //Close Seed number Loop
+  counter.save_total(keeptot);
+  counter.save();
 
   cout<<"finished"<<endl;
 }
