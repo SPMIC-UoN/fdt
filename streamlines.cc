@@ -466,6 +466,12 @@ namespace TRACT{
 	  //cout<<"numseeds="<<numseeds<<endl;
 	}
       }
+      if(opts.mode.value()=="simple"){
+	Matrix seeds = read_ascii_matrix(opts.seedfile.value());
+	if(seeds.Ncols()!=3 && seeds.Nrows()==3)
+	  seeds=seeds.t();
+	numseeds = seeds.Nrows();
+      }
       m_SeedCountMat.ReSize(numseeds,m_targetmasknames.size());
       m_SeedCountMat=0;
       m_SeedRow=1;
