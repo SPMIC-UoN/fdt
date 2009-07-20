@@ -305,7 +305,7 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],V3[0]);
   copybasicproperties(data[0],Delements[0]);
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
-  l1=0;l2=0;l3=0;MD=0;MODE=0,FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
+  l1=0;l2=0;l3=0;MD=0;MODE=0;FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
