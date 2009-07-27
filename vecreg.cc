@@ -186,7 +186,7 @@ void vecreg_aff(const volume4D<float>& tens,
 	  V_seed = v.Column(3);
 	  
 	  // rotate vector
-	  V_target=R*V_seed;
+	  V_target=F*V_seed;
 	  if(V_target.MaximumAbsoluteValue()>0)
 	    V_target/=sqrt(V_target.SumSquare());
 
