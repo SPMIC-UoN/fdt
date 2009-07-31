@@ -32,6 +32,7 @@ class ccopsOptions {
   Option<string> excl_mask;
   Option<bool>  reord1;
   Option<bool>  reord2;
+  Option<bool>  reord3;
   Option<float> connexity;
   Option<int>   bin;
   Option<float> power;
@@ -80,6 +81,9 @@ class ccopsOptions {
    reord2(string("--r2"), bool(false),
 	     string("do tractspace reordering (default no)"),
 	     false, no_argument), 
+   reord3(string("--tractreord"), bool(false),
+	     string("propagate seed reordering onto tract space"),
+	     false, no_argument), 
    connexity(string("--con"), 0.0,
 	     string("add connexity constraint - value between 0 and 1 (0 is no constraint). default=0"),
 	     false, requires_argument), 
@@ -110,6 +114,7 @@ class ccopsOptions {
        options.add(excl_mask);
        options.add(reord1);
        options.add(reord2);
+       options.add(reord3);
        options.add(connexity);
        options.add(bin);
        options.add(power);

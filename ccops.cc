@@ -274,7 +274,7 @@ void do_fuzzy(const Matrix& data,Matrix& u,const int k){
 
 void fuzzy_reord(const Matrix& A,Matrix& u,ColumnVector& r,ColumnVector& y,const int k){
   do_fuzzy(A,u,k);
-  OUT(u);
+  //OUT(u);
 
   float junk;
   int index;
@@ -748,6 +748,42 @@ int main ( int argc, char **argv ){
     save_volume(outCCvol,opts.directory.value()+"/reord_CC_"+base);
     save_volume(outcoords,opts.directory.value()+"/coords_for_reord_"+base);
 
+    // propagate seed clustering onto tract space if requested
+    if(opts.reord3.value()){
+      if(opts.scheme.value() == "spectral"){
+	cerr << "Warning: cannot propagate to tract space under this scheme." << endl;
+	cerr << "will carry on ignoring this option"<<endl;
+      }
+      else{
+	cout << "Propagating seed clustering into tract space" << endl;
+	volume<float> opaths;
+	read_volume(opaths,opts.directory.value()+"/lookup_tractspace_"+ip);
+	opaths = 0.0;
+
+	// firstly, determine sum of matrix2 over different classes
+	Matrix sumOverSeeds(y1.Maximum(),newtractcoordmat.Nrows());
+	sumOverSeeds = 0.0;
+	for(int j=1;j<=newtractcoordmat.Nrows();j++){
+	  for(int i=1;i<=y1.Nrows();i++){
+	    sumOverSeeds(y1(i),j) += newOMmat(r1(i),j);
+	  }
+
+	  float maxval,minval;
+	  int maxind;
+	  minval = sumOverSeeds.Minimum();
+	  maxval = sumOverSeeds.Column(j).Maximum1(maxind);
+	  if(minval != maxval)
+	    opaths(newtractcoordmat(j,1),
+		   newtractcoordmat(j,2),
+		   newtractcoordmat(j,3)) = maxind;
+	}
+
+	
+	opaths.setDisplayMaximumMinimum(opaths.max(),0);
+	save_volume(opaths,opts.directory.value()+"/tract_space_propagated_"+base);
+      }
+    }
+
     // save clustering if kmeans used
     if(opts.scheme.value() == "kmeans" || opts.scheme.value()=="fuzzy"){
       volume<int> mask;
@@ -768,7 +804,7 @@ int main ( int argc, char **argv ){
       if(opts.scheme.value() == "fuzzy"){
 	volume<float> umask;
 	umask.reinitialize(mask.xsize(),mask.ysize(),mask.zsize());
-	OUT(U);
+	//OUT(U);
 	for(int cl=1;cl<=opts.nclusters.value();cl++){
 	  umask=0;
 	  for(int i=0;i<outcoords.xsize();i++){
