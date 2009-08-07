@@ -79,7 +79,7 @@ class pvmfitOptions {
 	     true, requires_argument), 
    nfibres(string("-n,--nfibres"), 1,
 	     string("number of fibres to fit - default=1"),
-	     true, requires_argument), 
+	     false, requires_argument), 
    options("pvmfit", "pvmfit -k <filename>\n pvmfit --verbose\n")
    {
      
