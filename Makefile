@@ -24,7 +24,10 @@ INDEXER=indexer
 TEST=testfile
 VECREG=vecreg
 KURTOSIS=kurtosis
+SWAPDYADS=swap_dyadic_vectors
 PVMFIT=pvmfit
+DTIGEN=dtigen
+
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -43,7 +46,9 @@ INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
+SWAPDYADSOBJS=swap_dyadic_vectors.o
 PVMFITOBJS=pvmfit.o pvmfitOptions.o
+DTIGENOBJS=dtigen.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -51,7 +56,7 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
+XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
@@ -115,5 +120,12 @@ ${VECREG}:    	${VECREGOBJS}
 ${KURTOSIS}:   ${KURTOSISOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
 
+${SWAPDYADS}: ${SWAPDYADSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SWAPDYADSOBJS} ${DLIBS}
+
 ${PVMFIT}:    	${PVMFITOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PVMFITOBJS} ${DLIBS}
+
+${DTIGEN}:    	${DTIGENOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
+
