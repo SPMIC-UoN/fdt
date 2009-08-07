@@ -462,7 +462,7 @@ int main(int argc, char** argv)
 
   if(opts.verbose.value()) cout<<"ok"<<endl;
 
-  
+  //int counter=0;
   ColumnVector S(bvals.Nrows());
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   for(int k = minz; k < maxz; k++){
@@ -470,7 +470,11 @@ int main(int argc, char** argv)
     for(int j=miny; j < maxy; j++){
       for(int i =minx; i< maxx; i++){
 	if(mask(i,j,k)==0)continue;
-	
+
+	//counter++;
+	//OUT(counter);
+	//if(counter<1443)continue;
+
 	for(int t=0;t < data.tsize();t++)
 	  S(t+1)=data(i,j,k,t);
 	
@@ -485,16 +489,18 @@ int main(int argc, char** argv)
 	ColumnVector start(2+3*opts.nfibres.value());
 	start(1) = dti.get_s0();
 	start(2) = (dti.get_md()>0?dti.get_md():0.001);
-	start(3) = tan(dti.get_fa());
+	start(3) = tan(dti.get_fa())/two_pi;
 	start(4) = th;
 	start(5) = ph;
 	float sumf=abs(two_pi*atan(start(3)));
+	float tmpsumf = sumf;
 	for(int ff=2;ff<=opts.nfibres.value();ff++){
 	  float denom=2;
 	  do{
-	    start(ff*3) = tan(abs(two_pi*atan(start(3))/(denom)));
+	    start(ff*3) = tan(abs(two_pi*atan(start(3))/(denom)))/two_pi;
 	    denom *= 2;
-	  }while(sumf>1);
+	    tmpsumf = sumf + abs(two_pi*atan(start(ff*3)));
+	  }while(tmpsumf>1);
 	  sumf += abs(two_pi*atan(start(ff*3)));
 	  cart2sph(dti.get_v(ff),th,ph);
 	  start(ff*3+1) = th;
@@ -508,8 +514,9 @@ int main(int argc, char** argv)
 	//cout << i << " " << j << " " << k << endl;
 	//OUT(start.t());
 
-	if(dti.get_fa()<1){
+	if(dti.get_fa()<1 & dti.get_md()>0){
 	  NonlinParam  lmpar(start.Nrows(),NL_LM,start); // Levenberg-Marquardt
+	  lmpar.SetGaussNewtonType(LM_L); // Levenberg
 	  lmpar.SetStartingEstimate(start);
 	
 	  NonlinOut status = nonlin(lmpar,pvm_cf);
@@ -533,6 +540,35 @@ int main(int argc, char** argv)
 	  phvol[f](i-minx,j-miny,k-minz) = final_par(3*(1+f)+2);
 	}
 	
+	// where we reorder the PVFs
+	if(opts.nfibres.value()>1){
+	  vector< pair<float,int> > fpairs;
+	  vector< pair<float,float> > apairs;
+	  pair<float,int> mypair;
+	  pair<float,float> mypair2;
+	  for(int f=0;f<opts.nfibres.value();f++){
+	    mypair.first = fvol[f](i-minx,j-miny,k-minz);
+	    mypair.second = f;
+	    fpairs.push_back(mypair);
+	    mypair2.first = thvol[f](i-minx,j-miny,k-minz);
+	    mypair2.second = phvol[f](i-minx,j-miny,k-minz);
+	    apairs.push_back(mypair2);
+	  } 
+	  sort(fpairs.begin(),fpairs.end());
+	  for(int f=0,ff=opts.nfibres.value()-1;f<opts.nfibres.value();f++,ff--){
+	    fvol[ff](i-minx,j-miny,k-minz) = fpairs[f].first;
+	    thvol[ff](i-minx,j-miny,k-minz) = apairs[fpairs[f].second].first;
+	    phvol[ff](i-minx,j-miny,k-minz) = apairs[fpairs[f].second].second;
+	  }
+	}
+
+	// create dyads?
+	for(int f=0;f<opts.nfibres.value();f++){
+	  dyads[f](i-minx,j-miny,k-minz,0) = sin(thvol[f](i-minx,j-miny,k-minz)) * cos(phvol[f](i-minx,j-miny,k-minz));
+	  dyads[f](i-minx,j-miny,k-minz,1) = sin(thvol[f](i-minx,j-miny,k-minz)) * sin(phvol[f](i-minx,j-miny,k-minz));
+	  dyads[f](i-minx,j-miny,k-minz,2) = cos(thvol[f](i-minx,j-miny,k-minz));
+	}
+
       }
     }
   }
@@ -554,6 +590,9 @@ int main(int argc, char** argv)
     save_volume(thvol[f-1],opts.ofile.value()+"_th"+num2str(f));
     phvol[f-1].setDisplayMaximumMinimum(phvol[f-1].max(),phvol[f-1].min());
     save_volume(phvol[f-1],opts.ofile.value()+"_ph"+num2str(f));
+    dyads[f-1].setDisplayMaximumMinimum(-1,1);
+    save_volume4D(dyads[f-1],opts.ofile.value()+"_dyads"+num2str(f));
+
   }
 
   return 0;
