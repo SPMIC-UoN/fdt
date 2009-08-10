@@ -80,7 +80,7 @@ class pvmfitOptions {
    nfibres(string("-n,--nfibres"), 1,
 	     string("number of fibres to fit - default=1"),
 	     false, requires_argument), 
-   options("pvmfit", "pvmfit -k <filename>\n pvmfit --verbose\n")
+   options("pvmfit", "pvmfit -k <datafile> -m <maskfile> -r <bvecsfile> -b <bvalsfile> [-n 2]\n")
    {
      
     
