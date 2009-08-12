@@ -10,6 +10,15 @@ fi
 
 ecclog=$1
 bvecs=$2
+
+if [ -f ${bvecs}_old ];then
+    echo ""
+    echo "Error: Found that ${bvecs}_old already exists"
+    echo "This probably means that you have run this script before."
+    echo "If you want to force this program to run, please remove the file ${bvecs}_old"
+    echo ""
+    exit 1
+done
 /bin/cp ${bvecs} ${bvecs}_old
 #/bin/rm -f ${bvecs}
 
