@@ -117,7 +117,10 @@ if [ "x$SGE_ROOT" = "x" ]; then
 #!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
-while [ \$finished -eq 0 ] ; do
+
+trap "echo Final check; exit_test; exit" SIGUSR1
+
+check() {
     nfin=0
     slice=0
     while [ "\$slice" -le $nslices ];do
@@ -133,7 +136,29 @@ while [ \$finished -eq 0 ] ; do
     fi
 
     echo "\$nfin slices processed"
-    sleep 600;
+}
+
+exit_test() {
+    check;
+    if [ \$finished -eq 0 ] ; then
+	echo For some reason the bedpostX process DOES NOT appear
+	echo to have successfully completed. Please examine your
+	echo results carefully.
+    else
+	echo All slices processed
+    fi
+}
+
+check
+n=0
+while [ \$finished -eq 0 ] ; do
+    sleep 10;
+    if [ \$n -eq 60 ] ; then
+        check
+        n=0
+    else
+        n=\$((\$n + 1))
+    fi
 done
 EOM
     chmod +x ${subjdir}.bedpostX/monitor
@@ -153,10 +178,11 @@ do
     slice=$(($slice + 1))
 done
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
-[ "x$SGE_ROOT" = "x" ] && kill $monitorpid
 
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+
+[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
