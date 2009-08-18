@@ -118,29 +118,29 @@ if [ "x$SGE_ROOT" = "x" ]; then
 finished=0
 logdir=${subjdir}.bedpostX/logs
 
-trap "echo Final check; exit_test; exit" SIGUSR1
-
 check() {
-    nfin=0
-    slice=0
-    while [ "\$slice" -le $nslices ];do
-        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
-        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
-          nfin=\$((\$nfin + 1))
+    if [ \$finished -eq 1 ];then
+        echo "\$nfin slices processed"
+    else
+        nfin=0
+        slice=0
+        while [ "\$slice" -le $nslices ];do
+            slicezp=\`\$FSLDIR/bin/zeropad \$slice 4\`
+            isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads1\`
+            if [ \$isimg -eq 1 ];then
+                nfin=\$((\$nfin + 1))
+            fi
+                slice=\$((\$slice + 1))
+        done
+        if [ \$nfin -eq $nslices ] ; then
+            finished=1
         fi
-        slice=\$((\$slice + 1))
-    done
-
-    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
-        finished=1
+        echo "\$nfin slices processed"
     fi
-
-    echo "\$nfin slices processed"
 }
-
 exit_test() {
-    check;
-    if [ \$finished -eq 0 ] ; then
+    isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/dyads1\`
+    if [ \$isimg -eq 0 ] ; then
 	echo For some reason the bedpostX process DOES NOT appear
 	echo to have successfully completed. Please examine your
 	echo results carefully.
@@ -152,7 +152,7 @@ exit_test() {
 check
 n=0
 while [ \$finished -eq 0 ] ; do
-    sleep 10;
+    sleep 10
     if [ \$n -eq 60 ] ; then
         check
         n=0
@@ -160,6 +160,7 @@ while [ \$finished -eq 0 ] ; do
         n=\$((\$n + 1))
     fi
 done
+exit_test
 EOM
     chmod +x ${subjdir}.bedpostX/monitor
     ${subjdir}.bedpostX/monitor&
@@ -182,7 +183,7 @@ bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $m
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
-[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
+#[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
@@ -195,18 +196,20 @@ while [ \$finished -eq 0 ] ; do
     nfin=0
     slice=0
     while [ "\$slice" -le $nslices ];do
-        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
-        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
+        slicezp=\`\$FSLDIR/bin/zeropad \$slice 4\`
+        isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads1\`
+        if [ \$isimg -eq 1 ];then
           nfin=\$((\$nfin + 1))
         fi
         slice=\$((\$slice + 1))
     done
+    echo "\$nfin slices processed"
 
-    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
+        echo "All slices processed"
     fi
 
-    echo "\$nfin slices processed"
     sleep 600;
 done
 EOM
