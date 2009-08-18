@@ -170,7 +170,7 @@ slice=0
 while [ $slice -lt $nslices ]
 do
     slicezp=`$FSLDIR/bin/zeropad $slice 4`
-    if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads2.nii.gz ];then
+    if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ];then
 	echo "slice $slice has already been processed"
     else
 	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
