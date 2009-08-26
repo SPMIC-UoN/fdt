@@ -129,10 +129,12 @@ proc fdt:dialog { w tclstartupfile } {
 
     FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -filetypes IMAGE -command "ecc_update_files $w"
 
-   set eddy(refnum) 0
-   LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range {0 100 1 } -width 6 
+    set eddy(refnum) 0
+    LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range { 0 100 1 } -width 6 
+    checkbutton $w.ecc.reorient -text "reorient bvecs" -variable eddy(reorientbVecs)  -command " fdt:eddycorrect_mode $w "
+    FileEntry $w.ecc.bvecdata -textvariable eddy(bVecData) 	-label "bvecs file:" -title  "Choose bvecs name" -filetypes IMAGE 
 
-    pack $w.ecc.input $w.ecc.output $w.ecc.refnum -side top -padx 3 -pady 3 -expand yes -anchor w
+    pack $w.ecc.input $w.ecc.output $w.ecc.refnum $w.ecc.reorient -side top -padx 3 -pady 3 -expand yes -anchor w
 
    #------- DTIFit --------
 
@@ -237,7 +239,9 @@ proc fdt:dialog { w tclstartupfile } {
     frame  $w.data.seed.ssf
     set probtrack(mode) simple
     checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " fdt:probtrack_mode $w "
+    checkbutton $w.data.seed.ssf.nonlinear -text "nonlinear" -variable probtrack(useNonlinear)  -command " fdt:probtrack_mode $w "
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
+    FileEntry $w.data.seed.ssf.invxfm -textvariable probtrack(invxfm)  -label "Select diff to Seed transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
     FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
     pack $w.data.seed.ssf.ssd -side top -anchor nw
     if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
@@ -457,17 +461,26 @@ proc fdt:dialog { w tclstartupfile } {
     }
 }
 
+proc fdt:eddycorrect_mode { w } {
+    global eddy 
+    pack forget $w.ecc.bvecdata
+    if { $eddy(reorientbVecs) } { 
+	pack $w.ecc.bvecdata -side top -padx 3 -pady 3 -expand yes -anchor w
+    }
+}
+
 proc fdt:probtrack_mode { w } {
     global probtrack FSLDIR
 
-    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf $w.data.seed.ssf.invxfm $w.data.seed.ssf.nonlinear
     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
+    if { $probtrack(useNonlinear) } { pack $w.data.seed.ssf.invxfm -side bottom -anchor w -pady 2 }
     switch -- $probtrack(mode) {
   	simple {
-                     pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
-	             if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
-                     $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
-                     $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
+	    pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
+	    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
+	    $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
+	    $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
 	    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -486,7 +499,7 @@ proc fdt:probtrack_mode { w } {
     }
     if { $probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } 
     if { $probtrack(classify_yn) } { pack $w.data.targets.cf.tf }
-    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
+    if { $probtrack(usereference_yn) } { $w.data.seed.ssf.nonlinear pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
@@ -578,7 +591,6 @@ proc fdt_monitor { w cmd } {
 }
 
 proc fdt:apply { w dialog } {
-
     global probtrack BINPATH FSLDIR FSLPARALLEL
 
     switch -- $probtrack(tool) {
@@ -588,9 +600,13 @@ proc fdt:apply { w dialog } {
 	    set errorStr ""
 	    if { $eddy(input) == "" } { set errorStr "You need to specify the input image! " }
 	    if { $eddy(output) == "" } { set errorStr "$errorStr You need to specify an output image!" }
-	    if { $errorStr != "" } {
+	    if { $eddy(reorientbVecs) && $errorStr != "" } { set errorStr "$errorStr You need to specify a bvecs image!" }
 		MxPause $errorStr
 		return
+	    }
+	    set reorientCommand ""
+	    if { $eddy(reorientbVecs) } { 
+		set reorientCommand "; rotate_bvecs $eddy(bVecData) $eddy(output).ecclog"
 	    }
 
 	    #	    check output!=input
@@ -599,7 +615,7 @@ proc fdt:apply { w dialog } {
 		set canwrite [ YesNoWidget "Output and input images have the same name. Overwrite input?" Yes No ]
 	    }
 	    if { $canwrite } {
-		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum)"
+		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum) $reorientCommand"
 	    }
 	}
 	dtifit {
