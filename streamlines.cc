@@ -1001,14 +1001,9 @@ namespace TRACT{
       if(fibst == -1){
 	fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
       }
-      if(opts.randfib.value()){
-	float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
-	fibst = (int)round(tmp);
-	//if(tmp>0.5)
-	//fibst=0;
-	//else
-	//fibst=1;// fix this for > 2 fibres
-      } 
+      //TB moved randfib option inside tractvols.h 28/10/2009
+      // This means that we have access to fsamples when figuring out fibst
+      // so we can choose to seed in proportion to f in that voxel. 
     }
     
     // now re-orient dir using xfm transform

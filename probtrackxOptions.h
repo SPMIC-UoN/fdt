@@ -63,7 +63,7 @@ class probtrackxOptions {
   Option<float> steplength;
   Option<bool> loopcheck;
   Option<bool> usef;
-  Option<bool> randfib;
+  Option<int> randfib;
   Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
@@ -200,8 +200,8 @@ class probtrackxOptions {
    usef(string("-f,--usef"), false, 
 	 string("Use anisotropy to constrain tracking"), 
 	 false, no_argument),
-  randfib(string("--randfib"), false, 
-	 string("Select randomly from one of the fibres"), 
+  randfib(string("--randfib"), 0, 
+	 string("Set to 1 to randomly sample initial fibres. Set to 2 to sample in proportion to f"), 
 	 false, no_argument),
   fibst(string("--fibst"),1, 
 	 string("Force a starting fibre for tracking - default=1, i.e. first fibre orientation"), 

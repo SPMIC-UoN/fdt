@@ -35,7 +35,7 @@ namespace TRACTVOLSX{
       
     public:
       //constructors::
-      Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(1),usef(usefin){}
+      Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(0),usef(usefin){}
       Tractvolsx():opts(probtrackxOptions::getInstance()){}
       ~Tractvolsx(){
 	for(unsigned int m=0;m<thsamples.size();m++)
@@ -155,10 +155,62 @@ namespace TRACTVOLSX{
 	float dotmax=0,dottmp=0;
 	int fibind=0;
 	if(thsamples.size()>1){//more than 1 fibre
-	  if(init_sample){//go for the specified option on the first jump
+
+	  if(init_sample){//go for the specified fibre on the first jump or generate at random
+	    
+	    if(opts.randfib.value()==1){//this generates startfib at random (except for fibres where f<fibthresh)
+	      vector<int> fibvec;
+	      for(unsigned int fib=0;fib<thsamples.size();fib++){	    
+		float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		if(ft>opts.fibthresh.value()){
+		  fibvec.push_back(fib);
+		}
+	      }
+	      
+	      if(fibvec.size()==0){
+		fibst=0;
+	      }
+	      else{
+		float rtmp=rand()/RAND_MAX * float(fibvec.size()-1);
+		fibst = fibvec[ (int)round(rtmp) ];	      
+	      }
+	      
+	    }
+
+
+	    else if(opts.randfib.value()==2){ //this generates startfib with probability proportional to f (except for fibres where f<fibthresh). 
+	      //this chooses at random but in proportion to fsamples. 
+	      float fsumtmp=0;
+	      for(unsigned int fib=0;fib<thsamples.size();fib++){	    
+		float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		if(ft>opts.fibthresh.value()){
+		  fsumtmp+=ft;  //count total weight of f in this voxel. 
+		}
+	      }
+	      
+	      if(fsumtmp==0){
+		fibst=0;
+	      }
+	      else{
+		float fsumtmp2=0;
+		int fib=0;
+		float rtmp=rand()/RAND_MAX;
+		
+		while( fsumtmp2<rtmp){
+		  float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		  if(ft>opts.fibthresh.value()){
+		    fsumtmp2+=(ft/fsumtmp); 
+		  }
+		  fibst=fib;
+		  fib++;
+		}
+		
+	      }
+	      
 	    theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
 	    phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
 	    init_sample=false;
+	    }
 	  }
 	  else{
 	    if((fabs(prefer_x)+fabs(prefer_y)+fabs(prefer_z))==0){
