@@ -39,7 +39,8 @@ class probtrackxOptions {
   Option<bool> pathdist;
   Option<bool> s2tout;
   FmribOption<bool> matrix1out;
-  FmribOption<bool> matrix2out;
+  Option<bool> matrix2out;
+  FmribOption<bool> matrix3out;
   FmribOption<bool> maskmatrixout;
   Option<string> outfile;
   Option<string> rubbishfile;
@@ -53,11 +54,12 @@ class probtrackxOptions {
   Option<string> waypoints;
   Option<bool> network;
   Option<string> meshfile;
-  FmribOption<string> lrmask;
+  Option<string> lrmask;
   Option<string> logdir; 
   Option<bool> forcedir;
   Option<int> nparticles;
   Option<int> nsteps;
+  Option<float> distthresh;
   Option<float> c_thr;
   FmribOption<float> fibthresh;
   Option<float> steplength;
@@ -68,7 +70,7 @@ class probtrackxOptions {
   Option<bool> modeuler;
   Option<int> rseed;
   Option<bool> seedcountastext;
-  FmribOption<bool> splitmatrix2;
+  Option<bool> splitmatrix2;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -108,7 +110,7 @@ class probtrackxOptions {
 	    string("Bet binary mask file in diffusion space"),
 	    true, requires_argument),
    seedfile(string("-x,--seed"), string("Seed"),
-	    string("Seed volume, or voxel, or ascii file with multiple volumes"),
+	    string("Seed volume, or voxel, or ascii file with multiple volumes, or freesurfer label file"),
 	    true, requires_argument),
    mode(string("--mode"), string(""),
 	string("use --mode=simple for single seed voxel"),
@@ -130,6 +132,9 @@ class probtrackxOptions {
 	  false, no_argument), 
   matrix2out(string("--omatrix2"), false,
 	  string("output matrix2"),
+	  false, no_argument), 
+  matrix3out(string("--omatrix3"), false,
+	  string("output matrix3 (uses the termination mask to produce NxN matrix)"),
 	  false, no_argument), 
   maskmatrixout(string("--omaskmatrix"), false,
 		string("output maskmatrix"),
@@ -173,8 +178,8 @@ class probtrackxOptions {
   lrmask(string("--lrmask"), string(""),
 	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode"),
        false, requires_argument),
-  logdir(string("--dir"), string(""),
-	    string("Directory to put the final volumes in - code makes this directory"),
+  logdir(string("--dir"), string("logdir"),
+	    string("Directory to put the final volumes in - code makes this directory - default='logdir'"),
 	    false, requires_argument),
   forcedir(string("--forcedir"), false,
 	 string("Use the actual directory name given - i.e. don't add + to make a new directory"),
@@ -184,6 +189,9 @@ class probtrackxOptions {
 	 false, requires_argument),
    nsteps(string("-S,--nsteps"), 2000,
 	    string("Number of steps per sample - default=2000"),
+	    false, requires_argument),
+   distthresh(string("--distthresh"), 1000,
+	    string("Discards samples shorter than this threshold (in mm - default=1000)"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
 	 string("Curvature threshold - default=0.2"), 
@@ -216,7 +224,7 @@ class probtrackxOptions {
 		  string("Output seed-to-target counts as a text file (useful when seeding from a mesh)"),
 		  false, no_argument), 
   splitmatrix2(string("--splitmatrix2"), false,
-		  string("split matrix 2 (in case it is too big)"),
+		  string("split matrix 2 along seed dimension (in case it is too large)"),
 		  false, no_argument), 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
@@ -244,6 +252,7 @@ class probtrackxOptions {
        options.add(s2tout);
        options.add(matrix1out);
        options.add(matrix2out);
+       options.add(matrix3out);
        options.add(maskmatrixout);
        options.add(outfile);
        options.add(rubbishfile);
@@ -253,6 +262,7 @@ class probtrackxOptions {
        options.add(dti_to_seeds);
        options.add(nparticles);
        options.add(nsteps);
+       options.add(distthresh);
        options.add(c_thr);
        options.add(fibthresh);
        options.add(steplength);

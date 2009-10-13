@@ -109,7 +109,10 @@ namespace TRACT{
 
     void rotdir(const ColumnVector& dir,ColumnVector& rotdir,const float& x,const float& y,const float& z);
 
+    const volume<int>& get_stop()const{return m_stop;}
 
+    // debug
+    //const volume<int>& get_mask_ref()const{return m_mask;}
   };
 
 
@@ -148,6 +151,10 @@ namespace TRACT{
     volume<int> m_beenhere2;
     int m_Conrow2;
     ColumnVector m_lrdim;
+
+    volume<int> m_ConMat3;
+    volume<int>  m_Lookup3;
+    volume<int>  m_CoordMat3;
     
     const volume<float>& m_seeds;
     ColumnVector m_seedsdim;
@@ -172,13 +179,15 @@ namespace TRACT{
     void initialise_path_dist(){
       m_prob.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
       copybasicproperties(m_seeds,m_prob);
+      //m_prob.reinitialize(m_stline.get_mask_ref().xsize(),m_stline.get_mask_ref().ysize(),m_stline.get_mask_ref().zsize());
+      //copybasicproperties(m_stline.get_mask_ref(),m_prob);
       m_prob=0;
     }
     void initialise_seedcounts();
     
     void initialise_matrix1(); //Need to make sure that initialise_path_dist is run first
-    
     void initialise_matrix2();
+    void initialise_matrix3();
     
     void initialise_maskmatrix(){} //not written yet
     
@@ -204,6 +213,8 @@ namespace TRACT{
     void update_matrix2_row(); //but run this one every streamline as with the others
     void next_matrix2_row(){m_Conrow2++;}//and then run this after each voxel..
     void reset_beenhere2(const bool& forwardflag,const bool& backwardflag);
+
+    void update_matrix3();
   
     void update_maskmatrix(){} //not written yet
     
@@ -215,6 +226,7 @@ namespace TRACT{
     void save_seedcounts();
     void save_matrix1();
     void save_matrix2();
+    void save_matrix3();
     void save_maskmatrix(){}//not written yet
     
 

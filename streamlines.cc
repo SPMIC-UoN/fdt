@@ -155,21 +155,26 @@ namespace TRACT{
 	// set rotation matrix
 	Matrix F(3,3),u(3,3),v(3,3);
 	DiagonalMatrix d(3);
-	F << -m_Seeds_to_DTI(1,1) << m_Seeds_to_DTI(1,3) << -m_Seeds_to_DTI(1,2)
-	  << -m_Seeds_to_DTI(2,1) << m_Seeds_to_DTI(2,3) << -m_Seeds_to_DTI(2,2)
-	  << -m_Seeds_to_DTI(3,1) << m_Seeds_to_DTI(3,3) << -m_Seeds_to_DTI(3,2);
-	
+
+	if(opts.meshfile.value()!=""){
+	  F << -m_Seeds_to_DTI(1,1) << m_Seeds_to_DTI(1,3) << -m_Seeds_to_DTI(1,2)
+	    << -m_Seeds_to_DTI(2,1) << m_Seeds_to_DTI(2,3) << -m_Seeds_to_DTI(2,2)
+	    << -m_Seeds_to_DTI(3,1) << m_Seeds_to_DTI(3,3) << -m_Seeds_to_DTI(3,2);
+	}
+	else{
+	  F = m_Seeds_to_DTI.SubMatrix(1,3,1,3);
+	}
 	SVD(F*F.t(),d,u,v);
 	m_rotdir.ReSize(3,3);
 	m_rotdir = (u*sqrt(d)*v.t()).i()*F;
-
+	
       }
       else{
 	m_IsNonlinXfm = true;
 	FnirtFileReader ffr(opts.seeds_to_dti.value());
 	m_Seeds_to_DTI_warp = ffr.FieldAsNewimageVolume4D(true);
 	if(opts.dti_to_seeds.value()==""){
-	  cerr << "Error: DTI -> Seeds transform needed" << endl;
+	  cerr << "TRACT::Streamliner:: DTI -> Seeds transform needed" << endl;
 	  exit(1);
 	}
 	FnirtFileReader iffr(opts.dti_to_seeds.value());
@@ -236,7 +241,7 @@ namespace TRACT{
 	m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
       }
       
-
+    float pathlength=0;
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
       if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
 
@@ -263,6 +268,7 @@ namespace TRACT{
 	
 	x=m_part.x();y=m_part.y();z=m_part.z();
 	xyz_dti <<x<<y<<z;
+
 	// now find xyz in seeds space
 	if(!m_IsNonlinXfm)
 	  xyz_seeds = vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,m_DTI_to_Seeds);    
@@ -291,6 +297,7 @@ namespace TRACT{
 
 	
 	m_path.push_back(xyz_seeds);
+	//m_path.push_back(xyz_dti);
 	partlength++;
 	
 	
@@ -344,8 +351,9 @@ namespace TRACT{
 	    
 	  }
 	}
-	  
-	  
+	
+	// increase path length
+	pathlength += opts.steplength.value();
       }
 
       
@@ -361,6 +369,8 @@ namespace TRACT{
 	  accept_path=false;
     }   
     if(rubbish_passed)
+      accept_path=false;
+    if(pathlength<opts.distthresh.value())
       accept_path=false;
 
     return accept_path;
@@ -404,6 +414,9 @@ namespace TRACT{
     }
     if(opts.matrix2out.value()){
       initialise_matrix2();
+    }
+    if(opts.matrix3out.value()){
+      initialise_matrix3();
     }
     if(opts.maskmatrixout.value()){
       initialise_maskmatrix();
@@ -606,6 +619,40 @@ namespace TRACT{
       
   }
   
+  // the following will use the termination mask voxels to initialise 
+  // and NxN matrix. This matrix will store the number of samples from 
+  // each seed voxel that have made it to the termination mask from one
+  // side and from the other.
+  void Counter::initialise_matrix3(){
+    const volume<int>& stop = m_stline.get_stop();
+    int nstop=0;
+    for(int Wz=stop.minz();Wz<=stop.maxz();Wz++)
+      for(int Wy=stop.miny();Wy<=stop.maxy();Wy++)
+	for(int Wx=stop.minx();Wx<=stop.maxx();Wx++){
+	  if(stop(Wx,Wy,Wz)==0)continue;
+	  nstop++;
+	}
+    OUT(nstop);
+
+    m_CoordMat3.reinitialize(nstop,3,1);
+    m_ConMat3.reinitialize(nstop,nstop,1);
+    m_ConMat3=0;
+    m_Lookup3.reinitialize(stop.xsize(),stop.ysize(),stop.zsize());
+
+    nstop=0;
+    for(int Wz=stop.minz();Wz<=stop.maxz();Wz++)
+      for(int Wy=stop.miny();Wy<=stop.maxy();Wy++)
+	for(int Wx=stop.minx();Wx<=stop.maxx();Wx++){
+	  if(stop(Wx,Wy,Wz)==0)continue;
+	  m_CoordMat3(nstop,0,0) = Wx;
+	  m_CoordMat3(nstop,1,0) = Wy;
+	  m_CoordMat3(nstop,2,0) = Wz;
+	  m_Lookup3(Wx,Wy,Wz)  = nstop;
+	  nstop++;
+	}
+    save_volume(m_CoordMat3,logger.appendDir("coords_for_fdt_matrix3"));
+    exit(1);
+  }
   void Counter::count_streamline(){
     if(opts.simpleout.value()||opts.matrix1out.value()){
       update_pathdist();
@@ -798,8 +845,23 @@ namespace TRACT{
     }
     
   }
-  
-  
+
+  void Counter::update_matrix3(){
+    ColumnVector endpoint1(3),endpoint2(3);
+    const vector<ColumnVector>& path=m_stline.get_path_ref();
+    const volume<int>& stop = m_stline.get_stop();
+    if(m_path.size()==0 || path.size()==0)return;
+    endpoint1 = m_path.back();
+    endpoint2 = path.back();
+
+    if( stop(round(float(endpoint1(1))),round(float(endpoint1(2))),round(float(endpoint1(3))))!=0 )
+      if( stop(round(float(endpoint2(1))),round(float(endpoint2(2))),round(float(endpoint2(3))))!=0 ){
+	int row1 = m_Lookup3(round(float(endpoint1(1))),round(float(endpoint1(2))),round(float(endpoint1(3))));
+	int row2 = m_Lookup3(round(float(endpoint2(1))),round(float(endpoint2(2))),round(float(endpoint2(3))));
+	m_ConMat3(row1,row2,0) += 1;
+	m_ConMat3(row2,row1,0) += 1;
+      }
+  }  
   
   void Counter::reset_beenhere2(const bool& forwardflag,const bool& backwardflag){
     if(forwardflag){
@@ -857,6 +919,9 @@ namespace TRACT{
     }
     if(opts.matrix2out.value()){
       save_matrix2();
+    }
+    if(opts.matrix3out.value()){
+      save_matrix3();
     }
     if(opts.maskmatrixout.value()){
       save_maskmatrix();
@@ -983,7 +1048,11 @@ namespace TRACT{
 
     }
   }
-
+void Counter::save_matrix3(){
+  save_volume(m_ConMat3,logger.appendDir("fdt_matrix3"));
+  applycoordchange(m_CoordMat3, m_seeds.niftivox2newimagevox_mat().i());
+  save_volume(m_CoordMat3,logger.appendDir("coords_for_fdt_matrix3"));
+}
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
     ColumnVector dir(3);
     dir=0;
@@ -1008,18 +1077,22 @@ namespace TRACT{
     
     // now re-orient dir using xfm transform
     ColumnVector rotdir(3);
-    //m_stline.rotdir(dir,rotdir,x,y,z);
-    rotdir=dir;
+    m_stline.rotdir(dir,rotdir,x,y,z);
+    //rotdir=dir;
 
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
+      if(opts.randfib.value()){
+	float tmp=rand()/float(RAND_MAX) * float(m_stline.nfibres()-1);
+	fibst = (int)round(tmp);
+      } 
       if(opts.verbose.value()>1)
 	logger.setLogFile("particle"+num2str(p));
       
       m_stline.reset();
       bool forwardflag=false,backwardflag=false;
       bool counted=false;
-      if(!onewayonly){
+      if(!onewayonly || opts.matrix3out.value()){//always go both ways in matrix3 mode
 	if(m_stline.streamline(x,y,z,m_seeddims,fibst,rotdir)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
@@ -1033,7 +1106,10 @@ namespace TRACT{
 	
 	backwardflag=true;
 	m_counter.count_streamline();
-	
+	if(counted && opts.matrix3out.value()){//if the first half is not counted, do not bother with matrix3
+	  m_counter.update_matrix3();
+	}
+
 	if(!counted)nlines++; // the other half has is counted here
 
       }
@@ -1043,6 +1119,7 @@ namespace TRACT{
 
     m_counter.count_seed();
     
+
     return nlines;
     
   }
