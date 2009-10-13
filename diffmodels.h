@@ -41,14 +41,26 @@ using namespace MISCMATHS;
 class DTI : public NonlinCF{
 public: 
   DTI(const ColumnVector& iY,
-      const Matrix& ibvecs,const Matrix& ibvals):bvecs(ibvecs),bvals(ibvals){
+      const Matrix& ibvecs,const Matrix& ibvals){
     Y = iY;
     npts = Y.Nrows();
     m_v1.ReSize(3);
     m_v2.ReSize(3);
     m_v3.ReSize(3);
+    bvecs=ibvecs;
+    bvals=ibvals;
     form_Amat();
     nparams=7;
+  }
+  DTI(const ColumnVector& iY,
+      const Matrix& inAmat):Amat(inAmat){
+    Y = iY;
+    npts = Y.Nrows();
+    m_v1.ReSize(3);
+    m_v2.ReSize(3);
+    m_v3.ReSize(3);
+    nparams=7;
+    iAmat = pinv(Amat);
   }
   ~DTI(){}
   void linfit();
@@ -157,8 +169,8 @@ public:
   float anisoterm(const int& pt,const ColumnVector& ls,const Matrix& xx)const;
   
 private:
-  const Matrix& bvecs;
-  const Matrix& bvals;
+  Matrix bvecs;
+  Matrix bvals;
   ColumnVector Y;
   Matrix Amat,iAmat;
   int npts,nparams;

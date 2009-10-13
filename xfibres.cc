@@ -468,7 +468,7 @@ class xfibresVoxelManager{
   
   void initialise_tensor(const Matrix& Amat){
     DTI dti(m_data,Amat);
-    dti.fit();
+    dti.linfit();
     
     float D = dti.get_md();
     if(opts.modelnum.value()==1){
