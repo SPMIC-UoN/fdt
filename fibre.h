@@ -59,16 +59,17 @@ namespace FIBRE{
     ColumnVector m_Signal; 
     ColumnVector m_Signal_old; 
     const float& m_d;
+    const float& m_d_std; //second d param in multi-shell model - std in gamma dist of diffusivities
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
     const Matrix& m_bvals;
+    const int& m_modelnum; 
  public:
     //constructors::
 
     Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
-	   const Matrix& bvals,const float& d,const float& ardfudge=1):
-     m_ardfudge(ardfudge), m_d(d), m_alpha(alpha), m_beta(beta), m_bvals(bvals){
-
+	   const Matrix& bvals,const float& d,const float& ardfudge=1,const int& modelnum=1, const float& d_std=0.01):
+      m_ardfudge(ardfudge), m_d(d),m_d_std(d_std), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum){
 	m_th=M_PI/2;
 	m_th_old=m_th;
 	m_ph=0;
@@ -112,10 +113,10 @@ namespace FIBRE{
     Fibre(const ColumnVector& alpha, 
 	  const ColumnVector& beta, const Matrix& bvals, const float& d, const float& ardfudge,
 	  const float& th, const float& ph, const float& f, 
-	  const float& lam, const bool lam_jump=true) : 
-      m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d),
-      m_alpha(alpha), m_beta(beta), m_bvals(bvals)
-     {
+	  const float& lam, const bool lam_jump=true, const int& modelnum=1, const float& d_std=0.01) : 
+      m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d), m_d_std(d_std), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum)
+    {
+      
       m_th_old=m_th;
       m_ph_old=m_ph;
       m_f_old=m_f;
@@ -127,7 +128,7 @@ namespace FIBRE{
       
       m_th_prior=0;
       compute_th_prior();
-
+      
       m_ph_prior=0;
       compute_ph_prior();
       
@@ -137,7 +138,7 @@ namespace FIBRE{
       //cc      OUT(m_ardfudge);
       m_lam_prior=0;
       compute_lam_prior();
-
+      
 
       m_Signal.ReSize(alpha.Nrows());
       m_Signal=0;
@@ -153,7 +154,7 @@ namespace FIBRE{
      
     }
     Fibre(const Fibre& rhs): 
-      m_d(rhs.m_d), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals){
+      m_d(rhs.m_d), m_d_std(rhs.m_d_std), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals), m_modelnum(rhs.m_modelnum){
       *this=rhs;
     }
 
@@ -224,6 +225,7 @@ namespace FIBRE{
     }
 
     inline float get_prior() const{ return m_prior_en;}
+    inline float get_modelnum() const{ return m_modelnum;}
     
 
     inline void update_proposals(){
@@ -312,12 +314,25 @@ namespace FIBRE{
        for (int i = 1; i <= m_alpha.Nrows(); i++){
  	float angtmp=cos(m_ph-m_beta(i))*sin(m_alpha(i))*sin(m_th) + cos(m_alpha(i))*cos(m_th);
  	angtmp=angtmp*angtmp;
- 	m_Signal(i)=exp(-m_d*m_bvals(1,i)*angtmp);
+	if(m_modelnum==1){
+	  m_Signal(i)=exp(-m_d*m_bvals(1,i)*angtmp);
+	  //	  cout<<"here"<<endl;
+	}
+	else if(m_modelnum==2){
+	  float dalpha=m_d*m_d/(m_d_std*m_d_std);
+	  float dbeta=m_d/(m_d_std*m_d_std);
+	  m_Signal(i)=exp( log(dbeta/(dbeta + m_bvals(1,i)*angtmp)) *dalpha ); //gamma distribution of diffusivities - params alpha (m_d) and beta (m_d_beta): Expected signal is (beta./(beta+b*g(th,ph))).^alpha;
+	  //cout<<i<<" "<<angtmp<<" "<<m_d_std<<" "<<m_d<<endl;
+	  //cout<<"balh "<<m_Signal(i)<<endl;
+
+	}
+
        }
      }
 
 
     inline bool propose_th(){
+      //cout<<"th"<<endl;
       m_th_old=m_th;
       m_th+=normrnd().AsScalar()*m_th_prop;
       bool rejflag=compute_th_prior();//inside this it stores the old prior
@@ -339,6 +354,7 @@ namespace FIBRE{
     }
     
     inline bool propose_ph(){
+      //cout<<"ph"<<endl;
       m_ph_old=m_ph;
       m_ph+=normrnd().AsScalar()*m_ph_prop;
        bool rejflag=compute_ph_prior();//inside this it stores the old prior
@@ -362,6 +378,7 @@ namespace FIBRE{
     
     bool propose_th_ph(float th,float ph){
       //m_th_old=m_th;m_ph_old=m_ph;
+      //cout<<"thph"<<endl;
       m_th=th;m_ph=ph;
       bool rejflag_th=compute_th_prior();//inside this it stores the old prior
       bool rejflag_ph=compute_ph_prior();
@@ -390,6 +407,7 @@ namespace FIBRE{
     }
 
     inline bool propose_f( bool can_use_ard=true){
+      //cout<<"f"<<endl;
       m_f_old=m_f;
       m_f+=normrnd().AsScalar()*m_f_prop;
       bool rejflag=compute_f_prior(can_use_ard);
@@ -409,6 +427,7 @@ namespace FIBRE{
     }
     
     inline bool propose_lam(){
+      //cout<<"lam"<<endl;
       if(m_lam_jump){
 	m_lam_old=m_lam;
 	m_lam+=normrnd().AsScalar()*m_lam_prop;
@@ -489,6 +508,13 @@ namespace FIBRE{
     float m_d_old_prior;
     float m_d_acc;
     float m_d_rej;
+    float m_d_std; //second d param in multi-shell model - std in gamma dist of diffusivities - to get non-monoexponential decay. 
+    float m_d_std_old;
+    float m_d_std_prop;
+    float m_d_std_prior; 
+    float m_d_std_old_prior;
+    float m_d_std_acc;
+    float m_d_std_rej;
     float m_S0;
     float m_S0_old;
     float m_S0_prop;
@@ -508,14 +534,17 @@ namespace FIBRE{
     const ColumnVector& m_alpha;
     const ColumnVector& m_beta;
     const Matrix& m_bvals;
+    const int& m_modelnum;
     
+
   public:
     // empty constructor
 
     Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
-	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1):
-      m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b){
+	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1, int modelnum=1):
+      m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b), m_modelnum(modelnum){
       //      initialise(Amat,N);
+
     }
     
     ~Multifibre(){}
@@ -528,17 +557,19 @@ namespace FIBRE{
     }
     
     void addfibre(const float th, const float ph, const float f,const float lam, const bool lam_jump=true){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,lam,lam_jump);
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,lam,lam_jump,m_modelnum,m_d_std);
       m_fibres.push_back(fib);
     }
 
     void addfibre(){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge);
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,m_modelnum,m_d_std);
       m_fibres.push_back(fib);
     }
     
     void initialise_energies(){
       compute_d_prior();
+      if(m_modelnum==2)
+	compute_d_std_prior();
       compute_S0_prior();
       m_prior_en=0;
       compute_prior();
@@ -550,10 +581,14 @@ namespace FIBRE{
     void initialise_props(){
       m_S0_prop=m_S0/10; //must have set inital values before this is called;
       m_d_prop=m_d/10;
+      m_d_std_prop=m_d_std/10;
     }
     
     inline float get_d() const{ return m_d;}
     inline void set_d(const float d){ m_d=d; }
+
+    inline float get_d_std() const{ return m_d_std;}
+    inline void set_d_std(const float d_std){ m_d_std=d_std; }
 
     inline int get_nfibre(){return m_fibres.size();}
     
@@ -572,6 +607,13 @@ namespace FIBRE{
       OUT(m_d_old_prior);
       OUT(m_d_acc);
       OUT(m_d_rej);
+      OUT(m_d_std);
+      OUT(m_d_std_old);
+      OUT(m_d_std_prop);
+      OUT(m_d_std_prior); 
+      OUT(m_d_std_old_prior);
+      OUT(m_d_std_acc);
+      OUT(m_d_std_rej);
       OUT(m_S0);
       OUT(m_S0_old);
       OUT(m_S0_prop);
@@ -598,6 +640,16 @@ namespace FIBRE{
 	return false;
       }
     }
+
+    inline bool compute_d_std_prior(){
+      m_d_std_old_prior=m_d_std_prior;
+      if(m_d_std<0)
+	return true;
+      else{
+	m_d_std_prior=0;
+	return false;
+      }
+    }
     
     inline bool compute_S0_prior(){
       m_S0_old_prior=m_S0_prior;
@@ -620,6 +672,8 @@ namespace FIBRE{
     inline void compute_prior(){
       m_old_prior_en=m_prior_en;
       m_prior_en=m_d_prior+m_S0_prior;
+      if(m_modelnum==2)
+	m_prior_en=m_prior_en+m_d_std_prior;
       for(unsigned int f=0;f<m_fibres.size(); f++){
 	m_prior_en=m_prior_en+m_fibres[f].get_prior();
       } 
@@ -635,16 +689,21 @@ namespace FIBRE{
 	pred=pred+m_fibres[f].get_f()*m_fibres[f].getSignal();
 	fsum+=m_fibres[f].get_f();
       }
+
       for(int i=1;i<=pred.Nrows();i++){
-	pred(i)=pred(i)+(1-fsum)*exp(-m_d*m_bvals(1,i));
+	if(m_modelnum==1)
+	  pred(i)=pred(i)+(1-fsum)*exp(-m_d*m_bvals(1,i));
+	else if(m_modelnum==2){
+	  float dalpha=m_d*m_d/(m_d_std*m_d_std);
+	  float dbeta=m_d/(m_d_std*m_d_std);
+	  pred(i)=pred(i)+(1-fsum)*exp(log(dbeta/(dbeta+m_bvals(1,i)))*dalpha);
+	}
       }
       pred=pred*m_S0;
       
-
-
       float sumsquares=(m_data-pred).SumSquare();
       m_likelihood_en=(m_data.Nrows()/2)*log(sumsquares/2);
-     
+      
     }
     
   
@@ -673,6 +732,7 @@ namespace FIBRE{
 
     bool test_energy(){
       float tmp=exp(m_old_energy-m_energy);
+      //cout<<m_old_energy<< " " << m_energy <<endl;
       return (tmp>unifrnd().AsScalar());
     }
     
@@ -688,6 +748,7 @@ namespace FIBRE{
     }
 
     inline bool propose_d(){
+      //cout<<"d"<<endl;
       m_d_old=m_d;
       m_d+=normrnd().AsScalar()*m_d_prop;
       bool rejflag=compute_d_prior();//inside this it stores the old prior
@@ -708,8 +769,31 @@ namespace FIBRE{
 	m_fibres[f].restoreSignal();
       m_d_rej++;
     }
+    inline bool propose_d_std(){
+      //cout<<"d_std"<<endl;
+      m_d_std_old=m_d_std;
+      m_d_std+=normrnd().AsScalar()*m_d_std_prop;
+      bool rejflag=compute_d_std_prior();//inside this it stores the old prior
+      for(unsigned int f=0;f<m_fibres.size();f++)
+	m_fibres[f].compute_signal();
+      return rejflag;
+    };
+    
+    inline void accept_d_std(){
+      m_d_std_acc++;      
+    }
+    
+    inline void reject_d_std(){      
+      m_d_std=m_d_std_old;
+      m_d_std_prior=m_d_std_old_prior;
+      m_prior_en=m_old_prior_en;
+      for(unsigned int f=0;f<m_fibres.size();f++)
+	m_fibres[f].restoreSignal();
+      m_d_std_rej++;
+    }
     
     inline bool propose_S0(){
+      //cout<<"S0"<<endl;
       m_S0_old=m_S0;
       m_S0+=normrnd().AsScalar()*m_S0_prop;
       bool rejflag=compute_S0_prior();//inside this it stores the old prior
@@ -730,6 +814,12 @@ namespace FIBRE{
     inline void update_proposals(){
       m_d_prop*=sqrt(float(m_d_acc+1)/float(m_d_rej+1));
       m_d_prop=min(m_d_prop,maxfloat);
+      if(m_modelnum==2){
+	m_d_std_prop*=sqrt(float(m_d_std_acc+1)/float(m_d_std_rej+1));
+	m_d_std_prop=min(m_d_std_prop,maxfloat);
+	m_d_std_acc=0; 
+	m_d_std_rej=0;
+      }
       m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
       m_S0_prop=min(m_S0_prop,maxfloat);
       m_d_acc=0; 
@@ -747,7 +837,9 @@ namespace FIBRE{
     
 
     void jump( bool can_use_ard=true ){
-      
+      //       cout<<"modelnum "<<m_modelnum<<endl;
+      //       cout<<"fmodelnum "<<m_fibres[0].get_modelnum()<<endl;
+      //       cout<<"fmodelnum2 "<<m_fibres[1].get_modelnum()<<endl;
       if(!propose_d()){
 	compute_prior();
 	compute_likelihood();
@@ -764,6 +856,23 @@ namespace FIBRE{
 	reject_d();
       }
       
+      if(m_modelnum==2){
+	if(!propose_d_std()){
+	  compute_prior();
+	  compute_likelihood();
+	  compute_energy();
+	  if(test_energy()){
+	    accept_d_std();
+	  }
+	  else{
+	    reject_d_std();
+	    restore_energy();
+	  }
+	}
+	else{ 
+	  reject_d_std();
+	}
+      }
       if(!propose_S0()){
 	compute_prior();
 	compute_likelihood();
@@ -780,8 +889,8 @@ namespace FIBRE{
       } 
       
       for(unsigned int f=0;f<m_fibres.size();f++){
-	//cout<<"pre th"<<m_fibres[f].get_th()<<endl;	
-	//	cout << m_fibres[f].getSignal()<<endl;
+	//cout<<"pre th "<<m_fibres[f].get_th()<<endl;	
+	//cout << m_fibres[f].getSignal()<<endl;
 	//cout<<"prior"<<m_prior_en<<endl;
 	//cout<<"lik"<<m_likelihood_en<<endl;
 	//cout<<"energy"<<m_energy<<endl;
@@ -791,15 +900,17 @@ namespace FIBRE{
 	  compute_prior();
 	  compute_likelihood();
 	  compute_energy();
-	  //cout<<"pre th"<<m_fibres[f].get_th()<<endl;	
-	  //	cout << m_fibres[f].getSignal()<<endl;
+
+	  //cout<<"post th "<<m_fibres[f].get_th()<<endl;	
+	  //cout<< m_d<< " " <<m_d_std<<endl;
+	  //cout << m_fibres[f].getSignal()<<endl;
 	  //cout<<"prior"<<m_prior_en<<endl;
 	  //cout<<"lik"<<m_likelihood_en<<endl;
 	  //cout<<"energy"<<m_energy<<endl;
 	  	  
 	  if(test_energy()){
 	    m_fibres[f].accept_th();
-	  //cout<<"accepted"<<endl;}
+	  //cout<<"Accepted"<<endl;}
 	  }
 	  else{
 	    m_fibres[f].reject_th();
@@ -879,6 +990,13 @@ namespace FIBRE{
       m_d_old_prior=rhs.m_d_old_prior;
       m_d_acc=rhs.m_d_acc;
       m_d_rej=rhs.m_d_rej;
+      m_d_std=rhs.m_d_std;
+      m_d_std_old=rhs.m_d_std_old;
+      m_d_std_prop=rhs.m_d_std_prop;
+      m_d_std_prior=rhs.m_d_std_prior; 
+      m_d_std_old_prior=rhs.m_d_std_old_prior;
+      m_d_std_acc=rhs.m_d_std_acc;
+      m_d_std_rej=rhs.m_d_std_rej;
       m_S0=rhs.m_S0;
       m_S0_old=rhs.m_S0_old;
       m_S0_prop=rhs.m_S0_prop;
@@ -893,7 +1011,7 @@ namespace FIBRE{
       m_energy=rhs.m_energy;
       m_old_energy=rhs.m_old_energy;
       m_ardfudge=rhs.m_ardfudge;
-
+      
       return *this;
     }
     

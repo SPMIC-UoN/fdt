@@ -36,6 +36,7 @@ class xfibresOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<int> nfibres;
+  Option<int> modelnum;
   Option<float> fudge;
   Option<int> njumps;
   Option<int> nburn;
@@ -46,6 +47,7 @@ class xfibresOptions {
   Option<bool> no_ard;
   Option<bool> all_ard;
   Option<bool> localinit;
+  Option<bool> nonlin;
   void parse_command_line(int argc, char** argv,  Log& logger);
   
  private:
@@ -92,17 +94,20 @@ class xfibresOptions {
   nfibres(string("--nf,--nfibres"),1,
 	 string("Maximum nukmber of fibres to fit in each voxel (default 1)"),
 	 false,requires_argument),
+  modelnum(string("--model"),1,
+	 string("Which model to use. 1=mono-exponential (default and required for single shell). 2=continous exponential (for multi-shell experiments)"),
+	 false,requires_argument),
   fudge(string("--fudge"),1,
 	 string("ARD fudge factor"),
 	 false,requires_argument),
   njumps(string("--nj,--njumps"),5000,
 	 string("Num of jumps to be made by MCMC (default is 5000)"),
 	 false,requires_argument),
-  nburn(string("--bi,--burnin"),1,
-	string("Total num of jumps at start of MCMC to be discarded"),
+  nburn(string("--bi,--burnin"),0,
+	string("Total num of jumps at start of MCMC to be discarded (default is 0)"),
 	false,requires_argument),
   nburn_noard(string("--bn,--burnin_noard"),0,
-	string("num of burnin jumps before the ard is imposed"),
+	string("num of burnin jumps before the ard is imposed (default is 0)"),
 	false,requires_argument),
   sampleevery(string("--se,--sampleevery"),1,
 	string("Num of jumps for each sample (MCMC) (default is 1)"),
@@ -118,7 +123,9 @@ class xfibresOptions {
        false,no_argument),
   localinit(string("--nospat"),false,string("Initialise with tensor, not spatially"),
        false,no_argument),
-   options("xfibres v1.11", "xfibres -k <filename>\n xfibres --verbose\n")
+  nonlin(string("--nonlinear"),false,string("Initialise with nonlinear fitting"),
+       false,no_argument),
+   options("xfibres v1.11", "xfibres --help (for list of options)\n")
    {
      
     
@@ -132,6 +139,7 @@ class xfibresOptions {
        options.add(bvecsfile);
        options.add(bvalsfile);
        options.add(nfibres);
+       options.add(modelnum);
        options.add(fudge);
        options.add(njumps);
        options.add(nburn);
@@ -142,6 +150,7 @@ class xfibresOptions {
        options.add(no_ard);
        options.add(all_ard);
        options.add(localinit);
+       options.add(nonlin);
      }
      catch(X_OptionError& e) {
        options.usage();
