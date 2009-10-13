@@ -298,7 +298,7 @@ namespace TRACT{
 	
 	m_path.push_back(xyz_seeds);
 	//m_path.push_back(xyz_dti);
-	partlength++;
+	pathlength += opts.steplength.value();
 	
 	
 
@@ -352,8 +352,6 @@ namespace TRACT{
 	  }
 	}
 	
-	// increase path length
-	pathlength += opts.steplength.value();
       }
 
       
