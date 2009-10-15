@@ -41,6 +41,7 @@ class probtrackxOptions {
   FmribOption<bool> matrix1out;
   Option<bool> matrix2out;
   FmribOption<bool> matrix3out;
+  FmribOption<string> maskmatrix3;
   FmribOption<bool> maskmatrixout;
   Option<string> outfile;
   Option<string> rubbishfile;
@@ -134,8 +135,11 @@ class probtrackxOptions {
 	  string("output matrix2"),
 	  false, no_argument), 
   matrix3out(string("--omatrix3"), false,
-	  string("output matrix3 (uses the termination mask to produce NxN matrix)"),
+	  string("output matrix3 (NxN connectivity matrix)"),
 	  false, no_argument), 
+  maskmatrix3(string("--mask3"), "",
+	  string("mask used for NxN connectivity matrix"),
+	  false, requires_argument), 
   maskmatrixout(string("--omaskmatrix"), false,
 		string("output maskmatrix"),
 		false, no_argument), 
@@ -190,8 +194,8 @@ class probtrackxOptions {
    nsteps(string("-S,--nsteps"), 2000,
 	    string("Number of steps per sample - default=2000"),
 	    false, requires_argument),
-   distthresh(string("--distthresh"), 1000,
-	    string("Discards samples shorter than this threshold (in mm - default=1000)"),
+   distthresh(string("--distthresh"), 0,
+	    string("Discards samples shorter than this threshold (in mm - default=0)"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
 	 string("Curvature threshold - default=0.2"), 
@@ -253,6 +257,7 @@ class probtrackxOptions {
        options.add(matrix1out);
        options.add(matrix2out);
        options.add(matrix3out);
+       options.add(maskmatrix3);
        options.add(maskmatrixout);
        options.add(outfile);
        options.add(rubbishfile);

@@ -43,7 +43,7 @@ namespace TRACTVOLSX{
 	for(unsigned int m=0;m<phsamples.size();m++)
 	  delete phsamples[m];
 	for(unsigned int m=0;m<fsamples.size();m++)
-	  delete fsamples[m];
+	    delete fsamples[m];
       }
       inline int nfibres()const{return (int)thsamples.size();}
       
@@ -68,10 +68,8 @@ namespace TRACTVOLSX{
 	  cout<<"4"<<endl;
 	  phsamples.push_back(tmpphptr);
 	  cout<<"5"<<endl;
-	  if(usef){
-	    read_volume4D(*tmpfptr,basename+"_fsamples");
-	    fsamples.push_back(tmpfptr);
-	  }
+	  read_volume4D(*tmpfptr,basename+"_fsamples");
+	  fsamples.push_back(tmpfptr);
 	  cout<<"6"<<endl;
 	}
 	else{
@@ -130,26 +128,26 @@ namespace TRACTVOLSX{
 	
 	///////new xyz values from probabilistic interpolation
 	int newx,newy,newz; 
-	float tmp=rand(); tmp/=RAND_MAX;
+	float tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcx)
 	  newx=fx;
 	else
 	  newx=cx;
 	
-	tmp=rand(); tmp/=RAND_MAX;
+	tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcy)
 	  newy=fy;
 	else
 	  newy=cy;
 	
-	tmp=rand(); tmp/=RAND_MAX;
+	tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcz)
 	  newz=fz;
 	else
 	  newz=cz;
  
 	ColumnVector th_ph_f(3);	
-	float samp=rand(); samp/=RAND_MAX;
+	float samp=rand(); samp/=float(RAND_MAX);
 	samp=round(samp*((*thsamples[0]).tsize()-1));
 	float theta=0,phi=0;
 	float dotmax=0,dottmp=0;
@@ -171,7 +169,7 @@ namespace TRACTVOLSX{
 		fibst=0;
 	      }
 	      else{
-		float rtmp=rand()/RAND_MAX * float(fibvec.size()-1);
+		float rtmp=rand()/float(RAND_MAX) * float(fibvec.size()-1);
 		fibst = fibvec[ (int)round(rtmp) ];	      
 	      }
 	      
@@ -194,7 +192,7 @@ namespace TRACTVOLSX{
 	      else{
 		float fsumtmp2=0;
 		int fib=0;
-		float rtmp=rand()/RAND_MAX;
+		float rtmp=rand()/float(RAND_MAX);
 		
 		while( fsumtmp2<rtmp){
 		  float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
@@ -207,10 +205,11 @@ namespace TRACTVOLSX{
 		
 	      }
 	      
-	    theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
-	    phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
-	    init_sample=false;
+	      theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
+	      phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
+	      
 	    }
+	    init_sample=false;
 	  }
 	  else{
 	    if((fabs(prefer_x)+fabs(prefer_y)+fabs(prefer_z))==0){

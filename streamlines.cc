@@ -195,7 +195,6 @@ namespace TRACT{
     m_y_s_init=0;
     m_z_s_init=0;
 
-    
 
   }
   
@@ -230,8 +229,6 @@ namespace TRACT{
       m_part.set_dir(dir(1),dir(2),dir(3));//Set the start dir so that we track inwards from cortex 
     }
 
-    
-    int partlength=0;
     bool rubbish_passed=false;
     bool stop_flag=false;
     //bool has_goneout=false;
@@ -300,6 +297,17 @@ namespace TRACT{
 	//m_path.push_back(xyz_dti);
 	pathlength += opts.steplength.value();
 	
+	// //////////////////////////////
+	// update coordinates for matrix3
+	if(opts.matrix3out.value()){
+	  if( m_mask3(x_s,y_s,z_s)!=0 ){
+	    if( m_beenhere3(x_s,y_s,z_s)==0 ){
+	      m_beenhere3(x_s,y_s,z_s)=1;
+	      m_inmask3.push_back(xyz_seeds);
+	    }
+	  }
+	}
+	// //////////////////////////////
 	
 
 	if(opts.rubbishfile.value()!=""){
@@ -324,7 +332,7 @@ namespace TRACT{
 	    th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 	}
 	  
-	  
+
 	tmp2=rand(); tmp2/=RAND_MAX;
 	if(th_ph_f(3)>tmp2){
 	  if(!m_part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value())){
@@ -617,39 +625,43 @@ namespace TRACT{
       
   }
   
-  // the following will use the termination mask voxels to initialise 
-  // and NxN matrix. This matrix will store the number of samples from 
-  // each seed voxel that have made it to the termination mask from one
-  // side and from the other.
+  // the following will use the voxels of a given mask to initialise 
+  // an NxN matrix. This matrix will store the number of samples from 
+  // each seed voxel that have made it to each pair of voxels in the mask
   void Counter::initialise_matrix3(){
-    const volume<int>& stop = m_stline.get_stop();
-    int nstop=0;
-    for(int Wz=stop.minz();Wz<=stop.maxz();Wz++)
-      for(int Wy=stop.miny();Wy<=stop.maxy();Wy++)
-	for(int Wx=stop.minx();Wx<=stop.maxx();Wx++){
-	  if(stop(Wx,Wy,Wz)==0)continue;
-	  nstop++;
+    volume<int>& m_mask3           = m_stline.get_mask3();
+    volume<int>& m_beenhere3       = m_stline.get_beenhere3();
+    vector<ColumnVector> m_inmask3 = m_stline.get_inmask3();
+
+    read_volume(m_mask3,opts.maskmatrix3.value());
+    m_beenhere3.reinitialize(m_mask3.xsize(),m_mask3.ysize(),m_mask3.zsize());
+    m_beenhere3=0;
+
+    int nmask3=0;
+    for(int Wz=m_mask3.minz();Wz<=m_mask3.maxz();Wz++)
+      for(int Wy=m_mask3.miny();Wy<=m_mask3.maxy();Wy++)
+	for(int Wx=m_mask3.minx();Wx<=m_mask3.maxx();Wx++){
+	  if(m_mask3(Wx,Wy,Wz)==0)continue;
+	  nmask3++;
 	}
-    OUT(nstop);
 
-    m_CoordMat3.reinitialize(nstop,3,1);
-    m_ConMat3.reinitialize(nstop,nstop,1);
+    m_CoordMat3.reinitialize(nmask3,3,1);
+    m_ConMat3.reinitialize(nmask3,nmask3,1);
     m_ConMat3=0;
-    m_Lookup3.reinitialize(stop.xsize(),stop.ysize(),stop.zsize());
+    m_Lookup3.reinitialize(m_mask3.xsize(),m_mask3.ysize(),m_mask3.zsize());
 
-    nstop=0;
-    for(int Wz=stop.minz();Wz<=stop.maxz();Wz++)
-      for(int Wy=stop.miny();Wy<=stop.maxy();Wy++)
-	for(int Wx=stop.minx();Wx<=stop.maxx();Wx++){
-	  if(stop(Wx,Wy,Wz)==0)continue;
-	  m_CoordMat3(nstop,0,0) = Wx;
-	  m_CoordMat3(nstop,1,0) = Wy;
-	  m_CoordMat3(nstop,2,0) = Wz;
-	  m_Lookup3(Wx,Wy,Wz)  = nstop;
-	  nstop++;
+    nmask3=0;
+    for(int Wz=m_mask3.minz();Wz<=m_mask3.maxz();Wz++)
+      for(int Wy=m_mask3.miny();Wy<=m_mask3.maxy();Wy++)
+	for(int Wx=m_mask3.minx();Wx<=m_mask3.maxx();Wx++){
+	  if(m_mask3(Wx,Wy,Wz)==0)continue;
+	  m_CoordMat3(nmask3,0,0) = Wx;
+	  m_CoordMat3(nmask3,1,0) = Wy;
+	  m_CoordMat3(nmask3,2,0) = Wz;
+	  m_Lookup3(Wx,Wy,Wz)  = nmask3;
+	  nmask3++;
 	}
     save_volume(m_CoordMat3,logger.appendDir("coords_for_fdt_matrix3"));
-    exit(1);
   }
   void Counter::count_streamline(){
     if(opts.simpleout.value()||opts.matrix1out.value()){
@@ -845,20 +857,26 @@ namespace TRACT{
   }
 
   void Counter::update_matrix3(){
-    ColumnVector endpoint1(3),endpoint2(3);
-    const vector<ColumnVector>& path=m_stline.get_path_ref();
-    const volume<int>& stop = m_stline.get_stop();
-    if(m_path.size()==0 || path.size()==0)return;
-    endpoint1 = m_path.back();
-    endpoint2 = path.back();
+    volume<int>          m_beenhere3 = m_stline.get_beenhere3();
+    vector<ColumnVector> m_inmask3   = m_stline.get_inmask3();
+    if(m_inmask3.size()==0)return;
 
-    if( stop(round(float(endpoint1(1))),round(float(endpoint1(2))),round(float(endpoint1(3))))!=0 )
-      if( stop(round(float(endpoint2(1))),round(float(endpoint2(2))),round(float(endpoint2(3))))!=0 ){
-	int row1 = m_Lookup3(round(float(endpoint1(1))),round(float(endpoint1(2))),round(float(endpoint1(3))));
-	int row2 = m_Lookup3(round(float(endpoint2(1))),round(float(endpoint2(2))),round(float(endpoint2(3))));
+    for(unsigned int i=0;i<m_inmask3.size();i++){
+      for(unsigned int j=i+1;j<m_inmask3.size();j++){
+	int row1 = m_Lookup3((int)round(float(m_inmask3[i](1))),(int)round(float(m_inmask3[i](2))),(int)round(float(m_inmask3[i](3))));
+	int row2 = m_Lookup3((int)round(float(m_inmask3[j](1))),(int)round(float(m_inmask3[j](2))),(int)round(float(m_inmask3[j](3))));
 	m_ConMat3(row1,row2,0) += 1;
 	m_ConMat3(row2,row1,0) += 1;
       }
+    }
+
+    // cleanup
+    for(unsigned int i=0;i<m_inmask3.size();i++){
+      m_beenhere3((int)round(float(m_inmask3[i](1))),
+		  (int)round(float(m_inmask3[i](2))),
+		  (int)round(float(m_inmask3[i](3))))=0;
+    }
+    m_inmask3.clear();
   }  
   
   void Counter::reset_beenhere2(const bool& forwardflag,const bool& backwardflag){
@@ -1104,7 +1122,7 @@ void Counter::save_matrix3(){
 	
 	backwardflag=true;
 	m_counter.count_streamline();
-	if(counted && opts.matrix3out.value()){//if the first half is not counted, do not bother with matrix3
+	if(opts.matrix3out.value()){
 	  m_counter.update_matrix3();
 	}
 

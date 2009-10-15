@@ -59,6 +59,11 @@ namespace TRACT{
     float m_y_s_init;
     float m_z_s_init;
 
+    // Streamliner needs to know about matrix3 
+    volume<int>  m_mask3;
+    volume<int>  m_beenhere3;
+    vector<ColumnVector> m_inmask3;
+
     // we need this class to know about seed space
     const volume<float>& m_seeds;
 
@@ -113,6 +118,12 @@ namespace TRACT{
 
     // debug
     //const volume<int>& get_mask_ref()const{return m_mask;}
+
+    // streamliner needs to be able to tell Counter about matrix3 stuff
+    volume<int>&          get_beenhere3(){return m_beenhere3;}
+    volume<int>&          get_mask3()    {return m_mask3;}
+    vector<ColumnVector>& get_inmask3()  {return m_inmask3;}
+
   };
 
 
@@ -152,13 +163,13 @@ namespace TRACT{
     int m_Conrow2;
     ColumnVector m_lrdim;
 
-    volume<int> m_ConMat3;
+    volume<int>  m_ConMat3;
     volume<int>  m_Lookup3;
     volume<int>  m_CoordMat3;
     
     const volume<float>& m_seeds;
     ColumnVector m_seedsdim;
-    const Streamliner& m_stline;
+    Streamliner& m_stline;
     Streamliner& m_nonconst_stline;
     
   public:
