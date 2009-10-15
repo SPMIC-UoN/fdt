@@ -45,8 +45,8 @@ int main ( int argc, char **argv ){
   else if(opts.network.value()){ nmasks(); }
   else if(opts.meshfile.value()!=""){meshmask();}
   else {
-    cout << "No seed mask detected! exit without doing anything"<<endl;
-    cout << "If you are seeding from a list of coordinates, use --mode=simple"<<endl;
+    cerr << "No seed mask detected! exit without doing anything"<<endl;
+    cerr << "If you are seeding from a list of coordinates, use --mode=simple"<<endl;
     return 0;
   };
 
