@@ -24,6 +24,7 @@ Usage() {
     echo "-b (burnin period, default 1000)"
     echo "-j (number of jumps, default 1250)"
     echo "-s (sample every, default 25)"
+    echo "-model (1:monoexponential [default] - 2:non-monoexponential [to be used in multi-shell acquisitions])"
     echo ""
     exit 1
 }
@@ -54,6 +55,7 @@ fudge=1
 burnin=1000
 njumps=1250
 sampleevery=25
+model=1
 while [ ! -z "$2" ]
 do
   case "$2" in
@@ -62,6 +64,7 @@ do
       -b) burnin=$3;shift;;
       -j) njumps=$3;shift;;
       -s) sampleevery=$3;shift;;
+      -model) model=$3;shift;;
       *) break;;
   esac
   shift
@@ -173,12 +176,12 @@ do
     if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ];then
 	echo "slice $slice has already been processed"
     else
-	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
+	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $model $slice" \
 	    >> ${subjdir}.bedpostX/commands.txt
     fi
     slice=$(($slice + 1))
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -a lx24-amd64 -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
