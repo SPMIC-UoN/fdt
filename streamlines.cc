@@ -1080,7 +1080,7 @@ void Counter::save_matrix3(){
     cout <<x<<" "<<y<<" "<<z<<endl;
     if(opts.fibst.set()){
       fibst=opts.fibst.value()-1;
-      OUT(fibst);
+
     }
     else{
       if(fibst == -1){
@@ -1098,7 +1098,7 @@ void Counter::save_matrix3(){
 
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
-      
+
       if(opts.randfib.value()>2){ 
 	//This bit of code just does random sampling from all fibre populations - even those whose f value is less than f-thresh. 
 	//3 other possibilities - randfib==0 -> use fibst (default first fibre but can be set)

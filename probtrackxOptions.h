@@ -214,7 +214,7 @@ class probtrackxOptions {
 	 false, no_argument),
   randfib(string("--randfib"), 0, 
 	 string("Default 0. Set to 1 to randomly sample initial fibres (with f > fibthresh). \n                        Set to 2 to sample in proportion fibres (with f>fibthresh) to f. \n                        Set to 3 to sample ALL populations at random (even if f<fibthresh)"), 
-	 false, no_argument),
+	 false, requires_argument),
   fibst(string("--fibst"),1, 
 	 string("Force a starting fibre for tracking - default=1, i.e. first fibre orientation. Only works if randfib==0"), 
 	 false, requires_argument),

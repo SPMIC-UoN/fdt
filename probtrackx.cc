@@ -29,6 +29,7 @@ int main ( int argc, char **argv ){
   srand(opts.rseed.value());
   
   
+  
   if(opts.verbose.value()>0){
     opts.status();
   }

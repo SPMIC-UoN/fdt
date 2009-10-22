@@ -197,7 +197,9 @@ probtrackxOptions* probtrackxOptions::gopt = NULL;
     cout<<"nsteps     "<<nsteps.value()<<endl;
     cout<<"usef       "<<usef.value()<<endl;
     cout<<"rseed      "<<rseed.value()<<endl; 
-  }
+    cout<<"randfib    "<<randfib.value()<<endl;
+    cout<<"fibst      "<<fibst.value()<<endl;
+}
   
 }
 
