@@ -106,6 +106,7 @@ namespace TRACT{
     inline vector<ColumnVector> get_path() const{return m_path;}
     inline void reset(){
       m_part.reset();
+      vols.reset(opts.fibst.value());
     }
     inline void reverse(){
       m_part.restart_reverse();

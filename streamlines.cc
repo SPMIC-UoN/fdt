@@ -1098,14 +1098,20 @@ void Counter::save_matrix3(){
 
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
-      if(opts.randfib.value()){
+      
+      if(opts.randfib.value()>2){ 
+	//This bit of code just does random sampling from all fibre populations - even those whose f value is less than f-thresh. 
+	//3 other possibilities - randfib==0 -> use fibst (default first fibre but can be set)
+	// randfib==1 - random sampling of fibres bigger than fthresh
+	// randfib==2 random sampling of fibres bigger than fthresh in proporthion to their f-values. 
 	float tmp=rand()/float(RAND_MAX) * float(m_stline.nfibres()-1);
 	fibst = (int)round(tmp);
-      } 
+      }
+      
       if(opts.verbose.value()>1)
 	logger.setLogFile("particle"+num2str(p));
-      
-      m_stline.reset();
+   
+      m_stline.reset(); //This now includes a vols.reset() in order to get fibst right. 
       bool forwardflag=false,backwardflag=false;
       bool counted=false;
       if(!onewayonly || opts.matrix3out.value()){//always go both ways in matrix3 mode

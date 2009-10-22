@@ -153,9 +153,8 @@ namespace TRACTVOLSX{
 	float dotmax=0,dottmp=0;
 	int fibind=0;
 	if(thsamples.size()>1){//more than 1 fibre
-
+	  
 	  if(init_sample){//go for the specified fibre on the first jump or generate at random
-	    
 	    if(opts.randfib.value()==1){//this generates startfib at random (except for fibres where f<fibthresh)
 	      vector<int> fibvec;
 	      for(unsigned int fib=0;fib<thsamples.size();fib++){	    
@@ -172,10 +171,7 @@ namespace TRACTVOLSX{
 		float rtmp=rand()/float(RAND_MAX) * float(fibvec.size()-1);
 		fibst = fibvec[ (int)round(rtmp) ];	      
 	      }
-	      
 	    }
-
-
 	    else if(opts.randfib.value()==2){ //this generates startfib with probability proportional to f (except for fibres where f<fibthresh). 
 	      //this chooses at random but in proportion to fsamples. 
 	      float fsumtmp=0;
@@ -204,11 +200,10 @@ namespace TRACTVOLSX{
 		}
 		
 	      }
-	      
-	      theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
-	      phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
-	      
-	    }
+	    }  
+
+	    theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
+	    phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
 	    init_sample=false;
 	  }
 	  else{
