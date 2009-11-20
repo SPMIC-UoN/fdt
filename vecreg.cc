@@ -16,32 +16,35 @@ using namespace Utilities;
 string title="vecreg (Version 1.0)\nVector Affine/non linear Tranformation with Orientation Preservation";
 string examples="vecreg -i <input4Dvector> -o <output4D> -t <transformation>";
 
-Option<bool>   verbose(string("-v,--verbose"),false,
+Option<bool> verbose(string("-v,--verbose"),false,
 		       string("switch on diagnostic messages"),
 		       false,no_argument);
-Option<bool>   help(string("-h,--help"),false,
-		    string("display this message"),
-		    false,no_argument);
-Option<string> infilename(string("-i,--input"),string(""),
-			  string("filename of input vector or tensor field"),
-			  true,requires_argument);
-Option<string> outfilename(string("-o,--output"),string(""),
-			   string("filename of output registered vector or tensor field"),
-			   true,requires_argument);
+Option<bool> help(string("-h,--help"),false,
+		       string("display this message"),
+		       false,no_argument);
+Option<string> ivector(string("-i,--input"),string(""),
+		       string("filename of input vector"),
+		       false,requires_argument);
+Option<string> itensor(string("--tensor"),string(""),
+		       string("full tensor"),
+		       false,requires_argument);
+Option<string> ovector(string("-o,--output"),string(""),
+		       string("filename of output registered vector"),
+		       true,requires_argument);
 Option<string> ref(string("-r,--ref"),string(""),
-		   string("filename of reference (target) volume"),
-		   true,requires_argument);
-Option<string> transformation(string("-t,--transform"),string(""),
-			 string("filename of transformation matrix/warpfield"),
-			 true,requires_argument);
-Option<string> rotform(string("-w,--rotation"),string(""),
-		       string("filename of rotation matrix/warpfield (default=estimate from transform)"),
+		       string("filename of reference (target) volume"),
+		       true,requires_argument);
+Option<string> matrix(string("-t,--affine"),string(""),
+		       string("filename of affine transformation matrix"),
+		       false,requires_argument);
+Option<string> warp(string("-w,--warpfield"),string(""),
+		       string("filename of 4D warp field for nonlinear registration"),
+		       false,requires_argument);
+Option<string> interpmethod(string("--interp"),"",
+		       string("interpolation method : nearestneighbour, trilinear (default) or sinc"),
 		       false,requires_argument);
 Option<string> maskfile(string("-m,--mask"),string(""),
 		       string("brain mask in input space"),
-		       false,requires_argument);
-Option<string> interpmethod(string("--interp"),"",
-		       string("interpolation method : nearestneighbour, trilinear (default), sinc or spline"),
 		       false,requires_argument);
 ////////////////////////////////////////////////////////
 
@@ -134,6 +137,80 @@ ReturnMatrix ppd(const Matrix& F,ColumnVector& e1){
   return R;
 }
 
+
+void vecreg_aff(const volume4D<float>& tens,
+		volume4D<float>& oV1,
+		const volume<float>& refvol,
+		const Matrix& M,
+		const volume<float>& mask){
+
+  Matrix iM(4,4),R(3,3);
+  iM=M.i();
+  // extract rotation matrix from M
+  Matrix F(3,3),u(3,3),v(3,3);
+  DiagonalMatrix d(3);
+  F=M.SubMatrix(1,3,1,3);
+  SVD(F*F.t(),d,u,v);
+  R=(u*sqrt(d)*v.t()).i()*F;
+
+  ColumnVector seeddim(3),targetdim(3);
+  seeddim << tens.xdim() << tens.ydim() << tens.zdim();
+  targetdim  << refvol.xdim() << refvol.ydim() << refvol.zdim();
+  SymmetricMatrix Tens(3);
+  ColumnVector X_seed(3),X_target(3); 
+  ColumnVector V_seed(3),V_target(3);
+  for(int z=0;z<oV1.zsize();z++)
+    for(int y=0;y<oV1.ysize();y++)
+      for(int x=0;x<oV1.xsize();x++){
+
+	// compute seed coordinates
+	X_target << x << y << z;
+	X_seed=vox_to_vox(X_target,targetdim,seeddim,iM);
+	
+	if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
+	  continue;
+	}
+
+	 // compute interpolated tensor
+	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
+
+
+	if(ivector.set()){
+	  // compute first eigenvector
+	  EigenValues(Tens,d,v);
+	  V_seed = v.Column(3);
+	  
+	  // rotate vector
+	  V_target=F*V_seed;
+	  if(V_target.MaximumAbsoluteValue()>0)
+	    V_target/=sqrt(V_target.SumSquare());
+
+	  oV1(x,y,z,0)=V_target(1);
+	  oV1(x,y,z,1)=V_target(2);
+	  oV1(x,y,z,2)=V_target(3);
+	}
+	
+	// create tensor
+	if(ivector.unset()){
+	  Tens << R*Tens*R.t();
+	  
+	  oV1(x,y,z,0)=Tens(1,1);
+	  oV1(x,y,z,1)=Tens(2,1);
+	  oV1(x,y,z,2)=Tens(3,1);
+	  oV1(x,y,z,3)=Tens(2,2);
+	  oV1(x,y,z,4)=Tens(3,2);
+	  oV1(x,y,z,5)=Tens(3,3);
+	  
+	}
+	
+      }
+  
+}
 void sjgradient(const volume<float>& im,volume4D<float>& grad){
   
   grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
@@ -163,190 +240,30 @@ void sjgradient(const volume<float>& im,volume4D<float>& grad){
 }
 
 
-void vecreg_aff(const volume4D<float>& tens,
-		volume4D<float>& oV1,
-		const volume<float>& refvol,
-		const Matrix& M1,const Matrix& M2,
-		const volume<float>& mask,bool istensor){
-
-
-  Matrix iM(4,4),R(3,3);
-  iM=M1.i();
-  // extract rotation matrix from M
-  Matrix F(3,3),u(3,3),v(3,3);
-  DiagonalMatrix d(3);
-  F=M2.SubMatrix(1,3,1,3);
-  SVD(F*F.t(),d,u,v);
-  R=(u*sqrt(d)*v.t()).i()*F;
-
-  ColumnVector seeddim(3),targetdim(3);
-  seeddim << tens.xdim() << tens.ydim() << tens.zdim();
-  targetdim  << refvol.xdim() << refvol.ydim() << refvol.zdim();
-  SymmetricMatrix Tens(3);
-  ColumnVector X_seed(3),X_target(3); 
-  ColumnVector V_seed(3),V_target(3);
-  for(int z=0;z<oV1.zsize();z++)
-    for(int y=0;y<oV1.ysize();y++)
-      for(int x=0;x<oV1.xsize();x++){
-
-	// compute seed coordinates
-	X_target << x << y << z;
-	X_seed=vox_to_vox(X_target,targetdim,seeddim,iM);
-	
-	if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
-	  continue;
-	}
-
-	 // compute interpolated tensor
-	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-
-
-	if(!istensor){
-	  // compute first eigenvector
-	  EigenValues(Tens,d,v);
-	  V_seed = v.Column(3);
-	  
-	  // rotate vector
-	  V_target=R*V_seed;
-	  if(V_target.MaximumAbsoluteValue()>0)
-	    V_target/=sqrt(V_target.SumSquare());
-
-	  oV1(x,y,z,0)=V_target(1);
-	  oV1(x,y,z,1)=V_target(2);
-	  oV1(x,y,z,2)=V_target(3);
-	}
-	// create tensor
-	else{
-	  Tens << R*Tens*R.t();
-	  
-	  oV1(x,y,z,0)=Tens(1,1);
-	  oV1(x,y,z,1)=Tens(2,1);
-	  oV1(x,y,z,2)=Tens(3,1);
-	  oV1(x,y,z,3)=Tens(2,2);
-	  oV1(x,y,z,4)=Tens(3,2);
-	  oV1(x,y,z,5)=Tens(3,3);
-	  
-	}
-	
-      }
-  
-}
-
-void vecreg_aff(const volume4D<float>& tens,
-		volume4D<float>& oV1,
-		const volume<float>& refvol,
-		const Matrix& M1,const volume4D<float>& warpvol2,
-		const volume<float>& mask,bool istensor){
-
-  Matrix iM(4,4),R(3,3);
-  iM=M1.i();
-
-
-  // compute transformation jacobian
-  volume4D<float> jx(mask.xsize(),mask.ysize(),mask.zsize(),3);
-  volume4D<float> jy(mask.xsize(),mask.ysize(),mask.zsize(),3);
-  volume4D<float> jz(mask.xsize(),mask.ysize(),mask.zsize(),3);
-  sjgradient(warpvol2[0],jx);
-  sjgradient(warpvol2[1],jy);
-  sjgradient(warpvol2[2],jz);
-
-
-
-  Matrix I(3,3);I<<1<<0<<0<<0<<1<<0<<0<<0<<1;
-  Matrix F(3,3),Jw(3,3),u(3,3),v(3,3);
-  DiagonalMatrix d(3);  
-
-  ColumnVector seeddim(3),targetdim(3);
-  seeddim << tens.xdim() << tens.ydim() << tens.zdim();
-  targetdim  << refvol.xdim() << refvol.ydim() << refvol.zdim();
-  SymmetricMatrix Tens(3);
-  ColumnVector X_seed(3),X_target(3); 
-  ColumnVector V_seed(3),V_target(3);
-  for(int z=0;z<oV1.zsize();z++)
-    for(int y=0;y<oV1.ysize();y++)
-      for(int x=0;x<oV1.xsize();x++){
-
-	// compute seed coordinates
-	X_target << x << y << z;
-	X_seed=vox_to_vox(X_target,targetdim,seeddim,iM);
-	
-	if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
-	  continue;
-	}
-
-	 // compute interpolated tensor
-	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-
-
-	 // Local Jacobian of the backward warpfield
-	 Jw <<   jx(x,y,z,0) <<  jx(x,y,z,1) << jx(x,y,z,2)
-	    <<   jy(x,y,z,0) <<  jy(x,y,z,1) << jy(x,y,z,2)
-	    <<   jz(x,y,z,0) <<  jz(x,y,z,1) << jz(x,y,z,2);
-	 
-	 // compute local forward affine transformation	
-	 F = (I + Jw).i();
-	 
-
-	if(!istensor){
-	  // compute first eigenvector
-	  EigenValues(Tens,d,v);
-	  V_seed = v.Column(3);
-	  
-	  // rotate vector
-	  V_target=F*V_seed;
-	  if(V_target.MaximumAbsoluteValue()>0)
-	    V_target/=sqrt(V_target.SumSquare());
-
-	  oV1(x,y,z,0)=V_target(1);
-	  oV1(x,y,z,1)=V_target(2);
-	  oV1(x,y,z,2)=V_target(3);
-	}
-	// create tensor
-	else{	   
-	  EigenValues(Tens,d,v);
-	  R=ppd(F,v.Column(3),v.Column(2));
-	  Tens << R*Tens*R.t();
-	  
-	  oV1(x,y,z,0)=Tens(1,1);
-	  oV1(x,y,z,1)=Tens(2,1);
-	  oV1(x,y,z,2)=Tens(3,1);
-	  oV1(x,y,z,3)=Tens(2,2);
-	  oV1(x,y,z,4)=Tens(3,2);
-	  oV1(x,y,z,5)=Tens(3,3);
-	  
-	}
-	
-      }
-  
-}
-
-
-
 void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
-		   const volume<float>& refvol,volume4D<float>& warpvol1,const volume4D<float>& warpvol2,
-		   const volume<float>& mask,bool istensor){
-
+		   const volume<float>& refvol,volume4D<float>& warpvol,
+		   const volume<float>& mask){
 
   ColumnVector X_seed(3),X_target(3);
   
+  //float dxx=tens.xdim(),dyy=tens.ydim(),dzz=tens.zdim();
+  //float dx=oV1.xdim(),dy=oV1.ydim(),dz=oV1.zdim();
+  //float nxx=(float)tens.xsize()/2.0,nyy=(float)tens.ysize()/2.0,nzz=(float)tens.zsize()/2.0;
+  //float nx=(float)oV1.xsize()/2.0,ny=(float)oV1.ysize()/2.0,nz=(float)oV1.zsize()/2.0;
+
   
+  // read warp field created by Jesper
+  FnirtFileReader ffr(warp.value());
+  warpvol=ffr.FieldAsNewimageVolume4D(true);
+ 
+
   // compute transformation jacobian
   volume4D<float> jx(mask.xsize(),mask.ysize(),mask.zsize(),3);
   volume4D<float> jy(mask.xsize(),mask.ysize(),mask.zsize(),3);
   volume4D<float> jz(mask.xsize(),mask.ysize(),mask.zsize(),3);
-  sjgradient(warpvol2[0],jx);
-  sjgradient(warpvol2[1],jy);
-  sjgradient(warpvol2[2],jz);
+  sjgradient(warpvol[0],jx);
+  sjgradient(warpvol[1],jy);
+  sjgradient(warpvol[2],jz);
 
 
   ColumnVector V_seed(3),V_target(3);
@@ -360,8 +277,11 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
     for(int y=0;y<oV1.ysize();y++)
        for(int x=0;x<oV1.xsize();x++){
 	 
+
+
 	 X_target << x << y << z;
-	 X_seed = NewimageCoord2NewimageCoord(warpvol1,false,oV1[0],mask,X_target);
+	 X_seed = NewimageCoord2NewimageCoord(warpvol,false,oV1[0],mask,X_target);
+
 
 	 if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
 	   continue;
@@ -384,7 +304,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 F = (I + Jw).i();
 	 
 
-	 if(!istensor){
+	 if(ivector.set()){
 	   // reorient according to affine reorientation scheme
 	   //SVD(F*F.t(),d,u,v);
 	   //R=(u*sqrt(d)*v.t()).i()*F;
@@ -402,89 +322,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	   oV1(x,y,z,2)=V_target(3);
 	 }
 	 // create tensor
-	 else{
-	   //SVD(F*F.t(),d,u,v);
-	   //R=(u*sqrt(d)*v.t()).i()*F;
-
-	   EigenValues(Tens,d,v);
-	   R=ppd(F,v.Column(3),v.Column(2));
-	   Tens << R*Tens*R.t();
-
-	   oV1(x,y,z,0)=Tens(1,1);
-	   oV1(x,y,z,1)=Tens(2,1);
-	   oV1(x,y,z,2)=Tens(3,1);
-	   oV1(x,y,z,3)=Tens(2,2);
-	   oV1(x,y,z,4)=Tens(3,2);
-	   oV1(x,y,z,5)=Tens(3,3);
-
-	 }
-	 
-
-       }
-  
-  
-}
-
-
-
-void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
-		   const volume<float>& refvol,volume4D<float>& warpvol1,const Matrix& M2,
-		   const volume<float>& mask,bool istensor){
-
-  ColumnVector X_seed(3),X_target(3);
-  
-  // extract rotation matrix from M
-  Matrix F(3,3),R(3,3),u(3,3),v(3,3);
-  DiagonalMatrix d(3);
-  F=M2.SubMatrix(1,3,1,3);
-  SVD(F*F.t(),d,u,v);
-  R=(u*sqrt(d)*v.t()).i()*F;
-
-  ColumnVector V_seed(3),V_target(3);
-  ColumnVector V1_seed(3),V2_seed(3);
-  ColumnVector V1_target(3),V2_target(3),V3_target(3);
-  Matrix I(3,3);I<<1<<0<<0<<0<<1<<0<<0<<0<<1;
-  Matrix Jw(3,3);
-  SymmetricMatrix Tens(3);
-  for(int z=0;z<oV1.zsize();z++)
-    for(int y=0;y<oV1.ysize();y++)
-       for(int x=0;x<oV1.xsize();x++){
-	 
-	 X_target << x << y << z;
-	 X_seed = NewimageCoord2NewimageCoord(warpvol1,false,oV1[0],mask,X_target);
-
-	 if(mask((int)X_seed(1),(int)X_seed(2),(int)X_seed(3))==0){
-	   continue;
-	 }
-	
-	 // compute interpolated tensor
-	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-
-
-	 if(!istensor){
-	   // reorient according to affine reorientation scheme
-	   //SVD(F*F.t(),d,u,v);
-	   //R=(u*sqrt(d)*v.t()).i()*F;
-
-	   // compute first eigenvector
-	   EigenValues(Tens,d,v);
-	   V_seed = v.Column(3);
-	 
-	   V_target=R*V_seed;
-	   if(V_target.MaximumAbsoluteValue()>0)
-	     V_target/=sqrt(V_target.SumSquare());
-
-	   oV1(x,y,z,0)=V_target(1);
-	   oV1(x,y,z,1)=V_target(2);
-	   oV1(x,y,z,2)=V_target(3);
-	 }
-	 // create tensor
-	 else{
+	 if(ivector.unset()){
 	   //SVD(F*F.t(),d,u,v);
 	   //R=(u*sqrt(d)*v.t()).i()*F;
 
@@ -510,74 +348,50 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 
 
 int do_vecreg(){
-  volume4D<float> ivol,warpvol1,warpvol2;
+  volume4D<float> ivol,warpvol;
   volume<float> refvol,mask;
-  Matrix Aff1,Aff2;
- 
-  bool iswarp1=false,iswarp2=false;
-  if(fsl_imageexists(transformation.value()))iswarp1=true;
-  if(rotform.set())
-    if(fsl_imageexists(rotform.value()))iswarp2=true;
+  Matrix Aff(4,4);
 
-  if(verbose.value()) cout << "Load transformations" << endl;
-
-  if(!iswarp1)
-    Aff1 = read_ascii_matrix(transformation.value());
-  else{
-    FnirtFileReader ffr(transformation.value());
-    warpvol1=ffr.FieldAsNewimageVolume4D(true);
+  if((matrix.set())){
+    Aff = read_ascii_matrix(matrix.value());
   }
-  if(rotform.set()){
-    if(!iswarp2) Aff2 = read_ascii_matrix(rotform.value());
-    else{
-      FnirtFileReader ffr(rotform.value());
-      warpvol2=ffr.FieldAsNewimageVolume4D(true);
-    }
-  }
-  else{
-    if(!iswarp1)Aff2=Aff1;
-    else warpvol2=warpvol1;
-  }
-    
-  
-  if(verbose.value()) cout << "Load input data" << endl;
-  bool istensor=false;
-  read_volume4D(ivol,infilename.value());
-  if(ivol.tsize()==6)istensor=true;
-  
+  //if((warp.set())){
+  //if(verbose.value()) cerr << "Loading warpfield" << endl;
+  //read_volume4D(warpvol,warp.value());
+  //}
+  if(verbose.value()) cerr << "Loading volumes" << endl;
+  if(ivector.set())
+    read_volume4D(ivol,ivector.value());
+  else
+    read_volume4D(ivol,itensor.value());
   read_volume(refvol,ref.value());
 
   volume4D<float> ovol;
-  if(!istensor)
+  if(ivector.set())
     ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),3);
   else
     ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),6);
-
+  copybasicproperties(refvol,ovol);
 
   // set interpolation method
   if(interpmethod.value()=="nearestneighbour")
     ivol.setinterpolationmethod(nearestneighbour);
   else if(interpmethod.value()=="sinc")
     ivol.setinterpolationmethod(sinc);
-  else if(interpmethod.value()=="spline")
-    ivol.setinterpolationmethod(spline);
   else
     ivol.setinterpolationmethod(trilinear);
 
-  copybasicproperties(ivol,ovol);
-
-  // if a mask is not provided, set it to voxels where the input vectors are non-zero
   if(maskfile.value()!="")
     read_volume(mask,maskfile.value());
   else{
     mask.reinitialize(ivol[0].xsize(),ivol[0].ysize(),ivol[0].zsize());
+    copybasicproperties(ivol,mask);
     for(int z=0;z<mask.zsize();z++)
       for(int y=0;y<mask.ysize();y++)
 	for(int x=0;x<mask.xsize();x++){
-	  float s=0;
-	  for(int t=0;t<ivol.tsize();t++)
-	    s+=std::abs(ivol(x,y,z,t));
-	  if(s>0)
+	  if(ivol(x,y,z,0)*ivol(x,y,z,0)
+	     +ivol(x,y,z,1)*ivol(x,y,z,1)
+	     +ivol(x,y,z,2)*ivol(x,y,z,2) != 0)
 	    mask(x,y,z) = 1;
 	  else
 	    mask(x,y,z) = 0;
@@ -586,10 +400,9 @@ int do_vecreg(){
 
   ///////////////////////
   // tensor for interpolation
-  volume4D<float> tens(ivol.xsize(),ivol.ysize(),ivol.zsize(),6);  
+  volume4D<float> tens(ivol.xsize(),ivol.ysize(),ivol.zsize(),6);
   copybasicproperties(ivol,tens);
-
-  if(!istensor)
+  if(ivector.set())
     for(int z=0;z<ivol.zsize();z++) 
       for(int y=0;y<ivol.ysize();y++)  
 	for(int x=0;x<ivol.xsize();x++){
@@ -605,24 +418,17 @@ int do_vecreg(){
   }
 
   //time_t _time=time(NULL);
-  if(!iswarp1){
-    if(verbose.value()) cout << "Affine registration" << endl;
-    if(rotform.set() && iswarp2)
-      vecreg_aff(tens,ovol,refvol,Aff1,warpvol2,mask,istensor);
-    else
-      vecreg_aff(tens,ovol,refvol,Aff1,Aff2,mask,istensor);
+  if(matrix.set()){
+    if(verbose.value()) cerr << "Affine registration" << endl;
+    vecreg_aff(tens,ovol,refvol,Aff,mask);
   }
   else{
-    if(verbose.value()) cout << "Nonlinear registration" << endl;
-    if(rotform.set() && !iswarp2)
-      vecreg_nonlin(tens,ovol,refvol,warpvol1,Aff2,mask,istensor);
-    else
-      vecreg_nonlin(tens,ovol,refvol,warpvol1,warpvol2,mask,istensor);
-
+    if(verbose.value()) cerr << "Nonlinear registration" << endl;
+    vecreg_nonlin(tens,ovol,refvol,warpvol,mask);
   }
   //cout<<"elapsed time:"<<time(NULL)-_time<<" sec"<<endl;
 
-  save_volume4D(ovol,outfilename.value());
+  save_volume4D(ovol,ovector.value());
 
   return 0;
 
@@ -637,14 +443,14 @@ int main(int argc,char *argv[]){
   try{
     options.add(verbose);
     options.add(help);
-    options.add(infilename);
-    options.add(outfilename);
+    options.add(ivector);
+    options.add(itensor);
+    options.add(ovector);
     options.add(ref);
-    options.add(transformation);
-    options.add(rotform);
-    options.add(maskfile);
+    options.add(matrix);
+    options.add(warp);
     options.add(interpmethod);
-
+    options.add(maskfile);
 
     options.parse_command_line(argc,argv);
 
@@ -653,7 +459,33 @@ int main(int argc,char *argv[]){
       options.usage();
       exit(EXIT_FAILURE);
     }
-    
+    if( (matrix.set()) && (warp.set()) ){
+      options.usage();
+      cerr << endl
+	   << "Cannot specify both --affine AND --warpfield"
+	   << endl << endl;
+      exit(EXIT_FAILURE);
+    }
+    if( (matrix.unset()) && (warp.unset()) ){
+      options.usage();
+      cerr << endl
+	   << "Please Specify either --affine OR --warpfield"
+	   << endl << endl;
+      exit(EXIT_FAILURE);
+    }
+    if(ivector.unset()){
+      if(itensor.unset()){
+	cerr << endl;
+	cerr << "Please entre either an input vector or a tensor" << endl << endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+    if(ivector.set()){
+      if(itensor.set()){
+	cerr << endl;
+	cerr << "Warning: warping the input vector, and ignoring the tensor" << endl << endl;
+      }
+    }
   }
   catch(X_OptionError& e) {
     options.usage();
