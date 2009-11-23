@@ -12,14 +12,14 @@ href="../fsl.css"><TITLE>FSL</TITLE></HEAD>
  see <a
  href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">here</a>, and for details about crossing fibre modelling in FDT, see Behrens et al, NeuroImage 2007, 34(1):144-55.<br><br>
 
- Briefly, FDT repetitively samples from the distributions on voxel-wise principal diffusion directions, each time computing a streamline through these local samples to generate a <em>probabilistic streamline</em> or a <em>sample</em> from the distribution on the location of the true streamline. By taking many such samples FDT is able to build up the posterior distribution on the streamline location or the <em>connectivity distribution</em>. The local diffusion directions are calculated using <b>bedpostx</b>, and allow modelling multiple fibre orientations per voxel.
+ Briefly, FDT repetitively samples from the distributions on voxel-wise principal diffusion directions, each time computing a streamline through these local samples to generate a <em>probabilistic streamline</em> or a <em>sample</em> from the distribution on the location of the true streamline. By taking many such samples FDT is able to build up the posterior distribution on the streamline location or the <em>connectivity distribution</em>. The local diffusion directions are calculated using <b>bedpostx</b>, which allows modelling multiple fibre orientations per voxel.
 
 <p>After <b>bedpostx</b> has been applied it is possible to run tractography analyses using <b>probtrackx</b>.
 
 <p>To call the FDT GUI, either run <b>Fdt</b>, or run <b>fsl</b> and press the <b>FDT</b> button.  Use the top left drop down menu to select <b>PROBTRACKX</b>. 
 
 <p>
-PROBTRACKX has two main modules:
+PROBTRACKX GUI has two main sections:
 <ul>
 <li><a href="#seeds">Seed Space</a></li>
 <li><a href="#targets">Optional Targets</a></li>
@@ -27,11 +27,12 @@ PROBTRACKX has two main modules:
 
 Also, <b>probtrackx</b> requires the specification of a bedpostX directory. This directory must contain the following images:<br><br>
 
-<li><b>merged_ph&#60;i&#62;samples</b></li>
 <li><b>merged_th&#60;i&#62;samples</b></li>
+<li><b>merged_ph&#60;i&#62;samples</b></li>
+<li><b>merged_f&#60;i&#62;samples</b></li>
 <li><b>nodif_brain_mask</b></li>
 
-<br> <i>Note that users of previous versions of FDT can still use <b>probtrackx</b> on the old bedpost directories.</i><br>
+<br> (<i>Note that users of previous versions of FDT can still use <b>probtrackx</b> on the old bedpost directories. In this case, the above files are called <code>merged_thsamples</code>, etc.)</i><br>
 
 <p>As explained below, results from <b>probtrackx</b> can be binned in any available space -e.g.,
 diffusion space, structural space or standard space.  Note, however,
@@ -39,15 +40,18 @@ that tractography itself ALWAYS takes place in diffusion space - it is
 simply the <em>results</em> of <b>probtrackx</b> that are stored in the
 required space.  If <b>probtrackx</b> results are to be stored in a space
 other than diffusion space then you will need transformations from
-this space back into the space of the diffusion data. The <a href="fdt_reg.html">FDT registration tab</a> creates the following transformations in the <code>xfms</code> subdirectory of the bedpostX directory.
+this space back into the space of the diffusion data. 
+<br><br>
+You can use the <a href="fdt_reg.html">FDT registration tab</a> to create the required transformations, which will all be stored in the <code>xfms</code> subdirectory of the bedpostX directory.<br>
+Probtrackx can take either linear (FLIRT) or nonlinear (FNIRT) transformations. In the latter case, both <i>forward</i> (diffusion to seed space) and <i>backward</i> (seed space to diffusion) transformations are needed. Eg:
 
-<p>for running analyses in structural space:
-<li><b>xfms/str2diff.mat</b></li>
-<li><b>xfms/diff2str.mat</b></li>
+<p>For running analyses in structural space:
+<li>Linear: <b>xfms/str2diff.mat</b></li>
+<li>Nonlinear: <b>xfms/str2diff_warp</b> and <b>xfms/diff2str_warp</b></li>
 
-<p>for running analyses in standard space:
-<li><b>xfms/standard2diff.mat</b></li>
-<li><b>xfms/diff2standard.mat</b></li>
+<p>For running analyses in standard space:
+<li>Linear: <b>xfms/standard2diff.mat</b></li>
+<li>Nonlinear: <b>xfms/standard2diff_warp</b> and <b>xfms/diff2standard_warp</b></li>
 
 <hr>
 <h3>Overview</h3>
@@ -57,7 +61,7 @@ PROBTRACKX involves generating connectivity distributions from user-specified se
 <a name="seeds"></a>
 <h3>Seed specification - prologue</h3>
 
-A common feature for all seed specification modes is the ability to provide the seed in another space than the diffusion space. If <b>seed space is not diffusion</b>, then check the corresponding button. Set the transformation matrix from seed space to diffusion space (e.g., subject1.bedpostX/xfms/str2diff.mat if seed space is structural space or subject1.bedpostX/xfms/standard2diff.mat if seed space is standard space). Note that, in all cases, the smaller the voxel size in your seed space image, the lower will be the resulting connectivity values to these voxels (This is intuitive - the smaller a voxel is, the less chance that the true streamline will pass through it!). This highlights the problem with binning a continuous distribution into meaningless discrete bins. In order for the probability values to be truly meaningful, the dicrete bins chosen should be anatomically meaningful, as is the case when using <a href="#targets">classification targets</a>.
+A common feature for all seed specification modes is the ability to provide the seed in another space than the diffusion space. If <b>seed space is not diffusion</b>, then check the corresponding button. Set the transformation matrix from seed space to diffusion space (e.g., subject1.bedpostX/xfms/str2diff.mat if seed space is structural space or subject1.bedpostX/xfms/standard2diff.mat if seed space is standard space, or the forward and backward warpfields if using nonlinear registration). Note that, in all cases, the smaller the voxel size in your seed space image, the lower will be the resulting connectivity values to these voxels (This is intuitive - the smaller a voxel is, the less chance that the true streamline will pass through it!). This highlights the problem with binning a continuous distribution into meaningless discrete bins. In order for the probability values to be truly meaningful, the discrete bins chosen should be anatomically meaningful, as is the case when using <a href="#targets">classification targets</a>.
 
 
 <p><h4>Single voxel</h4>
@@ -66,7 +70,7 @@ A common feature for all seed specification modes is the ability to provide the 
 Generates a connectivity distribution from a single, user-specified voxel.
 
 <p>GUI Options: <br>
-<b>Seed reference image</b> Use the browse button to locate a reference image  (e.g., subject1.bedpostX/struct.hdr if seed space is structral space or subject1.bedpostX/standard.hdr if seed space is standard space).<br>
+<b>Seed reference image</b> Use the browse button to locate a reference image  (e.g., subject1.bedpostX/struct.nii.gz if seed space is structral space or subject1.bedpostX/standard.nii.gz if seed space is standard space).<br>
 <b>Seeds:</b> Enter the x,y,z co-ordinates of a single seed voxel.  Use the buttons to the right to specify whether the co-ordinates are given in voxels or millimetres. Note if the "seed space is not diffusion" is set, and the seed space reference image is the MNI152 average brain, then mm coordinates will have their origin at the AC.
 
 <p>The output will be a single image <b>in the space of the specified seed</b>.  All brain voxels will have a value (though many of these will be zero) representing the connectivity value between that voxel and the seed voxel (i.e., the number of samples that pass through that voxel).  The example on the right shows the connectivity distribution from a single seed in the internal capsule overlaid on an FA image. Note that when the seed space is a single voxel, the classification targets in the <a href="#targets">Optional Targets</a> tab is turned off. 
@@ -81,14 +85,14 @@ Generates a connectivity distribution from a user-specified region of interest.
 <b>probtrackx.log</b> - a text record of the command that was run.<br>
 <b>fdt.log</b> - a log of the setup of the FDT GUI when the analysis was run. To recover this GUI setup, type <code>Fdt fdt.log</code><br>
 <b>fdt_paths</b> - a 3D image file containing the output connectivity distribution to the seed mask.<br>
-<b>waytotal</b> - a text file containing a single number corresponding to the total number of generated tracts that have not been rejected due to exclusion masks.<br><br>
+<b>waytotal</b> - a text file containing a single number corresponding to the total number of generated tracts that have not been rejected by inclusion/exclusion mask criteria.<br><br>
 
 The output connectivity distribution file will be a single image in the space of the specified seed mask. All brain voxels will have a value (though many of these may be zero) representing the number of samples that pass through that voxel from the seed mask. Connectivity distributions from multiple seed voxels are summed to produce this output.  Therefore the connectivity values will depend on the number of voxels in the seed mask.<br>
 
 
 <p><h4>Multiple masks</h4>
 
-Generates a connectivity distribution between a group of seed masks. This option repeatedly samples tracts from every seed mask in a list, and retains only those tracts that pass through <b>one of the other</b> seed masks. The output is the sum of the connectivity distributions from each of the seed masks. 
+Generates a connectivity distribution between a group of seed masks. This option repeatedly samples tracts from every seed mask in a list, and retains only those tracts that pass through at least <b>one of the other</b> seed masks. The output is the sum of the connectivity distributions from each of the seed masks. 
 
 <p>GUI Options: <br>
 <b>Masks list</b>: Use the add button to locate each seed mask. Seed masks should all be in the same space (e.g., diffusion, structural or standard space). When all masks are loaded you can press the save list button to save the list of masks as a text file.  If you already have a text file list of required seed masks (including their path) then you can load it with the load list button.
@@ -97,16 +101,18 @@ Generates a connectivity distribution between a group of seed masks. This option
 <b>probtrackx.log</b> - a text record of the command that was run.<br>
 <b>fdt.log</b> - a log of the setup of the FDT GUI when the analysis was run.  To recover this GUI setup, type <code>Fdt fdt.log</code><br>
 <b>fdt_paths</b> - a 3D image file containing the output connectivity distribution.<br>
-<br>The output file will be a single image in the space of the specified masks.  All brain voxels will have a value (though many of these may be zero) representing the number of samples that pass through that voxel from either of the seed masks and which also pass through one of the other seedmasks.  Connectivity distributions from multiple seed voxels are summed to produce this output.  Therefore the connectivity values will depend on the number of voxels in the seed masks.
+<b>waytotal</b> - a text file containing one number per seed mask (in the order that has been specified when listing them). These numbers correspond to the total number of generated tracts from each seed mask that have reached at least one of the other masks and have not been rejected by inclusion/exclusion mask criteria.<br>
+
+<br>The output file will be a single image in the space of the specified masks.  All brain voxels will have a value (though many of these may be zero) representing the number of samples that pass through that voxel from either of the seed masks and which also pass through at least one of the other seedmasks.  Connectivity distributions from multiple seed voxels are summed to produce this output.  Therefore the connectivity values will depend on the number of voxels in the seed masks.
 
 <hr>
 
 <a name="targets"></a>
 <h3>Including targets for tractography - rationale</h3>
 
-<b>probtrackx</b> allows to include target masks for any tractography experiment. <br><br>
+<b>probtrackx</b> allows you to include target masks for any tractography experiment. <br><br>
 <b>Very Important:</b> Every target mask <b>must be in the same space as the seed masks</b> (or the <b>reference image</b> in the case of a single voxel mode). <br><br>
-Targets can be waypoint masks, for selecting only tracts passing through particular points in the brain; exclusion masks, for excluding tracts passing through parts of the brain; termination masks, for forcing tracts to stop whenever they reach a certain area; or classification target masks for connectivity-based seed classification. All these targets are optional.
+Targets can be waypoint masks (a.k.a. inclusion masks), for selecting only tracts passing through particular points in the brain; exclusion masks, for excluding tracts passing through parts of the brain; termination masks, for forcing tracts to stop whenever they reach a certain area; or classification target masks for connectivity-based seed classification. All these targets are optional.
 
 <p><h4>Waypoint masks</h4>
 <IMG ALIGN=RIGHT height=200 SRC="fdt_images/fdt_twomasks_tracts.gif" ALT="constraining tracts"> 
@@ -114,12 +120,18 @@ Use inclusion masks in the tractography. Tracts that do not pass through ALL the
 The example on the right shows the outputs from two different analyses which use the same seed mask (orange) but different waypoint masks (red).
 <br><br>
 Use the add and remove buttons to make a list of waypoint masks. 
+<br>
+Note that the criterion to keep a streamline here is to pass through ALL the waypoint masks in the list. If you need an OR condition, i.e. you want to keep streamlines that pass through at least one of the waypoint masks, then first add all these masks with fslmaths and include the result as a single waypoint mask:<br><br>
+
+<code>
+fslmaths mywaypoint1 -add mywaypoint2 -add ... myORwaypoint
+</code>
 
 <p><h4>Exclusion mask</h4>
 If an <b>exclusion mask</b> is to be used then check the box and use the browse button to locate the mask file.  Pathways will be discarded if they enter the exclusion mask.  For example, an exclusion mask of the midline will remove pathways that cross into the other hemisphere. 
 
 <p><h4>Termination mask</h4>
-If a <b>termination mask</b> is to be used then check the box and use the browse button to locate the mask file.  Pathways will be terminated as soon as they enter the termination mask.  The difference between an exclusion and a termination mask is that in the later case, the tract is stopped at the target mask, but included in the calculation of the connectivity distribution, while in the former case, the tract is completely discarded. (Note that paths are always terminated when they reach the brain surface as defined by nodif_brain_mask)
+If a <b>termination mask</b> is to be used then check the box and use the browse button to locate the mask file.  Pathways will be terminated as soon as they enter the termination mask.  The difference between an exclusion and a termination mask is that in the latter case, the tract is stopped at the target mask, but included in the calculation of the connectivity distribution, while in the former case, the tract is completely discarded. (Note that paths are always terminated when they reach the brain surface as defined by nodif_brain_mask)
 
 <p><h4>Classification targets</h4>
 <IMG ALIGN=RIGHT height=150 SRC="fdt_images/fdt_seeds2targets_quant_eg.gif" ALT="connectivity-based classification of thalamus">
@@ -133,7 +145,8 @@ The output directory will contain a single volume for each target mask, named <b
 <IMG ALIGN=RIGHT height=150 SRC="fdt_images/fdt_seeds2targets_thal.gif" ALT="connectivity-based classification of thalamus">
 There are command line utilities that can be run on these outputs:
 <ul><li><a href="fdt_thresh.html">proj_thresh</a> - for thresholding some outputs of <b>probtrackx</b></li>
-<li><A href="fdt_biggest.html">find_the_bigggest</a> - for performing hard segmentation on the outputs of connectivity-based thersholding in <b>probtrackx</b>, see example on the right</li></ul>
+<li><A href="fdt_biggest.html">find_the_bigggest</a> - for performing hard segmentation on the outputs of <b>probtrackx</b>, see example on the right</li>
+
 
 <hr>
 
@@ -161,4 +174,4 @@ streamlines. More accurate but slower.
 
 <p><b>Use anisotropy to constrain tracking</b>:
 Use this option if you want the fractional anisotropic volumes (stored in merged_f&#60;i&#62;samples) to influence the tractography. The tracts stop if the anisotropy is lower than a random variable between 0 (low anisotropy) and 1 (high anisotropy).
-<p><b>Use distance correction</b>: This option corrects for the fact that connectivity distribution drops with distance from the seed mask. If this option is checked, the connectivity distribution is the mean length of the pathways that cross each voxel.
+<p><b>Use distance correction</b>: This option corrects for the fact that connectivity distribution drops with distance from the seed mask. If this option is checked, the connectivity distribution is the expected length of the pathways that cross each voxel times the number of samples that cross it.
