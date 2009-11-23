@@ -195,6 +195,7 @@ namespace TRACT{
     m_y_s_init=0;
     m_z_s_init=0;
 
+    m_inmask3.reserve(opts.nsteps.value());
 
   }
   
@@ -631,7 +632,6 @@ namespace TRACT{
   void Counter::initialise_matrix3(){
     volume<int>& m_mask3           = m_stline.get_mask3();
     volume<int>& m_beenhere3       = m_stline.get_beenhere3();
-    vector<ColumnVector> m_inmask3 = m_stline.get_inmask3();
 
     read_volume(m_mask3,opts.maskmatrix3.value());
     m_beenhere3.reinitialize(m_mask3.xsize(),m_mask3.ysize(),m_mask3.zsize());
@@ -702,7 +702,10 @@ namespace TRACT{
       reset_beenhere2(forwardflag,backwardflag);
     }
     if(opts.maskmatrixout.value()){
-      //Do whatever it it you have to do!!
+      //Do whatever it is you have to do!!
+    }
+    if(opts.matrix3out.value()){
+      reset_beenhere3();
     }
   }
   
@@ -857,9 +860,8 @@ namespace TRACT{
   }
 
   void Counter::update_matrix3(){
-    volume<int>          m_beenhere3 = m_stline.get_beenhere3();
-    vector<ColumnVector> m_inmask3   = m_stline.get_inmask3();
-    if(m_inmask3.size()==0)return;
+    vector<ColumnVector>& m_inmask3   = m_stline.get_inmask3();
+    if(m_inmask3.size()<2)return;
 
     for(unsigned int i=0;i<m_inmask3.size();i++){
       for(unsigned int j=i+1;j<m_inmask3.size();j++){
@@ -869,14 +871,20 @@ namespace TRACT{
 	m_ConMat3(row2,row1,0) += 1;
       }
     }
+  }  
+  void Counter::reset_beenhere3(){
+    volume<int>&          m_beenhere3 = m_stline.get_beenhere3();
+    vector<ColumnVector>& m_inmask3   = m_stline.get_inmask3();
 
     // cleanup
-    for(unsigned int i=0;i<m_inmask3.size();i++){
-      m_beenhere3((int)round(float(m_inmask3[i](1))),
-		  (int)round(float(m_inmask3[i](2))),
-		  (int)round(float(m_inmask3[i](3))))=0;
+    if(m_inmask3.size()>0){
+      for(unsigned int i=0;i<m_inmask3.size();i++){
+	m_beenhere3((int)round(float(m_inmask3[i](1))),
+		    (int)round(float(m_inmask3[i](2))),
+		    (int)round(float(m_inmask3[i](3))))=0;
+      }
+      m_inmask3.clear();
     }
-    m_inmask3.clear();
   }  
   
   void Counter::reset_beenhere2(const bool& forwardflag,const bool& backwardflag){
@@ -1128,14 +1136,15 @@ void Counter::save_matrix3(){
 	
 	backwardflag=true;
 	m_counter.count_streamline();
-	if(opts.matrix3out.value()){
-	  m_counter.update_matrix3();
-	}
 
 	if(!counted)nlines++; // the other half has is counted here
 
       }
-     
+
+      if(opts.matrix3out.value()){
+	m_counter.update_matrix3();
+      }
+
       m_counter.clear_streamline(forwardflag,backwardflag); 
     }
 
