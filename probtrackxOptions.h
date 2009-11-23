@@ -39,14 +39,14 @@ class probtrackxOptions {
   Option<bool> pathdist;
   Option<bool> s2tout;
   FmribOption<bool> matrix1out;
-  Option<bool> matrix2out;
+  FmribOption<bool> matrix2out;
   FmribOption<bool> matrix3out;
   FmribOption<string> maskmatrix3;
   FmribOption<bool> maskmatrixout;
   Option<string> outfile;
   Option<string> rubbishfile;
   Option<string> stopfile;
-  Option<string> prefdirfile;
+  FmribOption<string> prefdirfile;
   Option<string> seeds_to_dti;
   Option<string> dti_to_seeds;
   FmribOption<string> skipmask;
@@ -55,7 +55,8 @@ class probtrackxOptions {
   Option<string> waypoints;
   Option<bool> network;
   Option<string> meshfile;
-  Option<string> lrmask;
+  FmribOption<string> meshspace;
+  FmribOption<string> lrmask;
   Option<string> logdir; 
   Option<bool> forcedir;
   Option<int> nparticles;
@@ -71,7 +72,7 @@ class probtrackxOptions {
   Option<bool> modeuler;
   Option<int> rseed;
   Option<bool> seedcountastext;
-  Option<bool> splitmatrix2;
+  FmribOption<bool> splitmatrix2;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -99,13 +100,13 @@ class probtrackxOptions {
 
  inline probtrackxOptions::probtrackxOptions() :
   verbose(string("-V,--verbose"), 0, 
-	  string("verbose level, [0-2]"), 
+	  string("Verbose level, [0-2]"), 
 	  false, requires_argument),
    help(string("-h,--help"), false,
-	string("display this message"),
+	string("Display this message"),
 	false, no_argument),
    basename(string("-s,--samples"), string("merged"),
-	       string("basename for samples files"),
+	       string("Basename for samples files"),
 	       true, requires_argument),  
    maskfile(string("-m,--mask"), string("mask"),
 	    string("Bet binary mask file in diffusion space"),
@@ -114,49 +115,49 @@ class probtrackxOptions {
 	    string("Seed volume, or voxel, or ascii file with multiple volumes, or freesurfer label file"),
 	    true, requires_argument),
    mode(string("--mode"), string(""),
-	string("use --mode=simple for single seed voxel"),
+	string("\tUse --mode=simple for single seed voxel"),
 	    false, requires_argument),
   targetfile(string("--targetmasks"), string("cmasks"),
 	    string("File containing a list of target masks - required for seeds_to_targets classification"),
 	    false, requires_argument),
   simpleout(string("--opd"), false,
-	    string("output path distribution"),
+	    string("\tOutput path distribution"),
 	    false, no_argument), 
   pathdist(string("--pd"), false,
-	   string("Correct path distribution for the length of the pathways"),
+	   string("\tCorrect path distribution for the length of the pathways"),
 	   false, no_argument), 
   s2tout(string("--os2t"), false,
-	 string("output seeds to targets"),
+	 string("\tOutput seeds to targets"),
 	 false, no_argument),
   matrix1out(string("--omatrix1"), false,
-	  string("output matrix1"),
+	  string("Output matrix1"),
 	  false, no_argument), 
   matrix2out(string("--omatrix2"), false,
-	  string("output matrix2"),
+	  string("Output matrix2"),
 	  false, no_argument), 
   matrix3out(string("--omatrix3"), false,
-	  string("output matrix3 (NxN connectivity matrix)"),
+	  string("Output matrix3 (NxN connectivity matrix)"),
 	  false, no_argument), 
   maskmatrix3(string("--mask3"), "",
-	  string("mask used for NxN connectivity matrix"),
+	  string("Mask used for NxN connectivity matrix"),
 	  false, requires_argument), 
   maskmatrixout(string("--omaskmatrix"), false,
-		string("output maskmatrix"),
+		string("Output maskmatrix"),
 		false, no_argument), 
    outfile(string("-o,--out"), string("fdt_paths"),
 	   string("Output file (default='fdt_paths')"),
 	   false, requires_argument),
    rubbishfile(string("--avoid"), string(""),
-	       string("Reject pathways passing through locations given by this mask"),
+	       string("\tReject pathways passing through locations given by this mask"),
 	       false, requires_argument),
    stopfile(string("--stop"), string(""),
-	       string("Stop tracking at locations given by this mask file"),
+	       string("\tStop tracking at locations given by this mask file"),
 	       false, requires_argument),
    prefdirfile(string("--prefdir"), string(""),
-	       string("prefered orientation preset in a 4D mask"),
+	       string("Prefered orientation preset in a 4D mask"),
 	       false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
-		string("Transform taking seed space to DTI space (either FLIRT matrix or FNIRT warpfield) - default is identity"),
+		string("\tTransform taking seed space to DTI space (either FLIRT matrix or FNIRT warpfield) - default is identity"),
 		false, requires_argument),
    dti_to_seeds(string("--invxfm"), string(""),
 		string("Transform taking DTI space to seed space (compulsory when using a warpfield for seeds_to_dti)"),
@@ -168,7 +169,7 @@ class probtrackxOptions {
 	 string("Reference vol to define seed space in simple mode - diffusion space assumed if absent"),
 	 false, requires_argument),
   mask2(string("--mask2"), string(""),
-	 string("second mask in twomask_symm mode."),
+	 string("\tSecond mask in twomask_symm mode."),
        false, requires_argument),
  waypoints(string("--waypoints"), string(""),
 	 string("Waypoint mask or ascii list of waypoint masks - only keep paths going through ALL the masks"),
@@ -177,13 +178,16 @@ class probtrackxOptions {
 	 string("Activate network mode - only keep paths going through at least one seed mask (required if multiple seed masks)"),
        false, no_argument),
    meshfile(string("--mesh"), string(""),
-	 string("Freesurfer-type surface descriptor (in ascii format)"),
+	 string("\tFreesurfer-type surface descriptor (in ascii format)"),
+       false, requires_argument),
+   meshspace(string("--meshspace"), string("freesurfer"),
+	 string("Mesh reference space - either 'freesurfer' (default) or 'caret'"),
        false, requires_argument),
   lrmask(string("--lrmask"), string(""),
-	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode"),
+	 string("Low resolution binary brain mask for storing connectivity distribution in matrix2 mode"),
        false, requires_argument),
   logdir(string("--dir"), string("logdir"),
-	    string("Directory to put the final volumes in - code makes this directory - default='logdir'"),
+	    string("\tDirectory to put the final volumes in - code makes this directory - default='logdir'"),
 	    false, requires_argument),
   forcedir(string("--forcedir"), false,
 	 string("Use the actual directory name given - i.e. don't add + to make a new directory"),
@@ -201,13 +205,13 @@ class probtrackxOptions {
 	 string("Curvature threshold - default=0.2"), 
 	 false, requires_argument),
   fibthresh(string("--fibthresh"), 0.01, 
-	    string("volume fraction before subsidary fibre orientations are considered - default=0.01"), 
+	    string("Volume fraction before subsidary fibre orientations are considered - default=0.01"), 
 	 false, requires_argument),
    steplength(string("--steplength"), 0.5, 
-	 string("steplength in mm - default=0.5"), 
+	 string("Steplength in mm - default=0.5"), 
 	 false, requires_argument),
    loopcheck(string("-l,--loopcheck"), false, 
-	 string("perform loopchecks on paths - slower, but allows lower curvature threshold"), 
+	 string("Perform loopchecks on paths - slower, but allows lower curvature threshold"), 
 	 false, no_argument),
    usef(string("-f,--usef"), false, 
 	 string("Use anisotropy to constrain tracking"), 
@@ -216,19 +220,19 @@ class probtrackxOptions {
 	 string("Default 0. Set to 1 to randomly sample initial fibres (with f > fibthresh). \n                        Set to 2 to sample in proportion fibres (with f>fibthresh) to f. \n                        Set to 3 to sample ALL populations at random (even if f<fibthresh)"), 
 	 false, requires_argument),
   fibst(string("--fibst"),1, 
-	 string("Force a starting fibre for tracking - default=1, i.e. first fibre orientation. Only works if randfib==0"), 
+	 string("\tForce a starting fibre for tracking - default=1, i.e. first fibre orientation. Only works if randfib==0"), 
 	 false, requires_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
   rseed(string("--rseed"), 12345,
-	string("Random seed"),
+	string("\tRandom seed"),
 	false, requires_argument), 
-  seedcountastext(string("--seedcountastext"), false,
+  seedcountastext(string("--s2tastext"), false,
 		  string("Output seed-to-target counts as a text file (useful when seeding from a mesh)"),
 		  false, no_argument), 
   splitmatrix2(string("--splitmatrix2"), false,
-		  string("split matrix 2 along seed dimension (in case it is too large)"),
+		  string("Split matrix 2 along seed dimension (in case it is too large)"),
 		  false, no_argument), 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
@@ -247,6 +251,7 @@ class probtrackxOptions {
        options.add(waypoints);
        options.add(network);
        options.add(meshfile);
+       options.add(meshspace);
        options.add(lrmask);
        options.add(seedref);
        options.add(logdir); 
