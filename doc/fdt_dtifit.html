@@ -35,7 +35,7 @@ the brain.</li>
 outputs of <b>dtifit</b>.  If the directory input option is used then the basename
 will be dti</li>
 
-<li><b>Gradient directions</b> (bvecs): A text file containing a list
+<li><b>Gradient directions</b> (bvecs): An ASCII text file containing a list
 of gradient directions applied during diffusion weighted volumes.  The
 order of entries in this file must match the order of volumes in the
 input data series. 
@@ -50,7 +50,7 @@ Vectors are normalised to unit length within the <b>dtifit</b> code. For volumes
 diffusion weighting, the entry should still be present, although the
 direction of the vector does not matter!  </li>
 
-<li><b>b values</b> (bvals): A text file containing a list of b values applied during
+<li><b>b values</b> (bvals): An ASCII text file containing a list of b values applied during
 each volume acquisition. The order of entries in this file must match the
 order of volumes in the input data and entries in the gradient directions text
 file.
@@ -71,6 +71,7 @@ b_1 b_2 b_3 ... b_n<br></pre>
 <li><b>&lt;basename&gt;_L3</b> - 3rd eigenvalue</li>
 <li><b>&lt;basename&gt;_MD</b> - mean diffusivity</li>
 <li><b>&lt;basename&gt;_FA</b> - fractional anisotropy</li>
+<li><b>&lt;basename&gt;_MO</b> - mode of the anisotropy (oblate ~ -1; isotropic ~ 0; prolate ~ 1)</li>
 <li><b>&lt;basename&gt;_S0</b> - raw T2 signal with no diffusion weighting</li>
 </ul>
 <TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
@@ -123,7 +124,10 @@ Compulsory arguments (You MUST set one or more of):
 Optional arguments (You may optionally specify one or more of):
 	-V,--verbose	switch on diagnostic messages
 	-h,--help	display this message
+	--cni	        Input counfound regressors
+	--sse	        Output sum of squared errors
 	--littlebit	Only process small area of brain
+	--save_tensor	Save the elements of the tensor
 	-z,--zmin	min z
 	-Z,--zmax	max z
 	-y,--ymin	min y
