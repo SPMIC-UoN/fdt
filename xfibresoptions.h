@@ -36,7 +36,7 @@ class xfibresOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<int> nfibres;
-  Option<int> modelnum;
+  FmribOption<int> modelnum;
   Option<float> fudge;
   Option<int> njumps;
   Option<int> nburn;

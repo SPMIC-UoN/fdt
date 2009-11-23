@@ -449,7 +449,7 @@ void PVM_single::fit(){
   ColumnVector start(nparams);
   start(1) = dti.get_s0();
   start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
-  start(3) = f2x(dti.get_fa()); // first pvf = FA 
+  start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
   start(4) = _th;
   start(5) = _ph;
   float sumf=x2f(start(2));
@@ -725,34 +725,22 @@ void PVM_multi::fit(){
   DTI dti(Y,bvecs,bvals);
   dti.linfit();
 
-  // set starting parameters for nonlinear fitting
-  float _th,_ph;
-  cart2sph(dti.get_v1(),_th,_ph);
+  // initialise with simple pvm
+  PVM_single pvm1(Y,bvecs,bvals,nfib);
+  pvm1.fit();
 
   float _a,_b;
   _a = 1; // start with d=d_std
-  _b = dti.get_md()>0?dti.get_md()*2:0.001;
+  _b = pvm1.get_d();
 
   ColumnVector start(nparams);
-  start(1) = dti.get_s0();
+  start(1) = pvm1.get_s0();
   start(2) = _a;
   start(3) = _b;
-  start(4) = f2x(dti.get_fa());                   // first pvf = FA 
-  start(5) = _th;
-  start(6) = _ph;
-  float sumf=x2f(start(2));
-  float tmpsumf=sumf;
-  for(int ii=2,i=7;ii<=nfib;ii++,i+=3){
-    float denom=2;
-    do{
-      start(i) = f2x(x2f(start(i-3))/denom);
-      denom *= 2;
-      tmpsumf = sumf + x2f(start(i));
-    }while(tmpsumf>=1);
-    sumf += x2f(start(i));
-    cart2sph(dti.get_v(ii),_th,_ph);
-    start(i+1) = _th;
-    start(i+2) = _ph;
+  for(int i=1,ii=4;i<=nfib;i++,ii+=3){
+    start(ii) = pvm1.get_f(i);
+    start(ii+1) = pvm1.get_th(i);
+    start(ii+2) = pvm1.get_ph(i);
   }
   
   // do the fit
