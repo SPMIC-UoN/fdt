@@ -227,7 +227,8 @@ namespace TRACT{
     void reset_beenhere2(const bool& forwardflag,const bool& backwardflag);
 
     void update_matrix3();
-  
+    void reset_beenhere3();
+
     void update_maskmatrix(){} //not written yet
     
     void save_total(const int& keeptotal);
