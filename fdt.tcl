@@ -767,7 +767,9 @@ proc fdt:apply { w dialog } {
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
 		puts $log "set probtrack($entry) $probtrack($entry)"
 	    }
+		    set singleFileName $probtrack(output)
             switch $probtrack(mode) {
+
 	       simple { 
 		    set singleFileName [ file tail $probtrack(output) ]
 		    set fd [ open "${filebase}_coordinates.txt" w ]
@@ -793,7 +795,7 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-		   set flags "--mode=simple --seedref=$probtrack(reference) -o ${probtrack(output)}/${singleFileName} -x ${filebase}_coordinates.txt $flags"
+		   set flags "--mode=simple --seedref=$probtrack(reference) -o ${singleFileName} -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
 		   if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
