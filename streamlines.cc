@@ -1116,6 +1116,17 @@ void Counter::save_matrix3(){
 	fibst = (int)round(tmp);
       }
       
+      // random sampling within a seed voxel
+      float newx=x,newy=y,newz=z;
+      if(opts.sampvox.value()){
+	float tmp2=rand()/float(RAND_MAX)-0.5;
+	newx+=tmp2;
+	tmp2=rand()/float(RAND_MAX)-0.5;
+	newy+=tmp2;
+	tmp2=rand()/float(RAND_MAX)-0.5;
+	newz+=tmp2;
+      }
+
       if(opts.verbose.value()>1)
 	logger.setLogFile("particle"+num2str(p));
    
@@ -1123,7 +1134,7 @@ void Counter::save_matrix3(){
       bool forwardflag=false,backwardflag=false;
       bool counted=false;
       if(!onewayonly || opts.matrix3out.value()){//always go both ways in matrix3 mode
-	if(m_stline.streamline(x,y,z,m_seeddims,fibst,rotdir)){ //returns whether to count the streamline or not
+	if(m_stline.streamline(newx,newy,newz,m_seeddims,fibst,rotdir)){ //returns whether to count the streamline or not
 	  forwardflag=true;
 	  m_counter.store_path();
 	  m_counter.count_streamline();
@@ -1132,7 +1143,7 @@ void Counter::save_matrix3(){
 	m_stline.reverse();
       }
     
-      if(m_stline.streamline(x,y,z,m_seeddims,fibst,rotdir)){
+      if(m_stline.streamline(newx,newy,newz,m_seeddims,fibst,rotdir)){
 	
 	backwardflag=true;
 	m_counter.count_streamline();
