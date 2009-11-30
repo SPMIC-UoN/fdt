@@ -28,16 +28,17 @@ The main FDT programmes, which are accesible from the GUI are:
 href="fdt_reg.html">registration</a> option that registers images
 using <a href="http://www.fmrib.ox.ac.uk/fsl/flirt/index.html" target="_top">FLIRT</a>.
 
-<p>Additional FDT programmes, that can be run only from the command line, are:
-<ul><li><a href="fdt_thresh.html">proj_thresh</a> - for thresholding some outputs
+<p>Additional FDT <a href="fdt_utils.html">utilities</a>, that can be run only from the command line, are:
+<ul><li><a href="fdt_utils.html#thresh">proj_thresh</a> - for thresholding some outputs
 of probtrack</li>
-<li><A href="fdt_biggest.html">find_the_biggest</a> - for performing hard
+<li><A href="fdt_utils.html#biggest">find_the_biggest</a> - for performing hard
 segmentation on the outputs of connectivity-based thresholding in probtrack</li>
-<li><A href="fdt_vecreg.html">vecreg</a> - for registering vector data</li></ul>
+<li><A href="fdt_utils.html#vecreg">vecreg</a> - for registering vector data</li></ul>
 
 <p>The probabilistic tractography tools within FDT are very flexible and allow
 the user to generate connectivity distributions from single or multiple
-voxels; to limit these distributions based on anatomical criteria and to
+voxels, or from a <a href="http://surfer.nmr.mgh.harvard.edu">FreeSurfer</a> cortical surface; 
+to limit these distributions based on anatomical criteria and to
 perform segmentation based on the probability of connection to user-defined
 target regions.
 
@@ -46,4 +47,5 @@ or Windows), or run <b>fsl</b> and press the <b>FDT</b> button.
 
 <p>For an overview of the local diffusion modelling and tractography used
 within FDT see the <a href="http://www.fmrib.ox.ac.uk/analysis/techrep/tr03tb1/tr03tb1/">appendix</a>.
+
 
