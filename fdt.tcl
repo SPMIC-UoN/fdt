@@ -80,11 +80,6 @@ proc fdt:dialog { w tclstartupfile } {
     checkbutton $w.registration.struct.yn -variable registration(struct_yn) -command "registration_packframe $w"
     label       $w.registration.struct.lb -text "Main structural image"
     TitleFrame  $w.registration.struct.tf -text "Main structural image" 
-    frame       $w.registration.nonlin
-    checkbutton $w.registration.nonlin.yn -variable registration(nonlin_yn) -text "Non-betted structural" -command "registration_packframe $w"
-    FileEntry   $w.registration.nonlin.file -textvariable registration(nonlin_image) -filetypes IMAGE 
-
-
     optionMenu2 $w.registration.struct.tf.search registration(struct_search) 0 "No search" 90 "Normal search" 180 "Full search"
     optionMenu2 $w.registration.struct.tf.dof registration(struct_dof)   6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"  
     optionMenu2 $w.registration.struct.tf.costfn registration(struct_costfn) corratio "Correlation ratio" mutualinfo "Mutual information"
@@ -111,18 +106,14 @@ proc fdt:dialog { w tclstartupfile } {
     set registration(standard_search) 90
     set registration(standard_image) [ file join ${FSLDIR} data standard MNI152_T1_2mm_brain ]
 
-    pack $w.registration.directory $w.registration.struct $w.registration.nonlin $w.registration.standard -side top -padx 3 -pady 3 -anchor w
-
-
+    pack $w.registration.directory $w.registration.struct $w.registration.standard -side top -padx 3 -pady 3 -anchor w
 
     proc registration_packframe { w } {
        global registration
-       pack forget $w.registration.struct.yn $w.registration.struct.tf $w.registration.struct.yn $w.registration.struct.lb $w.registration.nonlin.yn $w.registration.nonlin.file
+       pack forget $w.registration.struct.yn $w.registration.struct.tf $w.registration.struct.yn $w.registration.struct.lb
        pack forget $w.registration.standard.yn $w.registration.standard.tf $w.registration.standard.yn $w.registration.standard.lb
-       if { $registration(struct_yn) } { pack $w.registration.struct.yn $w.registration.struct.tf -side left -anchor w } else { pack $w.registration.struct.yn  $w.registration.struct.lb -side left -anchor w}
-       if { $registration(struct_yn) } { pack $w.registration.nonlin.yn -side left }
-       if { $registration(struct_yn) && $registration(nonlin_yn) } { pack $w.registration.nonlin.file -side left }
-       if { $registration(standard_yn) } { pack $w.registration.standard.yn $w.registration.standard.tf -side left -anchor w } else { pack $w.registration.standard.yn  $w.registration.standard.lb -side left -anchor w}
+       if {$registration(struct_yn)} { pack $w.registration.struct.yn $w.registration.struct.tf -side left -anchor w } else { pack $w.registration.struct.yn  $w.registration.struct.lb -side left -anchor w}
+       if {$registration(standard_yn)} { pack $w.registration.standard.yn $w.registration.standard.tf -side left -anchor w } else { pack $w.registration.standard.yn  $w.registration.standard.lb -side left -anchor w}
     }
     
     registration_packframe $w
@@ -138,12 +129,10 @@ proc fdt:dialog { w tclstartupfile } {
 
     FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -filetypes IMAGE -command "ecc_update_files $w"
 
-    set eddy(refnum) 0
-    LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range { 0 100 1 } -width 6 
-    checkbutton $w.ecc.reorient -text "reorient bvecs" -variable eddy(reorientbVecs)  -command " fdt:eddycorrect_mode $w "
-    FileEntry $w.ecc.bvecdata -textvariable eddy(bVecData) 	-label "bvecs file:" -title  "Choose bvecs name" -filetypes IMAGE 
+   set eddy(refnum) 0
+   LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range {0 100 1 } -width 6 
 
-    pack $w.ecc.input $w.ecc.output $w.ecc.refnum $w.ecc.reorient -side top -padx 3 -pady 3 -expand yes -anchor w
+    pack $w.ecc.input $w.ecc.output $w.ecc.refnum -side top -padx 3 -pady 3 -expand yes -anchor w
 
    #------- DTIFit --------
 
@@ -470,14 +459,6 @@ proc fdt:dialog { w tclstartupfile } {
     }
 }
 
-proc fdt:eddycorrect_mode { w } {
-    global eddy 
-    pack forget $w.ecc.bvecdata
-    if { $eddy(reorientbVecs) } { 
-	pack $w.ecc.bvecdata -side top -padx 3 -pady 3 -expand yes -anchor w
-    }
-}
-
 proc fdt:probtrack_mode { w } {
     global probtrack FSLDIR
 
@@ -487,13 +468,12 @@ proc fdt:probtrack_mode { w } {
     if { $probtrack(useNonlinear) && $probtrack(usereference_yn) } { pack $w.data.seed.ssf.invxfm -side bottom -anchor w -pady 2 }
     switch -- $probtrack(mode) {
   	simple {
-	    pack $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
-	    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
-	    $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
-	    $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
+                     pack $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
+	             if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
+                     $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
+                     $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
-
             pack forget $w.data.seed.ssf.ssd
 	    if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
 		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -504,12 +484,12 @@ proc fdt:probtrack_mode { w } {
 
   	}
 	network {
-	    pack  $w.data.seed.target -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack  $w.data.seed.target -in $w.data.seed.f -side bottom -anchor w -pady 2
 	}
     }
     if { $probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } 
     if { $probtrack(classify_yn) } { pack $w.data.targets.cf.tf }
-    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.nonlinear $w.data.seed.ssf.xfm   -side top -anchor w -pady 2 }
+    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.nonlinear $w.data.seed.ssf.xfm -side top -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
@@ -601,6 +581,7 @@ proc fdt_monitor { w cmd } {
 }
 
 proc fdt:apply { w dialog } {
+
     global probtrack BINPATH FSLDIR FSLPARALLEL
 
     switch -- $probtrack(tool) {
@@ -610,14 +591,9 @@ proc fdt:apply { w dialog } {
 	    set errorStr ""
 	    if { $eddy(input) == "" } { set errorStr "You need to specify the input image! " }
 	    if { $eddy(output) == "" } { set errorStr "$errorStr You need to specify an output image!" }
-	    if { $eddy(reorientbVecs) } { set errorStr "$errorStr You need to specify a bvecs image!" }
 	    if { $errorStr != "" } {
 		MxPause $errorStr
 		return
-	    }
-	    set reorientCommand ""
-	    if { $eddy(reorientbVecs) } { 
-		set reorientCommand "; rotate_bvecs $eddy(bVecData) $eddy(output).ecclog"
 	    }
 
 	    #	    check output!=input
@@ -626,7 +602,7 @@ proc fdt:apply { w dialog } {
 		set canwrite [ YesNoWidget "Output and input images have the same name. Overwrite input?" Yes No ]
 	    }
 	    if { $canwrite } {
-		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum) $reorientCommand"
+		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum)"
 	    }
 	}
 	dtifit {
@@ -744,11 +720,12 @@ proc fdt:apply { w dialog } {
 		set flags "$flags --xfm=$probtrack(xfm)"
       		puts $log "set probtrack(usereference_yn) $probtrack(usereference_yn)"
       		puts $log "set probtrack(xfm) $probtrack(xfm)"
-		if { $probtrack(useNonlinear) } { 
-		    set flags "$flags --invxfm=$probtrack(invxfm)" 
-		    puts $log "set $probtrack(useNonlinear) $probtrack(useNonlinear)"
-		    puts $log "set probtrack(invxfm) $probtrack(invxfm)"
-		}
+	    }
+
+	    if { $probtrack(useNonlinear) } { 
+ 	                     set flags "$flags --invxfm=$probtrack(invxfm)" 
+ 	                     puts $log "set $probtrack(useNonlinear) $probtrack(useNonlinear)"
+ 	                     puts $log "set probtrack(invxfm) $probtrack(invxfm)"
 	    }
 
 	    if { $probtrack(exclude_yn) == 1 } {
@@ -767,9 +744,8 @@ proc fdt:apply { w dialog } {
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
 		puts $log "set probtrack($entry) $probtrack($entry)"
 	    }
-		    set singleFileName $probtrack(output)
+	    set singleFileName $probtrack(output)
             switch $probtrack(mode) {
-
 	       simple { 
 		    set singleFileName [ file tail $probtrack(output) ]
 		    set fd [ open "${filebase}_coordinates.txt" w ]
@@ -884,8 +860,7 @@ proc fdt:apply { w dialog } {
 	    set errorStr ""
 	    if { $registration(directory) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $registration(struct_yn) && $registration(struct_image) == ""  } { set errorStr "$errorStr You must specify the structural image!" }
-	    if { $registration(struct_yn) && $registration(nonlin_yn) && $registration(nonlin_image) == ""  } { set errorStr "$errorStr You must specify the non-betted structural image!" }
-	    if { $registration(standard_yn) &&  == ""  } { set errorStr "$errorStr You must specify the standard image!" }
+	    if { $registration(standard_yn) && $registration(standard_image) == ""  } { set errorStr "$errorStr You must specify the standard image!" }
 	    if { $errorStr != "" } {
 		MxPause $errorStr
 		return
@@ -902,13 +877,9 @@ proc fdt:apply { w dialog } {
 	    set diff2str   [ file join $registration(directory) xfms diff2str.mat ]
 	    set str2diff   [ file join $registration(directory) xfms str2diff.mat ]
 	    set str2stand  [ file join $registration(directory) xfms str2standard.mat ]
-	    set str2stand_warp  [ file join $registration(directory) xfms str2standard_warp ]
 	    set stand2str  [ file join $registration(directory) xfms standard2str.mat ]
-	    set stand2str_warp  [ file join $registration(directory) xfms standard2str_warp ]
 	    set diff2stand [ file join $registration(directory) xfms diff2standard.mat ]
-	    set diff2stand_warp [ file join $registration(directory) xfms diff2standard_warp ]
 	    set stand2diff [ file join $registration(directory) xfms standard2diff.mat ]
-	    set stand2diff_warp [ file join $registration(directory) xfms standard2diff_warp ]
 	    set diff       [ file join $registration(directory) nodif_brain ]
 	    if { $registration(struct_yn) } {
 		set searchrx  "-searchrx -$registration(struct_search) $registration(struct_search)"
@@ -926,12 +897,6 @@ proc fdt:apply { w dialog } {
 		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2str -inverse $str2stand"
 		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
 		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2diff -inverse $diff2stand"
-		    if { $registration(nonlin_yn) } {
-			fdt_monitor $w "${FSLDIR}/bin/fnirt --in=$registration(nonlin_image) --aff=$str2strand --cout=$str2stand_warp --config=T1_2_MNI152_2mm"
-			fdt_monitor $w "${FSLDIR}/bin/invwarp -w $str2stand_warp -o standard2str_warp -r ${diff}_mask"
-			fdt_monitor $w "${FSLDIR}/bin/convertwarp -o $diff2stand_warp -r ${FSLDIR}/data/standard/MNI152_T1_2mm -m $diff2str -w $str2stand_warp"
-			fdt_monitor $w "${FSLDIR}/bin/convertwarp -o $stand2diff_warp -r ${diff}_mask -w $stand2str_warp --postmat=$str2diff"
-		    }
 		}
 	    } elseif { $registration(standard_yn) } {
 		set searchrx  "-searchrx -$registration(standard_search) $registration(standard_search)"
