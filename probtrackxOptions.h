@@ -64,6 +64,7 @@ class probtrackxOptions {
   Option<float> distthresh;
   Option<float> c_thr;
   FmribOption<float> fibthresh;
+  Option<bool> sampvox;
   Option<float> steplength;
   Option<bool> loopcheck;
   Option<bool> usef;
@@ -207,6 +208,9 @@ class probtrackxOptions {
   fibthresh(string("--fibthresh"), 0.01, 
 	    string("Volume fraction before subsidary fibre orientations are considered - default=0.01"), 
 	 false, requires_argument),
+  sampvox(string("--sampvox"), false, 
+	    string("Sample random points within seed voxels"), 
+	 false, no_argument),
    steplength(string("--steplength"), 0.5, 
 	 string("Steplength in mm - default=0.5"), 
 	 false, requires_argument),
@@ -275,6 +279,7 @@ class probtrackxOptions {
        options.add(distthresh);
        options.add(c_thr);
        options.add(fibthresh);
+       options.add(sampvox);
        options.add(steplength);
        options.add(loopcheck);
        options.add(usef);
