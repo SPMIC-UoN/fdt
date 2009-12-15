@@ -885,7 +885,7 @@ proc fdt:apply { w dialog } {
 	    if { $registration(directory) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $registration(struct_yn) && $registration(struct_image) == ""  } { set errorStr "$errorStr You must specify the structural image!" }
 	    if { $registration(struct_yn) && $registration(nonlin_yn) && $registration(nonlin_image) == ""  } { set errorStr "$errorStr You must specify the non-betted structural image!" }
-	    if { $registration(standard_yn) &&  == ""  } { set errorStr "$errorStr You must specify the standard image!" }
+	    if { $registration(standard_yn) && $registration(standard_image) == ""  } { set errorStr "$errorStr You must specify the standard image!" }
 	    if { $errorStr != "" } {
 		MxPause $errorStr
 		return
