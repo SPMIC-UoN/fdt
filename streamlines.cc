@@ -758,40 +758,48 @@ namespace TRACT{
     int yseedvox=int(round(m_stline.get_y_seed()));
     int zseedvox=int(round(m_stline.get_z_seed()));
 
-
+    float pathlength;
     if(!opts.pathdist.value()){
+      pathlength=0;
       for(unsigned int i=0;i<path.size();i++){
 	int x_s=int(round(float(path[i](1)))),y_s=int(round(float(path[i](2)))),z_s=int(round(float(path[i](3))));
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
 	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
 	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
-	      m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += 1;
-	      m_targflags[m]=1;
-	      if(opts.seedcountastext.value())
-		m_SeedCountMat(m_SeedRow,m+1) += 1;	    
+	      if(pathlength>=opts.distthresh.value()){
+		// if(m==0){
+// 		  OUT(m_targetmasknames[m]);
+// 		  for(int myind=0;myind<=i;myind++)
+// 		    OUT(path[myind].t());
+// 		  exit(1);
+// 		}
+		m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += 1;
+		if(opts.seedcountastext.value())
+		  m_SeedCountMat(m_SeedRow,m+1) += 1;
+	      }
+	      m_targflags[m]=1;	    
 	    }
 	}
+	pathlength += opts.steplength.value();
       }
     }
     else{
-      float d=0;
       int x_s,y_s,z_s;
+      pathlength=0;
       for(unsigned int i=0;i<path.size();i++){
 	x_s=int(round(float(path[i](1))));y_s=int(round(float(path[i](2))));z_s=int(round(float(path[i](3))));
-	if(i>0)
-	  d+=sqrt((path[i]-path[i-1]).SumSquare());
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
 	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
 	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
-	      m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += d;
-	      m_targflags[m]=1;
-	      
+	      if(pathlength>=opts.distthresh.value()){
+		m_seedcounts[m](m_seeds_vol2mat(xseedvox,yseedvox,zseedvox)) += pathlength;
 	      if(opts.seedcountastext.value())
-		m_SeedCountMat(m_SeedRow,m+1) += d;
-	      
+		m_SeedCountMat(m_SeedRow,m+1) += pathlength;
+	      }
+	      m_targflags[m]=1;	
 	    }
 	}
-	
+	pathlength += opts.steplength.value();
       }
     }
 
@@ -861,12 +869,18 @@ namespace TRACT{
 
   void Counter::update_matrix3(){
     vector<ColumnVector>& m_inmask3   = m_stline.get_inmask3();
+    //OUT(m_inmask3.size());
     if(m_inmask3.size()<2)return;
 
+    //OUT(m_ConMat3.xsize());
+    //OUT(m_ConMat3.ysize());
     for(unsigned int i=0;i<m_inmask3.size();i++){
       for(unsigned int j=i+1;j<m_inmask3.size();j++){
+	//cout<<"looking up"<<endl;
 	int row1 = m_Lookup3((int)round(float(m_inmask3[i](1))),(int)round(float(m_inmask3[i](2))),(int)round(float(m_inmask3[i](3))));
 	int row2 = m_Lookup3((int)round(float(m_inmask3[j](1))),(int)round(float(m_inmask3[j](2))),(int)round(float(m_inmask3[j](3))));
+	//OUT(row1);
+	//OUT(row2);
 	m_ConMat3(row1,row2,0) += 1;
 	m_ConMat3(row2,row1,0) += 1;
       }
@@ -932,9 +946,9 @@ namespace TRACT{
 
   void Counter::save(){
     cout << "now saving various outputs" << endl;
-    if(opts.simpleout.value()){
-      save_pathdist();
-    }
+//     if(opts.simpleout.value()){
+//       save_pathdist();
+//     }
     if(opts.s2tout.value()){
       save_seedcounts();
     }

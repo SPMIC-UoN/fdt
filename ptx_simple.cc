@@ -57,10 +57,12 @@ void track(){
     string add="_"+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     
     counter.save_pathdist(add);
+    counter.count_seed();
+
     counter.reset_prob();
   } //Close Seed number Loop
-  //counter.save_total(keeptot);
-  //counter.save();
+  
+  counter.save();
 
   cout<<"finished"<<endl;
 }
