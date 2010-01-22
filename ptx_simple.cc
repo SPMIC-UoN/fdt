@@ -59,7 +59,6 @@ void track(){
     if(opts.simpleout.value())
       counter.save_pathdist(add);
 
-    counter.count_seed();
 
     counter.reset_prob();
   } //Close Seed number Loop
