@@ -946,9 +946,9 @@ namespace TRACT{
 
   void Counter::save(){
     cout << "now saving various outputs" << endl;
-//     if(opts.simpleout.value()){
-//       save_pathdist();
-//     }
+    if(opts.simpleout.value() && opts.mode.value()!="simple"){
+      save_pathdist();
+    }
     if(opts.s2tout.value()){
       save_seedcounts();
     }
