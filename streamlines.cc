@@ -234,10 +234,9 @@ namespace TRACT{
     bool stop_flag=false;
     //bool has_goneout=false;
       //NB - this only goes in one direction!!
-    if(opts.waypoints.value()!="")
-      for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
-	m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
-      }
+    for(unsigned int pf=0;pf<m_passed_flags.size();pf++) {
+      m_passed_flags[pf]=false;  /// only keep it if this streamline went through all the masks
+    }
       
     float pathlength=0;
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
@@ -286,13 +285,11 @@ namespace TRACT{
 	  pref_z = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),2); 
 	}
 	//update every passed_flag
-	if(opts.waypoints.value()!="")
-	  for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
-	    if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
-	      m_passed_flags[wm]=true;
-	    }
+	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
+	  if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
+	    m_passed_flags[wm]=true;
 	  }
-
+	}
 	
 	m_path.push_back(xyz_seeds);
 	//m_path.push_back(xyz_dti);
