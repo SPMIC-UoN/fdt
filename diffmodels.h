@@ -359,8 +359,12 @@ public:
     cout << "D_STD :" << m_d_std << endl;
     for(int i=1;i<=nfib;i++){
       cout << "F" << i << "    :" << m_f(i) << endl;
+      ColumnVector x(3);
+      x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
+      if(x(3)<0)x=-x;
       cout << "TH" << i << "   :" << m_th(i) << endl; 
       cout << "PH" << i << "   :" << m_ph(i) << endl; 
+      cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
     }
   }
   void print(const ColumnVector& p)const{
