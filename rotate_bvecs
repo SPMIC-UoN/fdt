@@ -3,7 +3,8 @@
 if [ "$2" == "" ];then
     echo ""
     echo "Usage: rotate_bvecs <ecclogfile> <bvecs>"
-    echo "will save bvecs file into <bvecs>_old and create new bvecs file called <bvecs>"
+        echo "used to update bvecs based on eddy correction"
+    echo "will create a new bvecs file called <bvecs>_rot"
     echo ""
     exit 1
 fi
@@ -11,22 +12,21 @@ fi
 ecclog=$1
 bvecs=$2
 
-if [ -f ${bvecs}_old ];then
+if [ -f ${bvecs}_rot ];then
     echo ""
-    echo "Error: Found that ${bvecs}_old already exists"
-    echo "This probably means that you have run this script before. Be aware that this also means ${bvecs} have already been rotated!"
-    echo "If you want to force this program to run, please remove the file ${bvecs}_old"
+    echo "Error: Found that ${bvecs}_rot already exists"
+    echo "This probably means that you have run this script before."
+    echo "To get this program to run, please remove the file ${bvecs}_rot"
     echo ""
     exit 1
 fi
-/bin/cp ${bvecs} ${bvecs}_old
-#/bin/rm -f ${bvecs}
+
 
 
 # this only works if the bvecs are in lines...
-Xs=$(cat ${bvecs}_old | head -1 | tail -1)
-Ys=$(cat ${bvecs}_old | head -2 | tail -1)
-Zs=$(cat ${bvecs}_old | head -3 | tail -1)
+Xs=$(cat ${bvecs} | head -1 | tail -1)
+Ys=$(cat ${bvecs} | head -2 | tail -1)
+Zs=$(cat ${bvecs} | head -3 | tail -1)
 
 rnd=${$}
 cat ${ecclog} | while read line; do
@@ -96,7 +96,7 @@ for matfile in /tmp/grot${rnd}_*.mat;do
     i=$(echo "$i + 1" | bc) ;
 done
 
-echo "$rXs" > ${bvecs};
-echo "$rYs" >> ${bvecs};
-echo "$rZs" >> ${bvecs};
+echo "$rXs" > ${bvecs}_rot;
+echo "$rYs" >> ${bvecs}_rot;
+echo "$rZs" >> ${bvecs}_rot;
 
