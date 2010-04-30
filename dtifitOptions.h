@@ -36,6 +36,7 @@ class dtifitOptions {
   Option<string> bvalsfile;
   Option<string> cni; //confounds of no interest. 
   Option<bool> sse; // Sum of squared errors
+  Option<bool> wls; //Perform Weighted Least squares for tensor fitting 
   Option<bool> littlebit;
   Option<bool> savetensor;
   Option<int> z_min;
@@ -87,11 +88,14 @@ class dtifitOptions {
 	     string("b values file"),
 	     true, requires_argument), 
    cni(string("--cni"), string(""),
-	     string("Input counfound regressors"),
+	     string("Input confound regressors"),
 	     false, requires_argument), 
    sse(string("--sse"), false,
 	     string("Output sum of squared errors"),
 	     false, no_argument), 
+   wls(string("-w,--wls"),false, 
+             string("Fit the tensor with weighted least squares"), 
+             false, no_argument),
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
 	     false, no_argument),
@@ -130,6 +134,7 @@ class dtifitOptions {
        options.add(bvalsfile);
        options.add(cni);
        options.add(sse);
+       options.add(wls);
        options.add(littlebit);
        options.add(savetensor);
        options.add(z_min);
