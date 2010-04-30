@@ -100,7 +100,7 @@ Matrix form_Amat(const Matrix& r,const Matrix& b, const Matrix & cni )
   
   for( int i = 1; i <= r.Ncols(); i++){
     tmpvec << r(1,i) << r(2,i) << r(3,i);
-    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);   //this is the b-Matrix for direction i
     A(i,1) = tmpmat(1,1);
     A(i,2) = 2*tmpmat(1,2);
     A(i,3) = 2*tmpmat(1,3);
@@ -146,48 +146,63 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat,const ColumnVector& S)
+
+
+//Returns the pseudoinverse of the design matrix for performing Weighted Linear Least Squares
+ReturnMatrix WLS_pinv(const Matrix& Amat, const ColumnVector& S)
 {
-  //Initialise the parameters using traditional DTI analysis
+  Matrix pinvA;
+  DiagonalMatrix W(S.Nrows());                  //Weighting Matrix
+
+  W=0;
+  for (int i=1; i<=S.Nrows(); i++)
+      W(i)=(S(i)>0 ? S(i)*S(i):1);             //Weights according to (Salvador, HBM 2005) 
+ 
+  pinvA=(((Amat.t()*W)*Amat).i()*Amat.t())*W;  //WLS pseudoinverse of Amat
+  pinvA.Release();
+  return pinvA;
+}
+
+
+
+  
+//Performs fitting of the tensor using a precalculated pseudoinverse of the design matrix (Amat_pinv)
+//Depending on Amat_pinv, the function performs an OLS or WLS fiting of the DTI model.
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat, const Matrix& Amat_pinv, const ColumnVector& S)
+{
   ColumnVector logS(S.Nrows());
   SymmetricMatrix tens;   //Basser's Diffusion Tensor;
-  //  DiagonalMatrix Dd;   //eigenvalues
   Matrix Vd;   //eigenvectors
   DiagonalMatrix Ddsorted(3);
   float mDd, fsquared;
 
-  for ( int i = 1; i <= S.Nrows(); i++)
+  for (int i=1; i<=S.Nrows(); i++)
     {
-      if(S(i)>0){
+      if(S(i)>0)
 	logS(i)=log(S(i));
-      }
-      else{
+      else
 	logS(i)=0;
-      }
-      //      logS(i)=(S(i)/S0)>0.01 ? log(S(i))-log(S0):log(0.01);
     }
-
-  Dvec = -pinv(Amat)*logS;
+  Dvec=-Amat_pinv*logS;       //Estimate the model parameters
   
-  if(  Dvec(7) >  -maxlogfloat ){
+  if(Dvec(7)>-maxlogfloat )
     s0=exp(-Dvec(7));
-  }
-  else{
+  else
     s0=S.MaximumAbsoluteValue();
-  }
+  
   for ( int i = 1; i <= S.Nrows(); i++)
     {
       if(s0<S.Sum()/S.Nrows()){ s0=S.MaximumAbsoluteValue();  }
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
     }
-  Dvec = -pinv(Amat)*logS;
-  sse = (Amat*Dvec+logS).SumSquare();
+  Dvec = -Amat_pinv*logS;
+  sse=(Amat*Dvec+logS).SumSquare();
+  //sse = (W*(Amat*Dvec+logS)).SumSquare();   //In case of WLS, the weighted SSE will be evaluated, otherwise W=I, so OLS SSE is computed 
   
   s0=exp(-Dvec(7));
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
   tens = vec2tens(Dvec);
   
-
   EigenValues(tens,Dd,Vd);
   mDd = Dd.Sum()/Dd.Nrows();
   int maxind = Dd(1) > Dd(2) ? 1:2;   //finding max,mid and min eigenvalues
@@ -196,7 +211,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   if( (Dd(1)>=Dd(2) && Dd(2)>=Dd(3)) || (Dd(1)<=Dd(2) && Dd(2)<=Dd(3)) ){midind=2;}
   else if( (Dd(2)>=Dd(1) && Dd(1)>=Dd(3)) || (Dd(2)<=Dd(1) && Dd(1)<=Dd(3)) ){midind=1;}
   else {midind=3;}
-  int minind = Dd(1) < Dd(2) ? 1:2;   //finding maximum eigenvalue
+  int minind = Dd(1) < Dd(2) ? 1:2;   //finding minimum eigenvalue
   minind = Dd(minind) < Dd(3) ? minind:3;
   Ddsorted << Dd(maxind) << Dd(midind) << Dd(minind);
   Dd=Ddsorted;
@@ -211,15 +226,17 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   d = 2*d*d*d;
   mode = MIN(MAX(d ? n/d : 0.0, -1),1);
 
-  float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
+  //Compute the FA  
+  float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));  
   float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
  
   if(denom>0) fsquared=numer/denom;
   else fsquared=0;
   if(fsquared>0){f=sqrt(fsquared);}
   else{f=0;}
-
 }
+
+
 
 int main(int argc, char** argv)
 {
@@ -330,7 +347,9 @@ int main(int argc, char** argv)
   }
 
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
-  ColumnVector Dvec(7); Dvec=0;
+  ColumnVector Dvec(7); Dvec=0; 
+  Matrix pinv_Amat=pinv(Amat);
+
   for(int k = minz; k < maxz; k++){
     cout<<k<<" slices processed"<<endl;
       for(int j=miny; j < maxy; j++){
@@ -341,7 +360,9 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,S);
+	    if (opts.wls.value())
+	      pinv_Amat=WLS_pinv(Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,pinv_Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
