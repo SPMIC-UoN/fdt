@@ -239,7 +239,7 @@ namespace PARTICLE{
 
 	for(unsigned int i=0;i<th.size();i++){
 	  ps=tmpps;
-	  tmpps=fabs((sin(th[i])*(cos(ph[i])*m_rx+sin(ph[i])*m_ry)+cos(ph[i])*m_rz));
+	  tmpps=fabs((sin(th[i])*(cos(ph[i])*m_rx+sin(ph[i])*m_ry)+cos(th[i])*m_rz));
 	  r = tmpps > ps ? i : r;
 	}
 	
