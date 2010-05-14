@@ -240,7 +240,7 @@ namespace FIBRE{
       m_ph_prop=min(m_ph_prop,maxfloat);
       m_f_prop*=sqrt(float(m_f_acc+1)/float(m_f_rej+1));
       m_f_prop=min(m_f_prop,maxfloat);
-      //m_lam_prop*=sqrt(float(m_lam_acc+1)/float(m_lam_rej+1));   //STAM: REmoved Update for m_lam_prior
+      //m_lam_prop*=sqrt(float(m_lam_acc+1)/float(m_lam_rej+1));   
       //m_lam_prop=min(m_lam_prop,maxfloat);
       m_th_acc=0; 
       m_th_rej=0;
@@ -317,7 +317,7 @@ namespace FIBRE{
 
     inline void compute_prior(){
       m_old_prior_en=m_prior_en;
-      //m_prior_en=m_th_prior+m_ph_prior+m_f_prior+m_lam_prior;   //STAM:Removed m_lam_prior
+      //m_prior_en=m_th_prior+m_ph_prior+m_f_prior+m_lam_prior;   
       m_prior_en=m_th_prior+m_ph_prior+m_f_prior;
     }
 
@@ -325,28 +325,30 @@ namespace FIBRE{
     //Compute model predicted signal, only due to the anisotropic compartment 
     void compute_signal(){
        m_Signal_old=m_Signal;
-       for (int i = 1; i <= m_alpha.Nrows(); i++){
-	 float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   //STAM: Used trigonometric identity to reduce the number of sinusoids evaluated  
-         float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
+       
+       if(m_modelnum==1){
+	 for (int i = 1; i <= m_alpha.Nrows(); i++){
+	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   //Used trigonometric identities to reduce the number of sinusoids evaluated  
+           float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
           
-	//float angtmp=cos(m_ph-m_beta(i))*sin(m_alpha(i))*sin(m_th) + cos(m_alpha(i))*cos(m_th);
-	float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
- 	angtmp=angtmp*angtmp;
-	if(m_modelnum==1){
+	  //float angtmp=cos(m_ph-m_beta(i))*sin(m_alpha(i))*sin(m_th) + cos(m_alpha(i))*cos(m_th);
+	  float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
+ 	  angtmp=angtmp*angtmp;
 	  m_Signal(i)=exp(-m_d*m_bvals(1,i)*angtmp);
-	  //	  cout<<"here"<<endl;
-	}
-	else if(m_modelnum==2){
-	  float dbeta=m_d/(m_d_std*m_d_std);
-	  float dalpha=m_d*dbeta;                            //STAM: Removed one division
-	  m_Signal(i)=exp( log(dbeta/(dbeta + m_bvals(1,i)*angtmp)) *dalpha ); //gamma distribution of diffusivities - params alpha (m_d) and beta (m_d_beta): Expected signal is (beta./(beta+b*g(th,ph))).^alpha;
-	  //cout<<i<<" "<<angtmp<<" "<<m_d_std<<" "<<m_d<<endl;
-	  //cout<<"balh "<<m_Signal(i)<<endl;
-
-	}
-
+	 }
        }
-     }
+       else if(m_modelnum==2){
+	 float dbeta=m_d/(m_d_std*m_d_std);
+	 float dalpha=m_d*dbeta;                            
+	 for (int i = 1; i <= m_alpha.Nrows(); i++){
+	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   
+           float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
+     	   float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
+ 	   angtmp=angtmp*angtmp;
+           m_Signal(i)=exp(log(dbeta/(dbeta + m_bvals(1,i)*angtmp))*dalpha); //gamma distribution of diffusivities - params alpha (m_d) and beta (m_d_beta): Expected signal is (beta./(beta+b*g(th,ph))).^alpha;
+ 	 }
+       }
+    }
 
 
     inline bool propose_th(){
@@ -568,7 +570,7 @@ namespace FIBRE{
     float m_energy;               //Posterior
     float m_old_energy;
     float m_ardfudge;
-    ColumnVector m_iso_Signal;    //STAM:Vector that stores the signal from the isotropic compartment during the candidate/current state 
+    ColumnVector m_iso_Signal;    //Vector that stores the signal from the isotropic compartment during the candidate/current state 
     ColumnVector m_iso_Signal_old; 
 
     const ColumnVector& m_data;   //Data vector 
@@ -587,7 +589,7 @@ namespace FIBRE{
       //      initialise(Amat,N);
       m_iso_Signal.ReSize(alpha.Nrows());
       m_iso_Signal=0;
-      m_iso_Signal_old=m_iso_Signal;            //STAM: Initialize vectors that keep the signal from the isotropic compartment
+      m_iso_Signal_old=m_iso_Signal;            //Initialize vectors that keep the signal from the isotropic compartment
     }
     
     ~Multifibre(){}
@@ -618,7 +620,7 @@ namespace FIBRE{
       m_prior_en=0;
       compute_prior();
       m_likelihood_en=0;
-      compute_iso_signal();                  //STAM:Initialize the isotropic compartment signal before getting the likelihood for the first time
+      compute_iso_signal();                  
       compute_likelihood();
       compute_energy();
     }
@@ -732,39 +734,38 @@ namespace FIBRE{
     }
     
 
-    void compute_iso_signal(){               //STAM: Function that computes the signal from the isotropic compartment 
+    void compute_iso_signal(){               //Function that computes the signal from the isotropic compartment 
       m_iso_Signal_old=m_iso_Signal;
-      for(int i=1;i<=m_alpha.Nrows();i++)
-	{
-	if(m_modelnum==1)
-	  m_iso_Signal(i)=exp(-m_d*m_bvals(1,i));
-	else if(m_modelnum==2)
-	  {
+      if(m_modelnum==1){
+	for(int i=1;i<=m_alpha.Nrows();i++)
+	   m_iso_Signal(i)=exp(-m_d*m_bvals(1,i));
+      }
+      else if(m_modelnum==2){
+	for(int i=1;i<=m_alpha.Nrows();i++){
 	  float dbeta=m_d/(m_d_std*m_d_std);
 	  float dalpha=m_d*dbeta;	  
 	  m_iso_Signal(i)=exp(log(dbeta/(dbeta+m_bvals(1,i)))*dalpha);
-	  }
 	}
+      }
     }	
-    
+   
+ 
    void compute_likelihood(){
-
       m_old_likelihood_en=m_likelihood_en;
       ColumnVector pred(m_alpha.Nrows());
       pred=0;
       float fsum=0;
-      for(unsigned int f=0;f<m_fibres.size();f++){
+      for(unsigned int f=0;f<m_fibres.size();f++){   //Signal from the anisotropic compartments
 	pred=pred+m_fibres[f].get_f()*m_fibres[f].getSignal();
-	fsum+=m_fibres[f].get_f();
+	fsum+=m_fibres[f].get_f();                   //Total anisotropic volume fraction
       }
 
-      for(int i=1;i<=pred.Nrows();i++)
-	pred(i)=pred(i)+(1-fsum)*m_iso_Signal(i);      //STAM: Use the precalculated isotropic compartment 
-      pred=pred*m_S0;
+      for(int i=1;i<=pred.Nrows();i++){
+      	pred(i)=m_S0*(pred(i)+(1-fsum)*m_iso_Signal(i));   //Add the signal from the isotropic compartment     
+      }                                                    //and multiply by S0 to get the total signal
       
-      float sumsquares=(m_data-pred).SumSquare();
+      float sumsquares=(m_data-pred).SumSquare();         //Sum of squared residuals 
       m_likelihood_en=(m_data.Nrows()/2.0)*log(sumsquares/2.0);
-      
     }
     
     
@@ -780,7 +781,7 @@ namespace FIBRE{
 	m_fibres[f].compute_th_prior();
 	m_fibres[f].compute_ph_prior();
 	m_fibres[f].compute_f_prior();
-	//m_fibres[f].compute_lam_prior();     //STAM: Removed the lam_prior calulation
+	//m_fibres[f].compute_lam_prior();     
 	m_fibres[f].compute_signal();
 	m_fibres[f].compute_prior();
       }
@@ -818,7 +819,7 @@ namespace FIBRE{
       bool rejflag=compute_d_prior();//inside this it stores the old prior
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].compute_signal();
-      compute_iso_signal();          //STAM: Compute the signal from the isotropic compartment 
+      compute_iso_signal();        
       return rejflag;
     };
     
@@ -834,7 +835,7 @@ namespace FIBRE{
       m_prior_en=m_old_prior_en;
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].restoreSignal();
-      m_iso_Signal=m_iso_Signal_old;   //STAM:Restore the signal from the isotropic compartment
+      m_iso_Signal=m_iso_Signal_old;   
       m_d_rej++;
     }
 
@@ -846,7 +847,7 @@ namespace FIBRE{
       bool rejflag=compute_d_std_prior();//inside this it stores the old prior
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].compute_signal();
-      compute_iso_signal();   //STAM: Compute the signal from the isotropic compartment
+      compute_iso_signal();   
       return rejflag;
     };
     
@@ -862,7 +863,7 @@ namespace FIBRE{
       m_prior_en=m_old_prior_en;
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].restoreSignal();
-      m_iso_Signal=m_iso_Signal_old;    //STAM:Restore the signal from the isotropic compartment
+      m_iso_Signal=m_iso_Signal_old;   
       m_d_std_rej++;
     }
     
@@ -1085,7 +1086,7 @@ namespace FIBRE{
       m_energy=rhs.m_energy;
       m_old_energy=rhs.m_old_energy;
       m_ardfudge=rhs.m_ardfudge;
-      m_iso_Signal=rhs.m_iso_Signal;              //STAM: Equate the Iso_signal vectors as well
+      m_iso_Signal=rhs.m_iso_Signal;              
       m_iso_Signal_old=rhs.m_iso_Signal_old;
       return *this;
     }
