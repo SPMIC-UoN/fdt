@@ -186,19 +186,18 @@ namespace TRACTVOLSX{
 		fibst=0;
 	      }
 	      else{
-		float fsumtmp2=0;
-		int fib=0;
-		float rtmp=(float)rand()/float(RAND_MAX);
+		float ft,fsumtmp2=0;
+		float rtmp=fsumtmp * (float)rand()/float(RAND_MAX);
 		
-		while( fsumtmp2<=rtmp){
-		  float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
-		  if(ft>opts.fibthresh.value()){
-		    fsumtmp2+=(ft/fsumtmp); 
+		for(unsigned int fib=0;fib<thsamples.size();fib++){
+		  ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		  if(ft>opts.fibthresh.value())
+		    fsumtmp2 += ft;
+		  if(rtmp<=fsumtmp2){
+		    fibst=(int)fib;
+		    break;
 		  }
-		  fibst=fib;
-		  fib++;
-		}
-		
+		}		
 	      }
 	    }  
 
