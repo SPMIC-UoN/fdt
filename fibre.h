@@ -116,8 +116,8 @@ namespace FIBRE{
     Fibre(const ColumnVector& alpha, 
 	  const ColumnVector& beta, const Matrix& bvals, const float& d, const float& ardfudge,
 	  const float& th, const float& ph, const float& f, 
-	  const float& lam, const bool lam_jump=true, const int& modelnum=1, const float& d_std=0.01) : 
-      m_th(th), m_ph(ph), m_f(f), m_lam(lam), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d), m_d_std(d_std), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum)
+	  const bool lam_jump=true, const int& modelnum=1, const float& d_std=0.01) : 
+      m_th(th), m_ph(ph), m_f(f), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d), m_d_std(d_std), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum)
     {
       
       m_th_old=m_th;
@@ -282,7 +282,7 @@ namespace FIBRE{
 	  m_f_prior=0;
 	}
 	else{
-	  //if(m_lam_jump){              //STAM: Removed the if-else statement (always true since m_lam_jump=true)
+	  if(m_lam_jump){              
 	    // m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
 	    m_f_prior=std::log(m_f);
 	    	  	
@@ -292,9 +292,9 @@ namespace FIBRE{
 	    //cc	  OUT(mmk);
 	    //cc	  OUT(m_f_old_prior);
 
-	    //}
-	    //else
-	    //m_f_prior=0;
+	  }
+	  else
+	    m_f_prior=0;
 	  
 	}
 	m_f_prior=m_ardfudge*m_f_prior;
@@ -333,7 +333,7 @@ namespace FIBRE{
           
 	  //float angtmp=cos(m_ph-m_beta(i))*sin(m_alpha(i))*sin(m_th) + cos(m_alpha(i))*cos(m_th);
 	  float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
- 	  angtmp=angtmp*angtmp;
+ 	  angtmp=angtmp*angtmp;	  
 	  m_Signal(i)=exp(-m_d*m_bvals(1,i)*angtmp);
 	 }
        }
@@ -602,8 +602,8 @@ namespace FIBRE{
       return m_fibres;
     }
     
-    void addfibre(const float th, const float ph, const float f,const float lam, const bool lam_jump=true){
-      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,lam,lam_jump,m_modelnum,m_d_std);
+    void addfibre(const float th, const float ph, const float f,const bool use_ard=true){
+      Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,use_ard,m_modelnum,m_d_std);
        m_fibres.push_back(fib);
     }
 

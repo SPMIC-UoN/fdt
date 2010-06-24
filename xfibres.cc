@@ -309,9 +309,9 @@ public:
 	cart2sph(vec,th,ph);
 	if(f==0)
 	  // mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,false);//no a.r.d. on first fibre
-	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,opts.all_ard.value());//is all_ard, then turn ard on here
+	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),opts.all_ard.value());//is all_ard, then turn ard on here
 	else
-	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),1,true);
+	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),true);
 
       }
 	
@@ -487,8 +487,8 @@ class xfibresVoxelManager{
     cart2sph(dti.get_v1(),th,ph);
     f = dti.get_fa();
     if(opts.nfibres.value()>0){
-      //      m_multifibre.addfibre(th,ph,f,1,false);//no a.r.d. on first fibre
-      m_multifibre.addfibre(th,ph,f,1,opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
+      //      m_multifibre.addfibre(th,ph,f,false);//no a.r.d. on first fibre
+      m_multifibre.addfibre(th,ph,f,opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
       for(int i=2; i<=opts.nfibres.value(); i++){
 	 m_multifibre.addfibre();
       }
@@ -521,12 +521,12 @@ class xfibresVoxelManager{
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
 			      pvmf(1),
-			      1,opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
+			      opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
 	for(int i=2; i<=opts.nfibres.value();i++){
 	  m_multifibre.addfibre(pvmth(i),
 				pvmph(i),
 				pvmf(i),
-				1,!opts.no_ard.value());
+				!opts.no_ard.value());
 	}
       }
     }
@@ -555,12 +555,12 @@ class xfibresVoxelManager{
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
 			      pvmf(1),
-			      1,opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
+			      opts.all_ard.value());//if all_ard, then turn ard on here (SJ)
 	for(int i=2; i<=opts.nfibres.value();i++){
 	  m_multifibre.addfibre(pvmth(i),
 				pvmph(i),
 				pvmf(i),
-				1,!opts.no_ard.value());
+				!opts.no_ard.value());
 	}
 	
       }
