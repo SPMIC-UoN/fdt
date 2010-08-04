@@ -16,7 +16,7 @@ void biggest_from_volumes(vector<string> innames,string oname){
   cout<<"number of inputs "<<innames.size()<<endl;
   cout<<"Indices"<<endl;
   for(unsigned int i=0;i<innames.size();i++){
-    cout<<i<<" "<<innames[i]<<endl;
+    cout<<i+1<<" "<<innames[i]<<endl;
     read_volume(tmp,innames[i]);
     tmpvec.push_back(tmp);
   }
@@ -51,11 +51,13 @@ void biggest_from_volumes(vector<string> innames,string oname){
       }  
     }
   }
+
+  output.setDisplayMaximumMinimum(innames.size(),0);
   save_volume(output,oname);
 
 }
 
-ReturnMatrix read_label(const string& labelfile){
+ReturnMatrix read_label(const string& labelfile,string& firstline){
   Matrix L;
   ifstream fs(labelfile.c_str());
   if (!fs) { 
@@ -63,6 +65,14 @@ ReturnMatrix read_label(const string& labelfile){
     L.Release();
     return L;
   }
+
+  // read first line
+  char str[200];
+  FILE *fp;
+  fp = fopen(labelfile.c_str(), "r");
+  fscanf(fp, "%[^\n]", str);
+  firstline = str;
+
   string cline;
   // skip header
   cline = skip_alpha(fs);
@@ -85,13 +95,13 @@ ReturnMatrix read_label(const string& labelfile){
   L.Release();
   return L;
 }
-void write_label(const Matrix& L,const string& filename){
+void write_label(const Matrix& L,const string& filename,const string& firstline){
   ofstream fs(filename.c_str());
   if (!fs) { 
     cerr << "Could not open file " << filename << " for writing" << endl;
     exit(1);
   }
-  fs << "##!ascii label , written from FSL414" << endl;
+  fs << firstline << endl;
   fs << L.Nrows() << endl;
 
 #ifdef PPC64	
@@ -126,7 +136,8 @@ void biggest_from_matrix(vector<string> innames,string oname){
   cout << "number of targets:  " << M.Ncols() << endl;
 
   cout << endl << "read label file" << endl;
-  Matrix L = read_label(innames[1]);
+  string firstline;
+  Matrix L = read_label(innames[1],firstline);
   
   cout << "number of vertices: " << L.Nrows() << endl;
   cout << "number of columns:  " << L.Ncols() << endl;
@@ -136,7 +147,18 @@ void biggest_from_matrix(vector<string> innames,string oname){
     exit(1);
   }
 
-
+  // test this (i think M and L do not come in the same order...)
+  vector< pair<int,int> > labels(L.Nrows());
+  for(unsigned int i=0;i<labels.size();i++){
+    labels[i].first=(int)L(i+1,1);
+    labels[i].second=i+1;
+  }
+  sort(labels.begin(),labels.end());
+  Matrix sL=L;
+  for(int i=1;i<=L.Nrows();i++)
+    sL.Row(i)=L.Row(labels[i-1].second);
+  
+		      
   vector< vector<int> > Clusters(M.Ncols());
   float val;
   int cmax;
@@ -150,9 +172,10 @@ void biggest_from_matrix(vector<string> innames,string oname){
     if(Clusters[i].size()>0){
       Matrix C(Clusters[i].size(),5);
       for(unsigned int j=0;j<Clusters[i].size();j++){
-	C.Row(j+1) = L.Row(Clusters[i][j]); 
+	C.Row(labels[j].second) = L.Row(Clusters[i][j]); 
+	C(labels[j].second,5) = i+1;
       }
-      write_label(C,oname+"_"+num2str(i+1)+".label");
+      write_label(C,oname+"_"+num2str(i+1)+".label",firstline);
     }
   }
   
