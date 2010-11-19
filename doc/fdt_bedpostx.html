@@ -60,8 +60,13 @@ report</a>).</li>
 <li><b>mean_f&#60;i&#62;samples</b> -  3D Volume - Mean of distribution on <i>f</i>
 anisotropy  </li>
 <ul><li>Note that in each voxel, fibres are ordered according to a decreasing mean f-value</li></ul>
+<li><b>mean_dsamples</b> -  3D Volume - Mean of
+distribution on diffusivity d</li> 
 <li><b>dyads&#60;i&#62;</b> - Mean of PDD distribution in vector form.
  Note that this file can be loaded into fslview for easy <a href="fdt_display.html">viewing of diffusion directions</a></li>
+<li><b>dyads&#60;i&#62;_dispersion</b> - 3D Volume - Uncertainty on
+ the estimated fibre orientation. Characterizes how wide the
+ orientation distribution is around the respective dyad. 
 <li><b>nodif_brain</b> - brain extracted version of nodif - copied
 from input directory</li>
 <li><b>nodif_brain_mask</b> - binary mask created from nodif_brain -
