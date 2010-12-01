@@ -79,6 +79,7 @@ class Samples{
   Matrix m_dsamples;
   Matrix m_d_stdsamples;
   Matrix m_S0samples;
+  Matrix m_f0samples;
   Matrix m_lik_energy;
 
 //   // storing signal
@@ -95,6 +96,8 @@ class Samples{
   RowVector m_mean_dsamples;
   RowVector m_mean_d_stdsamples;
   RowVector m_mean_S0samples;
+  RowVector m_mean_f0samples;
+  RowVector m_mean_tausamples;
   vector<Matrix> m_dyadic_vectors;
   vector<RowVector> m_mean_fsamples;
   vector<RowVector> m_mean_lamsamples;
@@ -102,6 +105,8 @@ class Samples{
   float m_sum_d;
   float m_sum_d_std;
   float m_sum_S0;
+  float m_sum_f0;
+  float m_sum_tau;
   vector<SymmetricMatrix> m_dyad;
   vector<float> m_sum_f;
   vector<float> m_sum_lam;
@@ -160,6 +165,20 @@ public:
       m_sum_d_std=0;
     }
 
+    if (opts.f0.value()){
+      m_f0samples.ReSize(nsamples,nvoxels);
+      m_f0samples=0;
+      m_mean_f0samples.ReSize(nvoxels);
+      m_mean_f0samples=0;
+      m_sum_f0=0;
+    }
+
+  if (opts.rician.value()){
+      m_mean_tausamples.ReSize(nvoxels);
+      m_mean_tausamples=0;
+      m_sum_tau=0;
+    }
+
 
     SymmetricMatrix tmpdyad(3);
     tmpdyad=0;
@@ -191,6 +210,13 @@ public:
       m_d_stdsamples(samp,vox)=mfib.get_d_std();
       m_sum_d_std+=mfib.get_d_std();
     }
+    if (opts.f0.value()){
+      m_f0samples(samp,vox)=mfib.get_f0();
+      m_sum_f0+=mfib.get_f0();
+    }
+    if (opts.rician.value())
+      m_sum_tau+=mfib.get_tau();
+    
     m_S0samples(samp,vox)=mfib.get_S0();
     m_sum_S0+=mfib.get_S0();
     m_lik_energy(samp,vox)=mfib.get_likelihood_energy();
@@ -219,12 +245,19 @@ public:
     m_mean_dsamples(vox)=m_sum_d/m_nsamps;
     if(opts.modelnum.value()==2)
       m_mean_d_stdsamples(vox)=m_sum_d_std/m_nsamps;
-    m_mean_S0samples(vox)=m_sum_S0/m_nsamps;
+    if(opts.f0.value())
+      m_mean_f0samples(vox)=m_sum_f0/m_nsamps;
+    if(opts.rician.value())
+      m_mean_tausamples(vox)=m_sum_tau/m_nsamps;
 
+    m_mean_S0samples(vox)=m_sum_S0/m_nsamps;
     m_sum_d=0;
     m_sum_S0=0;
+    m_sum_tau=0;
     if(opts.modelnum.value()==2)
       m_sum_d_std=0;
+    if (opts.f0.value())
+      m_sum_f0=0;
 
     DiagonalMatrix dyad_D; //eigenvalues
     Matrix dyad_V; //eigenvectors
@@ -255,11 +288,10 @@ public:
       m_sum_f[f]=0;
       m_sum_lam[f]=0;
     }
+    cout<<m_mean_f0samples(vox)<<" "<<m_mean_dsamples(vox)<<endl;
+
     m_beenhere(int(m_matrix2volkey(vox,1)),int(m_matrix2volkey(vox,2)),int(m_matrix2volkey(vox,3)))=nfibs;
-    //cout<<nfibs<<endl;
-    //cout <<"boobooboo"<<endl;
-    //cout<<int(m_matrix2volkey(vox,1))<<" "<<int(m_matrix2volkey(vox,2))<<" "<<int(m_matrix2volkey(vox,3))<<endl;
-}
+  }
   
   
   bool neighbour_initialise(int vox, Multifibre& mfibre){
@@ -341,7 +373,7 @@ public:
       tmp.setmatrix(m_mean_dsamples,mask);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
     }
-    else     if(opts.modelnum.value()==2){
+    else if(opts.modelnum.value()==2){
       tmp.setmatrix(m_mean_dsamples,mask);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
       tmp.setmatrix(m_mean_d_stdsamples,mask);
@@ -351,10 +383,18 @@ public:
       save_volume4D(tmp,logger.appendDir("dsamples"));
       tmp.setmatrix(m_d_stdsamples,mask);
       save_volume4D(tmp,logger.appendDir("d_stdsamples"));
-      
-      
+    }
+    if (opts.f0.value()){
+      tmp.setmatrix(m_mean_f0samples,mask);
+      save_volume4D(tmp,logger.appendDir("mean_f0samples"));
+      tmp.setmatrix(m_f0samples,mask);
+      save_volume4D(tmp,logger.appendDir("f0samples"));
+    }
+    if (opts.rician.value()){
+      tmp.setmatrix(m_mean_tausamples,mask);
+      save_volume4D(tmp,logger.appendDir("mean_tausamples"));
+    }
 
-}
     tmp.setmatrix(m_mean_S0samples,mask);
     save_volume4D(tmp,logger.appendDir("mean_S0samples"));
     //tmp.setmatrix(m_lik_energy,mask);
@@ -441,25 +481,35 @@ class xfibresVoxelManager{
   const Matrix& m_bvecs;
   const Matrix& m_bvals; 
   Multifibre m_multifibre;
- public:
+public:
   xfibresVoxelManager(const ColumnVector& data,const ColumnVector& alpha, 
 		      const ColumnVector& beta, const Matrix& r,const Matrix& b,
 		      Samples& samples,int voxelnumber):
     opts(xfibresOptions::getInstance()), 
     m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
     m_alpha(alpha), m_beta(beta), m_bvecs(r), m_bvals(b), 
-    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value()){ }
+    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value(),opts.rician.value(),opts.f0.value(),opts.ardf0.value()){ }
   
    
   void initialise(const Matrix& Amat){
-    if(opts.nonlin.value())
-      initialise_nonlin();
-    else{
-      if(!opts.localinit.value())
-	if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
-	  initialise_tensor(Amat);
-	else
-	  initialise_tensor(Amat);
+    if (opts.rician.value()){  //For Rician noise model, always use a non-linear initialization
+	 ColumnVector res=initialise_nonlin();  //Initialize tau using the variance of the residuals
+	 float variance=var(res).AsScalar();
+	 float tau=1.0/variance;
+      //if (tau<0.01)
+      //tau=1.0/(0.429*variance);  //We are at very low signal levels, at the Rayleigh regime, convert sigma_Rician=0.655*sigma_Gaussian??
+	 m_multifibre.set_tau(tau);
+    }	
+    else{                     //For Gaussian noise model
+      if(opts.nonlin.value())
+	initialise_nonlin();
+      else{
+	if(!opts.localinit.value())
+	  if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
+	    initialise_tensor(Amat);
+	  else
+	    initialise_tensor(Amat);
+      }
     }
     m_multifibre.initialise_energies();
     m_multifibre.initialise_props();
@@ -492,31 +542,55 @@ class xfibresVoxelManager{
       for(int i=2; i<=opts.nfibres.value(); i++){
 	 m_multifibre.addfibre();
       }
-    
     }
-    
-    
   }
- 
 
-  void initialise_nonlin(){
-    //////////////////////////////////////////////////////
+ 
+  //Perform non-linear model fitting and returns a vector with the residuals
+  ReturnMatrix initialise_nonlin(){
+    ColumnVector residuals(m_data.Nrows()),predicted_signal(m_data.Nrows());
+
     // where using mono-exponential model
     if(opts.modelnum.value()==1){
-      PVM_single pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value());
+      PVM_single pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
       pvm.fit(); // this will give th,ph,f in the correct order
-
-      m_multifibre.set_S0(pvm.get_s0());
-      if(pvm.get_d()>=0)
-	m_multifibre.set_d(pvm.get_d());
-      else
-	m_multifibre.set_d(2e-3);
-
+      
+      float pvmS0, pvmd, pvmf0=0.001;
       ColumnVector pvmf,pvmth,pvmph;
       pvmf  = pvm.get_f();
       pvmth = pvm.get_th();
       pvmph = pvm.get_ph();
+      pvmS0 = pvm.get_s0();
+      pvmd  = pvm.get_d();
+      predicted_signal=pvm.get_prediction();
 
+      if (opts.f0.value()){
+	pvmf0=pvm.get_f0();
+
+	//If the full model gives values that are considered implausible, or we are in a CSF voxel (f1<0.05)
+	//then fit a model without the f0 and drive f0_init to almost zero 
+	if (((opts.nfibres.value()>0) && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
+	  PVM_single pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	  pvm2.fit(); // this will give th,ph,f in the correct order
+	  pvmf0=0.001;
+	  pvmS0=pvm2.get_s0();
+	  pvmd=pvm2.get_d();
+	  pvmf  = pvm2.get_f();
+	  pvmth = pvm2.get_th();
+	  pvmph = pvm2.get_ph();
+	  predicted_signal=pvm2.get_prediction();
+	}
+	m_multifibre.set_f0(pvmf0);
+	//m_multifibre.set_f0(0.001);
+      }
+      if(pvmd<0)
+	pvmd=2e-3;
+   
+      m_multifibre.set_S0(pvmS0);
+      m_multifibre.set_d(pvmd);
+      
+      cout<<pvmf0<<" "<<pvmS0<<" "<<pvmd<<" "<<pvmf(1)<<" "<<pvmf(2)<<endl;
+   
       if(opts.nfibres.value()>0){
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
@@ -529,10 +603,14 @@ class xfibresVoxelManager{
 				!opts.no_ard.value());
 	}
       }
+      residuals=m_data-predicted_signal;
     }
     else{ 
       //////////////////////////////////////////////////////
       // model 2 : non-mono-exponential
+      if (opts.f0.value())
+	m_multifibre.set_f0(0.001); //Need to include f0 in the non-linear initialization of model2 as well!! For now set it initially to almost zero
+
       PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value());
       pvm.fit();
 
@@ -564,10 +642,38 @@ class xfibresVoxelManager{
 	}
 	
       }
+      residuals=m_data-pvm.get_prediction();
     }
-     
+    residuals.Release();
+    return residuals;   
   }
+  
 
+  /*
+  //Initialize the precision tau, if rician noise requested
+  void initialise_tau(){  
+    vector<float> S0_intensities; float S0avg=0,var=0,sigma;
+    for (int i=1; i<=m_data.Nrows(); i++)
+      if (m_bvals(1,i)==0){  //Get the S0 intensities
+	S0avg+=m_data(i);
+	S0_intensities.push_back(m_data(i));
+      }
+    if (S0_intensities.size()>1){     //If we have many S0s, get the standard deviation of the S0s
+      S0avg/=S0_intensities.size();
+      for (int i=0; i<(int)S0_intensities.size(); i++)
+	var+=(S0_intensities[i]-S0avg)*(S0_intensities[i]-S0avg);
+      var/=(S0_intensities.size()-1);
+      sigma=sqrt(var);
+    }
+    else
+      sigma=S0_intensities[0]/15.0;  //If we have only one S0, assume that the SNR is 15 and obtain a sigma
+    cout<<1.0/sigma/sigma<<endl;
+    if (sigma!=0)
+      m_multifibre.set_tau((1.0/(sigma*sigma)));
+    else
+      m_multifibre.set_tau(0.01);
+  }  */
+  
 
 
   void runmcmc(){
@@ -641,22 +747,22 @@ int main(int argc, char *argv[])
       }  
     }
     
-    
-
-    {//scope in which the data exists in 4D format;
-      volume4D<float> data;
-      read_volume4D(data,opts.datafile.value());
-      read_volume(mask,opts.maskfile.value());
-      datam=data.matrix(mask); 
-      matrix2volkey=data.matrix2volkey(mask);
-      vol2matrixkey=data.vol2matrixkey(mask);
-    }
+    volume4D<float> data;
+    read_volume4D(data,opts.datafile.value());
+    read_volume(mask,opts.maskfile.value());
+    datam=data.matrix(mask); 
+    matrix2volkey=data.matrix2volkey(mask);
+    vol2matrixkey=data.vol2matrixkey(mask);
+ 
     Matrix Amat;
     ColumnVector alpha, beta;
     Amat=form_Amat(bvecs,bvals);
     cart2sph(bvecs,alpha,beta);
     Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols(),datam.Nrows());
-    
+  
+    if(opts.rician.value() && !opts.nonlin.value()) 
+      cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl;
+  
     for(int vox=1;vox<=datam.Ncols();vox++){
       cout <<vox<<"/"<<datam.Ncols()<<endl;
       xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvecs,bvals,samples,vox);
