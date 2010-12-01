@@ -28,8 +28,8 @@ using namespace MISCMATHS;
 
 
 #define two_pi 0.636619772
-#define f2x(x) (std::tan((x)/two_pi))
-#define x2f(x) (std::abs(two_pi*std::atan((x))))
+#define f2x(x) (std::tan((x)/two_pi))   //Express volume fractions as this function to ensure they are between 0 and 1.
+#define x2f(x) (std::abs(two_pi*std::atan((x)))) 
 #define bigger(a,b) ((a)>(b)?(a):(b))
 #define smaller(a,b) ((a)>(b)?(b):(a))
 
@@ -225,7 +225,7 @@ protected:
   ColumnVector cosalpha;
   ColumnVector beta;
   
-  float npts;
+  int npts;
   int   nfib;
 
 };
@@ -235,9 +235,12 @@ class PVM_single : public PVM, public NonlinCF {
 public:
   PVM_single(const ColumnVector& iY,
 	     const Matrix& ibvecs, const Matrix& ibvals,
-	     const int& nfibres):PVM(iY,ibvecs,ibvals,nfibres){
+	     const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres), m_include_f0(incl_f0){
 
-    nparams = nfib*3 + 2;
+    if (m_include_f0)
+      nparams = nfib*3 + 3; 
+    else
+      nparams = nfib*3 + 2;
 
     m_f.ReSize(nfib);
     m_th.ReSize(nfib);
@@ -270,6 +273,7 @@ public:
       cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
     }
   }
+
   void print(const ColumnVector& p)const{
     cout << "PARAMETER VALUES " << endl;
     cout << "S0   :" << p(1) << endl;
@@ -279,9 +283,12 @@ public:
       cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
       cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
     }
+    if (m_include_f0)
+      cout << "f0    :" << x2f(p(nparams)) << endl;
   }
 
   float get_s0()const{return m_s0;}
+  float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
   ColumnVector get_f()const{return m_f;}
   ColumnVector get_th()const{return m_th;}
@@ -316,9 +323,11 @@ private:
   int   nparams;
   float m_s0;
   float m_d;
+  float m_f0;
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
+  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
 
 
