@@ -466,8 +466,9 @@ void PVM_single::fit(){
     start(i+1) = _th;
     start(i+2) = _ph;
   }
-
-
+  if (m_include_f0)
+    start(nparams)=f2x(0.001);
+ 
   // do the fit
   NonlinParam  lmpar(start.Nrows(),NL_LM); 
   lmpar.SetGaussNewtonType(LM_L);
@@ -488,9 +489,12 @@ void PVM_single::fit(){
     m_th(k) = final_par(kk+1);
     m_ph(k) = final_par(kk+2);
   }
+  if (m_include_f0)
+    m_f0=x2f(final_par(nparams));
   sort();
   fix_fsum();
 }
+
 void PVM_single::sort(){
   vector< pair<float,int> > fvals(nfib);
   ColumnVector ftmp(nfib),thtmp(nfib),phtmp(nfib);
@@ -506,13 +510,17 @@ void PVM_single::sort(){
     m_ph(i) = phtmp(fvals[ii].second);
   }
 }
+
 void PVM_single::fix_fsum(){
   float sumf=0;
+  if (m_include_f0) 
+    sumf=m_f0;
   for(int i=1;i<=nfib;i++){
     sumf+=m_f(i);
     if(sumf>=1){for(int j=i;j<=nfib;j++)m_f(j)=0;break;}
   }
 }
+
 ReturnMatrix PVM_single::get_prediction()const{
   ColumnVector pred(npts);
   ColumnVector p(nparams);
@@ -523,11 +531,14 @@ ReturnMatrix PVM_single::get_prediction()const{
     p(i+1) = m_th(ii);
     p(i+2) = m_ph(ii);
   }
+  if (m_include_f0)
+    p(nparams)=f2x(m_f0);
   pred = forwardModel(p);
 
   pred.Release();
   return pred;
 }
+
 NEWMAT::ReturnMatrix PVM_single::forwardModel(const NEWMAT::ColumnVector& p)const{
   //cout<<"FORWARD"<<endl;
   //OUT(p.t());
@@ -535,6 +546,7 @@ NEWMAT::ReturnMatrix PVM_single::forwardModel(const NEWMAT::ColumnVector& p)cons
   pred = 0;
   float val;
   float _d = std::abs(p(2));
+  
   ////////////////////////////////////
   ColumnVector fs(nfib);
   Matrix x(nfib,3);
@@ -553,12 +565,19 @@ NEWMAT::ReturnMatrix PVM_single::forwardModel(const NEWMAT::ColumnVector& p)cons
     for(int k=1;k<=nfib;k++){
       val += fs(k)*anisoterm(i,_d,x.Row(k).t());
     }
-    pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
+    if (m_include_f0){
+      float temp_f0=x2f(p(nparams));
+      pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
+    } 
+    else
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
   }  
   pred.Release();
   //cout<<"----"<<endl;
   return pred;
 }
+
+
 double PVM_single::cf(const NEWMAT::ColumnVector& p)const{
   //cout<<"CF"<<endl;
   //OUT(p.t());
@@ -583,13 +602,19 @@ double PVM_single::cf(const NEWMAT::ColumnVector& p)const{
     for(int k=1;k<=nfib;k++){
       err += fs(k)*anisoterm(i,_d,x.Row(k).t());
     }
-    err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i)); 
+    if (m_include_f0){
+      float temp_f0=x2f(p(nparams));
+      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i)); 
+    }
+    else
+      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i)); 
     cfv += err*err; 
   }  
   //OUT(cfv);
   //cout<<"----"<<endl;
   return(cfv);
 }
+
 
 NEWMAT::ReturnMatrix PVM_single::grad(const NEWMAT::ColumnVector& p)const{
   //cout<<"GRAD"<<endl;
@@ -630,11 +655,19 @@ NEWMAT::ReturnMatrix PVM_single::grad(const NEWMAT::ColumnVector& p)const{
       // ph
       J(i,kk+2) = p(1)*fs(k)*anisoterm_ph(i,_d,xx,p(kk+1),p(kk+2));
     }
-    sig = p(1)*((1-sumf)*isoterm(i,_d)+sig);
+    if (m_include_f0){
+      float temp_f0=x2f(p(nparams));
+      //derivative with respect to f0
+      J(i,nparams)= p(1)*(1-isoterm(i,_d)) * two_pi*sign(p(nparams))*1/(1+p(nparams)*p(nparams));
+      sig=p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+sig);
+      J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf-temp_f0)*isoterm_d(i,_d);
+    }
+    else{
+      sig = p(1)*((1-sumf)*isoterm(i,_d)+sig);
+      J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf)*isoterm_d(i,_d);
+    }
     diff(i) = sig - Y(i);
-    // other stuff for derivatives
     J(i,1) = sig/p(1);
-    J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf)*isoterm_d(i,_d);
   }
   
   gradv = 2*J.t()*diff;
@@ -645,6 +678,7 @@ NEWMAT::ReturnMatrix PVM_single::grad(const NEWMAT::ColumnVector& p)const{
 
 
 }
+
 //this uses Gauss-Newton approximation
 boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
   //cout<<"HESS"<<endl;
@@ -666,7 +700,7 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
     x(k,2) = sin(p(kk+1))*sin(p(kk+2));
     x(k,3) = cos(p(kk+1));
   }
-  ////////////////////////////////////
+   ////////////////////////////////////
   Matrix J(npts,nparams);
   float sig;
   for(int i=1;i<=Y.Nrows();i++){
@@ -686,14 +720,20 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
       // ph
       J(i,kk+2) = p(1)*fs(k)*anisoterm_ph(i,_d,xx,p(kk+1),p(kk+2));
     }
-    sig = p(1)*((1-sumf)*isoterm(i,_d)+sig);
-    // other stuff for derivatives
+    if (m_include_f0){
+      float temp_f0=x2f(p(nparams));
+      //derivative with respect to f0
+      J(i,nparams)= p(1)*(1-isoterm(i,_d)) * two_pi*sign(p(nparams))*1/(1+p(nparams)*p(nparams));
+      sig=p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+sig);
+      J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf-temp_f0)*isoterm_d(i,_d);
+    }
+    else{
+      sig = p(1)*((1-sumf)*isoterm(i,_d)+sig);
+      J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf)*isoterm_d(i,_d);
+    }
     J(i,1) = sig/p(1);
-    J(i,2) += (p(2)>0?1.0:-1.0)*p(1)*(1-sumf)*isoterm_d(i,_d);
-    
   }
   
-
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sig = 0.0;
