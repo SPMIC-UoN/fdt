@@ -186,8 +186,8 @@ namespace PARTICLE{
 	    float tmp=rand(); tmp/=RAND_MAX;
 	    sign=tmp > 0.5 ? 1:-1;
 	    m_jumpsign=sign;
-	    m_has_jumped=true;
-	    init=true;
+	    // m_has_jumped=true; // causes probtrackx to go in one direction!
+	    // init=true;
 	  }
 	}
 	else{
