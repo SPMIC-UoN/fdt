@@ -20,10 +20,10 @@ do
 done
 
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_dsamples` ];then
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_dsamples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/mean_dsamples  `${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_*/mean_dsamples*`
 fi
-if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_d_stdsamples` ];then
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_d_stdsamples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/mean_d_stdsamples  `${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_*/mean_d_stdsamples*`
 fi
 
