@@ -1,6 +1,6 @@
 /* Xfibres Diffusion Partial Volume Model  
 
-    Tim Behrens, Saad Jbabdi  - FMRIB Image Analysis Group
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos  - FMRIB Image Analysis Group
  
     Copyright (C) 2005 University of Oxford  */
 
@@ -233,12 +233,6 @@ public:
       m_sum_f[f]+=mfib.fibres()[f].get_f();
       m_sum_lam[f]+=mfib.fibres()[f].get_lam();
     }
-
-//     for(int i=1;i<=m_sig2.Nrows();i++){
-//       float sig=mfib.get_signal()(i);
-//       m_mean_sig(i,vox)+=sig;
-//       m_sig2(i,vox)+=(sig*sig);
-//     }
   }
   
   void finish_voxel(int vox){
@@ -288,8 +282,6 @@ public:
       m_sum_f[f]=0;
       m_sum_lam[f]=0;
     }
-    cout<<m_mean_f0samples(vox)<<" "<<m_mean_dsamples(vox)<<endl;
-
     m_beenhere(int(m_matrix2volkey(vox,1)),int(m_matrix2volkey(vox,2)),int(m_matrix2volkey(vox,3)))=nfibs;
   }
   
@@ -321,8 +313,6 @@ public:
 	      ret=true;
 	    }
 	  }
-	
-	  
 	}
       } 
     }
@@ -344,13 +334,9 @@ public:
 	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),opts.all_ard.value());//is all_ard, then turn ard on here
 	else
 	  mfibre.addfibre(th,ph,m_mean_fsamples[f](voxbest),true);
-
       }
-	
-      
     }
     return ret;
-    
   }
   
   
@@ -501,7 +487,7 @@ public:
 	 m_multifibre.set_tau(tau);
     }	
     else{                     //For Gaussian noise model
-      if(opts.nonlin.value())
+      if(opts.nonlin.value() || opts.cnonlin.value())
 	initialise_nonlin();
       else{
 	if(!opts.localinit.value())
@@ -552,45 +538,76 @@ public:
 
     // where using mono-exponential model
     if(opts.modelnum.value()==1){
-      PVM_single pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
-      pvm.fit(); // this will give th,ph,f in the correct order
-      
       float pvmS0, pvmd, pvmf0=0.001;
       ColumnVector pvmf,pvmth,pvmph;
-      pvmf  = pvm.get_f();
-      pvmth = pvm.get_th();
-      pvmph = pvm.get_ph();
-      pvmS0 = pvm.get_s0();
-      pvmd  = pvm.get_d();
-      predicted_signal=pvm.get_prediction();
+      
+      if (opts.nonlin.value()){
+	PVM_single pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
+	pvm.fit(); // this will give th,ph,f in the correct order
+      
+	pvmf  = pvm.get_f();
+	pvmth = pvm.get_th();
+	pvmph = pvm.get_ph();
+	pvmS0 = pvm.get_s0();
+	pvmd  = pvm.get_d();
+	predicted_signal=pvm.get_prediction();
+      
+	if (opts.f0.value()){
+	  pvmf0=pvm.get_f0();
 
-      if (opts.f0.value()){
-	pvmf0=pvm.get_f0();
-
-	//If the full model gives values that are considered implausible, or we are in a CSF voxel (f1<0.05)
-	//then fit a model without the f0 and drive f0_init to almost zero 
-	if (((opts.nfibres.value()>0) && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
-	  PVM_single pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
-	  pvm2.fit(); // this will give th,ph,f in the correct order
-	  pvmf0=0.001;
-	  pvmS0=pvm2.get_s0();
-	  pvmd=pvm2.get_d();
-	  pvmf  = pvm2.get_f();
-	  pvmth = pvm2.get_th();
-	  pvmph = pvm2.get_ph();
-	  predicted_signal=pvm2.get_prediction();
+	  //If the full model gives values that are considered implausible, or we are in a CSF voxel (f1<0.05)
+	  //then fit a model without the f0 and drive f0_init to almost zero 
+	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
+	    PVM_single pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    pvm2.fit(); // this will give th,ph,f in the correct order
+	    pvmf0=0.001;
+	    pvmS0=pvm2.get_s0();
+	    pvmd=pvm2.get_d();
+	    pvmf  = pvm2.get_f();
+	    pvmth = pvm2.get_th();
+	    pvmph = pvm2.get_ph();
+	    predicted_signal=pvm2.get_prediction();
+	  }
+	  m_multifibre.set_f0(pvmf0);
 	}
-	m_multifibre.set_f0(pvmf0);
-	//m_multifibre.set_f0(0.001);
       }
+      else{   //Do constrained optimization
+      	PVM_single_c pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
+	pvm.fit(); // this will give th,ph,f in the correct order
+      
+	pvmf  = pvm.get_f();
+	pvmth = pvm.get_th();
+	pvmph = pvm.get_ph();
+	pvmS0 = pvm.get_s0();
+	pvmd  = pvm.get_d();
+	predicted_signal=pvm.get_prediction();
+      
+	if (opts.f0.value()){
+	  pvmf0=pvm.get_f0();
+
+	  //If the full model gives values that are considered implausible, or we are in a CSF voxel (f1<0.05)
+	  //then fit a model without the f0 and drive f0_init to almost zero 
+	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
+	    PVM_single_c pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    pvm2.fit(); // this will give th,ph,f in the correct order
+	    pvmf0=0.001;
+	    pvmS0=pvm2.get_s0();
+	    pvmd=pvm2.get_d();
+	    pvmf  = pvm2.get_f();
+	    pvmth = pvm2.get_th();
+	    pvmph = pvm2.get_ph();
+	    predicted_signal=pvm2.get_prediction();
+	  }
+	  m_multifibre.set_f0(pvmf0);
+	}
+      }
+
       if(pvmd<0)
 	pvmd=2e-3;
    
       m_multifibre.set_S0(pvmS0);
       m_multifibre.set_d(pvmd);
       
-      cout<<pvmf0<<" "<<pvmS0<<" "<<pvmd<<" "<<pvmf(1)<<" "<<pvmf(2)<<endl;
-   
       if(opts.nfibres.value()>0){
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
