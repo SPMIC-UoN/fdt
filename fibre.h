@@ -617,7 +617,6 @@ namespace FIBRE{
     const bool& m_rician;         //If true, use Rician noise model 
     const bool& m_includef0;      //If true, include an unattenuated signal compartment in the model with fraction f0
     const bool& m_ardf0;          //If true, use ard on the f0 compartment 
-    
 
   public:
     //Constructor
@@ -627,14 +626,13 @@ namespace FIBRE{
       m_iso_Signal.ReSize(alpha.Nrows());
       m_iso_Signal=0;
       m_iso_Signal_old=m_iso_Signal;            //Initialize vectors that keep the signal from the isotropic compartment
-      // m_logdata=m_iso_Signal;
      
-      m_d_acc=0; m_d_rej=0;                
+      /*      m_d_acc=0; m_d_rej=0;                
       m_d_std_acc=0; m_d_std_rej=0;
       m_S0_acc=0; m_S0_rej=0;
       m_tau_acc=0; m_tau_rej=0;
       m_f0_acc=0; m_f0_rej=0;
-      m_d_prior=0; m_d_std_prior=0; m_S0_prior=0; m_f0_prior=0; m_tau_prior=0; 
+      m_d_prior=0; m_d_std_prior=0; m_S0_prior=0; m_f0_prior=0; m_tau_prior=0; */
     
       m_f0=0.0;   //Set this parameter to 0, it will be initialized later only if m_includef0 is true  
    }
@@ -658,23 +656,12 @@ namespace FIBRE{
       Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,m_modelnum,m_d_std);
       m_fibres.push_back(fib);
     }
-    /* 
-    void Get_log_data(){
-      for (int i=1; i<=m_data.Nrows(); i++){
-	if (m_data(i)!=0)
-	  m_logdata(i)=std::log(m_data(i));
-	else
-	  m_logdata(i)=-maxfloat; //-Infinity
-      }
-      } */
- 
 
     void initialise_energies(){
       compute_d_prior();
       if(m_modelnum==2)
 	compute_d_std_prior();
       if (m_rician){
-	//	Get_log_data();
       	compute_tau_prior();
       }
       if (m_includef0)
