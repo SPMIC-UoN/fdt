@@ -1,6 +1,6 @@
 /*  Diffusion model fitting
 
-    Timothy Behrens, Saad Jbabdi  - FMRIB Image Analysis Group
+    Timothy Behrens, Saad Jbabdi, Stam Sotiropoulos  - FMRIB Image Analysis Group
  
     Copyright (C) 2005 University of Oxford  */
 
@@ -432,8 +432,401 @@ float DTI::anisoterm(const int& pt,const ColumnVector& ls,const Matrix& rot)cons
 }
 
 
+
+
+/////////////////////////////////////////////////////////////////////////
+//       PARTIAL VOLUME MODEL - SINGLE SHELL 
+// Constrained Optimization for the diffusivity, fractions and their sum<1
+//////////////////////////////////////////////////////////////////////////
+
+void PVM_single_c::fit(){
+
+  // initialise with a tensor
+  DTI dti(Y,bvecs,bvals);
+  dti.linfit();
+
+  // set starting parameters for nonlinear fitting
+  float _th,_ph;
+  cart2sph(dti.get_v1(),_th,_ph);
+
+  ColumnVector start(nparams);
+  //Initialize the non-linear fitter. Use the DTI estimates for most parameters, apart from the volume fractions
+  start(1) = dti.get_s0();
+  start(2) = d2lambda(dti.get_md()>0?dti.get_md()*2:0.001); // empirically found that d~2*MD
+  start(4) = _th;
+  start(5) = _ph;
+  for(int ii=2,i=6;ii<=nfib;ii++,i+=3){
+    cart2sph(dti.get_v(ii),_th,_ph);
+    start(i+1) = _th;
+    start(i+2) = _ph;
+  }
+  
+  // do a better job for initializing the volume fractions
+  fit_pvf(start);
+
+  // do the fit
+  NonlinParam  lmpar(start.Nrows(),NL_LM); 
+  lmpar.SetGaussNewtonType(LM_L);
+  lmpar.SetStartingEstimate(start);
+
+  NonlinOut status;
+  status = nonlin(lmpar,(*this));
+  ColumnVector final_par(nparams);
+  final_par = lmpar.Par();
+  
+  // finalise parameters
+  m_s0 = final_par(1);
+  m_d  = lambda2d(final_par(2));
+  for(int k=1;k<=nfib;k++){
+    int kk = 3 + 3*(k-1);
+
+    m_f(k)  = beta2f(final_par(kk))*partial_fsum(m_f,k-1);
+    m_th(k) = final_par(kk+1);
+    m_ph(k) = final_par(kk+2);
+  }
+  if (m_include_f0)
+    m_f0=beta2f(final_par(nparams))*partial_fsum(m_f,nfib);
+  sort();
+  //  print();
+}
+
+void PVM_single_c::sort(){
+  vector< pair<float,int> > fvals(nfib);
+  ColumnVector ftmp(nfib),thtmp(nfib),phtmp(nfib);
+  ftmp=m_f;thtmp=m_th;phtmp=m_ph;
+  for(int i=1;i<=nfib;i++){
+    pair<float,int> p(m_f(i),i);
+    fvals[i-1] = p;
+  }
+  std::sort(fvals.begin(),fvals.end());
+  for(int i=1,ii=nfib-1;ii>=0;i++,ii--){
+    m_f(i)  = ftmp(fvals[ii].second);
+    m_th(i) = thtmp(fvals[ii].second);
+    m_ph(i) = phtmp(fvals[ii].second);
+  }
+}
+
+
+//If the sum of the fractions is >1, then zero as many fractions
+//as necessary, so that the sum becomes smaller than 1.
+void PVM_single_c::fix_fsum(ColumnVector& fs)const{
+  float sumf=0;
+  for(int i=1;i<=nfib;i++){
+    sumf+=fs(i);
+    if(sumf>=1){
+      for(int j=i;j<=nfib;j++) 
+	fs(j)=0;
+      break;
+    }
+  }
+}
+
+
+//Find the volume fractions given all the other model 
+//parameters using Linear Least Squares
+void PVM_single_c::fit_pvf(ColumnVector& x)const{
+  ColumnVector fs(nfib);
+  ColumnVector Y_I(npts);
+  Matrix       M(npts,nfib),dir(3,nfib);
+  float s0=x(1),d=lambda2d(x(2)), f0;
+  for(int k=1;k<=nfib;k++){
+    int kk = 3+3*(k-1);
+    dir(1,k) = sin(x(kk+1))*cos(x(kk+2));
+    dir(2,k) = sin(x(kk+1))*sin(x(kk+2));
+    dir(3,k) = cos(x(kk+1));
+  }
+  ////////////////////////////////////
+  for(int i=1;i<=npts;i++){
+    float Iso_term=isoterm(i,d);
+    Y_I(i) = Y(i)-s0*Iso_term;
+    for(int k=1;k<=nfib;k++){
+      M(i,k)=s0*(anisoterm(i,d,dir.Column(k))-Iso_term);
+    }
+    //if (m_include_f0)
+    //M(i,f_num)=s0*(1-Iso_term);
+  }
+  fs = pinv(M)*Y_I;
+  if (m_include_f0){
+    f0=0.001; fs(1)-=f0;  //Initialize f0 with a very small value
+  }
+
+  for(int k=1;k<=nfib;k++)
+    fs(k)=fabs(fs(k));    //make sure that the initial values for the fractions are positive
+  
+  fix_fsum(fs);
+
+  for(int k=1;k<=nfib;k++)
+    x(3+3*(k-1))=f2beta(fs(k)/partial_fsum(fs,k-1));
+
+  if (m_include_f0)
+    x(nparams)=f2beta(f0/partial_fsum(fs,nfib));
+}
+
+
+ReturnMatrix PVM_single_c::get_prediction()const{
+  ColumnVector pred(npts);
+  ColumnVector p(nparams);
+  ColumnVector fs(nfib);
+  
+  fs=m_f;
+  p(1) = m_s0;
+  p(2) = d2lambda(m_d);
+  for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
+    p(i)   = f2beta(m_f(ii)/partial_fsum(fs,ii-1));
+    p(i+1) = m_th(ii);
+    p(i+2) = m_ph(ii);
+  }
+  if (m_include_f0)
+    p(nparams)=f2beta(m_f0/partial_fsum(fs,nfib));
+  pred = forwardModel(p);
+  pred.Release();
+  return pred;
+}
+
+
+NEWMAT::ReturnMatrix PVM_single_c::forwardModel(const NEWMAT::ColumnVector& p)const{
+  ColumnVector pred(npts);
+  pred = 0;
+  float val;
+  float _d = lambda2d(p(2));
+  ////////////////////////////////////
+  ColumnVector fs(nfib);
+  Matrix x(nfib,3);
+  float sumf=0;
+  for(int k=1;k<=nfib;k++){
+    int kk = 3+3*(k-1);
+    fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
+    sumf += fs(k);
+    x(k,1) = sin(p(kk+1))*cos(p(kk+2));
+    x(k,2) = sin(p(kk+1))*sin(p(kk+2));
+    x(k,3) = cos(p(kk+1));
+  }
+  ////////////////////////////////////
+  for(int i=1;i<=Y.Nrows();i++){
+    val = 0.0;
+    for(int k=1;k<=nfib;k++){
+      val += fs(k)*anisoterm(i,_d,x.Row(k).t());
+    }
+    if (m_include_f0){
+      float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
+      pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
+    } 
+    else
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
+  }  
+  pred.Release();
+  return pred;
+}
+
+
+//Cost Function, sum of squared residuals
+double PVM_single_c::cf(const NEWMAT::ColumnVector& p)const{
+  //cout<<"CF"<<endl;
+  //OUT(p.t());
+  double cfv = 0.0;
+  double err;
+  float _d = lambda2d(p(2));
+  ////////////////////////////////////
+  ColumnVector fs(nfib);
+  Matrix x(nfib,3);
+  float sumf=0;
+  for(int k=1;k<=nfib;k++){
+    int kk = 3+3*(k-1);
+    fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
+    sumf += fs(k);
+    x(k,1) = sin(p(kk+1))*cos(p(kk+2));
+    x(k,2) = sin(p(kk+1))*sin(p(kk+2));
+    x(k,3) = cos(p(kk+1));
+  }
+  ////////////////////////////////////
+  for(int i=1;i<=Y.Nrows();i++){
+    err = 0.0;
+    for(int k=1;k<=nfib;k++){
+      err += fs(k)*anisoterm(i,_d,x.Row(k).t());
+    }
+    if (m_include_f0){
+      float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
+      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i)); 
+    }
+    else
+      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i)); 
+    cfv += err*err; 
+  }  
+  return(cfv);
+}
+
+NEWMAT::ReturnMatrix PVM_single_c::grad(const NEWMAT::ColumnVector& p)const{
+  //cout<<"GRAD"<<endl;
+  //OUT(p.t());
+  NEWMAT::ColumnVector gradv(p.Nrows());
+  gradv = 0.0;
+  float _d = lambda2d(p(2));
+  ////////////////////////////////////
+  ColumnVector fs(nfib);
+  ColumnVector bs(nfib);
+  Matrix x(nfib,3);ColumnVector xx(3); ColumnVector yy(3);
+  float sumf=0;
+  
+  for(int k=1;k<=nfib;k++){
+    int kk = 3+3*(k-1);
+    bs(k)=p(kk);
+    fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
+    sumf += fs(k);
+    x(k,1) = sin(p(kk+1))*cos(p(kk+2));
+    x(k,2) = sin(p(kk+1))*sin(p(kk+2));
+    x(k,3) = cos(p(kk+1));
+  }
+
+  ////////////////////////////////////
+  Matrix f_deriv;
+  //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
+  f_deriv=fractions_deriv(nfib, fs, bs);  
+
+  Matrix J(npts,nparams);
+  ColumnVector diff(npts);
+  float sig, Iso_term; 
+  ColumnVector Aniso_terms(nfib);
+
+  for(int i=1;i<=Y.Nrows();i++){
+    Iso_term=isoterm(i,_d);  //Precompute some terms for this datapoint
+    for(int k=1;k<=nfib;k++){
+      xx = x.Row(k).t();
+      Aniso_terms(k)=anisoterm(i,_d,xx);
+    }
+    sig = 0;
+    J.Row(i)=0;
+    for(int k=1;k<=nfib;k++){
+      int kk = 3+3*(k-1);
+      xx = x.Row(k).t();
+      sig += fs(k)*Aniso_terms(k); //Total signal
+      // other stuff for derivatives
+      // lambda (i.e. d)
+      J(i,2) += p(1)*fs(k)*anisoterm_lambda(i,p(2),xx);
+      
+      // beta (i.e. f)
+      J(i,kk)=0;
+      for (int j=1; j<=nfib; j++){
+	if (f_deriv(j,k)!=0)
+	  J(i,kk) += p(1)*(Aniso_terms(j)-Iso_term)*f_deriv(j,k);
+      }
+      // th
+      J(i,kk+1) = p(1)*fs(k)*anisoterm_th(i,_d,xx,p(kk+1),p(kk+2));
+      // ph
+      J(i,kk+2) = p(1)*fs(k)*anisoterm_ph(i,_d,xx,p(kk+1),p(kk+2));
+    }
+    if (m_include_f0){
+      float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
+      //derivative with respect to f0
+      J(i,nparams)= p(1)*(1-Iso_term)*sin(2*p(nparams))*partial_fsum(fs,nfib);
+      sig=p(1)*(temp_f0+(1-sumf-temp_f0)*Iso_term+sig);
+      J(i,2) += p(1)*(1-sumf-temp_f0)*isoterm_lambda(i,p(2));
+    }
+    else{
+      sig = p(1)*((1-sumf)*Iso_term+sig);
+      J(i,2) += p(1)*(1-sumf)*isoterm_lambda(i,p(2)); //lambda
+    }
+    diff(i) = sig - Y(i);
+    J(i,1) = sig/p(1);  //S0
+  }
+  
+  gradv = 2*J.t()*diff;
+  gradv.Release();
+  return gradv;
+
+
+}
+//this uses Gauss-Newton approximation
+boost::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
+  //cout<<"HESS"<<endl;
+  //OUT(p.t());
+  boost::shared_ptr<BFMatrix>   hessm;
+  if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
+  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+
+  float _d = lambda2d(p(2));
+  ////////////////////////////////////
+  ColumnVector fs(nfib);
+  ColumnVector bs(nfib);
+  Matrix x(nfib,3);ColumnVector xx(3); ColumnVector yy(3);
+  float sumf=0;
+  for(int k=1;k<=nfib;k++){
+    int kk = 3+3*(k-1);
+    bs(k)=p(kk);
+    fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
+    sumf += fs(k);
+    x(k,1) = sin(p(kk+1))*cos(p(kk+2));
+    x(k,2) = sin(p(kk+1))*sin(p(kk+2));
+    x(k,3) = cos(p(kk+1));
+  }
+  ////////////////////////////////////
+  Matrix f_deriv;
+  f_deriv=fractions_deriv(nfib, fs, bs);
+
+  Matrix J(npts,nparams);
+  float sig, Iso_term; 
+  ColumnVector Aniso_terms(nfib);
+
+  for(int i=1;i<=Y.Nrows();i++){
+    Iso_term=isoterm(i,_d);  //Precompute some terms for this datapoint
+    for(int k=1;k<=nfib;k++){
+      xx = x.Row(k).t();
+      Aniso_terms(k)=anisoterm(i,_d,xx);
+    }
+    sig = 0;
+    J.Row(i)=0;
+    for(int k=1;k<=nfib;k++){
+      int kk = 3+3*(k-1);
+      xx = x.Row(k).t();
+      sig += fs(k)*Aniso_terms(k); //Total signal
+      // other stuff for derivatives
+      // lambda (i.e. d)
+      J(i,2) += p(1)*fs(k)*anisoterm_lambda(i,p(2),xx);
+      
+      // beta (i.e. f)
+      J(i,kk)=0;
+      for (int j=1; j<=nfib; j++){
+	if (f_deriv(j,k)!=0)
+	  J(i,kk) += p(1)*(Aniso_terms(j)-Iso_term)*f_deriv(j,k);
+      }
+      // th
+      J(i,kk+1) = p(1)*fs(k)*anisoterm_th(i,_d,xx,p(kk+1),p(kk+2));
+      // ph
+      J(i,kk+2) = p(1)*fs(k)*anisoterm_ph(i,_d,xx,p(kk+1),p(kk+2));
+    }
+    if (m_include_f0){
+      float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
+      //derivative with respect to f0
+      J(i,nparams)= p(1)*(1-Iso_term)*sin(2*p(nparams))*partial_fsum(fs,nfib);
+      sig=p(1)*(temp_f0+(1-sumf-temp_f0)*Iso_term+sig);
+      J(i,2) += p(1)*(1-sumf-temp_f0)*isoterm_lambda(i,p(2));
+    }
+    else{
+      sig = p(1)*((1-sumf)*Iso_term+sig);
+      J(i,2) += p(1)*(1-sumf)*isoterm_lambda(i,p(2)); //lambda
+    }
+    J(i,1) = sig/p(1);  //S0
+  }
+
+  for (int i=1; i<=p.Nrows(); i++){
+    for (int j=i; j<=p.Nrows(); j++){
+      sig = 0.0;
+      for(int k=1;k<=J.Nrows();k++)
+	sig += 2*(J(k,i)*J(k,j));
+      hessm->Set(i,j,sig);
+    }
+  }
+  for (int j=1; j<=p.Nrows(); j++) {
+    for (int i=j+1; i<=p.Nrows(); i++) {
+      hessm->Set(i,j,hessm->Peek(j,i));
+    }
+  }
+  return(hessm);
+}
+
+
+
 ////////////////////////////////////////////////
-//       PARTIAL VOLUME MODEL - SINGLE SHELL
+//       PARTIAL VOLUME MODEL - SINGLE SHELL (OLD)
 ////////////////////////////////////////////////
 
 void PVM_single::fit(){
@@ -452,7 +845,7 @@ void PVM_single::fit(){
   start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
   start(4) = _th;
   start(5) = _ph;
-  float sumf=x2f(start(2));
+  float sumf=x2f(start(3));
   float tmpsumf=sumf;
   for(int ii=2,i=6;ii<=nfib;ii++,i+=3){
     float denom=2;
@@ -755,6 +1148,7 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
 
 
 
+
 ////////////////////////////////////////////////
 //       PARTIAL VOLUME MODEL - MULTIPLE SHELLS
 ////////////////////////////////////////////////
@@ -1042,7 +1436,65 @@ boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost:
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //               USEFUL FUNCTIONS TO CALCULATE DERIVATIVES
 ///////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////
+///////Model 1 (Constrained)
+/////////////////////////////////////
 // functions
+float PVM_single_c::isoterm(const int& pt,const float& _d)const{
+  return(std::exp(-bvals(1,pt)*_d));
+}
+float PVM_single_c::anisoterm(const int& pt,const float& _d,const ColumnVector& x)const{
+  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
+  return(std::exp(-bvals(1,pt)*_d*dp*dp));
+}
+// 1st order derivatives
+float PVM_single_c::isoterm_lambda(const int& pt,const float& lambda)const{
+  return(-2*bvals(1,pt)*lambda*std::exp(-bvals(1,pt)*lambda*lambda));
+}
+float PVM_single_c::anisoterm_lambda(const int& pt,const float& lambda,const ColumnVector& x)const{
+  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
+  return(-2*bvals(1,pt)*lambda*dp*dp*std::exp(-bvals(1,pt)*lambda*lambda*dp*dp));
+}
+float PVM_single_c::anisoterm_th(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const{
+  float dp  = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
+  float dp1 = cos(_th)*(bvecs(1,pt)*cos(_ph) + bvecs(2,pt)*sin(_ph)) - bvecs(3,pt)*sin(_th);
+  return(-2*bvals(1,pt)*_d*dp*dp1*std::exp(-bvals(1,pt)*_d*dp*dp));
+}
+float PVM_single_c::anisoterm_ph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const{
+  float dp  = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
+  float dp1 = sin(_th)*(-bvecs(1,pt)*sin(_ph) + bvecs(2,pt)*cos(_ph));
+  return(-2*bvals(1,pt)*_d*dp*dp1*std::exp(-bvals(1,pt)*_d*dp*dp));
+}
+
+NEWMAT::ReturnMatrix PVM_single_c::fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const{
+  NEWMAT::Matrix Deriv(nfib,nfib);
+  float fsum;
+  Deriv=0;
+  for (int j=1; j<=nfib; j++)
+    for (int k=1; k<=nfib; k++){
+      if (j==k){
+	fsum=1; 
+	for (int n=1; n<=j-1; n++)
+	  fsum-=fs(n);
+	Deriv(j,k)=sin(2*bs(k))*fsum;
+      }
+      else if (j>k){
+	fsum=0;
+	for (int n=1; n<=j-1; n++)
+	  fsum+=Deriv(n,k);
+	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;  
+      }
+    } 	   
+  Deriv.Release();
+  return Deriv;
+}
+
+
+/////////////////////////////////////
+////////Model 1 (Old)
+/////////////////////////////////////
+//functions
 float PVM_single::isoterm(const int& pt,const float& _d)const{
   return(std::exp(-bvals(1,pt)*_d));
 }
@@ -1147,4 +1599,3 @@ float PVM_multi::anisoterm_ph(const int& pt,const float& _a,const float& _b,cons
   float dp1 = sin(_th)*(-bvecs(1,pt)*sin(_ph) + bvecs(2,pt)*cos(_ph));
   return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
 }
-
