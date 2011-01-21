@@ -1,6 +1,6 @@
 /*  Diffusion model fitting
 
-    Timothy Behrens, Saad Jbabdi  - FMRIB Image Analysis Group
+    Timothy Behrens, Saad Jbabdi, Stam Sotiropoulos  - FMRIB Image Analysis Group
  
     Copyright (C) 2005 University of Oxford  */
 
@@ -56,7 +56,7 @@ public:
     bvecs=ibvecs;
     bvals=ibvals;
     form_Amat();
-    nparams=Amat.Ncols();
+    nparams=7;
   }
   DTI(const ColumnVector& iY,
       const Matrix& inAmat):Amat(inAmat){
@@ -65,13 +65,12 @@ public:
     m_v1.ReSize(3);
     m_v2.ReSize(3);
     m_v3.ReSize(3);
-    nparams=Amat.Ncols();
+    nparams=7;
     iAmat = pinv(Amat);
   }
   ~DTI(){}
   void linfit();
-  void gmmfit();
-  void nonlinfit(); // not functional yet!!!
+  void nonlinfit();
   void calc_tensor_parameters();
   void sort();
   void set_data(const ColumnVector& data){Y=data;}
@@ -80,11 +79,8 @@ public:
   float get_s0()const{return m_s0;}
   float get_mo()const{return m_mo;}
   ColumnVector get_v1()const{return m_v1;}
-  float get_v1(const int& i)const{return m_v1(i);}
   ColumnVector get_v2()const{return m_v2;}
-  float get_v2(const int& i)const{return m_v2(i);}
   ColumnVector get_v3()const{return m_v3;}
-  float get_v3(const int& i)const{return m_v3(i);}
   float get_l1()const{return m_l1;}
   float get_l2()const{return m_l2;}
   float get_l3()const{return m_l3;}
@@ -100,17 +96,11 @@ public:
     return x;
   }
   ColumnVector get_v(const int& i)const{if(i==1)return m_v1;else if(i==2)return m_v2;else return m_v3;}
+  ColumnVector get_prediction()const;
   SymmetricMatrix get_covar()const{return m_covar;}
   ColumnVector get_data()const{return Y;}
   Matrix get_Amat()const{return Amat;}
-  ColumnVector get_dvec()const{return m_dvec;}
-  float get_dvec(const int& i)const{return m_dvec(i);}
-  float get_sse()const{return m_sse;}
-  ColumnVector get_pred()const{return m_pred;}
-  float get_pred(const int& i)const{return m_pred(i);}
-  float get_weights(const int& i)const{return sqrt(m_sqrweights(i,i));}
 
-  
   // derivatives of tensor functions w.r.t. tensor parameters
   ReturnMatrix calc_fa_grad(const ColumnVector& _tens)const;
   float calc_fa_var()const;
@@ -151,33 +141,6 @@ public:
     }
     iAmat = pinv(Amat);
   }
-
-void form_Amat(const Matrix& bmat, const Matrix & cni )
-{
-  //cni are confound regressors of no interest
-  Matrix A(bmat.Ncols(),7 + cni.Ncols());
-  Matrix A_noconf(bmat.Ncols(),7);
-  for( int i = 1; i <= bmat.Ncols(); i++){
-    A(i,1) = bmat(1,i);
-    A(i,2) = 2*bmat(2,i);
-    A(i,3) = 2*bmat(3,i);
-    A(i,4) = bmat(4,i);
-    A(i,5) = 2*bmat(5,i);
-    A(i,6) = bmat(6,i);
-    A(i,7) = 1;
-    A_noconf(i,1) = bmat(1,i);
-    A_noconf(i,2) = 2*bmat(2,i);
-    A_noconf(i,3) = 2*bmat(3,i);
-    A_noconf(i,4) = bmat(4,i);
-    A_noconf(i,5) = 2*bmat(5,i);
-    A_noconf(i,6) = bmat(6,i);
-    A_noconf(i,7) = 1;
-    for( int col=1;col<=cni.Ncols();col++){
-      A(i,col+7)=cni(i,col);
-    }
-  }
-  Amat=A;
-}
   void vec2tens(const ColumnVector& Vec){
     m_tens.ReSize(3);
     m_tens(1,1)=Vec(1);
@@ -223,11 +186,8 @@ private:
   float m_sse;
   SymmetricMatrix m_tens;
   SymmetricMatrix m_covar;
-  ColumnVector m_dvec;
-  ColumnVector m_pred;
-  Matrix m_sqrweights;
-  ColumnVector m_res;
 };
+
 
 ////////////////////////////////////////////////
 //       Partial Volume Models
@@ -276,6 +236,7 @@ protected:
   int   nfib;
 
 };
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Model 1 : mono-exponential (for single shell). Contrained optimization for the diffusivity, fractions and their sum<1
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -478,7 +439,6 @@ public:
   float anisoterm_phph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
   float anisoterm_thph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
 
-
 private:  
   int   nparams;
   float m_s0;
@@ -489,8 +449,6 @@ private:
   ColumnVector m_ph;
   const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
-
-
 
 
 
