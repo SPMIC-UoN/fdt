@@ -116,15 +116,29 @@ int main(int argc, char** argv)
 	  S(t+1)=data(i,j,k,t);
 
 	if(opts.modelnum.value()==1){
-	  PVM_single pvm(S,bvecs,bvals,opts.nfibres.value());
-	  pvm.fit();
+	  if (opts.cnonlinear.value()){
+	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value());
+	    pvm.fit();
 	  
-	  S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
-	  dvol(i-minx,j-miny,k-minz) = pvm.get_d();
-	  for(int f=0;f<opts.nfibres.value();f++){
-	    fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
-	    thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
-	    phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
+	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    for(int f=0;f<opts.nfibres.value();f++){
+	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
+	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
+	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	    }
+	  }
+	  else{
+	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value());
+	    pvm.fit();
+	  
+	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
+	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    for(int f=0;f<opts.nfibres.value();f++){
+	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
+	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
+	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	    }
 	  }
 	}
 	else{

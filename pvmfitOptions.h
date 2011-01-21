@@ -36,6 +36,8 @@ class pvmfitOptions {
   Option<string> bvalsfile;
   Option<int>    nfibres;
   Option<int>    modelnum;
+  Option<bool>   cnonlinear;
+
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -84,6 +86,9 @@ class pvmfitOptions {
    modelnum(string("--model"), 1,
 	     string("1:monoexponential;2:non mono-exponential"),
 	     false, requires_argument), 
+   cnonlinear(string("--cnonlinear"),false, 
+	      string("Apply constrained nonlinear optimization on the diffusivity, volume fractions and their sum"),
+	      false,no_argument),
    options("pvmfit", "pvmfit -k <datafile> -m <maskfile> -r <bvecsfile> -b <bvalsfile> [-n 2]\n")
    {
      
@@ -98,6 +103,7 @@ class pvmfitOptions {
        options.add(bvalsfile);
        options.add(nfibres);
        options.add(modelnum);
+       options.add(cnonlinear);
      }
      catch(X_OptionError& e) {
        options.usage();
