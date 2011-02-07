@@ -577,7 +577,7 @@ namespace FIBRE{
     const ColumnVector& m_alpha;  //Theta angles of bvecs 
     const ColumnVector& m_beta;   //Phi angles of bvecs
     const Matrix& m_bvals;        //b values
-    const int& m_modelnum;        //1 for single-shell, 2 for multi-shell model
+    const int m_modelnum;         //1 for single-shell, 2 for multi-shell model
     
 
   public:
@@ -590,7 +590,13 @@ namespace FIBRE{
       m_iso_Signal.ReSize(alpha.Nrows());
       m_iso_Signal=0;
       m_iso_Signal_old=m_iso_Signal;            //Initialize vectors that keep the signal from the isotropic compartment
-    }
+      
+      m_d_acc=0; m_d_rej=0;                
+      m_d_std_acc=0; m_d_std_rej=0;
+      m_S0_acc=0; m_S0_rej=0;
+      m_d_prior=0; m_d_std_prior=0; m_S0_prior=0; 
+      m_d_old=0; m_d=0; m_S0_old=0; m_S0=0; m_d_std_old=0; m_d_std=0;
+      }
     
     ~Multifibre(){}
     
