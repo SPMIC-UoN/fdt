@@ -613,7 +613,7 @@ namespace FIBRE{
     const ColumnVector& m_alpha;  //Theta angles of bvecs 
     const ColumnVector& m_beta;   //Phi angles of bvecs
     const Matrix& m_bvals;        //b values
-    const int& m_modelnum;        //1 for single-shell, 2 for multi-shell model
+    const int m_modelnum;        //1 for single-shell, 2 for multi-shell model
     const bool& m_rician;         //If true, use Rician noise model 
     const bool& m_includef0;      //If true, include an unattenuated signal compartment in the model with fraction f0
     const bool& m_ardf0;          //If true, use ard on the f0 compartment 
