@@ -62,6 +62,7 @@ class probtrackxOptions {
   Option<int> nparticles;
   Option<int> nsteps;
   Option<float> distthresh;
+  FmribOption<float> distthresh3;
   Option<float> c_thr;
   FmribOption<float> fibthresh;
   Option<bool> sampvox;
@@ -74,6 +75,7 @@ class probtrackxOptions {
   Option<int> rseed;
   Option<bool> seedcountastext;
   FmribOption<bool> splitmatrix2;
+
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -182,7 +184,7 @@ class probtrackxOptions {
 	 string("\tFreesurfer-type surface descriptor (in ascii format)"),
        false, requires_argument),
    meshspace(string("--meshspace"), string("freesurfer"),
-	 string("Mesh reference space - either 'freesurfer' (default) or 'caret'"),
+	 string("Mesh reference space - either 'freesurfer' (default) or 'caret' or 'first'"),
        false, requires_argument),
   lrmask(string("--lrmask"), string(""),
 	 string("Low resolution binary brain mask for storing connectivity distribution in matrix2 mode"),
@@ -201,6 +203,9 @@ class probtrackxOptions {
 	    false, requires_argument),
    distthresh(string("--distthresh"), 0,
 	    string("Discards samples shorter than this threshold (in mm - default=0)"),
+	    false, requires_argument),
+   distthresh3(string("--distthresh3"), 0,
+	    string("Discards samples (in matrix3) shorter than this threshold (in voxels - default=0)"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
 	 string("Curvature threshold - default=0.2"), 
@@ -277,6 +282,7 @@ class probtrackxOptions {
        options.add(nparticles);
        options.add(nsteps);
        options.add(distthresh);
+       options.add(distthresh3);
        options.add(c_thr);
        options.add(fibthresh);
        options.add(sampvox);

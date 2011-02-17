@@ -483,13 +483,6 @@ namespace TRACT{
     m_SeedRow=1;
     
 
-    // where we initialise the vector that stores average path lengths
-    // (maybe in the future, we shouldn't need --os2t to do this...)
-    if(opts.pathlengths.value()){
-      m_pathlengths.ReSize(m_numseeds,opts.nparticles.value());
-      m_pathlengths = -1.0;
-      m_nsamp=1;
-    }
   }
   
 
@@ -638,9 +631,8 @@ namespace TRACT{
     if(opts.matrix2out.value()){
       next_matrix2_row();
     }
-    if(opts.seedcountastext.value() || opts.pathlengths.value()){
+    if(opts.seedcountastext.value()){
       m_SeedRow++;
-      m_nsamp=1;
     }
   }
   
@@ -688,15 +680,6 @@ namespace TRACT{
 	  m_beenhere(x_s,y_s,z_s)=1;
 	}
       }
-    }
-
-    if(opts.pathlengths.value()){
-      float pathlength=0.0;
-      for(unsigned int i=0;i<m_path.size();i++){
-	pathlength+=opts.steplength.value();
-      }
-      m_pathlengths(m_SeedRow,m_nsamp)=pathlength;
-      m_nsamp++;
     }
 
     
@@ -905,10 +888,6 @@ namespace TRACT{
   void Counter::save_pathdist(){  
     m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
     save_volume(m_prob,logger.appendDir(opts.outfile.value()));
-
-    if(opts.pathlengths.value()){
-      write_ascii_matrix(m_pathlengths,logger.appendDir("pathlengths"));
-    }
   }
   
   void Counter::save_pathdist(string add){  //for simple mode
