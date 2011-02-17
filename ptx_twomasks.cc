@@ -24,14 +24,25 @@ void twomasks()
   read_volume(seeds,opts.seedfile.value());
   read_volume(seeds2,opts.mask2.value());
 
+  if(opts.s2tout.value()){
+    cerr << "Seed_to_target not available in multiple seed tractography" << endl;
+    exit(0);
+  }
   // correct for non-1 values
   seeds=NEWIMAGE::abs(seeds);
   seeds.binarise(0,seeds.max()+1,exclusive);
   seeds2=NEWIMAGE::abs(seeds2);
   seeds2.binarise(0,seeds2.max()+1,exclusive);
 
+  int numseeds=0;
+  for(int z=0;z<seeds.zsize();z++)
+    for(int y=0;y<seeds.ysize();y++)
+      for(int x=0;x<seeds.xsize();x++)
+	if(seeds(x,y,z)!=0)numseeds++;	
+
+
   Streamliner stline(seeds);
-  Counter counter(seeds,stline);
+  Counter counter(seeds,stline,numseeds);
   counter.initialise();
   Seedmanager seedmanager(counter);
   

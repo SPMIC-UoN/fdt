@@ -22,13 +22,21 @@ void seedmask()
   //  Log& logger = LogSingleton::getInstance();
   volume<float> seeds;
   read_volume(seeds,opts.seedfile.value());
+  seeds=NEWIMAGE::abs(seeds);
+  seeds.binarise(0,seeds.max()+1,exclusive);
+  int numseeds=0;
+  for(int z=0;z<seeds.zsize();z++)
+    for(int y=0;y<seeds.ysize();y++)
+      for(int x=0;x<seeds.xsize();x++)
+	if(seeds(x,y,z)!=0)numseeds++;
+
+
+
   Streamliner stline(seeds);
-  Counter counter(seeds,stline);
+  Counter counter(seeds,stline,numseeds);
   counter.initialise();
   Seedmanager seedmanager(counter);
 
-  seeds=NEWIMAGE::abs(seeds);
-  seeds.binarise(0,seeds.max()+1,exclusive);
 
   int keeptotal=0;
   for(int z=0;z<seeds.zsize();z++){

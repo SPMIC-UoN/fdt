@@ -42,9 +42,16 @@ void nmasks()
     tmpvol.binarise(0,tmpvol.max()+1,exclusive);
     seeds.push_back(tmpvol);
   }
+  
+  int numseeds=0;
+  for(int z=0;z<seeds[0].zsize();z++)
+    for(int y=0;y<seeds[0].ysize();y++)
+      for(int x=0;x<seeds[0].xsize();x++)
+	if(seeds[0](x,y,z)!=0)numseeds++;	
+
 
   Streamliner stline(seeds[0]);
-  Counter counter(seeds[0],stline);
+  Counter counter(seeds[0],stline,numseeds);
   counter.initialise();
   Seedmanager seedmanager(counter);
   

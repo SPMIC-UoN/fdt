@@ -8,7 +8,7 @@
 #include "probtrackxOptions.h"
 #include "particle.h"
 #include "tractvolsx.h"
-
+#include "miscmaths/SpMat.h" 
 
 
 
@@ -107,31 +107,38 @@ namespace TRACT{
     inline void reset(){
       m_part.reset();
       vols.reset(opts.fibst.value());
+      for(unsigned int i=0;i<m_passed_flags.size();i++)
+	m_passed_flags[i]=false;
     }
     inline void reverse(){
       m_part.restart_reverse();
     }
-    bool streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
+    int streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
 
     void rotdir(const ColumnVector& dir,ColumnVector& rotdir,const float& x,const float& y,const float& z);
 
     const volume<int>& get_stop()const{return m_stop;}
 
-    // debug
-    //const volume<int>& get_mask_ref()const{return m_mask;}
 
-    // streamliner needs to be able to tell Counter about matrix3 stuff
+    // matrix3 methods
+    void clear_beenhere3(){
+      for(unsigned int i=0;i<m_inmask3.size();i++){
+	m_beenhere3((int)round(float(m_inmask3[i](1))),
+		    (int)round(float(m_inmask3[i](2))),
+		    (int)round(float(m_inmask3[i](3))))=0;
+      }
+    }
+    void                  clear_inmask3(){m_inmask3.clear();}
+    vector<ColumnVector>& get_inmask3(){return m_inmask3;}
+    volume<int>&          get_mask3(){return m_mask3;}
     volume<int>&          get_beenhere3(){return m_beenhere3;}
-    volume<int>&          get_mask3()    {return m_mask3;}
-    vector<ColumnVector>& get_inmask3()  {return m_inmask3;}
-
   };
 
 
   class Counter{
     probtrackxOptions& opts;
     Log& logger;
-    volume<int> m_prob;
+    volume<int> m_prob; 
     volume<int> m_beenhere;
     Matrix m_I;
     vector<ColumnVector> m_path;
@@ -139,6 +146,7 @@ namespace TRACT{
     vector<ColumnVector> m_seedcounts;
     Matrix m_SeedCountMat;
     int    m_SeedRow;
+    int    m_numseeds;
 
     Matrix m_targetmasks;
     vector<string> m_targetmasknames;
@@ -164,20 +172,25 @@ namespace TRACT{
     int m_Conrow2;
     ColumnVector m_lrdim;
 
-    volume<int>  m_ConMat3;
+    //volume<int>  m_ConMat3;
+    SpMat<int>  *m_ConMat3;    // Use sparse representation to allow for big NxN matrices 
     volume<int>  m_Lookup3;
-    volume<int>  m_CoordMat3;
+    Matrix       m_CoordMat3;
     
     const volume<float>& m_seeds;
     ColumnVector m_seedsdim;
     Streamliner& m_stline;
     Streamliner& m_nonconst_stline;
     
+    Matrix m_pathlengths;
+    int m_nsamp;
+
   public:
-    Counter(const volume<float>& seeds,Streamliner& stline):opts(probtrackxOptions::getInstance()),
-							  logger(LogSingleton::getInstance()),
-							  m_seeds(seeds),m_stline(stline),
-							  m_nonconst_stline(stline){
+    Counter(const volume<float>& seeds,Streamliner& stline,int numseeds):opts(probtrackxOptions::getInstance()),
+									 logger(LogSingleton::getInstance()),
+									 m_numseeds(numseeds),
+									 m_seeds(seeds),m_stline(stline),
+									 m_nonconst_stline(stline){
       //are they initialised to zero?
       m_beenhere.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
       m_seedsdim.ReSize(3);
@@ -191,8 +204,6 @@ namespace TRACT{
     void initialise_path_dist(){
       m_prob.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
       copybasicproperties(m_seeds,m_prob);
-      //m_prob.reinitialize(m_stline.get_mask_ref().xsize(),m_stline.get_mask_ref().ysize(),m_stline.get_mask_ref().zsize());
-      //copybasicproperties(m_stline.get_mask_ref(),m_prob);
       m_prob=0;
     }
     void initialise_seedcounts();
@@ -203,15 +214,20 @@ namespace TRACT{
     
     void initialise_maskmatrix(){} //not written yet
     
-    inline void store_path(){ m_path=m_stline.get_path();}
-    
+    void store_path(){ m_path=m_stline.get_path();}
+    void append_path(){
+      for(unsigned int i=0;i<m_stline.get_path_ref().size();i++)
+	m_path.push_back(m_stline.get_path_ref()[i]);
+    }
+    void clear_path(){ m_path.clear(); };
+
     void count_streamline();
     void count_seed();
-    void clear_streamline(const bool& forwardflag,const bool& backwardflag);
+    void clear_streamline();
     
     
     void update_pathdist();
-    void reset_beenhere(const bool& forwardflag,const bool& backwardflag);
+    void reset_beenhere();
     
     void reset_prob(){m_prob=0;}
     void update_seedcounts();
@@ -224,7 +240,7 @@ namespace TRACT{
     
     void update_matrix2_row(); //but run this one every streamline as with the others
     void next_matrix2_row(){m_Conrow2++;}//and then run this after each voxel..
-    void reset_beenhere2(const bool& forwardflag,const bool& backwardflag);
+    void reset_beenhere2();
 
     void update_matrix3();
     void reset_beenhere3();

@@ -30,14 +30,15 @@ void track(){
     read_volume(seedref,opts.maskfile.value());
   }
 
-  Streamliner stline(seedref);
-  Counter counter(seedref,stline);
-  counter.initialise();
-  Seedmanager seedmanager(counter);
-    
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
   if(Seeds.Ncols()!=3 && Seeds.Nrows()==3)
 	Seeds=Seeds.t();
+
+  Streamliner stline(seedref);
+  Counter counter(seedref,stline,Seeds.Nrows());
+  counter.initialise();
+  Seedmanager seedmanager(counter);
+    
   
   // convert coordinates from nifti (external) to newimage (internal)
   //   conventions - Note: for radiological files this should do nothing
