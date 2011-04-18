@@ -7,7 +7,7 @@
 /*  CCOPYRIGHT */
 
 #include "utils/options.h"
-#include "heap.h"
+#include <heap.h>
 #include "newimage/newimageall.h"
 #include "miscmaths/miscprob.h"
 #include "stdlib.h"
