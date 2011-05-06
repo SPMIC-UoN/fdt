@@ -77,8 +77,8 @@ do
   esac
   shift
 done
-opts=" --nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
-defopts=" --cnonlinear"
+opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
+defopts="--cnonlinear"
 opts="$opts $defopts $*"
 
 #check that all required files exist
@@ -118,8 +118,7 @@ mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
 echo Queuing preprocessing stages
-#preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
-#preprocid=`${FSLDIR}/bin/fsl_sub -q veryshort.q -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
+preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
@@ -189,18 +188,16 @@ do
     if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ];then
 	echo "slice $slice has already been processed"
     else
-	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $opts" \
+	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $slice $opts" \
 	    >> ${subjdir}.bedpostX/commands.txt
     fi
     slice=$(($slice + 1))
 done
 
-#bedpostid=`${FSLDIR}/bin/fsl_sub -q verylong.q -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
-#bedpostid=`${FSLDIR}/bin/fsl_sub -q veryshort.q -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
-#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -q veryshort.q -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
 [ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 
