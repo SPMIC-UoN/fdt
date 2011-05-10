@@ -106,3 +106,59 @@ Optional arguments (You may optionally specify one or more of):
 
 </pre>
  
+
+<hr>
+
+<a name="qboot"></a>
+<h3>qboot - Estimation of fibre orientations using q-ball ODFs and residual bootstrap</h3>
+
+<p>
+
+<IMG ALIGN=RIGHT height=300 SRC="fdt_images/qboot.gif"
+ALT="Different types of ODFs that can be inferred">
+<b>qboot</b> is a command line tool that allows estimation of diffusion ODFs and fibre orientations from them. Its output can be used as an input for probtrackX in order to perform probabilistic tractography.<br><br>
+
+ODF estimation is performed using a real spherical harmonics basis. Fibre orientations are estimated as the local maxima of the ODFs. Both deterministic and probabilistic estimation can be performed. For the latter, residual bootstrap is performed to infer on the ODF shape and obtain a distribution of fibre orientations. For more details on the implementation see (S.N. Sotiropoulos, I. Aganj, S. Jbabdi, G. Sapiro, C. Lenglet and T.E. Behrens, "Inference on Constant Solid Angle Orientation Distribution Functions from Diffusion-Weighted MRI", OHBM, 2011).<br><br> 
+
+<b>qboot</b> allows reconstruction of q-ball ODFs (Tuch, MRM, 2004), CSA ODFs (Aganj et al, MRM, 2010) and variants of them, obtained via Laplacian sharpening and Laplace-Beltrami regularization (Descoteaux et al, MRM, 2007). Both spherical harmonic coefficients of the reconstructed ODFs and fibre orientation estimates may be returned as ouput. 
+<br><br>
+
+<p>
+
+<b>Input files for qboot </b>: Similar to dtifit and bedpostx, qboot needs a 4D data file, a binary mask_file, a bvecs and a bvals file.
+
+<p>
+
+<b>Command-line utility</b>
+<pre>
+qboot -k data_file -m nodif_brain_mask -r bvecs -b bvals
+</pre>
+
+<br><b>more options</b>
+<pre>
+Compulsory arguments (You MUST set one or more of):
+	-k,--data	Data file
+	-m,--mask	Mask file
+	-r,--bvecs	b vectors file
+	-b,--bvals	b values file
+
+Optional arguments (You may optionally specify one or more of):
+	--ld,--logdir	Output directory (default is logdir)
+	--forcedir	Use the actual directory name given - i.e. don't add + to make a new directory
+	--q		File provided with multi-shell data. Indicates the number of directions for each shell
+	--model		Which model to use. 1=Tuch's ODFs, 2=CSA ODFs (default), 3=multi-shell CSA ODFs
+	--lmax		Maximum spherical harmonic oder employed (must be even, default=4)
+	--npeaks	Maximum number of ODF peaks to be detected (default 2)
+	--thr		Minimum threshold for a local maxima to be considered an ODF peak.
+                        Expressed as a fraction of the maximum ODF value (default 0.4)
+	--pf		Which peak finder to use. 1=Discrete, 2=Semi-continuous (can be only used with lmax=4) (default=1)
+	--ns,--nsamples	Number of bootstrap samples (default is 50)
+	--lambda	Laplace-Beltrami regularization parameter (default is 0)
+	--delta		Signal attenuation regularization parameter for model=2 (default is 0.01)
+	--alpha		Laplacian sharpening parameter for model=1 (default is 0, should be smaller than 1)
+	--seed		Seed for pseudo-random number generator
+	--savecoeff	Save the ODF coefficients instead of the peaks. 
+	--savemeancoeff	Save the mean ODF coefficients across all samples
+	-V,--verbose	Switch on diagnostic messages
+
+</pre>
