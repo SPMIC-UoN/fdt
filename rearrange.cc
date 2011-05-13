@@ -1,5 +1,5 @@
 /*  Copyright (C) 2010 University of Oxford  */
-
+/*  Stam Sotiropoulos  */    
 /*  CCOPYRIGHT  */
 
 #include <iostream>
@@ -17,7 +17,9 @@ using namespace NEWMAT;
 int main ( int argc, char *argv[]){
   if(argc<5 || argc>6){
     cerr<<" "<<endl;
-    cerr<<"usage: rearrange data bvecs ref_dyads [brain_mask] ouput"<<endl;
+    cerr<<"usage: rearrange data bvecs ref_dyads [brain_mask] output"<<endl<<endl;
+    cerr<<"Rearranges a dataset according to the angular distance"<<endl; 
+    cerr<<"between the corresponding bvecs entry and a reference vector"<<endl;
     cerr<<" "<<endl;
     exit(1);
   }
