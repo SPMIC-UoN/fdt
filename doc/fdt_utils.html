@@ -147,7 +147,7 @@ Optional arguments (You may optionally specify one or more of):
 	--forcedir	Use the actual directory name given - i.e. don't add + to make a new directory
 	--q		File provided with multi-shell data. Indicates the number of directions for each shell
 	--model		Which model to use. 1=Tuch's ODFs, 2=CSA ODFs (default), 3=multi-shell CSA ODFs
-	--lmax		Maximum spherical harmonic oder employed (must be even, default=4)
+	--lmax		Maximum spherical harmonic order employed (must be even, default=4)
 	--npeaks	Maximum number of ODF peaks to be detected (default 2)
 	--thr		Minimum threshold for a local maxima to be considered an ODF peak.
                         Expressed as a fraction of the maximum ODF value (default 0.4)
@@ -162,3 +162,25 @@ Optional arguments (You may optionally specify one or more of):
 	-V,--verbose	Switch on diagnostic messages
 
 </pre>
+
+<b>Possible Outputs of qboot</b>
+<p><ul>
+<li>qboot will by default return distributions of ODF peaks. Setting <i> --ns=1 </i>, will perform <b> deterministic </b> estimation of
+the ODFs and their peaks.</li>
+<li>If <i>--savecoeff </i> is set, then only samples of the ODF coefficients will be saved, without any peaks.</li>
+<li>If <i>--savecoeff --savemeancoeff </i> are set, then only the mean ODF coefficients (across the samples) will be saved for each voxel and
+again no peaks.</li>
+<li>If <i> --savemeancoeff </i> is set, then the mean ODF coefficients (across the samples) will be saved for each voxel, along with the
+samples of the ODF peaks.</li>
+<li>If none of the above is set, samples of the ODF peaks are saved.</li>
+</ul>
+<p> <p>
+<b>Multi-shell data assumptions</b>
+<p>
+The current implementation of qboot can estimate multi-shell ODFs, assuming the following for the data:
+<ul><li>Three-shell data are assumed. The bvalues should form an arithmetic progression, e.g. 1000, 2000, 3000 or 2000, 4000, 6000.</li>  
+<li>It is assumed that all data from each shell are grouped together and shells are one after the other in data, bvecs and bvals. So, if
+for example 3 directions are available for 3 shells these should appear as: dir1_shell1, dir2_shell1, dir3_shell1, dir1_shell2,dir2_shell2, dir3_shell2,      dir1_shell3,dir2_shell3, dir3_shell3.</li>
+<li>There is no assumption on the number of directions in each shell. Each shell can have its own directions and number of directions. The minimum number of directions in a shell is dictated by the number of coefficients estimated, i.e. if lmax=4 => Num_of_coeff=15 => All shells should have at least 15 directions. This is because interpolation of the data occurs, when: i) different number of directions exist in different shells or ii) same number of directions, but corresponding directions between shells (e.g. dir1_shell1 vs dir1_shell2) differ more than 1 degree. In this case each shell is fitted with SH of the same order, which is by default 10, unless the number of directions in the shell with the less points is not enough (then order is decreased).</li>
+<li>By default, same number of datapoints (including b=0's) are assumed for each shell acquisition. If this is not the case, a <i> --q=qshells.txt </i> file should be provided. The information in the qshells file is of the form <i> N1 N2 N3 </i>, each number indicating the number of datapoints (including b=0's) that correspond to each shell acquisition. 
+</ul>
