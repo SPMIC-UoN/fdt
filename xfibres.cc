@@ -357,31 +357,40 @@ public:
     Log& logger = LogSingleton::getInstance();
     if(opts.modelnum.value()==1){
       tmp.setmatrix(m_mean_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
     }
     else if(opts.modelnum.value()==2){
       tmp.setmatrix(m_mean_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
       tmp.setmatrix(m_mean_d_stdsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_d_stdsamples"));
       
       tmp.setmatrix(m_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("dsamples"));
       tmp.setmatrix(m_d_stdsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("d_stdsamples"));
     }
     if (opts.f0.value()){
       tmp.setmatrix(m_mean_f0samples,mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       save_volume4D(tmp,logger.appendDir("mean_f0samples"));
       tmp.setmatrix(m_f0samples,mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       save_volume4D(tmp,logger.appendDir("f0samples"));
     }
     if (opts.rician.value()){
       tmp.setmatrix(m_mean_tausamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_tausamples"));
     }
 
     tmp.setmatrix(m_mean_S0samples,mask);
+    tmp.setDisplayMaximumMinimum(tmp.max(),0);
     save_volume4D(tmp,logger.appendDir("mean_S0samples"));
     //tmp.setmatrix(m_lik_energy,mask);
     //save_volume4D(tmp,logger.appendDir("lik_energy"));
@@ -426,21 +435,30 @@ public:
       //      element_mod_n(thsamples_out[f],M_PI);
       //      element_mod_n(phsamples_out[f],2*M_PI);
       tmp.setmatrix(thsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
       string oname="th"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+      
       tmp.setmatrix(phsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
       oname="ph"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+   
       tmp.setmatrix(fsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       oname="f"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+
       //      tmp.setmatrix(lamsamples_out[f],mask);
       //      oname="lam"+num2str(f+1)+"samples";
       //      save_volume4D(tmp,logger.appendDir(oname));
       tmp.setmatrix(mean_fsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       oname="mean_f"+num2str(f+1)+"samples";
       save_volume(tmp[0],logger.appendDir(oname));
+      
       tmp.setmatrix(dyadic_vectors_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,-1);
       oname="dyads"+num2str(f+1);
       save_volume4D(tmp,logger.appendDir(oname));
     }
