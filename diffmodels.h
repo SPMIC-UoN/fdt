@@ -232,7 +232,7 @@ protected:
   ColumnVector cosalpha;
   ColumnVector beta;
   
-  float npts;
+  int   npts;
   int   nfib;
 
 };
