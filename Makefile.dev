@@ -1,0 +1,188 @@
+include $(FSLCONFDIR)/default.mk
+
+PROJNAME = fdt
+
+#OPTFLAGS = -ggdb
+
+
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
+USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
+
+DLIBS = -lwarpfns -lbasisfield -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+
+DTIFIT=dtifit
+CCOPS=ccops
+
+PTX=probtrackx2
+
+FTB=find_the_biggest
+PJ=proj_thresh
+MED=medianfilter
+ROM=reord_OM
+SAUS=sausages
+XFIBRES=xfibres
+XFIBRES2=xfibres_2
+RV=replacevols
+MDV=make_dyadic_vectors
+FMO=fdt_matrix_ops
+FMS=fdt_matrix_split
+INDEXER=indexer
+TEST=testfile
+VECREG=vecreg
+KURTOSIS=kurtosis
+SWAPDYADS=swap_dyadic_vectors
+PVMFIT=pvmfit
+DTIGEN=dtigen
+ONLINETEST=onlinetest
+
+DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
+CCOPSOBJS=ccops.o ccopsOptions.o 
+
+PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_nmasks.o csv.o
+
+FTBOBJS=find_the_biggest.o
+PJOBJS=proj_thresh.o
+MEDOBJS=medianfilter.o 
+ROMOBJS=reord_OM.o
+SAUSOBJS=sausages.o
+XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o
+XFIBOBJS2=xfibres_2.o xfibresoptions.o
+RVOBJS=replacevols.o
+MDVOBJS=make_dyadic_vectors.o
+FMOOBJS=fdt_matrix_ops.o
+FMSOBJS=fdt_matrix_split.o
+INDEXEROBJS=indexer.o
+TESTOBJS=testfile.o csv.o
+VECREGOBJS=vecreg.o
+KURTOSISOBJS=kurtosis.o dtifitOptions.o
+SWAPDYADSOBJS=swap_dyadic_vectors.o
+PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
+DTIGENOBJS=dtigen.o
+ONLINEOBJS=onlinetest.o quicktracker.o
+
+SURFSAMP=surf_samp
+SURFSAMPOBJS=surf_samp.o csv.o
+SURFDATA=surf_proj
+SURFDATAOBJS=surf_proj.o csv.o
+SURFPROP=surf_prop_dir
+SURFPROPOBJS=surf_prop_dir.o csv.o
+MATMERGE=fdt_matrix_merge
+MATMERGEOBJS=fdt_matrix_merge.o
+SAMPDIR=samp_dir
+SAMPDIROBJS=samp_dir.o
+S2S=surf2surf
+S2SOBJS=surf2surf.o csv.o
+S2V=surf2vol
+S2VOBJS=surf2vol.o csv.o
+L2S=label2surf
+L2SOBJS=label2surf.o
+
+
+SGEBEDPOST = bedpost 
+SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
+
+SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} 
+FSCRIPTS = correct_and_average ocmr_preproc
+
+XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
+
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
+
+
+RUNTCLS = Fdt
+
+all: ${XFILES} ${FXFILES} 
+
+${PTX}:		   ${PTXOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
+
+${FTB}:    	${FTBOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FTBOBJS} ${DLIBS} 
+
+${PJ}:    	${PJOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PJOBJS} ${DLIBS} 
+
+${MED}:    	${MEDOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MEDOBJS} ${DLIBS} 
+
+${DTIFIT}:    	${DTIFITOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIFITOBJS} ${DLIBS}
+
+${CCOPS}:    	${CCOPSOBJS}	
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CCOPSOBJS} ${DLIBS}
+
+${ROM}:    	${ROMOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ROMOBJS} ${DLIBS}
+
+${SAUS}:    	${SAUSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SAUSOBJS} ${DLIBS}
+
+${XFIBRES}:    	${XFIBOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS} ${DLIBS}
+
+${XFIBRES2}:    	${XFIBOBJS2}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS2} ${DLIBS}
+
+${RV}:    	${RVOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RVOBJS} ${DLIBS}
+
+${MDV}:    	${MDVOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MDVOBJS} ${DLIBS}
+
+${FMO}:    	${FMOOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FMOOBJS} ${DLIBS}
+
+${FMS}:    	${FMSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FMSOBJS} ${DLIBS}
+
+${INDEXER}:    	${INDEXEROBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${INDEXEROBJS} ${DLIBS}
+
+${TEST}:    	${TESTOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
+
+${VECREG}:    	${VECREGOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
+
+
+${KURTOSIS}:   ${KURTOSISOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
+
+${SWAPDYADS}: ${SWAPDYADSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SWAPDYADSOBJS} ${DLIBS}
+
+${PVMFIT}:    	${PVMFITOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PVMFITOBJS} ${DLIBS}
+
+${DTIGEN}:    	${DTIGENOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
+
+
+${ONLINETEST}:    	${ONLINEOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ONLINEOBJS} ${DLIBS}
+
+${SURFSAMP}:    ${SURFSAMPOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SURFSAMPOBJS} ${DLIBS}
+
+${SURFDATA}:    ${SURFDATAOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SURFDATAOBJS} ${DLIBS}
+
+${SURFPROP}:    ${SURFPROPOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SURFPROPOBJS} ${DLIBS}
+
+${MATMERGE}:    ${MATMERGEOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MATMERGEOBJS} ${DLIBS}
+
+${SAMPDIR}:     ${SAMPDIROBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SAMPDIROBJS} ${DLIBS}
+
+
+${S2S}:         ${S2SOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${S2SOBJS} ${DLIBS}
+
+${S2V}:         ${S2VOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${S2VOBJS} ${DLIBS}
+
+${L2S}:         ${L2SOBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${L2SOBJS} ${DLIBS}
+
