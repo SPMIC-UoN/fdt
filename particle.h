@@ -139,25 +139,26 @@ namespace PARTICLE{
 	m_x=0;m_y=0;m_z=0;m_rx=0;m_ry=0;m_rz=0;m_has_jumped=false;
       }
       //functions
-      void jump(const float& theta,const float& phi){
+      void jump(const float& theta,const float& phi,bool forcedir=false){
 	float rx_new=cos(phi)*sin(theta);
 	float ry_new=sin(phi)*sin(theta);
 	float rz_new=cos(theta);
-	int sign; bool init=false;
+	int sign=1; bool init=false;
 	if(!m_simdiff){
-	  if(m_has_jumped)
-	    {sign=(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>0 ? 1:-1;}
+	  if(m_has_jumped){
+	    if(!forcedir){
+	      sign=(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>0 ? 1:-1;
+	    }
+	  }
 	  else{
-	    float tmp=rand(); tmp/=RAND_MAX;
-	    sign=tmp > 0.5 ? 1:-1;
+	    sign=(float)rand()/float(RAND_MAX)>0.5?1:-1;
 	    m_jumpsign=sign;
 	    m_has_jumped=true;
 	    init=true;
 	  }
 	}
 	else{
-	  float tmp=rand(); tmp/=RAND_MAX;
-	  sign=tmp > 0.5 ? 1:-1;
+	  sign=(float)rand()/float(RAND_MAX)>0.5?1:-1;
 	}
 	m_x += sign*m_steplength/m_xdim*rx_new;
 	m_y += sign*m_steplength/m_ydim*ry_new;
@@ -169,25 +170,24 @@ namespace PARTICLE{
 	  m_ry_init=m_ry;
 	  m_rz_init=m_rz;
 	}
-	
-	
       }
      
 
-      void testjump(const float& theta,const float& phi){
+      void testjump(const float& theta,const float& phi,bool forcedir=false){
 	float rx_new=cos(phi)*sin(theta);
 	float ry_new=sin(phi)*sin(theta);
 	float rz_new=cos(theta);
-	int sign;bool init=false;
+	int sign=1;bool init=false;
 	if(!m_simdiff){
 	  if(m_has_jumped)
-	    {sign=(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>0 ? 1:-1;}
+	    if(!forcedir)
+	      {sign=(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>0 ? 1:-1;}
 	  else{
 	    float tmp=rand(); tmp/=RAND_MAX;
 	    sign=tmp > 0.5 ? 1:-1;
 	    m_jumpsign=sign;
-	    // m_has_jumped=true; // causes probtrackx to go in one direction!
-	    // init=true;
+	    //m_has_jumped=true; // bad! causes tracking to only go in one direction!
+	    //init=true;         // bad! causes tracking to only go in one direction!
 	  }
 	}
 	else{
@@ -221,30 +221,25 @@ namespace PARTICLE{
       }
       
       
-      bool check_dir(const float& theta,const float& phi, const float& thr){
+      bool check_dir(const float& theta,const float& phi, const float& thr,bool forcedir=false){
 	if(m_has_jumped){
 	  float rx_new=cos(phi)*sin(theta);
 	  float ry_new=sin(phi)*sin(theta);
 	  float rz_new=cos(theta);
-	  return fabs(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>thr;
+	  if(!forcedir){
+	    if(fabs(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>thr)
+	      return true;
+	    else
+	      return false;
+	  }
+	  else{
+	    if((rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>thr)
+	      return true;
+	    else
+	      return false;
+	  }
 	}
 	else return true;
-      }
-
-      // function added by Saad to choose a direction during deterministic streamlining
-      // the choosed direction is the one that is closest to current direction
-      unsigned int choose_dir(const vector<float>& th,const vector<float>& ph){
-	float ps,tmpps=0;
-	unsigned int r=0;
-
-	for(unsigned int i=0;i<th.size();i++){
-	  ps=tmpps;
-	  tmpps=fabs((sin(th[i])*(cos(ph[i])*m_rx+sin(ph[i])*m_ry)+cos(th[i])*m_rz));
-	  r = tmpps > ps ? i : r;
-	}
-	
-	return r;
-	
       }
 
 

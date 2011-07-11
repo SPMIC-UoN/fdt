@@ -9,8 +9,8 @@
 #include "particle.h"
 #include "tractvolsx.h"
 #include "miscmaths/SpMat.h" 
-
-
+#include "csv.h"
+#include "utils/tracer_plus.h"
 
 using namespace std;
 using namespace NEWIMAGE;
@@ -20,205 +20,294 @@ using namespace mesh;
 using namespace PARTICLE;
 
 namespace TRACT{
-  void read_masks(vector<string>& masks, const string& filename);
 
+  void read_ascii_file(const string& filename,vector<string>& content);  
+
+  //  the following is a helper function for save_matrix*
+  //  to convert between nifti coords (external) and newimage coord (internal)
+  void applycoordchange(volume<int>& coordvol, const Matrix& old2new_mat);
+  void applycoordchange(Matrix& coordvol, const Matrix& old2new_mat);
 
   class Streamliner{
     //Everything in DTI space is done INSIDE this class and lower level classes (particle and tractvolsx)
     //This class communicates with higher level classes in Seed voxels.
     //
-    probtrackxOptions& opts;
-    Log& logger;
-    Particle m_part;
-    vector<ColumnVector> m_path;
-    volume<int> m_mask;
+    probtrackxOptions&            opts;
+    Log&                          logger;
+
+    Particle                      m_part;
+    vector<ColumnVector>          m_path;
+    int                           m_tracksign;
+
+    volume<float>                 m_mask;
+
+    // prior masks
+    volume<int>                   m_skipmask;
+
+    CSV                           *m_rubbish;
+    CSV                           *m_stop; 
+    CSV                           *m_waymasks;
+    vector<bool>                  m_passed_flags;
+    string                        m_waycond;
+    
+    volume4D<float>               m_prefdir;
+    volume4D<float>               m_loopcheck;
 
 
-    volume<int> m_skipmask;
-    volume<int> m_rubbish;
-    volume<int> m_stop;
-    volume4D<float> m_prefdir;
-    volume4D<float> m_loopcheck;
-    vector<volume<float>* > m_waymasks;
-    vector<bool> m_passed_flags;
-    vector<bool> m_own_waymasks;
+    // transform seed<->diff space
+    Matrix                        m_Seeds_to_DTI;
+    Matrix                        m_DTI_to_Seeds;
+    volume4D<float>               m_Seeds_to_DTI_warp;
+    volume4D<float>               m_DTI_to_Seeds_warp;
+    bool                          m_IsNonlinXfm;
+    // rotdir stuff
+    Matrix                        m_rotdir;
+    volume4D<float>               m_jacx,m_jacy,m_jacz;
 
-    Matrix m_Seeds_to_DTI;
-    Matrix m_DTI_to_Seeds;
-    volume4D<float> m_Seeds_to_DTI_warp;
-    volume4D<float> m_DTI_to_Seeds_warp;
-    volume4D<float> m_jacx;
-    volume4D<float> m_jacy;
-    volume4D<float> m_jacz;
-    bool m_IsNonlinXfm;
-    Matrix m_rotdir;
-
-    Tractvolsx vols;
-    float m_lcrat;
-    float m_x_s_init;
-    float m_y_s_init;
-    float m_z_s_init;
+    Tractvolsx                    vols;
+    float                         m_lcrat;
+    float                         m_x_s_init;
+    float                         m_y_s_init;
+    float                         m_z_s_init;
 
     // Streamliner needs to know about matrix3 
-    volume<int>  m_mask3;
-    volume<int>  m_beenhere3;
-    vector<ColumnVector> m_inmask3;
+    CSV                           *m_mask3;
+    CSV                           *m_lrmask3;
+    vector< pair<int,float> >     m_inmask3; // knows which node in mask3 and how far from seed (signed distance)
+    vector< pair<int,float> >     m_inlrmask3;
 
     // we need this class to know about seed space
-    const volume<float>& m_seeds;
+    const CSV&                    m_seeds;
 
   public:
     //Constructors
-    Streamliner(const volume<float>&);
-    ~Streamliner(){
-      for(unsigned int i=0;i<m_waymasks.size();i++)
-	if(m_own_waymasks[i]) delete m_waymasks[i];
-    }
-    void add_waymask(volume<float>& myway,const bool& ownership=false){
-      //make sure that the waymask to add will not be deleted before
-      //this streamliner goes out of scope!!
-      m_waymasks.push_back(&myway);
-      m_own_waymasks.push_back(ownership);
-      m_passed_flags.push_back(false);
-    }
-    void pop_waymasks(){
-      volume<float>* tmpptr=m_waymasks[m_waymasks.size()-1];
-      m_waymasks.pop_back();
-      m_passed_flags.pop_back();
-      if(m_own_waymasks[m_own_waymasks.size()-1]){
-	delete tmpptr;
-      }
-      m_own_waymasks.pop_back();
-      
-    }
-    void clear_waymasks(){
-      // clear all waymasks
-      for(unsigned int i=0;i<m_waymasks.size();i++)
-	pop_waymasks();
-    }
-
-    const Tractvolsx& get_vols() const {return vols;}
-    inline int nfibres() const {return vols.nfibres();}
+    Streamliner  (const CSV& seeds);
+    ~Streamliner (){}
+    const CSV&         get_seeds()  const {return m_seeds;}
+    const Tractvolsx&  get_vols()   const {return vols;}
+    inline int         nfibres()    const {return vols.get_nfibres();}
     inline const float get_x_seed() const {return m_x_s_init;}
     inline const float get_y_seed() const {return m_y_s_init;}
     inline const float get_z_seed() const {return m_z_s_init;}
     inline const vector<ColumnVector>& get_path_ref() const{return m_path;}
-    inline vector<ColumnVector> get_path() const{return m_path;}
+    inline vector<ColumnVector>        get_path()     const{return m_path;}
+
     inline void reset(){
       m_part.reset();
       vols.reset(opts.fibst.value());
       for(unsigned int i=0;i<m_passed_flags.size();i++)
 	m_passed_flags[i]=false;
+      m_tracksign=1;
     }
     inline void reverse(){
       m_part.restart_reverse();
+      m_tracksign=-1;
     }
-    int streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
+    void rotdir(const ColumnVector& dir,ColumnVector& rotdir,
+		const float& x,const float& y,const float& z);
 
-    void rotdir(const ColumnVector& dir,ColumnVector& rotdir,const float& x,const float& y,const float& z);
+    int streamline(const float& x_init,const float& y_init, const float& z_init,
+		   const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
 
-    const volume<int>& get_stop()const{return m_stop;}
+    
+    // separate masks loading from class constructor
+    void load_waymasks(const string& filename){
+      vector<int> excl;excl.clear();
+      load_waymasks(filename,excl);
+    }
+    void load_waymasks(const string& filename,const int& excl){
+      vector<int> vexcl;vexcl.push_back(excl);
+      load_waymasks(filename,vexcl);
+    }
+    void load_waymasks(const string& filename,const vector<int>& exclude){
+      m_waycond=opts.waycond.value();
 
+      string tmpfilename=logger.appendDir("tmpwaymaskfile");
+      ofstream of(tmpfilename.c_str());
+      vector<string> filelist;
+      read_ascii_file(filename,filelist);
 
-    // matrix3 methods
-    void clear_beenhere3(){
-      for(unsigned int i=0;i<m_inmask3.size();i++){
-	m_beenhere3((int)round(float(m_inmask3[i](1))),
-		    (int)round(float(m_inmask3[i](2))),
-		    (int)round(float(m_inmask3[i](3))))=0;
+      int nfiles=0;
+      for(unsigned int i=0;i<filelist.size();i++){
+	bool iselmnt=false;
+	for(unsigned int j=0;j<exclude.size();j++){
+	  if(i==(unsigned int)exclude[j]){iselmnt=true;break;}
+	}
+	if(!iselmnt){
+	  nfiles++;
+	  of<<filelist[i]<<endl;
+	}
+      }
+      if(nfiles==0)return;      
+
+      if(m_waymasks==NULL){
+	m_waymasks = new CSV(m_seeds.get_refvol());
+	m_waymasks->set_convention(opts.meshspace.value());
+	m_waymasks->load_rois(tmpfilename);    
+      }
+      else{            
+	m_waymasks->reload_rois(tmpfilename);    
+      }
+      m_passed_flags.clear();
+      for(int m=0;m<m_waymasks->nRois();m++){
+	m_passed_flags.push_back(false);
       }
     }
-    void                  clear_inmask3(){m_inmask3.clear();}
-    vector<ColumnVector>& get_inmask3(){return m_inmask3;}
-    volume<int>&          get_mask3(){return m_mask3;}
-    volume<int>&          get_beenhere3(){return m_beenhere3;}
+    CSV*    get_waymasks(){return m_waymasks;}
+    void    set_waycond(const string& cond){m_waycond=cond;}
+    string  get_waycond()const{return m_waycond;}
+    void load_stop(const string& filename){    
+      m_stop = new CSV(m_seeds.get_refvol());
+      m_stop->set_convention(opts.meshspace.value());
+      m_stop->load_rois(filename);     
+    }
+    void load_rubbish(const string& filename){      
+      m_rubbish = new CSV(m_seeds.get_refvol());
+      m_rubbish->set_convention(opts.meshspace.value());
+      m_rubbish->load_rois(filename);     
+    }
+
+    // //////    matrix3 methods
+    void init_mask3(){
+      m_mask3 = new CSV(m_seeds.get_refvol());
+      m_mask3->set_convention(opts.meshspace.value());
+      m_mask3->load_rois(opts.mask3.value());
+
+      if(opts.lrmask3.value()!=""){
+	m_lrmask3 = new CSV(m_seeds.get_refvol());
+	m_lrmask3->set_convention(opts.meshspace.value());      
+	m_lrmask3->load_rois(opts.lrmask3.value());
+      }
+    }
+    void                       clear_inmask3()   {m_inmask3.clear();}
+    void                       clear_inlrmask3() {m_inlrmask3.clear();}
+    vector< pair<int,float> >& get_inmask3()     {return m_inmask3;}
+    vector< pair<int,float> >& get_inlrmask3()   {return m_inlrmask3;}
+    CSV*                       get_mask3()       {return m_mask3;}
+    CSV*                       get_lrmask3()     {return m_lrmask3;}
+    void fill_inmask3(const vector<int>& crossedlocs3,const float& pathlength){
+      vector< pair<int,float> > inmask3;
+      for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
+	pair<int,float> mypair;
+	mypair.first=crossedlocs3[iter];
+	mypair.second=m_tracksign*pathlength;
+	inmask3.push_back(mypair);
+      }
+      m_inmask3.insert(m_inmask3.end(),inmask3.begin(),inmask3.end());
+    }
+    void fill_inlrmask3(const vector<int>& crossedlocs3,const float& pathlength){
+      vector< pair<int,float> > inmask3;
+      for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
+	pair<int,float> mypair;
+	mypair.first=crossedlocs3[iter];
+	mypair.second=m_tracksign*pathlength;
+	inmask3.push_back(mypair);
+      }
+      m_inlrmask3.insert(m_inlrmask3.end(),inmask3.begin(),inmask3.end());
+    }
+    // /////////////////////////////////////////////////////////////////
   };
 
 
   class Counter{
-    probtrackxOptions& opts;
-    Log& logger;
-    volume<int> m_prob; 
-    volume<int> m_beenhere;
-    Matrix m_I;
-    vector<ColumnVector> m_path;
+    probtrackxOptions&           opts;
+    Log&                         logger;
+
+    volume<float>                m_prob;      // spatial histogram of tract location
+    volume<int>                  m_beenhere;
+    Matrix                       m_I;
+    vector<ColumnVector>         m_path;
+
+    // do we still need these?
+    vector<ColumnVector>         m_seedcounts;
+    Matrix                       m_SeedCountMat;
+    int                          m_SeedRow;
+    int                          m_numseeds;
+
+    // know where we are in seed space/counts (because seeds are now CSV)
+    string                       m_curtype;
+    int                          m_seedroi;
+    int                          m_curloc;
+
+    // classification targets
+    CSV                         *m_targetmasks;
+    vector<bool>                 m_targflags;
+    vector<CSV*>                 m_s2t_count;
+    Matrix                       m_s2tastext;
+    int                          m_s2trow;
+
+    // MATRIX 1
+    SpMat<float>                *m_ConMat1; // using sparse
+    int                          m_Conrow1;
+
+    // MATRIX 2
+    SpMat<float>                 *m_ConMat2; // using sparse
+    volume<int>                  m_lrmask;
+    volume<int>                  m_lookup2;
+    volume<int>                  m_beenhere2;
+    ColumnVector                 m_lrdim;
+
+    // MATRIX 3
+    SpMat<float>                 *m_ConMat3; // using sparse
+    vector<int>                  m_inmask3;
+
+    // misc    
+    ColumnVector                 m_seedsdim;
+    Streamliner&                 m_stline;
     
-    vector<ColumnVector> m_seedcounts;
-    Matrix m_SeedCountMat;
-    int    m_SeedRow;
-    int    m_numseeds;
-
-    Matrix m_targetmasks;
-    vector<string> m_targetmasknames;
-    vector<int> m_targflags;
-
-
-    volume<int> m_seeds_vol2mat;
-    Matrix      m_seeds_mat2vol;
-    volume<int> m_targets_vol2mat;
-    Matrix      m_targets_mat2vol;
-
-    
-    volume<int> m_ConMat;
-    volume<int> m_CoordMat;
-    int m_Conrow;
-
-    volume<int> m_ConMat2;
-    volume<int> m_CoordMat2;
-    volume<int> m_CoordMat_tract2;
-    volume<int> m_lrmask;
-    volume4D<int> m_lookup2;
-    volume<int> m_beenhere2;
-    int m_Conrow2;
-    ColumnVector m_lrdim;
-
-    //volume<int>  m_ConMat3;
-    SpMat<int>  *m_ConMat3;    // Use sparse representation to allow for big NxN matrices 
-    volume<int>  m_Lookup3;
-    Matrix       m_CoordMat3;
-    
-    const volume<float>& m_seeds;
-    ColumnVector m_seedsdim;
-    Streamliner& m_stline;
-    Streamliner& m_nonconst_stline;
-    
-    Matrix m_pathlengths;
-    int m_nsamp;
-
   public:
-    Counter(const volume<float>& seeds,Streamliner& stline,int numseeds):opts(probtrackxOptions::getInstance()),
-									 logger(LogSingleton::getInstance()),
-									 m_numseeds(numseeds),
-									 m_seeds(seeds),m_stline(stline),
-									 m_nonconst_stline(stline){
+    Counter(Streamliner& stline):opts(probtrackxOptions::getInstance()),
+				 logger(LogSingleton::getInstance()),						  
+				 m_stline(stline)
+    {
+      m_numseeds = m_stline.get_seeds().nLocs();
       //are they initialised to zero?
-      m_beenhere.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
+      m_beenhere.reinitialize(m_stline.get_seeds().xsize(),
+			      m_stline.get_seeds().ysize(),
+			      m_stline.get_seeds().zsize());
+      m_beenhere=0;
       m_seedsdim.ReSize(3);
-      m_seedsdim << m_seeds.xdim() <<m_seeds.ydim() <<m_seeds.zdim();
-      m_I=IdentityMatrix(4);
-      
+      m_seedsdim << m_stline.get_seeds().xdim() 
+		 << m_stline.get_seeds().ydim() 
+		 << m_stline.get_seeds().zdim();
+      m_I=IdentityMatrix(4);      
     }
-    
+    ~Counter(){}
+
+    Streamliner& get_stline(){return m_stline;}
+
     void initialise();
     
     void initialise_path_dist(){
-      m_prob.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
-      copybasicproperties(m_seeds,m_prob);
+      m_prob.reinitialize(m_stline.get_seeds().xsize(),
+			  m_stline.get_seeds().ysize(),
+			  m_stline.get_seeds().zsize());
+      copybasicproperties(m_stline.get_seeds().get_refvol(),m_prob);
       m_prob=0;
     }
     void initialise_seedcounts();
     
-    void initialise_matrix1(); //Need to make sure that initialise_path_dist is run first
+    void initialise_matrix1(); 
     void initialise_matrix2();
     void initialise_matrix3();
     
-    void initialise_maskmatrix(){} //not written yet
+    void forceNumSeeds(const int& n) {m_numseeds=n;}
+    void volumeSeeding(int roi)      {m_curtype="volume";m_seedroi=roi;}
+    bool volumeSeeding()             {if(m_curtype=="volume")return true;else return false;}
+    void surfaceSeeding(int surf)    {m_curtype="surface";m_seedroi=surf;}
+    bool surfaceSeeding()            {if(m_curtype=="surface")return true;else return false;}
+    void updateSeedLocation(int loc) {m_curloc=loc;}
     
+
     void store_path(){ m_path=m_stline.get_path();}
     void append_path(){
       for(unsigned int i=0;i<m_stline.get_path_ref().size();i++)
 	m_path.push_back(m_stline.get_path_ref()[i]);
     }
+    float calc_pathlength(const int& redund=0){
+      return( float(m_path.size()-redund)*opts.steplength.value() );
+    }
+
     void clear_path(){ m_path.clear(); };
 
     void count_streamline();
@@ -232,20 +321,18 @@ namespace TRACT{
     void reset_prob(){m_prob=0;}
     void update_seedcounts();
     void reset_targetflags(){
-      for(unsigned int i=0;i<m_targflags.size();i++) m_targflags[i]=0;
+      for(unsigned int i=0;i<m_targflags.size();i++) m_targflags[i]=false;
     }
     
     
     void update_matrix1(); //update path_dist after each streamline, only run this after each voxel!!
     
     void update_matrix2_row(); //but run this one every streamline as with the others
-    void next_matrix2_row(){m_Conrow2++;}//and then run this after each voxel..
     void reset_beenhere2();
 
     void update_matrix3();
     void reset_beenhere3();
 
-    void update_maskmatrix(){} //not written yet
     
     void save_total(const int& keeptotal);
     void save_total(const vector<int>& keeptotal);
@@ -256,34 +343,35 @@ namespace TRACT{
     void save_matrix1();
     void save_matrix2();
     void save_matrix3();
-    void save_maskmatrix(){}//not written yet
-    
-
-    inline const Streamliner& get_streamline() const {return m_stline;}
-    inline Streamliner& get_nonconst_streamline() const {return m_nonconst_stline;}
-    inline const volume<float>& get_seeds() const {return m_seeds;}
-
     
   };
   
   class Seedmanager{
-    probtrackxOptions& opts;
-    Log& logger;
-    Counter& m_counter;    
-    Streamliner& m_stline;
-    const volume<float>& m_seeds;
-    ColumnVector m_seeddims;
+    probtrackxOptions&        opts;
+    Log&                      logger;
+
+    Counter&                  m_counter;    
+    ColumnVector              m_seeddims;
+
   public:
     Seedmanager(Counter& counter):opts(probtrackxOptions::getInstance()),
 				  logger(LogSingleton::getInstance()),
-				  m_counter(counter),
-				  m_stline(m_counter.get_nonconst_streamline()),
-				  m_seeds(m_counter.get_seeds()){
+				  m_counter(counter){
       m_seeddims.ReSize(3);
-      m_seeddims<<m_seeds.xdim()<<m_seeds.ydim()<<m_seeds.zdim();
+      m_seeddims<<m_counter.get_stline().get_seeds().xdim()
+		<<m_counter.get_stline().get_seeds().ydim()
+		<<m_counter.get_stline().get_seeds().zdim();
     }
-    int run(const float& x,const float& y,const float& z,bool onewayonly=false, int fibst=-1);
-    int run(const float& x,const float& y,const float& z,bool onewayonly, int fibst,const ColumnVector& dir);
+    ~Seedmanager(){}
+    Streamliner& get_stline(){return m_counter.get_stline();}
+
+    int run(const float& x,const float& y,const float& z,
+	    bool onewayonly, int fibst,bool sampvox);
+    int run(const float& x,const float& y,const float& z,
+	    bool onewayonly, int fibst,bool sampvox,const ColumnVector& dir);
+
+
+
   };
 
 }
