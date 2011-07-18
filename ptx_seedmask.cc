@@ -98,16 +98,16 @@ void seedmask()
 	pos=seeds.get_vertex_as_vox(i,p);
 	dir=seeds.get_normal_as_vox(i,p);
 
-	if(opts.meshspace.value()=="caret")
-	  dir*=-1; // normals in caret point away from the brain
+	//if(opts.meshspace.value()=="caret")
+	//  dir*=-1; // normals in caret point away from the brain
+
 	if(opts.verbose.value()>=1){
 	  cout <<"run"<<endl;
 	  cout <<pos(1)<<" "<<pos(2)<<" "<<pos(3)<<endl;
 	}
 	keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
 				     false,-1,false);
-	//keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
-	//		     false,-1,false,dir);
+
 
       }
     }
