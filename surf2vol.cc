@@ -22,20 +22,13 @@ int main(int argc, char** argv){
     exit(1);
   }
 
-  volume<short int> refvol,ovol;
+  volume<short int> refvol;
   read_volume(refvol,argv[2]);
-  ovol.reinitialize(refvol.xsize(),
-		    refvol.ysize(),
-		    refvol.zsize());
-  copybasicproperties(refvol,ovol);
-  ovol=0;
-
 
   CSV csv(refvol);
   csv.set_convention(argv[4]);
   csv.load_rois(argv[1]);
   csv.save_surfvol(argv[3],true);
-
 
   return 0;
 }

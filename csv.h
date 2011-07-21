@@ -21,23 +21,35 @@
 #define EXPOSE_TREACHEROUS
 #endif
 
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <stdio.h>
 #include "newimage/newimageio.h"
-#include "meshclass/meshclass.h"
 #include "miscmaths/miscmaths.h"
 #include "fslvtkio/fslvtkio.h"
 #include "utils/tracer_plus.h"
+#include "csv_mesh.h"
+//#include "fslsurface/fslsurface.h"
+//#include "fslsurface/fslsurfaceio.h"
+//#include "fslsurface/fslsurface_dataconv.h"
 
+using namespace std;
 using namespace NEWIMAGE;
 using namespace MISCMATHS;
-using namespace mesh;
 using namespace fslvtkio;
 using namespace Utilities;
+//using namespace fslsurface_name;
 
 // useful routines for collision detection
 bool triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
 bool rayBoxIntersection(float origin[3],float direction[3],float vminmax[2][3]);
 bool segTriangleIntersection(float seg[2][3],float tri[3][3]);
 float triDistPoint(const Triangle& t,const ColumnVector pos);
+
+
+
+
 
 // This is the main class that can handle an ROI made of a bunch of voxels and surface vertices
 // Its main role is to tell you whether a point is in the ROI (voxels) or whether a line segment
@@ -48,10 +60,7 @@ float triDistPoint(const Triangle& t,const ColumnVector pos);
 class CSV {
 private:
   volume<float>                          roivol;     // volume-like ROIs (all in the same volume for memory efficiency)
-  vector<Mesh>                           roimesh;    // surface-like ROIs
-
-  vector<Mesh>                           lowresmesh; // low res surfaces (useful for counting)
-  vector<Matrix>                         high2lowres;// correspondence between high and low res surfaces
+  vector<CsvMesh>                        roimesh;    // surface-like ROIs
 
   vector<string>                         surfnames;  // file names
   vector<string>                         volnames;   // useful for seed_to_target storage in probtrackx
@@ -100,9 +109,9 @@ private:
 
 
 public:
-  CSV(){
-    init_dims();
-  }
+  //CSV(){
+  // init_dims();
+  //}
   CSV(const volume<short int>& ref):refvol(ref){
     init_dims();
     _xdim=refvol.xdim();
@@ -119,7 +128,7 @@ public:
     surfvol.reinitialize(refvol.xsize(),
 			 refvol.ysize(),
 			 refvol.zsize());
-    surfvol=0;
+    surfvol=0;    
   }
   CSV(const CSV& csv){*this=csv;}
   ~CSV(){}
@@ -186,7 +195,7 @@ public:
     if(volind[i]>=0){return volnames[volind[i]];}
     else{return surfnames[surfind[i]];}
   }
-  Mesh& get_mesh(const int i){return roimesh[i];}
+  CsvMesh& get_mesh(const int i){return roimesh[i];}
   int get_loc(int roi,int x,int y,int z)const{
     return vol2bigmat(x,y,z,roi);
   }
@@ -211,40 +220,39 @@ public:
 
   // indices start at 0
   ColumnVector get_vertex(const int& surfind,const int& vertind){
-    Mpoint *P;
-    P=roimesh[surfind].get_point(vertind);
+    CsvMpoint P(roimesh[surfind].get_point(vertind));
     ColumnVector p(3);
-    p << P->get_coord().X
-      << P->get_coord().Y
-      << P->get_coord().Z;
+    p << P.get_coord().X
+      << P.get_coord().Y
+      << P.get_coord().Z;
     return p;
   }
   ColumnVector get_vertex_as_vox(const int& surfind,const int& vertind){
-    Mpoint *P;
-    P=roimesh[surfind].get_point(vertind);
+    CsvMpoint P(roimesh[surfind].get_point(vertind));
     ColumnVector p(4);
-    p << P->get_coord().X
-      << P->get_coord().Y
-      << P->get_coord().Z
+    p << P.get_coord().X
+      << P.get_coord().Y
+      << P.get_coord().Z
       << 1;
     p = mm2vox*p;
     p = p.SubMatrix(1,3,1,1);
     return p;
   }
-  ColumnVector get_normal(const int& surfind,const int& vertind){
-    Vec n = roimesh[surfind].get_point(vertind)->local_normal();
-    ColumnVector ret(3);
-    ret<<n.X<<n.Y<<n.Z;
-    return ret;
-  }
-  ColumnVector get_normal_as_vox(const int& surfind,const int& vertind){
-    Vec n = roimesh[surfind].get_point(vertind)->local_normal();
-    ColumnVector ret(3);
-    ret<<n.X<<n.Y<<n.Z;
-    ret=mm2vox.SubMatrix(1,3,1,3)*ret;
+  // ColumnVector get_normal(const int& surfind,const int& vertind){
+//     Vec n = roimesh[surfind].get_point(vertind).local_normal();
+//     ColumnVector ret(3);
+//     ret<<n.X<<n.Y<<n.Z;
+//     return ret;
+//   }
+//   ColumnVector get_normal_as_vox(const int& surfind,const int& vertind){
+//     Vec n = roimesh[surfind].get_point(vertind).local_normal();
+//     ColumnVector ret(3);
+//     ret<<n.X<<n.Y<<n.Z;
+//     ret=mm2vox.SubMatrix(1,3,1,3)*ret;
     
-    return ret;
-  }
+//     return ret;
+//   }
+  
   
   const vector<ColumnVector>& get_locs_coords()const{return loccoords;}
   const vector<int>& get_locs_roi_index()const{return locrois;}
@@ -267,6 +275,7 @@ public:
   void update_surfvol(const vector<ColumnVector>& v,const int& id,const int& meshid);
   void save_surfvol(const string& filename,const bool& binarise=true)const;
   void init_hitvol(const vector<string>& fnames);
+
 
   void  add_value(const string& type,const int& roiind,const int& locind,const float& val);
   void  set_value(const string& type,const int& roiind,const int& locind,const float& val);
@@ -336,4 +345,7 @@ public:
 
 };
 
+
+
+ 
 #endif

@@ -11,6 +11,7 @@
 #include "miscmaths/SpMat.h" 
 #include "csv.h"
 #include "utils/tracer_plus.h"
+#include <boost/shared_ptr.hpp>
 
 using namespace std;
 using namespace NEWIMAGE;
@@ -21,7 +22,7 @@ using namespace PARTICLE;
 
 namespace TRACT{
 
-  void read_ascii_file(const string& filename,vector<string>& content);  
+  void read_ascii_files(const string& filename,vector<string>& content);  
 
   //  the following is a helper function for save_matrix*
   //  to convert between nifti coords (external) and newimage coord (internal)
@@ -43,11 +44,14 @@ namespace TRACT{
 
     // prior masks
     volume<int>                   m_skipmask;
+    boost::shared_ptr<CSV>        m_rubbish;
+    boost::shared_ptr<CSV>        m_stop; 
+    boost::shared_ptr<CSV>        m_waymasks;
+    boost::shared_ptr<CSV>        m_netmasks;
 
-    CSV                           *m_rubbish;
-    CSV                           *m_stop; 
-    CSV                           *m_waymasks;
-    vector<bool>                  m_passed_flags;
+    vector<bool>                  m_way_passed_flags;
+    vector<bool>                  m_net_passed_flags;
+
     string                        m_waycond;
     
     volume4D<float>               m_prefdir;
@@ -71,8 +75,8 @@ namespace TRACT{
     float                         m_z_s_init;
 
     // Streamliner needs to know about matrix3 
-    CSV                           *m_mask3;
-    CSV                           *m_lrmask3;
+    boost::shared_ptr<CSV>        m_mask3;
+    boost::shared_ptr<CSV>        m_lrmask3;
     vector< pair<int,float> >     m_inmask3; // knows which node in mask3 and how far from seed (signed distance)
     vector< pair<int,float> >     m_inlrmask3;
 
@@ -89,14 +93,18 @@ namespace TRACT{
     inline const float get_x_seed() const {return m_x_s_init;}
     inline const float get_y_seed() const {return m_y_s_init;}
     inline const float get_z_seed() const {return m_z_s_init;}
-    inline const vector<ColumnVector>& get_path_ref() const{return m_path;}
-    inline vector<ColumnVector>        get_path()     const{return m_path;}
+    const vector<ColumnVector>& get_path_ref() const{return m_path;}
+    vector<ColumnVector>        get_path()     const{return m_path;}
 
     inline void reset(){
       m_part.reset();
       vols.reset(opts.fibst.value());
-      for(unsigned int i=0;i<m_passed_flags.size();i++)
-	m_passed_flags[i]=false;
+      for(unsigned int i=0;i<m_way_passed_flags.size();i++)
+	m_way_passed_flags[i]=false;
+      if(opts.network.value()){
+	for(unsigned int i=0;i<m_net_passed_flags.size();i++)
+	  m_net_passed_flags[i]=false;
+      }
       m_tracksign=1;
     }
     inline void reverse(){
@@ -111,21 +119,17 @@ namespace TRACT{
 
     
     // separate masks loading from class constructor
-    void load_waymasks(const string& filename){
-      vector<int> excl;excl.clear();
-      load_waymasks(filename,excl);
-    }
-    void load_waymasks(const string& filename,const int& excl){
+    void load_netmasks(const string& filename,const int& excl){
       vector<int> vexcl;vexcl.push_back(excl);
-      load_waymasks(filename,vexcl);
+      load_netmasks(filename,vexcl);
     }
-    void load_waymasks(const string& filename,const vector<int>& exclude){
-      m_waycond=opts.waycond.value();
+    void load_netmasks(const string& filename,const vector<int>& exclude){
 
-      string tmpfilename=logger.appendDir("tmpwaymaskfile");
+      string tmpfilename=logger.appendDir("tmpnetmaskfile");
       ofstream of(tmpfilename.c_str());
       vector<string> filelist;
-      read_ascii_file(filename,filelist);
+
+      read_ascii_files(filename,filelist);
 
       int nfiles=0;
       for(unsigned int i=0;i<filelist.size();i++){
@@ -138,43 +142,48 @@ namespace TRACT{
 	  of<<filelist[i]<<endl;
 	}
       }
-      if(nfiles==0)return;      
+            
+      m_netmasks.reset(new CSV(m_seeds.get_refvol()));
+      m_netmasks->set_convention(opts.meshspace.value());
+      m_netmasks->load_rois(tmpfilename);    
 
-      if(m_waymasks==NULL){
-	m_waymasks = new CSV(m_seeds.get_refvol());
-	m_waymasks->set_convention(opts.meshspace.value());
-	m_waymasks->load_rois(tmpfilename);    
-      }
-      else{            
-	m_waymasks->reload_rois(tmpfilename);    
-      }
-      m_passed_flags.clear();
-      for(int m=0;m<m_waymasks->nRois();m++){
-	m_passed_flags.push_back(false);
-      }
+      m_net_passed_flags.clear();
+      m_net_passed_flags.resize(m_netmasks->nRois(),false);
+
     }
-    CSV*    get_waymasks(){return m_waymasks;}
+    void load_waymasks(const string& filename){
+      m_waymasks.reset(new CSV(m_seeds.get_refvol()));
+      m_waymasks->set_convention(opts.meshspace.value());
+      m_waymasks->load_rois(filename);    
+
+      m_way_passed_flags.clear();
+      for(int i=0;i<m_waymasks->nRois();i++)
+	m_way_passed_flags.push_back(false);
+      //m_way_passed_flags.resize(m_waymasks->nRois(),false);
+    }
+    boost::shared_ptr<CSV>    get_waymasks(){return m_waymasks;}
     void    set_waycond(const string& cond){m_waycond=cond;}
     string  get_waycond()const{return m_waycond;}
+
     void load_stop(const string& filename){    
-      m_stop = new CSV(m_seeds.get_refvol());
+      m_stop.reset(new CSV(m_seeds.get_refvol()));
       m_stop->set_convention(opts.meshspace.value());
       m_stop->load_rois(filename);     
     }
     void load_rubbish(const string& filename){      
-      m_rubbish = new CSV(m_seeds.get_refvol());
+      m_rubbish.reset(new CSV(m_seeds.get_refvol()));
       m_rubbish->set_convention(opts.meshspace.value());
       m_rubbish->load_rois(filename);     
     }
 
     // //////    matrix3 methods
     void init_mask3(){
-      m_mask3 = new CSV(m_seeds.get_refvol());
+      m_mask3.reset(new CSV(m_seeds.get_refvol()));
       m_mask3->set_convention(opts.meshspace.value());
       m_mask3->load_rois(opts.mask3.value());
 
       if(opts.lrmask3.value()!=""){
-	m_lrmask3 = new CSV(m_seeds.get_refvol());
+	m_lrmask3.reset(new CSV(m_seeds.get_refvol()));
 	m_lrmask3->set_convention(opts.meshspace.value());      
 	m_lrmask3->load_rois(opts.lrmask3.value());
       }
@@ -183,8 +192,8 @@ namespace TRACT{
     void                       clear_inlrmask3() {m_inlrmask3.clear();}
     vector< pair<int,float> >& get_inmask3()     {return m_inmask3;}
     vector< pair<int,float> >& get_inlrmask3()   {return m_inlrmask3;}
-    CSV*                       get_mask3()       {return m_mask3;}
-    CSV*                       get_lrmask3()     {return m_lrmask3;}
+    boost::shared_ptr<CSV>     get_mask3()       {return m_mask3;}
+    boost::shared_ptr<CSV>     get_lrmask3()     {return m_lrmask3;}
     void fill_inmask3(const vector<int>& crossedlocs3,const float& pathlength){
       vector< pair<int,float> > inmask3;
       for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
@@ -230,7 +239,7 @@ namespace TRACT{
     int                          m_curloc;
 
     // classification targets
-    CSV                         *m_targetmasks;
+    boost::shared_ptr<CSV>       m_targetmasks;
     vector<bool>                 m_targflags;
     vector<CSV*>                 m_s2t_count;
     Matrix                       m_s2tastext;
@@ -261,7 +270,7 @@ namespace TRACT{
 				 m_stline(stline)
     {
       m_numseeds = m_stline.get_seeds().nLocs();
-      //are they initialised to zero?
+
       m_beenhere.reinitialize(m_stline.get_seeds().xsize(),
 			      m_stline.get_seeds().ysize(),
 			      m_stline.get_seeds().zsize());

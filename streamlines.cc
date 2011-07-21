@@ -4,7 +4,7 @@
 
 namespace TRACT{
 
-  void read_ascii_file(const string& filename,vector<string>& content){
+  void read_ascii_files(const string& filename,vector<string>& content){
     ifstream fs(filename.c_str());
     string tmp;
     if(fs){
@@ -15,7 +15,7 @@ namespace TRACT{
       }while(!fs.eof());
     }
     else{
-      cerr<<filename<<" does not exist"<<endl;
+      cerr<<"TRACT::read_ascii_files: "<<filename<<" does not exist"<<endl;
       exit(0);
     }
   }
@@ -106,9 +106,10 @@ namespace TRACT{
   }
 
   Streamliner::Streamliner(const CSV& seeds):opts(probtrackxOptions::getInstance()),
-					     logger(LogSingleton::getInstance()),
+					     logger(LogSingleton::getInstance()),					     					     
 					     vols(opts.usef.value()),
-					     m_seeds(seeds){
+					     m_seeds(seeds)
+  {    
 
     // the tracking mask - no tracking outside of this
     read_volume(m_mask,opts.maskfile.value());
@@ -144,11 +145,9 @@ namespace TRACT{
     }
      
     // waymasks in CSV format
-    if(opts.waypoints.value()!=""){
-      load_waymasks(opts.waypoints.value());
-      if(opts.network.value()){
-	cerr<<"Warning: running in network mode - waypoints will be ignored"<<endl;
-      }
+    if(opts.waypoints.set()){
+      load_waymasks(opts.waypoints.value());      
+      m_waycond=opts.waycond.value();
     }
     
     // choose preferred fibre within this mask (prior knowledge)
@@ -267,9 +266,15 @@ namespace TRACT{
     bool forcedir=false;
     //NB - this only goes in one direction!!
 
-    if(opts.onewaycondition.value())
-      for(unsigned int i=0; i<m_passed_flags.size();i++)
-	m_passed_flags[i]=false;
+    if(opts.onewaycondition.value()){
+      for(unsigned int i=0; i<m_way_passed_flags.size();i++)
+	m_way_passed_flags[i]=false;
+      if(opts.network.value()){
+	for(unsigned int i=0; i<m_net_passed_flags.size();i++)
+	  m_net_passed_flags[i]=false;
+      }
+    }
+
 
     for(int it=1;it<=opts.nsteps.value()/2;it++){
       
@@ -350,23 +355,33 @@ namespace TRACT{
 	// only test exclusion after at least one step
 	if(opts.rubbishfile.value()!="" && cnt>1){
 	  if(m_rubbish->has_crossed(m_path[cnt-2],m_path[cnt-1])){
-	    rubbish_passed=true;
+	    rubbish_passed=1;
 	    break;
 	  }
 	}
 
 	// update every passed_flag
-	if(opts.waypoints.value()!="" || opts.network.value()){
+	if(m_way_passed_flags.size()>0){
 	  if(cnt>1){
 	    waycrossed.clear();
 	    m_waymasks->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
-	      m_passed_flags[waycrossed[wm]]=true;
+	      m_way_passed_flags[waycrossed[wm]]=true;
 	    }
 	  }
 	}
-	
+	if(opts.network.value()){
+	  if(cnt>1){
+	    waycrossed.clear();
+	    m_netmasks->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
+
+	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
+	      m_net_passed_flags[waycrossed[wm]]=true;
+	    }
+	  }	  
+	}
+
 	// //////////////////////////////
 	// update locations for matrix3
 	if(opts.matrix3out.value() && cnt>1){
@@ -469,20 +484,46 @@ namespace TRACT{
     
     // rejflag = 0 (accept), 1 (reject) or 2 (wait for second direction)
     int rejflag=0;
-    if(m_passed_flags.size()!=0){
+
+    if(m_way_passed_flags.size()!=0){
       unsigned int numpassed=0;
-      for(unsigned int i=0; i<m_passed_flags.size();i++){
-	if(m_passed_flags[i])numpassed++;
+      for(unsigned int i=0; i<m_way_passed_flags.size();i++){
+	if(m_way_passed_flags[i])numpassed++;
       }
+
       if(numpassed==0)rejflag=1;
-      else if(numpassed<m_passed_flags.size()){
-	if(m_waycond=="AND")
+      else if(numpassed<m_way_passed_flags.size()){
+
+	if(m_waycond=="AND"){
+
 	  rejflag=opts.onewaycondition.value()?1:2;
-	else
+	}
+	else{
 	  rejflag=0;
+	}
       }
       else rejflag=0;
     }
+    if(opts.network.value()){
+      unsigned int numpassed=0;
+      for(unsigned int i=0; i<m_net_passed_flags.size();i++){
+	if(m_net_passed_flags[i])numpassed++;
+      }
+
+      if(numpassed==0)rejflag=1;
+      else if(numpassed<m_net_passed_flags.size()){
+	if(m_waycond=="AND"){
+	  rejflag=opts.onewaycondition.value()?1:2;
+	}
+	else{
+	  rejflag=0;
+	}
+      }
+      else rejflag=0;
+    }
+    
+    
+
     if(rubbish_passed){
       rejflag=1;
     }
@@ -514,13 +555,13 @@ namespace TRACT{
   
   void Counter::initialise_seedcounts(){
     // now the CSV class does all the work
-    m_targetmasks = new CSV(m_stline.get_seeds().get_refvol());
+    m_targetmasks.reset(new CSV(m_stline.get_seeds().get_refvol()));
     m_targetmasks->set_convention(opts.meshspace.value());
     m_targetmasks->load_rois(opts.targetfile.value());
     m_targetmasks->reset_values();
 
     // seeds are CSV-format
-    if(opts.simple.value()){
+    if(!opts.simple.value()){
       for(int m=0;m<m_targetmasks->nRois();m++){
 	CSV *csv = new CSV(m_stline.get_seeds());
 	csv->reset_values();
@@ -638,7 +679,7 @@ namespace TRACT{
 
     // save lookup tables...
     
-    CSV *mask3 = m_stline.get_mask3();
+    boost::shared_ptr<CSV> mask3(m_stline.get_mask3());
     vector<ColumnVector> coords = mask3->get_locs_coords();
     vector<int> roicind = mask3->get_locs_coord_index();
     vector<int> roiind = mask3->get_locs_roi_index();
@@ -655,7 +696,7 @@ namespace TRACT{
     write_ascii_matrix(mat,logger.appendDir("coords_for_fdt_matrix3"));
 
     if(opts.lrmask3.value()!=""){
-      CSV *lrmask3 = m_stline.get_lrmask3();
+      boost::shared_ptr<CSV> lrmask3(m_stline.get_lrmask3());
       vector<ColumnVector> lrcoords = lrmask3->get_locs_coords();
       vector<int> lrroicind = lrmask3->get_locs_coord_index();
       vector<int> lrroiind = lrmask3->get_locs_roi_index();
@@ -760,7 +801,7 @@ namespace TRACT{
       for(unsigned int t=0;t<crossed.size();t++){
 	if(m_targflags[crossed[t]])continue;
 
-	if(opts.simple.value()){
+	if(!opts.simple.value()){
 	  if(!opts.pathdist.value())
 	    m_s2t_count[crossed[t]]->add_value(m_curtype,m_seedroi,m_curloc,1);
 	  else
@@ -966,6 +1007,11 @@ namespace TRACT{
       }	
     }
 
+    if(opts.s2tastext.value()){
+      write_ascii_matrix(m_s2tastext,logger.appendDir("matrix_seeds_to_all_targets"));
+    }
+
+    
   }
     
   // the following is a helper function for save_matrix*

@@ -8,7 +8,7 @@ PROJNAME = fdt
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
-DLIBS = -lwarpfns -lbasisfield -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+DLIBS = -lwarpfns -lbasisfield -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 DTIFIT=dtifit
 CCOPS=ccops
@@ -38,7 +38,7 @@ ONLINETEST=onlinetest
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
 CCOPSOBJS=ccops.o ccopsOptions.o 
 
-PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_nmasks.o csv.o
+PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_nmasks.o csv.o csv_mesh.o
 
 FTBOBJS=find_the_biggest.o
 PJOBJS=proj_thresh.o
@@ -61,19 +61,19 @@ DTIGENOBJS=dtigen.o
 ONLINEOBJS=onlinetest.o quicktracker.o
 
 SURFSAMP=surf_samp
-SURFSAMPOBJS=surf_samp.o csv.o
+SURFSAMPOBJS=surf_samp.o csv.o csv_mesh.o
 SURFDATA=surf_proj
-SURFDATAOBJS=surf_proj.o csv.o
+SURFDATAOBJS=surf_proj.o csv.o csv_mesh.o
 SURFPROP=surf_prop_dir
-SURFPROPOBJS=surf_prop_dir.o csv.o
+SURFPROPOBJS=surf_prop_dir.o csv.o csv_mesh.o
 MATMERGE=fdt_matrix_merge
 MATMERGEOBJS=fdt_matrix_merge.o
 SAMPDIR=samp_dir
 SAMPDIROBJS=samp_dir.o
 S2S=surf2surf
-S2SOBJS=surf2surf.o csv.o
+S2SOBJS=surf2surf.o csv.o csv_mesh.o
 S2V=surf2vol
-S2VOBJS=surf2vol.o csv.o
+S2VOBJS=surf2vol.o csv.o csv_mesh.o
 L2S=label2surf
 L2SOBJS=label2surf.o
 

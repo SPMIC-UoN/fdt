@@ -30,13 +30,18 @@ void nmasks()
   cout<<"load seeds"<<endl;  
   // check if seeds are a single volume
   if(fsl_imageexists(opts.seedfile.value())){
-    cerr<<"Seed is a volume file - please turn off --network option as it is not needed"<<endl;
+    cerr<<"Seed is a volume file - please turn off --network option or change the seed to a list of files"<<endl;
     exit(1);
   }
 
   CSV seeds(refvol);
   seeds.set_convention(opts.meshspace.value());
   seeds.load_rois(opts.seedfile.value());
+
+  if(seeds.nRois()==1){
+    cerr<<"Seed is a single ROI - please turn off --network option or change the seed to a list of >1 files"<<endl;
+    exit(1);
+  }
  
   if(seeds.nVols()==0 && opts.seedref.value()==""){
     cerr<<"Warning: need to set a reference volume when defining a surface-based seed"<<endl;
@@ -53,11 +58,12 @@ void nmasks()
   counter.initialise();
   Seedmanager  seedmanager (counter);
 
-  vector<int> keeptotal(seeds.nRois(),0);
+  vector<int>  keeptotal(seeds.nRois(),0);
   int cnt=-1;
 
   time_t _time;
   _time=time(NULL);
+
   // seed from volume-like ROIs
   if(seeds.nVols()>0){
     cout << "Volume seeds" << endl;
@@ -66,9 +72,7 @@ void nmasks()
 
       cnt++;
       counter.volumeSeeding(roi);
-      seedmanager.get_stline().load_waymasks(opts.seedfile.value(),roiind[cnt]);
-      if(!opts.waycond.set())
-	seedmanager.get_stline().set_waycond("OR");
+      seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
 
       for(int z=0;z<seeds.zsize();z++){
 	if(opts.verbose.value()>=1)
@@ -95,15 +99,13 @@ void nmasks()
   // seed from surface-like ROIs
   if(seeds.nSurfs()>0){
     cout << "Surface seeds" << endl;
-    ColumnVector pos,dir;
+    ColumnVector pos;//,dir;
     for(int i=0;i<seeds.nSurfs();i++){
       cout<<"surface "<<i<<endl;
       cnt++;
       counter.surfaceSeeding(i);
       
-      seedmanager.get_stline().load_waymasks(opts.seedfile.value(),roiind[cnt]);
-      if(!opts.waycond.set())
-	seedmanager.get_stline().set_waycond("OR");      
+      seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
 
       // inform user if whole surface is used or not
       if( seeds.nActVertices(i) != seeds.nVertices(i) ){
@@ -113,21 +115,23 @@ void nmasks()
 
       for(int p=0;p<seeds.get_mesh(i).nvertices();p++){
 	// check if active point	
-	if(seeds.get_mesh(i).get_point(p)->get_value()==0.0)
+	if(seeds.get_mesh(i).get_pvalue(p)==0.0)
 	  continue;
 
 	counter.updateSeedLocation(seeds.get_loc(i,p));
 	pos=seeds.get_vertex_as_vox(i,p);
-	dir=seeds.get_normal_as_vox(i,p);
+	//dir=seeds.get_normal_as_vox(i,p);
 
-	if(opts.meshspace.value()=="caret")
-	  dir*=-1; // normals in caret point away from the brain
+	//if(opts.meshspace.value()=="caret")
+	//dir*=-1; // normals in caret point away from the brain
+
 	if(opts.verbose.value()>=1){
 	  cout <<"run"<<endl;
 	  cout <<pos(1)<<" "<<pos(2)<<" "<<pos(3)<<endl;
 	}
 	keeptotal[roiind[cnt]] += seedmanager.run(pos(1),pos(2),pos(3),
 				     false,-1,false);
+
 	//keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
 	//		     false,-1,false,dir);
 

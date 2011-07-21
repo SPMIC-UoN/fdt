@@ -78,7 +78,7 @@ void seedmask()
   // seed from surface-like ROIs
   if(seeds.nSurfs()>0){
     cout << "Surface seeds" << endl;
-    ColumnVector pos,dir;
+    ColumnVector pos;//,dir;
     for(int i=0;i<seeds.nSurfs();i++){
       cout<<"surface "<<i<<endl;
       counter.surfaceSeeding(i);
@@ -91,12 +91,12 @@ void seedmask()
       
       for(int p=0;p<seeds.get_mesh(i).nvertices();p++){
 	// check if active point	
-	if(seeds.get_mesh(i).get_point(p)->get_value()==0.0)
+	if(seeds.get_mesh(i).get_pvalue(p)==0.0)
 	  continue;
 	
 	counter.updateSeedLocation(seeds.get_loc(i,p));
 	pos=seeds.get_vertex_as_vox(i,p);
-	dir=seeds.get_normal_as_vox(i,p);
+	//dir=seeds.get_normal_as_vox(i,p);
 
 	//if(opts.meshspace.value()=="caret")
 	//  dir*=-1; // normals in caret point away from the brain
