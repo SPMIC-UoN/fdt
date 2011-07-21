@@ -168,7 +168,11 @@ void CsvMesh::load_ascii(const string& filename) { //load a freesurfer ascii mes
 }
 
 void CsvMesh::save_ascii(const string& s) {
-  ofstream f(s.c_str());
+  string filename(s);
+  string last_3 = filename.substr(filename.size()-3, 3);
+  if( last_3 != "asc" ){filename=filename+".asc";}
+  
+  ofstream f(filename.c_str());
   stringstream flot;
   if (f.is_open())
     {

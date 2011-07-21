@@ -102,16 +102,18 @@ private:
   vector<ColumnVector>                   loccoords;
   vector<int>                            locrois;
   vector<int>                            locindex;
-  vector<int>                            volind;
-  vector<int>                            surfind;
+  vector<int>                            volind;     // local roi ind ---> global volume ind
+  vector<int>                            surfind;    // local roi ind ---> global surface ind
+  vector<int>                            volroiind;  // global vol ind ---> local vol ind
+  vector<int>                            surfroiind; // global surf ind ---> local surf ind
 
   volume<short int>                      refvol;     // reference volume (in case no volume-like ROI is used)
 
 
 public:
-  //CSV(){
-  // init_dims();
-  //}
+  CSV(){
+    init_dims();
+  }
   CSV(const volume<short int>& ref):refvol(ref){
     init_dims();
     _xdim=refvol.xdim();
@@ -131,7 +133,7 @@ public:
     surfvol=0;    
   }
   CSV(const CSV& csv){*this=csv;}
-  ~CSV(){}
+  ~CSV(){clear_all();}
 
   void init_dims(){
     nvols=0;
@@ -141,10 +143,27 @@ public:
     nrois=0;
     _identity=IdentityMatrix(4);
   }
+  void reinitialize(const volume<short int>& vol){
+    init_dims();
+    _xdim=vol.xdim();
+    _ydim=vol.ydim();
+    _zdim=vol.zdim();
+    _dims.ReSize(3);_dims<<_xdim<<_ydim<<_zdim;
+    set_convention("freesurfer");
+    set_refvol(vol);
+    clear_all();
+  }
+  
+  void clear_all(){
+    roimesh.clear();surfnames.clear();volnames.clear();triangles.clear();mesh2loc.clear();
+    loc2mesh.clear();loccoords.clear();locrois.clear();locindex.clear();volind.clear();surfind.clear();
+    volroiind.clear();surfroiind.clear();
+
+  }
 
   // get/set
   const volume<short int>& get_refvol()const{return refvol;}
-  void set_refvol(const volume<short int> vol){
+  void set_refvol(const volume<short int>& vol){
     refvol=vol;
     _xdim=refvol.xdim();
     _ydim=refvol.ydim();
@@ -153,7 +172,12 @@ public:
     copybasicproperties(refvol,roivol);
     roivol=0;
     vol2mat.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize());
-    vol2mat=0;    
+    vol2mat=0; 
+    copybasicproperties(refvol,surfvol);
+    surfvol.reinitialize(refvol.xsize(),
+			 refvol.ysize(),
+			 refvol.zsize());
+    surfvol=0;       
 
   }
   void change_refvol(const vector<string>& fnames){
@@ -339,6 +363,8 @@ public:
     locindex=rhs.locindex;
     volind=rhs.volind;
     surfind=rhs.surfind;
+    volroiind=rhs.volroiind;
+    surfroiind=rhs.surfroiind;
     refvol=rhs.refvol;
     return *this;
   }

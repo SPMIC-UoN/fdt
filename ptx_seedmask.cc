@@ -51,6 +51,7 @@ void seedmask()
   if(seeds.nVols()>0){
     cout << "Volume seeds" << endl;
     for(int roi=1;roi<=seeds.nVols();roi++){
+      cout<<"volume "<<roi<<endl;
       counter.volumeSeeding(roi);
 
       for(int z=0;z<seeds.zsize();z++){

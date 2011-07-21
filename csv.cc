@@ -166,11 +166,11 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
       if(t.intersect(segment,ind)){// ind is 0,1 or2
 	ret=true;
 	if(crossedrois!=NULL)
-	  (*crossedrois).push_back( surfind[localtriangles[i].first] );
+	  (*crossedrois).push_back( surfind[indmesh] );
 	if(crossedlocs!=NULL){
 	  if( roimesh[indmesh].get_pvalue(t.get_vertice(ind).get_no())!=0){//some triangles have <3 active vertices --> ignore these intersections....
 	    ind = t.get_vertice(ind).get_no();
-	    ind = mesh2loc[localtriangles[i].first][ind];
+	    ind = mesh2loc[indmesh][ind];
 	    if(ind<0){
 	      cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
 	      exit(1);
@@ -312,8 +312,10 @@ void CSV::reset_values(){
       roimesh[i].reset_tvalues();
     }
   }
+
 }
-void CSV::add_value(const string& type,const int& roiind,const int& locind,const float& val){
+void CSV::add_value(const string& type,const int& roiind,
+		    const int& locind,const float& val){
   if(type=="volume"){
     // is locind the right thing to do here?
     int x=(int)round((float)loccoords[locind-1](1));
@@ -322,7 +324,7 @@ void CSV::add_value(const string& type,const int& roiind,const int& locind,const
     hitvol(vol2mat(x,y,z),roiind) += val;    
   }
   else if(type=="surface"){
-    int vertind=loc2mesh[locind].second;
+    int vertind=loc2mesh[locind].second-1;
     float curval=roimesh[roiind].get_pvalue(vertind);
     roimesh[roiind].set_pvalue(vertind,curval+val);
   }
@@ -392,8 +394,9 @@ void CSV::load_volume(const string& filename){
 	mypair.second=-1;
 	loc2mesh.push_back(mypair);
       }
-  volind.push_back(nvols);
-  surfind.push_back(-1);
+  volind.push_back(nrois);
+  volroiind.push_back(nvols);
+  surfroiind.push_back(-1);
 
   nvols++;
   nrois++;
@@ -448,8 +451,10 @@ void CSV::load_surface(const string& filename){
   mesh2loc.push_back(lu1);
 
   roimesh.push_back(m);
-  surfind.push_back(nsurfs);
-  volind.push_back(-1);
+
+  surfind.push_back(nrois);
+  surfroiind.push_back(nsurfs);
+  volroiind.push_back(-1);
   
   nsurfs++;
   nrois++;
@@ -511,15 +516,16 @@ void CSV::load_rois(const string& filename,bool do_change_refvol){
   // second read pass on volumes to update lookup table
   init_hitvol(fnames);
 
+
 }
 void CSV::reload_rois(const string& filename){
   cleanup();
   load_rois(filename,false);
 }
 void CSV::save_roi(const int& roiind,const string& fname){
-  int ind = volind[roiind];
+  int ind = volroiind[roiind];
   bool isvol=true;
-  if(ind<0){ind=surfind[roiind];isvol=false;}
+  if(ind<0){ind=surfroiind[roiind];isvol=false;}
 
   if(isvol){//save volume
     volume<float> tmpvol;
@@ -540,11 +546,7 @@ void CSV::cleanup(){
   roivol=0;
   vol2mat=0;vol2bigmat=0;
   surfvol=0;
-  roimesh.clear();
-  surfnames.clear();volnames.clear();triangles.clear();
-  mesh2loc.clear();loc2mesh.clear();
-  loccoords.clear();locrois.clear();locindex.clear();
-  volind.clear();surfind.clear();
+  clear_all();
 }
 void CSV::set_convention(const string& conv){
   convention=conv;

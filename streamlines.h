@@ -11,7 +11,6 @@
 #include "miscmaths/SpMat.h" 
 #include "csv.h"
 #include "utils/tracer_plus.h"
-#include <boost/shared_ptr.hpp>
 
 using namespace std;
 using namespace NEWIMAGE;
@@ -44,13 +43,14 @@ namespace TRACT{
 
     // prior masks
     volume<int>                   m_skipmask;
-    boost::shared_ptr<CSV>        m_rubbish;
-    boost::shared_ptr<CSV>        m_stop; 
-    boost::shared_ptr<CSV>        m_waymasks;
-    boost::shared_ptr<CSV>        m_netmasks;
+    CSV                           m_rubbish;
+    CSV                           m_stop; 
+    CSV                           m_waymasks;
+    CSV                           m_netmasks;
 
-    vector<bool>                  m_way_passed_flags;
-    vector<bool>                  m_net_passed_flags;
+    vector<int>                   m_way_passed_flags;
+    ColumnVector                  m_net_passed_flags;
+    //vector<int>                   m_net_passed_flags;
 
     string                        m_waycond;
     
@@ -75,8 +75,8 @@ namespace TRACT{
     float                         m_z_s_init;
 
     // Streamliner needs to know about matrix3 
-    boost::shared_ptr<CSV>        m_mask3;
-    boost::shared_ptr<CSV>        m_lrmask3;
+    CSV                           m_mask3;
+    CSV                           m_lrmask3;
     vector< pair<int,float> >     m_inmask3; // knows which node in mask3 and how far from seed (signed distance)
     vector< pair<int,float> >     m_inlrmask3;
 
@@ -100,10 +100,11 @@ namespace TRACT{
       m_part.reset();
       vols.reset(opts.fibst.value());
       for(unsigned int i=0;i<m_way_passed_flags.size();i++)
-	m_way_passed_flags[i]=false;
+	m_way_passed_flags[i]=0;
       if(opts.network.value()){
-	for(unsigned int i=0;i<m_net_passed_flags.size();i++)
-	  m_net_passed_flags[i]=false;
+	m_net_passed_flags=0;
+	//for(unsigned int i=0;i<m_net_passed_flags.size();i++)
+	//m_net_passed_flags[i]=0;
       }
       m_tracksign=1;
     }
@@ -142,58 +143,60 @@ namespace TRACT{
 	  of<<filelist[i]<<endl;
 	}
       }
-            
-      m_netmasks.reset(new CSV(m_seeds.get_refvol()));
-      m_netmasks->set_convention(opts.meshspace.value());
-      m_netmasks->load_rois(tmpfilename);    
+      
+      m_netmasks.reinitialize(m_seeds.get_refvol());
+      m_netmasks.set_convention(opts.meshspace.value());
+      m_netmasks.load_rois(tmpfilename);    
 
-      m_net_passed_flags.clear();
-      m_net_passed_flags.resize(m_netmasks->nRois(),false);
+      m_net_passed_flags.ReSize(m_netmasks.nRois());
+      m_net_passed_flags=0;
+
+      //m_net_passed_flags.clear();
+      //m_net_passed_flags.resize(m_netmasks.nRois(),0);
 
     }
     void load_waymasks(const string& filename){
-      m_waymasks.reset(new CSV(m_seeds.get_refvol()));
-      m_waymasks->set_convention(opts.meshspace.value());
-      m_waymasks->load_rois(filename);    
+      m_waymasks.reinitialize(m_seeds.get_refvol());
+      m_waymasks.set_convention(opts.meshspace.value());
+      m_waymasks.load_rois(filename);    
 
-      m_way_passed_flags.clear();
-      for(int i=0;i<m_waymasks->nRois();i++)
-	m_way_passed_flags.push_back(false);
-      //m_way_passed_flags.resize(m_waymasks->nRois(),false);
+      m_way_passed_flags.clear(); 
+      for(int i=0;i<m_waymasks.nRois();i++)
+	m_way_passed_flags.push_back(0);
     }
-    boost::shared_ptr<CSV>    get_waymasks(){return m_waymasks;}
+
     void    set_waycond(const string& cond){m_waycond=cond;}
-    string  get_waycond()const{return m_waycond;}
+    string  get_wacond()const{return m_waycond;}
 
     void load_stop(const string& filename){    
-      m_stop.reset(new CSV(m_seeds.get_refvol()));
-      m_stop->set_convention(opts.meshspace.value());
-      m_stop->load_rois(filename);     
+      m_stop.reinitialize(m_seeds.get_refvol());
+      m_stop.set_convention(opts.meshspace.value());
+      m_stop.load_rois(filename);     
     }
     void load_rubbish(const string& filename){      
-      m_rubbish.reset(new CSV(m_seeds.get_refvol()));
-      m_rubbish->set_convention(opts.meshspace.value());
-      m_rubbish->load_rois(filename);     
+      m_rubbish.reinitialize(m_seeds.get_refvol());
+      m_rubbish.set_convention(opts.meshspace.value());
+      m_rubbish.load_rois(filename);     
     }
 
     // //////    matrix3 methods
     void init_mask3(){
-      m_mask3.reset(new CSV(m_seeds.get_refvol()));
-      m_mask3->set_convention(opts.meshspace.value());
-      m_mask3->load_rois(opts.mask3.value());
+      m_mask3.reinitialize(m_seeds.get_refvol());
+      m_mask3.set_convention(opts.meshspace.value());
+      m_mask3.load_rois(opts.mask3.value());
 
       if(opts.lrmask3.value()!=""){
-	m_lrmask3.reset(new CSV(m_seeds.get_refvol()));
-	m_lrmask3->set_convention(opts.meshspace.value());      
-	m_lrmask3->load_rois(opts.lrmask3.value());
+	m_lrmask3.reinitialize(m_seeds.get_refvol());
+	m_lrmask3.set_convention(opts.meshspace.value());      
+	m_lrmask3.load_rois(opts.lrmask3.value());
       }
     }
     void                       clear_inmask3()   {m_inmask3.clear();}
     void                       clear_inlrmask3() {m_inlrmask3.clear();}
     vector< pair<int,float> >& get_inmask3()     {return m_inmask3;}
     vector< pair<int,float> >& get_inlrmask3()   {return m_inlrmask3;}
-    boost::shared_ptr<CSV>     get_mask3()       {return m_mask3;}
-    boost::shared_ptr<CSV>     get_lrmask3()     {return m_lrmask3;}
+    CSV                        get_mask3()       {return m_mask3;}
+    CSV                        get_lrmask3()     {return m_lrmask3;}
     void fill_inmask3(const vector<int>& crossedlocs3,const float& pathlength){
       vector< pair<int,float> > inmask3;
       for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
@@ -239,9 +242,9 @@ namespace TRACT{
     int                          m_curloc;
 
     // classification targets
-    boost::shared_ptr<CSV>       m_targetmasks;
+    CSV                          m_targetmasks;
     vector<bool>                 m_targflags;
-    vector<CSV*>                 m_s2t_count;
+    vector<CSV>                  m_s2t_count;
     Matrix                       m_s2tastext;
     int                          m_s2trow;
 

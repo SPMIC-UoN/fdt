@@ -268,10 +268,9 @@ namespace TRACT{
 
     if(opts.onewaycondition.value()){
       for(unsigned int i=0; i<m_way_passed_flags.size();i++)
-	m_way_passed_flags[i]=false;
+	m_way_passed_flags[i]=0;
       if(opts.network.value()){
-	for(unsigned int i=0; i<m_net_passed_flags.size();i++)
-	  m_net_passed_flags[i]=false;
+	m_net_passed_flags=0;
       }
     }
 
@@ -340,7 +339,7 @@ namespace TRACT{
 	// // attractor mask 
 	// if(opts.pullmask.value()!=""){
 	//   ColumnVector pulldir(3);float mindist;
-	//   if(m_pullmask->is_near_surface(xyz_seeds,opts.pulldist.value(),pulldir,mindist)){
+	//   if(m_pullmask.is_near_surface(xyz_seeds,opts.pulldist.value(),pulldir,mindist)){
 	//     m_prefx = pulldir(1);
 	//     m_prefy = pulldir(2);
 	//     m_prefz = pulldir(3);
@@ -354,7 +353,7 @@ namespace TRACT{
 
 	// only test exclusion after at least one step
 	if(opts.rubbishfile.value()!="" && cnt>1){
-	  if(m_rubbish->has_crossed(m_path[cnt-2],m_path[cnt-1])){
+	  if(m_rubbish.has_crossed(m_path[cnt-2],m_path[cnt-1])){
 	    rubbish_passed=1;
 	    break;
 	  }
@@ -364,20 +363,20 @@ namespace TRACT{
 	if(m_way_passed_flags.size()>0){
 	  if(cnt>1){
 	    waycrossed.clear();
-	    m_waymasks->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
+	    m_waymasks.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
-	      m_way_passed_flags[waycrossed[wm]]=true;
+	      m_way_passed_flags[waycrossed[wm]]=1;
 	    }
 	  }
 	}
 	if(opts.network.value()){
 	  if(cnt>1){
 	    waycrossed.clear();
-	    m_netmasks->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
+	    m_netmasks.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
-	      m_net_passed_flags[waycrossed[wm]]=true;
+	      m_net_passed_flags(waycrossed[wm]+1)=1;
 	    }
 	  }	  
 	}
@@ -386,12 +385,12 @@ namespace TRACT{
 	// update locations for matrix3
 	if(opts.matrix3out.value() && cnt>1){
 	  waycrossed.clear();crossedlocs3.clear();
-	  if(m_mask3->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
+	  if(m_mask3.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
 	    fill_inmask3(crossedlocs3,pathlength);
 	  }
 	  if(opts.lrmask3.value()!=""){
 	    waycrossed.clear();crossedlocs3.clear();
-	    if(m_lrmask3->has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
+	    if(m_lrmask3.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
 	      fill_inlrmask3(crossedlocs3,pathlength);
 	    }	  
 	  }
@@ -403,7 +402,7 @@ namespace TRACT{
 	  if(m_path.size()==2 && opts.forcefirststep.value()){
 	    // do nothing
 	  }
-	  else if(m_stop->has_crossed(m_path[cnt-2],m_path[cnt-1])){
+	  else if(m_stop.has_crossed(m_path[cnt-2],m_path[cnt-1])){
 	    break;	    
 	  }	  
 	}
@@ -485,6 +484,27 @@ namespace TRACT{
     // rejflag = 0 (accept), 1 (reject) or 2 (wait for second direction)
     int rejflag=0;
 
+    if(rubbish_passed) return(1);
+    if(pathlength<opts.distthresh.value()) return(1);
+
+    if(opts.network.value()){
+      unsigned int numpassed=0;
+      for(int i=1; i<m_net_passed_flags.Nrows();i++){
+	if(m_net_passed_flags(i))numpassed++;
+      }
+      if(numpassed==0)rejflag=1;
+      else if((int)numpassed<m_net_passed_flags.Nrows()){
+	if(m_waycond=="AND"){
+	  rejflag=opts.onewaycondition.value()?1:2;
+	}
+	else{
+	  rejflag=0;
+	}
+      }
+      else rejflag=0;
+    }
+    if(rejflag==1) return(rejflag);
+    
     if(m_way_passed_flags.size()!=0){
       unsigned int numpassed=0;
       for(unsigned int i=0; i<m_way_passed_flags.size();i++){
@@ -493,25 +513,6 @@ namespace TRACT{
 
       if(numpassed==0)rejflag=1;
       else if(numpassed<m_way_passed_flags.size()){
-
-	if(m_waycond=="AND"){
-
-	  rejflag=opts.onewaycondition.value()?1:2;
-	}
-	else{
-	  rejflag=0;
-	}
-      }
-      else rejflag=0;
-    }
-    if(opts.network.value()){
-      unsigned int numpassed=0;
-      for(unsigned int i=0; i<m_net_passed_flags.size();i++){
-	if(m_net_passed_flags[i])numpassed++;
-      }
-
-      if(numpassed==0)rejflag=1;
-      else if(numpassed<m_net_passed_flags.size()){
 	if(m_waycond=="AND"){
 	  rejflag=opts.onewaycondition.value()?1:2;
 	}
@@ -521,15 +522,7 @@ namespace TRACT{
       }
       else rejflag=0;
     }
-    
-    
 
-    if(rubbish_passed){
-      rejflag=1;
-    }
-    if(pathlength<opts.distthresh.value()){
-      rejflag=1;
-    }
     return rejflag;    
   }
   
@@ -555,27 +548,27 @@ namespace TRACT{
   
   void Counter::initialise_seedcounts(){
     // now the CSV class does all the work
-    m_targetmasks.reset(new CSV(m_stline.get_seeds().get_refvol()));
-    m_targetmasks->set_convention(opts.meshspace.value());
-    m_targetmasks->load_rois(opts.targetfile.value());
-    m_targetmasks->reset_values();
+    m_targetmasks.reinitialize(m_stline.get_seeds().get_refvol());
+    m_targetmasks.set_convention(opts.meshspace.value());
+    m_targetmasks.load_rois(opts.targetfile.value());
+    m_targetmasks.reset_values();
 
     // seeds are CSV-format
     if(!opts.simple.value()){
-      for(int m=0;m<m_targetmasks->nRois();m++){
-	CSV *csv = new CSV(m_stline.get_seeds());
-	csv->reset_values();
+      for(int m=0;m<m_targetmasks.nRois();m++){
+	CSV csv(m_stline.get_seeds());
+	csv.reset_values();
 	m_s2t_count.push_back(csv);
       }
     }
     // seeds are text
     if(opts.simple.value() || opts.s2tastext.value()){
-      m_s2tastext.ReSize(m_numseeds,m_targetmasks->nRois());
+      m_s2tastext.ReSize(m_numseeds,m_targetmasks.nRois());
       m_s2tastext=0;
     }
 
     m_s2trow=1;
-    m_targflags.resize(m_targetmasks->nRois());
+    m_targflags.resize(m_targetmasks.nRois());
   }
   
 
@@ -667,10 +660,10 @@ namespace TRACT{
   void Counter::initialise_matrix3(){
     m_stline.init_mask3();
 
-    int nmask3 = m_stline.get_mask3()->nLocs();
+    int nmask3 = m_stline.get_mask3().nLocs();
     int nlrmask3;
     if(opts.lrmask3.value()!="")
-      nlrmask3 = m_stline.get_lrmask3()->nLocs();
+      nlrmask3 = m_stline.get_lrmask3().nLocs();
     else
       nlrmask3 = nmask3;
 
@@ -679,12 +672,12 @@ namespace TRACT{
 
     // save lookup tables...
     
-    boost::shared_ptr<CSV> mask3(m_stline.get_mask3());
-    vector<ColumnVector> coords = mask3->get_locs_coords();
-    vector<int> roicind = mask3->get_locs_coord_index();
-    vector<int> roiind = mask3->get_locs_roi_index();
+    CSV  mask3(m_stline.get_mask3());
+    vector<ColumnVector> coords = mask3.get_locs_coords();
+    vector<int> roicind = mask3.get_locs_coord_index();
+    vector<int> roiind = mask3.get_locs_roi_index();
     
-    Matrix mat(mask3->nLocs(),5);
+    Matrix mat(mask3.nLocs(),5);
     for (unsigned int i=0;i<coords.size();i++)
       mat.Row(i+1) << coords[i](1) 
 		   << coords[i](2)
@@ -696,12 +689,12 @@ namespace TRACT{
     write_ascii_matrix(mat,logger.appendDir("coords_for_fdt_matrix3"));
 
     if(opts.lrmask3.value()!=""){
-      boost::shared_ptr<CSV> lrmask3(m_stline.get_lrmask3());
-      vector<ColumnVector> lrcoords = lrmask3->get_locs_coords();
-      vector<int> lrroicind = lrmask3->get_locs_coord_index();
-      vector<int> lrroiind = lrmask3->get_locs_roi_index();
+      CSV lrmask3(m_stline.get_lrmask3());
+      vector<ColumnVector> lrcoords = lrmask3.get_locs_coords();
+      vector<int> lrroicind = lrmask3.get_locs_coord_index();
+      vector<int> lrroiind = lrmask3.get_locs_roi_index();
     
-      Matrix lrmat(lrmask3->nLocs(),5);
+      Matrix lrmat(lrmask3.nLocs(),5);
       for (unsigned int i=0;i<lrcoords.size();i++)
 	lrmat.Row(i+1) << lrcoords[i](1) 
 		     << lrcoords[i](2)
@@ -797,15 +790,16 @@ namespace TRACT{
       // this would be more efficient if we only checked 
       // masks that haven't been crossed yet...
       crossed.clear();
-      m_targetmasks->has_crossed_roi(m_path[i-1],m_path[i],&crossed);
+      m_targetmasks.has_crossed_roi(m_path[i-1],m_path[i],&crossed);
       for(unsigned int t=0;t<crossed.size();t++){
 	if(m_targflags[crossed[t]])continue;
 
 	if(!opts.simple.value()){
-	  if(!opts.pathdist.value())
-	    m_s2t_count[crossed[t]]->add_value(m_curtype,m_seedroi,m_curloc,1);
+	  if(!opts.pathdist.value()){
+	    m_s2t_count[crossed[t]].add_value(m_curtype,m_seedroi,m_curloc,1);
+	  }
 	  else
-	    m_s2t_count[crossed[t]]->add_value(m_curtype,m_seedroi,m_curloc,pathlength);
+	    m_s2t_count[crossed[t]].add_value(m_curtype,m_seedroi,m_curloc,pathlength);
 	}
 	if(opts.simple.value() || opts.s2tastext.value()){
 	  if(!opts.pathdist.value())
@@ -818,7 +812,7 @@ namespace TRACT{
 
       }
       // stop if they all have been crossed
-      if(cnt==m_targetmasks->nRois())break;
+      if(cnt==m_targetmasks.nRois())break;
     }
   }
 
@@ -985,8 +979,8 @@ namespace TRACT{
   }
 
   void Counter::save_seedcounts(){
-    for(int m=0;m<m_targetmasks->nRois();m++){
-      string tmpname=m_targetmasks->get_name(m);
+    for(int m=0;m<m_targetmasks.nRois();m++){
+      string tmpname=m_targetmasks.get_name(m);
       int pos=tmpname.find("/",0);
       int lastpos=pos;
       while(pos>=0){
@@ -998,12 +992,12 @@ namespace TRACT{
       //only take things after the last pos
       tmpname=tmpname.substr(lastpos+1,tmpname.length()-lastpos-1);
 
-      if(m_s2t_count[m]->nRois()>1){
-	for(int i=0;i<m_s2t_count[m]->nRois();i++)
-	  m_s2t_count[m]->save_roi(i,logger.appendDir("seeds_"+num2str(i)+"_to_"+tmpname));
+      if(m_s2t_count[m].nRois()>1){
+	for(int i=0;i<m_s2t_count[m].nRois();i++)
+	  m_s2t_count[m].save_roi(i,logger.appendDir("seeds_"+num2str(i)+"_to_"+tmpname));
       }
       else{// keep this nomenclature for backward compatibility
-	m_s2t_count[m]->save_roi(0,logger.appendDir("seeds_to_"+tmpname));
+	m_s2t_count[m].save_roi(0,logger.appendDir("seeds_to_"+tmpname));
       }	
     }
 

@@ -116,8 +116,8 @@ class CsvMesh {
     _points.clear();_triangles.clear();_pvalues.clear();_tvalues.clear();
   }
 
-  const int   nvertices() const{return (int)_points.size();}
-  const int   ntriangles() const{return (int)_triangles.size();}
+  int   nvertices() const{return (int)_points.size();}
+  int   ntriangles() const{return (int)_triangles.size();}
   const CsvMpoint&    get_point(int n)const{return _points[n];}
   const CsvTriangle&  get_triangle(int n)const{return _triangles[n];}
 
@@ -126,8 +126,16 @@ class CsvMesh {
   void set_pvalue(const int& i,const float& val){_pvalues[i]=val;}
   void set_tvalue(const int& i,const float& val){_tvalues[i]=val;}
 
-  void reset_pvalues(){_pvalues.resize(_points.size(),0);}
-  void reset_tvalues(){_tvalues.resize(_triangles.size(),0);}
+  void reset_pvalues(){
+    _pvalues.clear();
+    for(unsigned int i=0;i<_points.size();i++)
+      _pvalues.push_back(0);
+  }
+  void reset_tvalues(){
+    _tvalues.clear();
+    for(unsigned int i=0;i<_triangles.size();i++)
+      _tvalues.push_back(0);  
+  }
 
   void load(const string& filename); 
   void load_ascii(const string& filename);
