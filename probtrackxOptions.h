@@ -64,7 +64,7 @@ class probtrackxOptions {
   Option<float> distthresh;
   FmribOption<float> distthresh3;
   Option<float> c_thr;
-  FmribOption<float> fibthresh;
+  Option<float> fibthresh;
   Option<bool> sampvox;
   Option<float> steplength;
   Option<bool> loopcheck;
