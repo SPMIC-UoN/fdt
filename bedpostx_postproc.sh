@@ -26,6 +26,9 @@ fi
 if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_d_stdsamples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/mean_d_stdsamples  `${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_*/mean_d_stdsamples*`
 fi
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_f0samples` -eq 1 ];then
+    ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/mean_f0samples  `${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_*/mean_f0samples*`
+fi
 
 echo Removing intermediate files
 
