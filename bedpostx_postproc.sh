@@ -4,6 +4,10 @@ subjdir=$1
 
 numfib=`${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples* | wc -w | awk '{print $1}'`
 
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/f0samples` -eq 1 ];then
+    numfib=$(($numfib - 1))
+fi
+
 fib=1
 while [ $fib -le $numfib ]
 do
