@@ -461,9 +461,12 @@ class PVM_multi : public PVM, public NonlinCF {
 public:
   PVM_multi(const ColumnVector& iY,
 	    const Matrix& ibvecs, const Matrix& ibvals,
-	    const int& nfibres):PVM(iY,ibvecs,ibvals,nfibres){
+	    const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres), m_include_f0(incl_f0){
 
-    nparams = nfib*3 + 3;
+   if (m_include_f0)
+      nparams = nfib*3 + 4; 
+    else
+      nparams = nfib*3 + 3;
 
     m_f.ReSize(nfib);
     m_th.ReSize(nfib);
@@ -506,10 +509,13 @@ public:
       cout << "TH" << ii << "   :" << p(i+1) << endl; 
       cout << "PH" << ii << "   :" << p(i+2) << endl; 
     }
+    if (m_include_f0)
+      cout << "f0    :" << x2f(p(nparams)) << endl;
   }
 
   float get_s0()const{return m_s0;}
   float get_d()const{return m_d;}
+  float get_f0()const{return m_f0;}
   float get_d_std()const{return m_d_std;}
   ColumnVector get_f()const{return m_f;}
   ColumnVector get_th()const{return m_th;}
@@ -536,10 +542,12 @@ private:
   int   nparams;
   float m_s0;
   float m_d;
+  float m_f0;
   float m_d_std;
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
+  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
 
 

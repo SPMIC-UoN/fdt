@@ -643,27 +643,36 @@ public:
     else{ 
       //////////////////////////////////////////////////////
       // model 2 : non-mono-exponential
-      if (opts.f0.value())
-	m_multifibre.set_f0(0.001); //Need to include f0 in the non-linear initialization of model2 as well!! For now set it initially to almost zero
-
-      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value());
+      float pvmS0, pvmd, pvmd_std, pvmf0=0.001;
+      ColumnVector pvmf,pvmth,pvmph;
+      
+      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
       pvm.fit();
 
-      m_multifibre.set_S0(pvm.get_s0());
-      if(pvm.get_d()>=0)
-	m_multifibre.set_d(pvm.get_d());
-      else
-	m_multifibre.set_d(2e-3);
-      if(pvm.get_d_std()>=0)
-	m_multifibre.set_d_std(pvm.get_d());
-      else
-	m_multifibre.set_d(2e-3);
+      pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
+      pvmS0 = pvm.get_s0(); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
+      
+      if (opts.f0.value()){
+	  pvmf0=pvm.get_f0();
+	  //If the full model gives values that are implausible, or we are in a CSF voxel (f1<0.05)
+	  //then fit a model without the f0 and drive f0_init to almost zero 
+	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
+	    PVM_multi pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    pvm2.fit();
+	    pvmf0=0.001; pvmS0=pvm2.get_s0(); pvmd=pvm2.get_d(); pvmd_std=pvm2.get_d_std();
+	    pvmf  = pvm2.get_f();  pvmth = pvm2.get_th(); pvmph = pvm2.get_ph();
+	    predicted_signal=pvm2.get_prediction();
+	  }
+	  m_multifibre.set_f0(pvmf0);
+      }
 
-      ColumnVector pvmf,pvmth,pvmph;
-      pvmf  = pvm.get_f();
-      pvmth = pvm.get_th();
-      pvmph = pvm.get_ph();
+      if(pvmd<0) pvmd=2e-3;
+      if(pvmd_std<0) pvmd_std=2e-3;
 
+      m_multifibre.set_S0(pvmS0);
+      m_multifibre.set_d(pvmd);
+      m_multifibre.set_d_std(pvmd_std);
+     
       if(opts.nfibres.value()>0){
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
@@ -677,7 +686,7 @@ public:
 	}
 	
       }
-      residuals=m_data-pvm.get_prediction();
+      residuals=m_data-predicted_signal;
     }
     residuals.Release();
     return residuals;   
