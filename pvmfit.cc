@@ -73,7 +73,7 @@ int main(int argc, char** argv)
   volume<float> dvol(maxx-minx,maxy-miny,maxz-minz);
   volume<float> tmpvol(maxx-minx,maxy-miny,maxz-minz);
   volume4D<float> tmpvol4D(maxx-minx,maxy-miny,maxz-minz,3);
-
+  
   vector< volume<float> > fvol,thvol,phvol;
   vector< volume4D<float> > dyads;
 
@@ -95,10 +95,15 @@ int main(int argc, char** argv)
 
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
   S0=0;dvol=0;
-  volume<float> dvol_std;
+  volume<float> dvol_std, f0vol;
   if(opts.modelnum.value()==2){
     dvol_std.reinitialize(maxx-minx,maxy-miny,maxz-minz);
     dvol_std=0;
+  }
+
+  if(opts.include_f0.value()){
+    f0vol.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    f0vol=0;
   }
   
 
@@ -117,11 +122,13 @@ int main(int argc, char** argv)
 
 	if(opts.modelnum.value()==1){
 	  if (opts.cnonlinear.value()){
-	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value());
+	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
 	    pvm.fit();
 	  
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    if (opts.include_f0.value())
+	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
 	    for(int f=0;f<opts.nfibres.value();f++){
 	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
@@ -129,11 +136,13 @@ int main(int argc, char** argv)
 	    }
 	  }
 	  else{
-	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value());
+	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
 	    pvm.fit();
 	  
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    if (opts.include_f0.value())
+	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
 	    for(int f=0;f<opts.nfibres.value();f++){
 	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
@@ -142,12 +151,14 @@ int main(int argc, char** argv)
 	  }
 	}
 	else{
-	  PVM_multi pvm(S,bvecs,bvals,opts.nfibres.value());
+	  PVM_multi pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
 	  pvm.fit();
 	  
 	  S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	  dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	  dvol_std(i-minx,j-miny,k-minz) = pvm.get_d_std();
+	  if (opts.include_f0.value())
+	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
 	  for(int f=0;f<opts.nfibres.value();f++){
 	    fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	    thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
@@ -178,6 +189,10 @@ int main(int argc, char** argv)
     dvol_std.setDisplayMaximumMinimum(dvol_std.max(),0);
     save_volume(dvol_std,opts.ofile.value()+"_D_STD");
   }
+  if (opts.include_f0.value()){
+    f0vol.setDisplayMaximumMinimum(1,0);
+    save_volume(f0vol,opts.ofile.value()+"_f0");
+  }
 
   for(int f=1;f<=opts.nfibres.value();f++){
     fvol[f-1].setDisplayMaximumMinimum(1,0);
@@ -193,16 +208,3 @@ int main(int argc, char** argv)
 
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
