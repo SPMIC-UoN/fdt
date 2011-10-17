@@ -804,7 +804,6 @@ int main ( int argc, char **argv ){
       if(opts.scheme.value() == "fuzzy"){
 	volume<float> umask;
 	umask.reinitialize(mask.xsize(),mask.ysize(),mask.zsize());
-	copybasicproperties(mask,umask);
 	//OUT(U);
 	for(int cl=1;cl<=opts.nclusters.value();cl++){
 	  umask=0;

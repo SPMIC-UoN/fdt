@@ -27,7 +27,6 @@ KURTOSIS=kurtosis
 SWAPDYADS=swap_dyadic_vectors
 PVMFIT=pvmfit
 DTIGEN=dtigen
-RARNG=rearrange
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
@@ -50,7 +49,6 @@ KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
 PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
 DTIGENOBJS=dtigen.o
-RARNGOBJS=rearrange.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -60,7 +58,7 @@ FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
 
 RUNTCLS = Fdt
@@ -131,5 +129,3 @@ ${PVMFIT}:    	${PVMFITOBJS}
 ${DTIGEN}:    	${DTIGENOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
 
-${RARNG}: 	${RARNGOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RARNGOBJS} ${DLIBS}
