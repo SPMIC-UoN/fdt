@@ -620,7 +620,7 @@ public:
 	}
       }
 
-      if(pvmd<0)
+      if(pvmd<0 || pvmd>0.01)
 	pvmd=2e-3;
    
       m_multifibre.set_S0(pvmS0);
@@ -666,8 +666,8 @@ public:
 	  m_multifibre.set_f0(pvmf0);
       }
 
-      if(pvmd<0) pvmd=2e-3;
-      if(pvmd_std<0) pvmd_std=2e-3;
+      if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
+      if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
 
       m_multifibre.set_S0(pvmS0);
       m_multifibre.set_d(pvmd);

@@ -345,7 +345,7 @@ namespace FIBRE{
     void compute_signal(){
        m_Signal_old=m_Signal;
        
-       if(m_modelnum==1){
+       if(m_modelnum==1 || m_d_std<1e-5){
 	 for (int i = 1; i <= m_alpha.Nrows(); i++){
 	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   //Used trigonometric identities to reduce the number of sinusoids evaluated  
            float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
@@ -765,10 +765,11 @@ namespace FIBRE{
 
     inline bool compute_d_std_prior(){
       m_d_std_old_prior=m_d_std_prior;
-      if(m_d_std<0)
+      if(m_d_std<=0 || m_d_std>0.01)
 	return true;
       else{
-	m_d_std_prior=0;
+	//m_d_std_prior=0;
+	m_d_std_prior=std::log(m_d_std);
 	return false;
       }
     }
@@ -837,7 +838,7 @@ namespace FIBRE{
 
     void compute_iso_signal(){               //Function that computes the signal from the isotropic compartment 
       m_iso_Signal_old=m_iso_Signal;
-      if(m_modelnum==1){
+      if(m_modelnum==1 || m_d_std<1e-5){
 	for(int i=1;i<=m_alpha.Nrows();i++)
 	   m_iso_Signal(i)=exp(-m_d*m_bvals(1,i));
       }
