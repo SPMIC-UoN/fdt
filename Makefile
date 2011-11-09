@@ -28,6 +28,7 @@ SWAPDYADS=swap_dyadic_vectors
 PVMFIT=pvmfit
 DTIGEN=dtigen
 RARNG=rearrange
+XPRED=xfibres_pred
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
@@ -51,6 +52,7 @@ SWAPDYADSOBJS=swap_dyadic_vectors.o
 PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
 DTIGENOBJS=dtigen.o
 RARNGOBJS=rearrange.o
+XPREDOBJS=xfibres_pred.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -60,7 +62,7 @@ FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
 
 RUNTCLS = Fdt
@@ -133,3 +135,6 @@ ${DTIGEN}:    	${DTIGENOBJS}
 
 ${RARNG}: 	${RARNGOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RARNGOBJS} ${DLIBS}
+
+${XPRED}: 	${XPREDOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XPREDOBJS} ${DLIBS}
