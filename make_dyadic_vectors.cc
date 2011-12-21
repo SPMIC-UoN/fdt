@@ -97,7 +97,9 @@ int main ( int argc, char **argv ){
     }
   }
 
+  dyadic_vecs.setDisplayMaximumMinimum(1,-1);
   save_volume4D(dyadic_vecs,oname);
+  disp.setDisplayMaximumMinimum(1,0);
   save_volume(disp,oname+"_dispersion");
 
   // where we calculate the cone of uncertainty
@@ -128,6 +130,8 @@ int main ( int argc, char **argv ){
 
 	}
   
+    
+    cones.setDisplayMaximumMinimum(1,0);
     save_volume(cones,oname+"_cones"+num2str(acone*100));
   }
 
