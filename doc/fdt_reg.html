@@ -11,11 +11,11 @@ href="../fsl.css"><TITLE>FSL</TITLE></HEAD>
 space then registration must be run.
 
 <p>Registration within FDT uses <a href="http://www.fmrib.ox.ac.uk/fsl/flirt/index.html" target="_top">FLIRT</a>. When using the GUI, registration can only be applied after <b>bedpostx</b> has been run. Typically, registration will be run between three spaces:
-<ul><li>Diffusion space (using the <code>nodif_brain</code> image in the bedpostX directory.)</li>
-<li>Structural space (using the struct image in the bedpostX directory, e.g., the space of a high resolution T1-weighted image of the same subject)</li>
-<li>Standard space (by default, the MNI152 brain stored within $FSLDIR/data/standard)</li></ul>
+<ul><li>Diffusion space (need to have a <code>nodif_brain</code> image in the bedpostX directory.)</li>
+<li>Structural space (using a structural image, e.g., the space of a high resolution T1-weighted image of the same subject)</li>
+<li>Standard space (by default, the MNI152_2mm brain stored within $FSLDIR/data/standard)</li></ul>
 
-<p>Note that the structural (T1-weighted) image must have had <a href="http://www.fmrib.ox.ac.uk/fsl/bet/index.html" target="_top">BET</a> applied.  The <code>nodif_brain</code> image should be the brain extracted version of the nodif image that is stored in the bedpostX directory. Create this image using <code>fslroi</code> then <code>bet</code> on the data if it does not already exist. (it is important that the user checks the quality of bet results on these images and adjust the settings in bet where appropriate).
+<p>Note that the structural (T1-weighted) image must have had <a href="http://www.fmrib.ox.ac.uk/fsl/bet2/index.html" target="_top">BET</a> applied.  The <code>nodif_brain</code> image should be a brain extracted version of the nodif image stored in the bedpostX directory. Create this image using <code>fslroi</code> then <code>bet</code> on the data if it does not already exist. (it is important that the user checks the quality of bet results on these images and adjust the settings in bet where appropriate).
 
 
 <p>Transformation matrices, and their inverses, will be derived from diffusion to structural space and
@@ -38,4 +38,18 @@ are derived using 12 degrees of freedom, the correlation ratio cost
 function and normal search.  These parameters may be adjusted if required
 using the drop down menus in the registration panel.
 
+<h4>Non-linear transformations</h4>
+<p>You may also calculate non-linear transformations to standard space (via the T1-weighted structural) for more accurate standard space tractography. In this case, you need to run <a href="http://www.fmrib.ox.ac.uk/fsl/fnirt/index.html" target="_top">FNIRT</a> to estimate a warpfield between structural and standard spaces, then combine this warpfield with the FLIRT matrix from diffusion to structural space. You also need to invert this transformation in order to be able to use it in probtrackx. 
+<p>Summary of the steps required for using nonlinear transforms:
+<ul>
+<li> Use FNIRT from structural to standard (see <a href="http://www.fmrib.ox.ac.uk/fsl/fnirt/index.html" target="_top">FNIRT</a> for how to do this).
+<li> Combined the obtained warpfield with the diff-to-struct FLIRT matrix using <code>convertwarp</code>.
+<li> Invert the obtained warpfield to get the standard-to-diff warpdfield.
+</ul>
+</p>
 
+<HR>
+<FONT SIZE=1>Copyright &copy; 2000-2011, written by
+<A HREF="http://www.fmrib.ox.ac.uk/~behrens/index.html">T. Behrens</A>,
+<A HREF="http://www.fmrib.ox.ac.uk/~saad/index.html">S. Jbabdi</A>.
+</FONT>

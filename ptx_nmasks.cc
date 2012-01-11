@@ -49,7 +49,7 @@ void nmasks()
   // get roiind
   vector<int> roiind(seeds.nRois());int iv=0,is=0;
   for(int i=0;i<seeds.nRois();i++){
-    if(seeds.isVol(i)){roiind[iv]=i;iv++;}
+    if(seeds.get_roitype(i)==VOLUME){roiind[iv]=i;iv++;}
     else{roiind[seeds.nVols()+is]=i;is++;}
   }
   
@@ -71,7 +71,6 @@ void nmasks()
       cout<<"volume "<<roi-1<<endl;
 
       cnt++;
-      counter.volumeSeeding(roi);
       seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
 
       for(int z=0;z<seeds.zsize();z++){
@@ -80,7 +79,7 @@ void nmasks()
 	for(int y=0;y<seeds.ysize();y++){
 	  for(int x=0;x<seeds.xsize();x++){
 	    if(seeds.isInRoi(x,y,z,roi)){
-	      counter.updateSeedLocation(seeds.get_loc(roi-1,x,y,z));
+	      counter.updateSeedLocation(seeds.get_volloc(roi-1,x,y,z));
 	      if(opts.verbose.value()>=1){
 		cout <<"run"<<endl;
 		cout <<x<<" "<<y<<" "<<z<<endl;
@@ -103,7 +102,6 @@ void nmasks()
     for(int i=0;i<seeds.nSurfs();i++){
       cout<<"surface "<<i<<endl;
       cnt++;
-      counter.surfaceSeeding(i);
       
       seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
 
@@ -118,22 +116,25 @@ void nmasks()
 	if(seeds.get_mesh(i).get_pvalue(p)==0.0)
 	  continue;
 
-	counter.updateSeedLocation(seeds.get_loc(i,p));
+	counter.updateSeedLocation(seeds.get_surfloc(i,p));
 	pos=seeds.get_vertex_as_vox(i,p);
-	//dir=seeds.get_normal_as_vox(i,p);
+	ColumnVector dir(3);
+	dir=seeds.get_normal_as_vox(i,p);
 
-	//if(opts.meshspace.value()=="caret")
-	//dir*=-1; // normals in caret point away from the brain
+	if(opts.meshspace.value()=="caret")
+	  dir*=-1; // normals in caret point away from the brain
 
 	if(opts.verbose.value()>=1){
 	  cout <<"run"<<endl;
 	  cout <<pos(1)<<" "<<pos(2)<<" "<<pos(3)<<endl;
 	}
-	keeptotal[roiind[cnt]] += seedmanager.run(pos(1),pos(2),pos(3),
-				     false,-1,false);
 
-	//keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
-	//		     false,-1,false,dir);
+	if(!opts.onewayonly.value())
+	  keeptotal[roiind[cnt]] += seedmanager.run(pos(1),pos(2),pos(3),
+						    false,-1,false);
+	else
+	  keeptotal[roiind[cnt]] += seedmanager.run(pos(1),pos(2),pos(3),
+						    true,-1,false,seeds.get_surfloc(i,p));
 
       }
     }

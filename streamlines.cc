@@ -192,6 +192,7 @@ namespace TRACT{
     m_z_s_init=0;
 
     m_inmask3.reserve(opts.nsteps.value());
+    m_inlrmask3.reserve(opts.nsteps.value());
     
   }
   
@@ -219,11 +220,12 @@ namespace TRACT{
       rotdir = F*dir;
       if(rotdir.MaximumAbsoluteValue()>0)
 	rotdir = rotdir/std::sqrt(rotdir.SumSquare());
+
     }
   }
   
   int Streamliner::streamline(const float& x_init,const float& y_init,const float& z_init, 
-			      const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir){ 
+			      const ColumnVector& dim_seeds,const int& fibst,const int& seed_ind){ 
     //Tracer_Plus tr("Streamliner::streamline");
     //fibst tells tractvolsx which fibre to start with if there are more than one..
     //x_init etc. are in seed space...
@@ -251,15 +253,13 @@ namespace TRACT{
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
 
-    // set direction
-    if(dir.MaximumAbsoluteValue()>0)
-      m_part.set_dir(dir(1),dir(2),dir(3));
-    
+
     float          pathlength=0;
     bool           rubbish_passed=false;
+    bool           wayorder=true;
     vector<int>    waycrossed;
     vector<int>    crossedlocs3;
-    int            cnt=0;
+    int            cnt=-1;
     // loopcheck stuff
     float oldrx,oldry,oldrz;
     int   lcx,lcy,lcz;
@@ -302,7 +302,7 @@ namespace TRACT{
 	xyz_dti <<x<<y<<z;
 
 	// now find xyz in seeds space
-	if(cnt>0){
+	if(cnt>=0){
 	  if(!m_IsNonlinXfm)
 	    xyz_seeds = vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,m_DTI_to_Seeds);    
 	  else{
@@ -346,34 +346,59 @@ namespace TRACT{
 	//   }	  
 	// }
 
+
 	// augment the path	
 	m_path.push_back(xyz_seeds);cnt++;
-	if(cnt>1)
+	if(cnt>0)
 	  pathlength += opts.steplength.value();
 
+
+	// // // if first step and onewayonly
+// // 	if(opts.onewayonly.value() && m_path.size()==2){
+// // 	  Vec step(m_path[1](1)-m_path[0](1),
+// // 		   m_path[1](2)-m_path[0](2),
+// // 		   m_path[1](3)-m_path[0](3));
+
+// // 	  if(m_seeds.coord_sign(seed_ind,m_path[0]+0.001*(m_path[1]-m_path[0]))<0){
+// // 	    rubbish_passed=1;
+// // 	    break;
+// // 	  }	  
+// // 	}
+
+	
+	
 	// only test exclusion after at least one step
-	if(opts.rubbishfile.value()!="" && cnt>1){
-	  if(m_rubbish.has_crossed(m_path[cnt-2],m_path[cnt-1])){
-	    rubbish_passed=1;
+	if(opts.rubbishfile.value()!="" && cnt>0){
+	  if(m_rubbish.has_crossed(m_path[cnt-1],m_path[cnt])){
+	    rubbish_passed=1;	
 	    break;
 	  }
 	}
 
 	// update every passed_flag
 	if(m_way_passed_flags.size()>0){
-	  if(cnt>1){
+	  if(cnt>0){
 	    waycrossed.clear();
-	    m_waymasks.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
+	    m_waymasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
 	      m_way_passed_flags[waycrossed[wm]]=1;
 	    }
+	    // check if order is respected
+	    if(opts.wayorder.value() && wayorder){
+	      for(unsigned int wm=0;wm<waycrossed.size();wm++){
+		for(int wm2=0;wm2<waycrossed[wm];wm2++){
+		  if(m_way_passed_flags[wm2]==0){ wayorder=false; break;}
+		}
+		if(!wayorder)break;
+	      }
+	    }	    
 	  }
 	}
 	if(opts.network.value()){
-	  if(cnt>1){
+	  if(cnt>0){
 	    waycrossed.clear();
-	    m_netmasks.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed);
+	    m_netmasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
 	      m_net_passed_flags(waycrossed[wm]+1)=1;
@@ -383,32 +408,37 @@ namespace TRACT{
 
 	// //////////////////////////////
 	// update locations for matrix3
-	if(opts.matrix3out.value() && cnt>1){
+	if(opts.matrix3out.value() && cnt>0){
 	  waycrossed.clear();crossedlocs3.clear();
-	  if(m_mask3.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
+	  if(m_mask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed,crossedlocs3)){	    
 	    fill_inmask3(crossedlocs3,pathlength);
 	  }
 	  if(opts.lrmask3.value()!=""){
 	    waycrossed.clear();crossedlocs3.clear();
-	    if(m_lrmask3.has_crossed_roi(m_path[cnt-2],m_path[cnt-1],&waycrossed,&crossedlocs3)){	    
+	    if(m_lrmask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed,crossedlocs3)){	    
 	      fill_inlrmask3(crossedlocs3,pathlength);
 	    }	  
 	  }
 	}
-	// //////////////////////////////
+
+
+
 
 	// only test stopping after at least one step
 	if(opts.stopfile.value()!="" && m_path.size()>1){
 	  if(m_path.size()==2 && opts.forcefirststep.value()){
 	    // do nothing
 	  }
-	  else if(m_stop.has_crossed(m_path[cnt-2],m_path[cnt-1])){
+	  else if(m_stop.has_crossed(m_path[cnt-1],m_path[cnt])){
 	    break;	    
 	  }	  
 	}
-	
+
+
+	// //////////////////////////////
+
 	// sample a new fibre orientation
-	int sampled_fib,newx,newy,newz;
+	int sampled_fib,newx,newy,newz;	
 	if(opts.skipmask.value() == ""){
 	  //Tracer_Plus tr("sample");
 	  th_ph_f = vols.sample(m_part.x(),m_part.y(),m_part.z(),    // sample at this location
@@ -427,21 +457,23 @@ namespace TRACT{
 				sampled_fib,
 				newx,newy,newz);
 	}
+	
 
-	// depending on which fibre has been sampled, decide whether to forcedir
-	forcedir=false;
-	if(opts.prefdirfile.value()!=""){
-	  if(m_prefdir.tsize()==2){
-	    if(m_prefdir(newx,newy,newz,1)==sampled_fib)
-	      forcedir=true;
-	  }
-	}
+// 	// depending on which fibre has been sampled, decide whether to forcedir
+// 	forcedir=false;
+// 	if(opts.prefdirfile.value()!=""){
+// 	  if(m_prefdir.tsize()==2){
+// 	    if(m_prefdir(newx,newy,newz,1)==sampled_fib)
+// 	      forcedir=true;
+// 	  }
+// 	}
  
 	// jump
 	tmp2=(float)rand()/(float)RAND_MAX;	
 
 	if(th_ph_f(3)>tmp2){ //volume fraction criterion	  
 	  if(!m_part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value(),forcedir)){// curvature threshold
+	    //cout<<"curv break"<<endl;
 	    break;
 	  }
 
@@ -463,6 +495,7 @@ namespace TRACT{
 		}
 	    }
 	    else{
+	      //cout<<"mask break 1"<<endl;
 	      break; // outside mask	    
 	    }
 	  }
@@ -470,6 +503,7 @@ namespace TRACT{
 	
 	  }
       else{
+	//cout<<"mask break 2"<<endl;
 	break;
       }// outside mask
 
@@ -505,22 +539,32 @@ namespace TRACT{
     }
     if(rejflag==1) return(rejflag);
     
+    // Waypoints
     if(m_way_passed_flags.size()!=0){
       unsigned int numpassed=0;
       for(unsigned int i=0; i<m_way_passed_flags.size();i++){
-	if(m_way_passed_flags[i])numpassed++;
+	if(m_way_passed_flags[i]>0)numpassed++;
       }
-
+      
       if(numpassed==0)rejflag=1;
       else if(numpassed<m_way_passed_flags.size()){
 	if(m_waycond=="AND"){
-	  rejflag=opts.onewaycondition.value()?1:2;
+	  if(opts.onewaycondition.value()){rejflag=1;}
+	  else{
+	    if(opts.wayorder.value()){rejflag=wayorder?2:1;}
+	    else{rejflag=2;}
+	  }
 	}
 	else{
 	  rejflag=0;
 	}
       }
-      else rejflag=0;
+      else{
+	if(m_waycond=="OR" || !opts.wayorder.value())
+	  rejflag=0;
+	else
+	  rejflag=wayorder?0:1;
+      }
     }
 
     return rejflag;    
@@ -669,6 +713,9 @@ namespace TRACT{
 
     // recalculate nmask3 if lowres surface provided
     m_ConMat3  = new SpMat<float> (nmask3,nlrmask3); 
+    //OUT(m_ConMat3->Nrows());
+    //OUT(m_ConMat3->Ncols());
+    //exit(1);
 
     // save lookup tables...
     
@@ -709,6 +756,9 @@ namespace TRACT{
   }
 
   void Counter::count_streamline(){
+    if(opts.save_paths.value()){
+      add_path();
+    }
     if(opts.simpleout.value()||opts.matrix1out.value()){
       update_pathdist();
     }
@@ -747,13 +797,21 @@ namespace TRACT{
   void Counter::update_pathdist(){
     int x_s,y_s,z_s;
     float pathlength=0;
+    vector<int> crossedrois,crossedlocs;
+    int nlocs=0;
+    //OUT(m_path.size());
     for(unsigned int i=0;i<m_path.size();i++){
+      //OUT(i);
+      //OUT(pathlength);
+      //OUT(m_path[i].t());
       x_s=(int)round((float)m_path[i](1));
       y_s=(int)round((float)m_path[i](2));
       z_s=(int)round((float)m_path[i](3));
       // check here if back to seed
-      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
+      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
+	//cout<<"ste pathlength to zero"<<endl;
 	pathlength=0;
+      }
 
       if(m_beenhere(x_s,y_s,z_s)==0){
 	if(!opts.pathdist.value())
@@ -761,18 +819,103 @@ namespace TRACT{
 	else
 	  m_prob(x_s,y_s,z_s)+=pathlength;
 	m_beenhere(x_s,y_s,z_s)=1;
+
+	if(opts.opathdir.value() && i>0){
+	  ColumnVector v(3);
+	  v=m_path[i]-m_path[i-1];
+	  v/=std::sqrt(v.SumSquare());
+	  m_localdir(x_s,y_s,z_s,0)+=v(1);
+	  m_localdir(x_s,y_s,z_s,1)+=v(2);
+	  m_localdir(x_s,y_s,z_s,2)+=v(3);
+	}
+      }
+
+      // Fill alternative mask
+      // This mask's values are:
+      //  0: location not to be considered
+      //  1: location has not been visited 
+      //  2: location has been visited
+
+      if(opts.pathfile.set()){
+	//cout<<"here"<<endl;
+	if(pathlength>0){
+	  //OUT(m_path[i-1].t());OUT(m_path[i].t());
+	  crossedrois.clear();crossedlocs.clear();
+	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedrois,crossedlocs)){
+	    //cout<<"update"<<endl;
+	    nlocs+=crossedlocs.size();
+	    for(unsigned int i=0;i<crossedlocs.size();i++){
+	      //OUT(m_beenhere_alt.get_value(crossedlocs[i]));
+	      if(m_beenhere_alt.get_value(crossedlocs[i])==1){	      
+		if(!opts.pathdist.value())
+		  m_prob_alt.add_value(crossedlocs[i],1); 
+		else
+		  m_prob_alt.add_value(crossedlocs[i],pathlength);
+		m_beenhere_alt.set_value(crossedlocs[i],2);
+	      }
+	    }
+	  }
+	}
       }
       pathlength+=opts.steplength.value();
-    }  
+      
+    } 
+    //cout<<"update"<<endl;
+    //OUT(nlocs);
   }
 
   void Counter::reset_beenhere(){
     int x_s,y_s,z_s;
+    vector<int> crossedlocs,crossedrois;
+    bool hascrossed=false;
     for(unsigned int i=0;i<m_path.size();i++){
       x_s=(int)round((float)m_path[i](1));
       y_s=(int)round((float)m_path[i](2));
       z_s=(int)round((float)m_path[i](3));
       m_beenhere(x_s,y_s,z_s)=0;
+
+      // back to first point? keep going
+      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
+	continue;
+
+      // alternative roi
+      if(opts.pathfile.set()){
+	if(i>0){
+	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedrois,crossedlocs))
+	    hascrossed=true;
+	}
+      }
+    }
+    if(opts.pathfile.set() && hascrossed){
+      //cout<<"reset"<<endl;
+      //OUT(crossedlocs.size());
+      for(unsigned int i=0;i<crossedlocs.size();i++){
+	if(m_beenhere_alt.get_value(crossedlocs[i])>1)
+	  m_beenhere_alt.set_value(crossedlocs[i],1);
+      }      
+    }
+
+  }
+
+  void Counter::add_path(){
+    m_save_paths.push_back(m_path);
+  }
+  void Counter::save_paths(){
+    string filename=logger.appendDir("saved_paths.txt");
+    ofstream of(filename.c_str());
+    if (of.is_open()){
+      for(unsigned int i=0;i<m_save_paths.size();i++){
+	stringstream flot;
+	flot << "# " << m_save_paths[i].size()<<endl;
+	for(unsigned int j=0;j<m_save_paths[i].size();j++){
+	  flot << m_save_paths[i][j](1) << " " << m_save_paths[i][j](2) << " " << m_save_paths[i][j](3) << endl;
+	}
+	of<<flot.str();
+      }
+      of.close();
+    }
+    else{
+      cerr<<"Counter::save_paths:error opening file for writing: "<<filename<<endl;
     }
   }
   
@@ -790,16 +933,16 @@ namespace TRACT{
       // this would be more efficient if we only checked 
       // masks that haven't been crossed yet...
       crossed.clear();
-      m_targetmasks.has_crossed_roi(m_path[i-1],m_path[i],&crossed);
+      m_targetmasks.has_crossed_roi(m_path[i-1],m_path[i],crossed);
       for(unsigned int t=0;t<crossed.size();t++){
 	if(m_targflags[crossed[t]])continue;
 
 	if(!opts.simple.value()){
 	  if(!opts.pathdist.value()){
-	    m_s2t_count[crossed[t]].add_value(m_curtype,m_seedroi,m_curloc,1);
+	    m_s2t_count[crossed[t]].add_value(m_curloc,1);
 	  }
 	  else
-	    m_s2t_count[crossed[t]].add_value(m_curtype,m_seedroi,m_curloc,pathlength);
+	    m_s2t_count[crossed[t]].add_value(m_curloc,pathlength);
 	}
 	if(opts.simple.value() || opts.s2tastext.value()){
 	  if(!opts.pathdist.value())
@@ -830,7 +973,7 @@ namespace TRACT{
       }
       crossedseeds.clear();crossedlocs.clear();
 
-      if(m_stline.get_seeds().has_crossed_roi(m_path[i-1],m_path[i],&crossedseeds,&crossedlocs)){
+      if(m_stline.get_seeds().has_crossed_roi(m_path[i-1],m_path[i],crossedseeds,crossedlocs)){
 	allcrossed.insert(allcrossed.end(),crossedlocs.begin(),crossedlocs.end());
 	vector<float> vals(crossedlocs.size(),val);
 	allvals.insert(allvals.end(),vals.begin(),vals.end());
@@ -842,7 +985,7 @@ namespace TRACT{
     // fill matrix1
     make_unique(allcrossed,allvals);
     for(unsigned int i=0;i<allcrossed.size();i++){
-      m_ConMat1->AddTo(m_Conrow1,allcrossed[i],allvals[i]);
+      m_ConMat1->AddTo(m_Conrow1,allcrossed[i]+1,allvals[i]);
     }
   }
   
@@ -862,12 +1005,12 @@ namespace TRACT{
       z_lr=(int)round((float)xyz_lr(3));
       Concol2=m_lookup2(x_lr,y_lr,z_lr);
 
-      if(Concol2!=0){
+      if(Concol2>0){
 	if(m_beenhere2(x_lr,y_lr,z_lr)==0){	  
 	  if(!opts.pathdist.value())
-	    m_ConMat2->AddTo(m_curloc,Concol2,1);
+	    m_ConMat2->AddTo(m_curloc+1,Concol2,1);
 	  else
-	    m_ConMat2->AddTo(m_curloc,Concol2,d);
+	    m_ConMat2->AddTo(m_curloc+1,Concol2,d);
 	  m_beenhere2(x_lr,y_lr,z_lr)=1;
 	  d+=opts.steplength.value();
 	}
@@ -893,10 +1036,10 @@ namespace TRACT{
       for(unsigned int i=0;i<inmask3.size();i++){
 	for(unsigned int j=i+1;j<inmask3.size();j++){
 	  if(!opts.pathdist.value())
-	    m_ConMat3->AddTo(inmask3[i].first,inmask3[j].first,1);
+	    m_ConMat3->AddTo(inmask3[i].first+1,inmask3[j].first+1,1);
 	  else{
 	    float val = fabs(inmask3[i].second-inmask3[j].second);
-	    m_ConMat3->AddTo(inmask3[i].first,inmask3[j].first,val);
+	    m_ConMat3->AddTo(inmask3[i].first+1,inmask3[j].first+1,val);
 	  }
 	}
       }
@@ -906,10 +1049,10 @@ namespace TRACT{
       for(unsigned int i=0;i<inmask3.size();i++){
 	for(unsigned int j=0;j<inlrmask3.size();j++){
 	  if(!opts.pathdist.value())
-	    m_ConMat3->AddTo(inmask3[i].first,inlrmask3[j].first,1);
+	    m_ConMat3->AddTo(inmask3[i].first+1,inlrmask3[j].first+1,1);
 	  else{
 	    float val = fabs(inmask3[i].second-inlrmask3[j].second);
-	    m_ConMat3->AddTo(inmask3[i].first,inlrmask3[j].first,val);
+	    m_ConMat3->AddTo(inmask3[i].first+1,inlrmask3[j].first+1,val);
 	  }
 	}
       }
@@ -951,6 +1094,8 @@ namespace TRACT{
     if(opts.simpleout.value() && !opts.simple.value()){
       save_pathdist();
     }
+    if(opts.save_paths.value())
+      save_paths();
     if(opts.s2tout.value()){
       save_seedcounts();
     }
@@ -968,6 +1113,29 @@ namespace TRACT{
   void Counter::save_pathdist(){  
     m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
     save_volume(m_prob,logger.appendDir(opts.outfile.value()));
+    if(opts.pathfile.set()){
+      m_prob_alt.save_rois(logger.appendDir(opts.outfile.value())+"_alt");
+      //m_beenhere_alt.save_rois(logger.appendDir(opts.outfile.value())+"_beenhere");
+    }
+    if(opts.opathdir.value()){
+      for(int z=0;z<m_prob.zsize();z++){
+	for(int y=0;y<m_prob.ysize();y++){
+	  for(int x=0;x<m_prob.xsize();x++){
+	    if(m_prob(x,y,z)==0)continue;
+	    double norm=0;
+	    for(int t=0;t<3;t++)
+	      norm+=m_localdir(x,y,z,t)*m_localdir(x,y,z,t);
+	    norm=sqrt(norm);
+	    if(norm==0)continue;
+	    for(int t=0;t<3;t++)
+	      m_localdir(x,y,z,t) /= norm;
+	  }
+	}
+      }
+      save_volume(m_prob,logger.appendDir(opts.outfile.value()));
+      m_localdir.setDisplayMaximumMinimum(1,-1);
+      save_volume4D(m_localdir,logger.appendDir(opts.outfile.value()+"_localdir"));
+    }
   }
   
   void Counter::save_pathdist(string add){  //for simple mode
@@ -976,6 +1144,9 @@ namespace TRACT{
     thisout+=add;
     m_prob.setDisplayMaximumMinimum(m_prob.max(),m_prob.min());
     save_volume(m_prob,logger.appendDir(thisout));
+    if(opts.pathfile.set()){
+      m_prob_alt.save_rois(logger.appendDir(thisout)+"_alt");
+    }
   }
 
   void Counter::save_seedcounts(){
@@ -1048,15 +1219,14 @@ namespace TRACT{
 
   int Seedmanager::run(const float& x,const float& y,const float& z,
 		       bool onewayonly, int fibst,bool sampvox){
-    ColumnVector dir(3);
-    dir=0;
+    int seed_ind=-1;
     // run without forcing the tracking direction
-    return run(x,y,z,onewayonly,fibst,sampvox,dir);
+    return run(x,y,z,onewayonly,fibst,sampvox,seed_ind);
   }
 
   // this function returns the total number of pathways that survived a streamlining 
   int Seedmanager::run(const float& x,const float& y,const float& z,
-		       bool onewayonly, int fibst,bool sampvox,const ColumnVector& dir){
+		       bool onewayonly, int fibst,bool sampvox,const int& seed_ind){
     //Tracer_Plus tr("Seedmanager::run");
 
     //onewayonly for mesh things..
@@ -1072,12 +1242,6 @@ namespace TRACT{
       // so we can choose to seed in proportion to f in that voxel. 
     }
   
-    // now re-orient dir using xfm transform
-    ColumnVector rotdir(3);
-    if(dir.MaximumAbsoluteValue()>0)
-      m_counter.get_stline().rotdir(dir,rotdir,x,y,z);
-    else
-      rotdir=0;
   
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){
@@ -1109,19 +1273,21 @@ namespace TRACT{
     
       // track in one direction
       if(!onewayonly || opts.matrix3out.value()){//always go both ways in matrix3 mode
-	rejflag1 = m_counter.get_stline().streamline(newx,newy,newz,m_seeddims,fibst,rotdir);
+	rejflag1 = m_counter.get_stline().streamline(newx,newy,newz,m_seeddims,fibst,seed_ind);
 
 	if(rejflag1==0 || rejflag1==2){ 
 	  forwardflag=true;
 	  m_counter.append_path();
+	  if(opts.save_paths.value())
+	    m_counter.add_path();
 	}
 	m_counter.get_stline().reverse();
       }
-    
+      
 
       // track in the other direction
       // if rotdir!=0 then this tracks again in the same direction (doubles the number of samples...)
-      rejflag2=m_counter.get_stline().streamline(newx,newy,newz,m_seeddims,fibst,rotdir);
+      rejflag2=m_counter.get_stline().streamline(newx,newy,newz,m_seeddims,fibst,seed_ind);
 
       if(rejflag2==0){	
 	backwardflag=true;
@@ -1134,9 +1300,11 @@ namespace TRACT{
     
       if(!forwardflag)
 	m_counter.clear_path();
-      if(backwardflag)
-	m_counter.append_path();      
-    
+      if(backwardflag){
+	m_counter.append_path();   	
+	if(opts.save_paths.value())
+	  m_counter.add_path();
+      }
       if(forwardflag || backwardflag){
 	nlines++; 
 	m_counter.count_streamline();

@@ -42,12 +42,14 @@ class probtrackxOptions {
   Option<bool>             network;
   Option<bool>             simpleout;
   Option<bool>             pathdist;
+  Option<string>           pathfile;
   Option<bool>             s2tout;
   Option<bool>             s2tastext;
 
   Option<string>           targetfile;
   Option<string>           waypoints;
   Option<string>           waycond;
+  Option<bool>             wayorder;
   Option<string>           rubbishfile;
   Option<string>           stopfile;
 
@@ -83,12 +85,14 @@ class probtrackxOptions {
   Option<int>              rseed;
 
   // hidden options
-  FmribOption<string>      prefdirfile;
-  FmribOption<string>      skipmask;
-  FmribOption<bool>        forcefirststep;
-  FmribOption<bool>        osampfib;
-  FmribOption<bool>        onewaycondition;
-
+  FmribOption<string>      prefdirfile;      // inside this mask, pick orientation closest to whatever is in here
+  FmribOption<string>      skipmask;         // inside this mask, ignore data (inertia)
+  FmribOption<bool>        forcefirststep;   // always take at least one step 
+  FmribOption<bool>        osampfib;         // not yet
+  FmribOption<bool>        onewaycondition;  // only apply waypoint conditions to half the tract
+  FmribOption<bool>        onewayonly;       // in surface mode, track towards the brain (assumes surface normal points towards the brain)
+  FmribOption<bool>        opathdir;         // like fdt_paths but with average local tract orientation
+  FmribOption<bool>        save_paths;       // save paths to ascii file
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -155,6 +159,9 @@ class probtrackxOptions {
    pathdist(string("--pd"), false,
 	    string("\tCorrect path distribution for the length of the pathways"),
 	    false, no_argument), 
+   pathfile(string("--fopd"), "",
+	    string("\tOther mask for binning tract distribution"),
+	    false, requires_argument), 
    s2tout(string("--os2t"), false,
 	  string("\tOutput seeds to targets"),
 	  false, no_argument),
@@ -172,6 +179,9 @@ class probtrackxOptions {
    waycond(string("--waycond"),"AND",
 	   string("Waypoint condition. Either 'AND' (default) or 'OR'"),
 	   false, requires_argument),
+   wayorder(string("--wayorder"),false,
+	    string("Reject streamlines that do not hit waypoints in given order. Only valid if waycond=AND"),
+	    false,no_argument),
    rubbishfile(string("--avoid"), string(""),
 	       string("\tReject pathways passing through locations given by this mask"),
 	       false, requires_argument),
@@ -276,7 +286,15 @@ class probtrackxOptions {
    onewaycondition(string("--onewaycondition"),false,
 	    string("Apply waypoint conditions to each half tract separately"),
 	    false, no_argument),
-
+   onewayonly(string("--onewayonly"),false,
+	      string("Track in one direction only (towards the brain - only valid for surface seeds)"),
+	      false, no_argument),
+   opathdir(string("--opathdir"),false,
+	    string("Output average local tract orientation (tangent)"),
+	    false, no_argument),
+   save_paths(string("--savepaths"),false,
+	      string("Save path coordinates to ascii file"),
+	      false, no_argument),
 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
@@ -298,12 +316,14 @@ class probtrackxOptions {
        options.add(network);
        options.add(simpleout);
        options.add(pathdist);
+       options.add(pathfile);
        options.add(s2tout);
        options.add(s2tastext);
 
        options.add(targetfile);
        options.add(waypoints);
        options.add(waycond);
+       options.add(wayorder);
        options.add(rubbishfile);
        options.add(stopfile);
 
@@ -343,6 +363,9 @@ class probtrackxOptions {
        options.add(forcefirststep);
        options.add(osampfib);
        options.add(onewaycondition);
+       options.add(onewayonly);
+       options.add(opathdir);
+       options.add(save_paths);
 
      }
      catch(X_OptionError& e) {

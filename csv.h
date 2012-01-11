@@ -57,20 +57,19 @@ float triDistPoint(const Triangle& t,const ColumnVector pos);
 // This class is quite tailored to fit with probtrackx requirements :)
 // For now: it can only detect collisions with triangle meshes
 // For now: it uses meshclass for I/O. Eventually port into Brian's I/O to support GIFTI
+
 class CSV {
 private:
   volume<float>                          roivol;     // volume-like ROIs (all in the same volume for memory efficiency)
   vector<CsvMesh>                        roimesh;    // surface-like ROIs
 
-  vector<string>                         surfnames;  // file names
-  vector<string>                         volnames;   // useful for seed_to_target storage in probtrackx
+  vector<string>                         roinames;   // file names
+                                                     // useful for seed_to_target storage in probtrackx
 
   Matrix                                 hitvol;     // hit counter (voxels)
   Matrix                                 isinroi;    // which voxel in which ROI 
   Matrix                                 mat2vol;    // lookup volume coordinates
   volume<int>                            vol2mat;    // lookup matrix row
-  volume4D<int>                          vol2bigmat; // lookup in big matrix (with meshes etc)
-
 
   volume<int>                            surfvol;    // this is the main thing that speeds up surface collision detection
                                                      // where each voxel knows whether the surface goes through or not
@@ -97,17 +96,24 @@ private:
   int                                    nlocs;      // # ROI locations (eventually repeated)
   int                                    nrois;      // # ROIs in total (volumes+surfaces)
 
-  vector< vector<int> >                  mesh2loc;   // mesh->locs lookup
-  vector< pair<int,int> >                loc2mesh;   // locs->mesh lookup
-  vector<ColumnVector>                   loccoords;
-  vector<int>                            locrois;
-  vector<int>                            locindex;
-  vector<int>                            volind;     // local roi ind ---> global volume ind
-  vector<int>                            surfind;    // local roi ind ---> global surface ind
-  vector<int>                            volroiind;  // global vol ind ---> local vol ind
-  vector<int>                            surfroiind; // global surf ind ---> local surf ind
+  // Sort out the transformations
+  // from a given loc, I need to be able to tell 
+  // whether it is a surface or volume
+  // + which surface or volume
+  // + which sublocation within the surface or volume
+  vector<int>           loctype;            // SURFACE OR VOLUME
+  vector<int>           locroi;             // 0:NROIS-1
+  vector<int>           locsubroi;          // 0:NSURFS or 0:NVOLS
+  vector<int>           locsubloc;          // 0:n
+  vector<ColumnVector>  loccoords;
+  vector< vector<int> > mesh2loc;
+  volume4D<int>         vol2loc;
+  vector<int>           volind;             // vol is which roi index?
+  vector<int>           surfind;            // surf is which roi index?
+  vector<int>           roitype;
+  vector<int>           roisubind;          // roi is which subindex?
 
-  volume<short int>                      refvol;     // reference volume (in case no volume-like ROI is used)
+  volume<short int>     refvol;     // reference volume (in case no volume-like ROI is used)
 
 
 public:
@@ -155,10 +161,9 @@ public:
   }
   
   void clear_all(){
-    roimesh.clear();surfnames.clear();volnames.clear();triangles.clear();mesh2loc.clear();
-    loc2mesh.clear();loccoords.clear();locrois.clear();locindex.clear();volind.clear();surfind.clear();
-    volroiind.clear();surfroiind.clear();
-
+    roimesh.clear();roinames.clear();
+    loctype.clear();locroi.clear();locsubroi.clear();locsubloc.clear();
+    mesh2loc.clear();
   }
 
   // get/set
@@ -190,15 +195,15 @@ public:
       }
     }
   }
-  void init_vol2bigmat(const vector<string>& fnames){
+  void init_vol2loc(const vector<string>& fnames){
     int cnt=0;
     for(unsigned int i=0;i<fnames.size();i++){
       if(fsl_imageexists(fnames[i])){
 	cnt++;
       }
     }
-    vol2bigmat.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),cnt);
-    vol2bigmat=0;
+    vol2loc.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),cnt);
+    vol2loc=0;
   }
   inline const float xdim()const{return _xdim;}
   inline const float ydim()const{return _ydim;}
@@ -216,31 +221,44 @@ public:
   int nVertices(const int& i)const{return (int)roimesh[i]._points.size();}
 
   string get_name(const int& i){
-    if(volind[i]>=0){return volnames[volind[i]];}
-    else{return surfnames[surfind[i]];}
+    return roinames[i];
   }
+  int get_roitype(const int& i){return roitype[i];}
   CsvMesh& get_mesh(const int i){return roimesh[i];}
-  int get_loc(int roi,int x,int y,int z)const{
-    return vol2bigmat(x,y,z,roi);
+  int get_volloc(int subroi,int x,int y,int z)const{
+    return vol2loc(x,y,z,subroi);
   }
-  int get_loc(int roi,int vert)const{
-    return mesh2loc[roi][vert];
-  }
-  bool isVol(const int& i)const{
-    return (volind[i]>=0);
+  int get_surfloc(int subroi,int subloc)const{
+    return mesh2loc[subroi][subloc];
   }
   
-  ColumnVector get_loc_coord(const int& ind){
-    return loccoords[ind];
+  ColumnVector get_loc_coord(const int& loc){
+    return loccoords[loc];
   }
-  ColumnVector get_loc_coord_as_vox(const int& ind){
-    if(locindex[ind]<0){
-      return loccoords[ind];
+  ColumnVector get_loc_coord_as_vox(const int& loc){
+    if(loctype[loc]==VOLUME){
+      return loccoords[loc];
     }
     else{
-      return get_vertex_as_vox(loc2mesh[ind].first,locindex[ind]);
+      return get_vertex_as_vox(locsubroi[loc],locsubloc[loc]);
     }
   }
+  vector<ColumnVector> get_locs_coords()const{return loccoords;}
+  vector<int> get_locs_roi_index()const{
+    vector<int> ret;
+    for(unsigned int i=0;i<locroi.size();i++){
+      ret.push_back(locroi[i]);
+    }
+    return ret;
+  }
+  vector<int> get_locs_coord_index()const{
+    vector<int> ret;
+    for(unsigned int i=0;i<locsubloc.size();i++){
+      ret.push_back(locsubloc[i]);
+    }
+    return ret;
+  }
+  
 
   // indices start at 0
   ColumnVector get_vertex(const int& surfind,const int& vertind){
@@ -262,26 +280,22 @@ public:
     p = p.SubMatrix(1,3,1,1);
     return p;
   }
-  // ColumnVector get_normal(const int& surfind,const int& vertind){
-//     Vec n = roimesh[surfind].get_point(vertind).local_normal();
-//     ColumnVector ret(3);
-//     ret<<n.X<<n.Y<<n.Z;
-//     return ret;
-//   }
-//   ColumnVector get_normal_as_vox(const int& surfind,const int& vertind){
-//     Vec n = roimesh[surfind].get_point(vertind).local_normal();
-//     ColumnVector ret(3);
-//     ret<<n.X<<n.Y<<n.Z;
-//     ret=mm2vox.SubMatrix(1,3,1,3)*ret;
-    
-//     return ret;
-//   }
+   ColumnVector get_normal(const int& surfind,const int& vertind){
+     Vec n = roimesh[surfind].local_normal(vertind);
+     ColumnVector ret(3);
+     ret<<n.X<<n.Y<<n.Z;
+     return ret;
+   }
+   ColumnVector get_normal_as_vox(const int& surfind,const int& vertind){
+     Vec n = roimesh[surfind].local_normal(vertind);
+     ColumnVector ret(3);
+     ret<<n.X<<n.Y<<n.Z;
+     ret=mm2vox.SubMatrix(1,3,1,3)*ret;
+     if(ret.MaximumAbsoluteValue()>0)
+       ret/=std::sqrt(ret.SumSquare());
+     return ret;
+   }
   
-  
-  const vector<ColumnVector>& get_locs_coords()const{return loccoords;}
-  const vector<int>& get_locs_roi_index()const{return locrois;}
-  const vector<int>& get_locs_coord_index()const{return locindex;}
-  int get_loc_roi(const int& i)const{return locrois[i];}
 
   // routines
   void load_volume  (const string& filename);
@@ -289,6 +303,7 @@ public:
   void load_rois    (const string& filename,bool do_change_refvol=true);
   void reload_rois  (const string& filename);
   void save_roi     (const int& roiind,const string& prefix);
+  void save_rois    (const string& prefix);
   void fill_volume  (volume<float>& vol,const int& ind);
   void cleanup();
 
@@ -298,14 +313,18 @@ public:
   void init_surfvol();
   void update_surfvol(const vector<ColumnVector>& v,const int& id,const int& meshid);
   void save_surfvol(const string& filename,const bool& binarise=true)const;
+  void save_normalsAsVol(const int& meshind,const string& filename)const;
   void init_hitvol(const vector<string>& fnames);
 
 
-  void  add_value(const string& type,const int& roiind,const int& locind,const float& val);
-  void  set_value(const string& type,const int& roiind,const int& locind,const float& val);
-  float get_value(const string& type,const int& roiind,const int& locind);
+  void  add_value(const int& loc,const float& val);
+  void  set_value(const int& loc,const float& val);
+  void  set_vol_values(const float& val);
+  float get_value(const int& loc);
   void  reset_values();
+  void  reset_values(const vector<int>& locs);
   void  save_values(const int& roi);
+  void  loc_info(const int& loc)const;
 
   bool isInRoi(int x,int y,int z)const{return (roivol(x,y,z)!=0);}
   bool isInRoi(int x,int y,int z,int roi)const{
@@ -316,8 +335,13 @@ public:
   bool has_crossed(const ColumnVector& x1,const ColumnVector& x2,
 		   bool docount=false,bool docontinue=false,const float& val=1.0);
   bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-		       vector<int>* crossedrois=NULL,vector<int>* crossedlocs=NULL)const;
+		       vector<int>& crossedrois)const;
+  bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
+		       vector<int>& crossedrois,vector<int>& crossedlocs)const;
 
+
+  int step_sign(const int& loc,const Vec& step)const;
+  int coord_sign(const int& loc,const ColumnVector& x2)const;
 
   // "near-collision" detection
   // returns true if one of the surfaces (meshind) is closer than dist. 
@@ -334,13 +358,12 @@ public:
   CSV& operator=(const CSV& rhs){
     roivol=rhs.roivol;
     roimesh=rhs.roimesh;
-    surfnames=rhs.surfnames;
-    volnames=rhs.volnames;
+    roinames=rhs.roinames;
     hitvol=rhs.hitvol;
     isinroi=rhs.isinroi;
     mat2vol=rhs.mat2vol;
     vol2mat=rhs.vol2mat;
-    vol2bigmat=rhs.vol2bigmat;
+    vol2loc=rhs.vol2loc;
     surfvol=rhs.surfvol;
     triangles=rhs.triangles;
     mm2vox=rhs.mm2vox;
@@ -356,22 +379,22 @@ public:
     nvoxels=rhs.nvoxels;
     nlocs=rhs.nlocs;
     nrois=rhs.nrois;
-    mesh2loc=rhs.mesh2loc;
-    loc2mesh=rhs.loc2mesh;
+    loctype=rhs.loctype;
+    locroi=rhs.locroi;
+    locsubroi=rhs.locsubroi;
+    locsubloc=rhs.locsubloc;
     loccoords=rhs.loccoords;
-    locrois=rhs.locrois;
-    locindex=rhs.locindex;
+    mesh2loc=rhs.mesh2loc;
+    vol2loc=rhs.vol2loc;
     volind=rhs.volind;
     surfind=rhs.surfind;
-    volroiind=rhs.volroiind;
-    surfroiind=rhs.surfroiind;
+    roitype=rhs.roitype;
+    roisubind=rhs.roisubind;
     refvol=rhs.refvol;
     return *this;
   }
 
 };
-
-
 
  
 #endif

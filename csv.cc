@@ -25,29 +25,34 @@ using namespace fslvtkio;
 bool CSV::has_crossed(const ColumnVector& x1,const ColumnVector& x2,
 		      bool docount,bool docontinue,const float& val){
   // x1 and x2 in voxel space
-  int ix2 = (int)round((float)x2(1));
-  int iy2 = (int)round((float)x2(2));
-  int iz2 = (int)round((float)x2(3));
+  int ix,iy,iz;
 
-  // start by looking at volume roi
-  if(nvols>0){
-    if(roivol(ix2,iy2,iz2)!=0){
-      for(int i=1;i<=nvols;i++){
-	if(isinroi(vol2mat(ix2,iy2,iz2),i)!=0){
-	  if(docount)
-	    hitvol(vol2mat(ix2,iy2,iz2),i) += val;
-	  if(!docontinue)return true;
-	}
-      }
-      return true;
-    }
-  }
-
-  if(nsurfs==0){return false;}
-  
   vector<ColumnVector> crossed; // voxels crossed when going from x1 to x2
   float line[2][3]={{x1(1),x1(2),x1(3)},{x2(1),x2(2),x2(3)}};
   line_crossed_voxels(line,crossed);//crossed in voxels
+
+  if(nvols>0){
+    for(unsigned int i=0;i<crossed.size();i++){
+      ix=(int)round((float)crossed[i](1));
+      iy=(int)round((float)crossed[i](2));
+      iz=(int)round((float)crossed[i](3));
+
+      if(roivol(ix,iy,iz)!=0){
+	for(int i=1;i<=nvols;i++){
+	  if(isinroi(vol2mat(ix,iy,iz),i)!=0){
+	    if(docount)
+	      hitvol(vol2mat(ix,iy,iz),i) += val;
+	    if(!docontinue)return true;
+	}
+	}
+	return true;
+      }
+    }
+  }
+  
+  if(nsurfs==0){return false;}
+  
+
   
   vector< pair<int,int> > localtriangles;
   for(unsigned int i=0;i<crossed.size();i++){
@@ -105,31 +110,35 @@ bool CSV::has_crossed(const ColumnVector& x1,const ColumnVector& x2,
 // this one fills a vector of which rois are crossed
 // and also fills in which locations are crossed (e.g. for matrix{1,3})
 bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-			  vector<int>* crossedrois,vector<int>* crossedlocs)const{
+			  vector<int>& crossedrois)const{
   // x1 and x2 in voxel space
-  int ix2 = (int)round((float)x2(1));
-  int iy2 = (int)round((float)x2(2));
-  int iz2 = (int)round((float)x2(3));
+  int ix,iy,iz;
   bool ret=false;
-  // start by looking at volume roi
-  if(nvols>0){
-    if(roivol(ix2,iy2,iz2)!=0){
-      for(int i=1;i<=nvols;i++){
-	if(isinroi(vol2mat(ix2,iy2,iz2),i)!=0){
-	  ret=true;
-	  if(crossedrois!=NULL)
-	    (*crossedrois).push_back(volind[i-1]);	  
-	  if(crossedlocs!=NULL)
-	    (*crossedlocs).push_back(vol2bigmat(ix2,iy2,iz2,i-1)); 
-	}
-      }
-    }
-  }
-  if(nsurfs==0){return ret;}
 
   vector<ColumnVector> crossed; // voxels crossed when going from x1 to x2
   float line[2][3]={{x1(1),x1(2),x1(3)},{x2(1),x2(2),x2(3)}};
   line_crossed_voxels(line,crossed);
+
+  // start by looking at volume roi
+  if(nvols>0){
+    for(unsigned int i=0;i<crossed.size();i++){
+      ix=(int)round((float)crossed[i](1));
+      iy=(int)round((float)crossed[i](2));
+      iz=(int)round((float)crossed[i](3));
+      
+      if(roivol(ix,iy,iz)!=0){
+	for(int i=1;i<=nvols;i++){
+	  if(isinroi(vol2mat(ix,iy,iz),i)!=0){
+	    ret=true;
+	    crossedrois.push_back(volind[i-1]);	  
+	  }
+	}
+      }
+    }
+  }
+
+
+  if(nsurfs==0){return ret;}
 
 
   vector< pair<int,int> > localtriangles;
@@ -165,24 +174,181 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
       int ind;
       if(t.intersect(segment,ind)){// ind is 0,1 or2
 	ret=true;
-	if(crossedrois!=NULL)
-	  (*crossedrois).push_back( surfind[indmesh] );
-	if(crossedlocs!=NULL){
-	  if( roimesh[indmesh].get_pvalue(t.get_vertice(ind).get_no())!=0){//some triangles have <3 active vertices --> ignore these intersections....
-	    ind = t.get_vertice(ind).get_no();
-	    ind = mesh2loc[indmesh][ind];
-	    if(ind<0){
-	      cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
-	      exit(1);
-	    }
-	    (*crossedlocs).push_back(ind);
-	  }
-	}
+	crossedrois.push_back( surfind[indmesh] );
       }
     }
   }
   return ret;
 }
+
+// this one fills a vector of which rois are crossed
+// and also fills in which locations are crossed (e.g. for matrix{1,3})
+bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
+			  vector<int>& crossedrois,vector<int>& crossedlocs)const{
+  // x1 and x2 in voxel space
+  int ix,iy,iz;
+  bool ret=false;
+
+  vector<ColumnVector> crossed; // voxels crossed when going from x1 to x2
+  float line[2][3]={{x1(1),x1(2),x1(3)},{x2(1),x2(2),x2(3)}};
+  line_crossed_voxels(line,crossed);
+
+  // start by looking at volume roi
+  if(nvols>0){
+    for(unsigned int i=0;i<crossed.size();i++){
+      ix=(int)round((float)crossed[i](1));
+      iy=(int)round((float)crossed[i](2));
+      iz=(int)round((float)crossed[i](3));
+
+      if(roivol(ix,iy,iz)!=0){
+	for(int i=1;i<=nvols;i++){
+	  if(isinroi(vol2mat(ix,iy,iz),i)!=0){
+	    ret=true;
+	    crossedrois.push_back(volind[i-1]);	  	  
+	    crossedlocs.push_back(vol2loc(ix,iy,iz,i-1)); 
+	  }
+	}
+      }
+    }
+  }
+  if(nsurfs==0){return ret;}
+
+  vector< pair<int,int> > localtriangles;
+  for(unsigned int i=0;i<crossed.size();i++){
+    //OUT(crossed[i].t());
+    int val=surfvol((int)round((float)crossed[i](1)),
+		    (int)round((float)crossed[i](2)),
+		    (int)round((float)crossed[i](3)))-1;
+    if(val<0)continue;
+    localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
+  }
+
+  if(localtriangles.size()>0){
+    ColumnVector x1mm(4),x2mm(4);
+    // transform into mm space
+    x1mm<<x1(1)<<x1(2)<<x1(3)<<1;
+    x1mm=vox2mm*x1mm;
+    x2mm<<x2(1)<<x2(2)<<x2(3)<<1;
+    x2mm=vox2mm*x2mm;
+
+
+    // for each triangle, check for intersection and stop if any
+    CsvTriangle t;
+    vector<Pt> segment;
+    Pt p1(x1mm(1),x1mm(2),x1mm(3));segment.push_back(p1);
+    Pt p2(x2mm(1),x2mm(2),x2mm(3));segment.push_back(p2);
+
+    for(unsigned int i=0;i<localtriangles.size();i++){
+      int indmesh=localtriangles[i].first;
+      int indtri=localtriangles[i].second-1;
+      t = roimesh[indmesh].get_triangle(indtri);
+
+      int ind;
+      if(t.intersect(segment,ind)){// ind is 0,1 or 2
+	//OUT(ind);
+	//OUT(t.get_vertice(ind).get_no());
+	if( roimesh[indmesh].get_pvalue(t.get_vertice(ind).get_no())!=0){//some triangles have <3 active vertices --> ignore these intersections....
+	  ret=true;
+	  crossedrois.push_back( surfind[indmesh] );
+
+	  ind = t.get_vertice(ind).get_no();
+	  ind = mesh2loc[indmesh][ind];
+	  if(ind<0){
+	    cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
+	    exit(1);
+	  }
+	  crossedlocs.push_back(ind);
+	}	
+      }
+    }
+  }
+  return ret;
+}
+
+int CSV::step_sign(const int& loc,const Vec& step)const{
+  if(loctype[loc]==VOLUME)return(1);
+  int meshind=locsubroi[loc];
+  ColumnVector stepmm(4);
+  stepmm<<step.X<<step.Y<<step.Z<<1;
+  stepmm=vox2mm*stepmm;
+  Vec v(stepmm(1),stepmm(2),stepmm(3));
+  return roimesh[meshind].step_sign(locsubloc[loc],v);
+}
+int CSV::coord_sign(const int& loc,const ColumnVector& x2)const{
+  if(loctype[loc]==VOLUME)return(1);
+  ColumnVector x1mm(4),x2mm(4),x1(4);
+  x1mm<<loccoords[loc](1)<<loccoords[loc](2)<<loccoords[loc](3)<<1;
+  x1=mm2vox*x1mm;
+  x2mm<<x2(1)<<x2(2)<<x2(3)<<1;
+  x2mm=vox2mm*x2mm;
+//   OUT(x1mm.t());
+//   OUT(x2mm.t());
+
+  CsvMpoint p = roimesh[locsubroi[loc]].get_point(locsubloc[loc]);
+
+  CsvTriangle t;
+  float d=0,dmin=0;
+  float dist=0,distmin=0;
+  Vec xx2(x2mm(1),x2mm(2),x2mm(3));
+  Vec proj;
+  for(int i=0;i<p.ntriangles();i++){
+    int trID=p.get_trID(i);
+    t = roimesh[locsubroi[loc]].get_triangle(trID);
+    d = t.normal()|(x2mm-t.get_vertice(0));
+    proj=xx2-((double)d*t.normal());
+    if(t.isinside(proj)){
+      if(d<0)return(-1);
+      else{return(1);}
+    }
+    //    dist=(proj-t.centroid()).norm();
+    dist=t.dist_to_point(xx2);
+//     OUT(dist);
+//     OUT(d);
+    if(i==0||(dist<=distmin)){dmin=d;distmin=dist;}
+    if(dist==distmin){if(d<dmin)dmin=d;}
+  }
+  //OUT(dmin);
+  //loc_info(loc);
+  //exit(1);
+   if(dmin<0)return(-1);
+
+//   // add more triangles 
+   //cout<<"MORE!!"<<endl;
+  vector<ColumnVector> crossed; // voxels crossed when going from x1 to x2
+  float line[2][3]={{x1(1),x1(2),x1(3)},{x2(1),x2(2),x2(3)}};
+  line_crossed_voxels(line,crossed);
+  vector< pair<int,int> > localtriangles;
+  for(unsigned int i=0;i<crossed.size();i++){
+    int val=surfvol((int)round((float)crossed[i](1)),
+		    (int)round((float)crossed[i](2)),
+		    (int)round((float)crossed[i](3)))-1;
+    if(val<0)continue;
+    localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
+  }
+  //  OUT(localtriangles.size());
+  bool self;
+  for(unsigned int i=0;i<localtriangles.size();i++){    
+    int indmesh=localtriangles[i].first;
+    int indtri=localtriangles[i].second-1;
+    self=false;
+    for(int j=0;j<p.ntriangles();j++)
+      if(indtri==p.get_trID(j))self=true;break;//ignore self-triangles
+    if(self)continue;
+    t = roimesh[indmesh].get_triangle(indtri);
+    if(locsubroi[loc]!=indmesh)continue; // only look at same mesh
+
+    vector<Pt> segment;
+    Pt p1(x1mm(1),x1mm(2),x1mm(3));segment.push_back(p1);
+    Pt p2(x2mm(1),x2mm(2),x2mm(3));segment.push_back(p2);
+    if(!t.intersect(segment))continue;//ignore if does not intersect?
+    return(-1);
+    //d = t.normal()|(x2mm-t.get_vertice(0));
+    //if((fabs(d)<fabs(dmin)))dmin=d;
+  }
+
+  return(1); // (dmin<0?-1:1);
+}
+
 
 // initialise surfvol
 // go through all triangles in ROI meshes
@@ -273,6 +439,36 @@ void CSV::save_surfvol(const string& filename,const bool& binarise)const{
   }
     
 }
+void CSV::save_normalsAsVol(const int& meshind,const string& filename)const{
+  volume4D<float> normals(surfvol.xsize(),surfvol.ysize(),surfvol.zsize(),3);
+  normals=0;
+  ColumnVector n(3);Vec nvec;
+  DiagonalMatrix d(3);Matrix v(3,3);SymmetricMatrix dd(3);
+  for(int z=0;z<surfvol.zsize();z++){
+    for(int y=0;y<surfvol.ysize();y++){
+      for(int x=0;x<surfvol.xsize();x++){
+	int val=surfvol(x,y,z)-1;
+	if(val<0)continue;
+	CsvTriangle t;
+	for(unsigned int i=0;i<triangles[val].size();i++){
+	  t=roimesh[meshind].get_triangle(triangles[val][i].second-1);
+	  nvec=t.normal();
+	  n<<nvec.X<<nvec.Y<<nvec.Z;
+	  dd<<n*n.t();	  
+	}
+	dd/=float(triangles[val].size());
+	EigenValues(dd,d,v);
+	normals(x,y,z,0)=v(1,3);
+	normals(x,y,z,1)=v(2,3);
+	normals(x,y,z,2)=v(3,3);
+      }
+    }
+  }
+  copybasicproperties(refvol,normals);
+  normals.setDisplayMaximumMinimum(1,-1);
+  save_volume4D(normals,filename);
+}
+
 void CSV::init_hitvol(const vector<string>& fnames){
   volume<float> tmpvol;
   isinroi.ReSize(nvoxels,nvols);
@@ -312,60 +508,97 @@ void CSV::reset_values(){
       roimesh[i].reset_tvalues();
     }
   }
+}
+void CSV::set_vol_values(const float& val){
+  if(nvols>0){
+    hitvol=val;
+  }
+}
 
+void CSV::reset_values(const vector<int>& locs){
+  for(unsigned int i=0;i<locs.size();i++)
+    set_value(locs[i],0);
 }
-void CSV::add_value(const string& type,const int& roiind,
-		    const int& locind,const float& val){
-  if(type=="volume"){
+void CSV::add_value(const int& loc,const float& val){
+  if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[locind-1](1));
-    int y=(int)round((float)loccoords[locind-1](2));
-    int z=(int)round((float)loccoords[locind-1](3));
-    hitvol(vol2mat(x,y,z),roiind) += val;    
+    int x=(int)round((float)loccoords[loc](1));
+    int y=(int)round((float)loccoords[loc](2));
+    int z=(int)round((float)loccoords[loc](3));
+    hitvol(vol2mat(x,y,z),locsubroi[loc]+1) += val;
   }
-  else if(type=="surface"){
-    int vertind=loc2mesh[locind].second-1;
-    float curval=roimesh[roiind].get_pvalue(vertind);
-    roimesh[roiind].set_pvalue(vertind,curval+val);
+  else if(loctype[loc]==SURFACE){
+    int   vertind=locsubloc[loc];
+    int   meshind=locsubroi[loc];
+    float curval=roimesh[meshind].get_pvalue(vertind);
+    roimesh[meshind].set_pvalue(vertind,curval+val);
   }
   else{
-    cerr<<"CSV::add_value:unrecognised type "<<type<<endl;
+    cerr<<"CSV::add_value:unrecognised type "<<loctype[loc]<<endl;
     exit(1);
   }  
 }
-void CSV::set_value(const string& type,const int& roiind,const int& locind,const float& val){
-  if(type=="volume"){
+void CSV::set_value(const int& loc,const float& val){
+  if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[locind-1](1));
-    int y=(int)round((float)loccoords[locind-1](2));
-    int z=(int)round((float)loccoords[locind-1](3));
-    hitvol(vol2mat(x,y,z),roiind) = val;    
+    int x=(int)round((float)loccoords[loc](1));
+    int y=(int)round((float)loccoords[loc](2));
+    int z=(int)round((float)loccoords[loc](3));
+    hitvol(vol2mat(x,y,z),locsubroi[loc]+1) = val;
   }
-  else if(type=="surface"){
-    int vertind=loc2mesh[locind].second;
-    roimesh[roiind].set_pvalue(vertind,val);
+  else if(loctype[loc]==SURFACE){
+    int   vertind=locsubloc[loc];
+    int   meshind=locsubroi[loc];
+    roimesh[meshind].set_pvalue(vertind,val);
   }
   else{
-    cerr<<"CSV::set_value:unrecognised type "<<type<<endl;
+    cerr<<"CSV::set_value:unrecognised type "<<loctype[loc]<<endl;
     exit(1);
   }  
 }
-float CSV::get_value(const string& type,const int& roiind,const int& locind){
-  if(type=="volume"){
+float CSV::get_value(const int& loc){
+  if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[locind-1](1));
-    int y=(int)round((float)loccoords[locind-1](2));
-    int z=(int)round((float)loccoords[locind-1](3));
-    return(hitvol(vol2mat(x,y,z),roiind));    
+    int x=(int)round((float)loccoords[loc](1));
+    int y=(int)round((float)loccoords[loc](2));
+    int z=(int)round((float)loccoords[loc](3));
+    return(hitvol(vol2mat(x,y,z),locsubroi[loc]+1));
   }
-  else if(type=="surface"){
-    int vertind=loc2mesh[locind].second;
-    return(roimesh[roiind].get_pvalue(vertind));
+  else if(loctype[loc]==SURFACE){
+    int   vertind=locsubloc[loc];
+    int   meshind=locsubroi[loc];
+    return(roimesh[meshind].get_pvalue(vertind));
   }
   else{
-    cerr<<"CSV::get_value:unrecognised type "<<type<<endl;
+    OUT(loc);    
+    cerr<<"CSV::get_value:unrecognised type "<<loctype[loc]<<endl;
     exit(1);
   }  
+}
+void CSV::loc_info(const int& loc)const{
+  if(loctype[loc]==VOLUME){
+    cout<<"Volume location"<<endl;
+    OUT(loccoords[loc].t());
+    OUT(locroi[loc]);
+    OUT(locsubroi[loc]);
+    OUT(locsubloc[loc]);
+  }
+  else{
+    cout<<"Surface location"<<endl;
+    OUT(loccoords[loc].t());
+    OUT(locroi[loc]);
+    OUT(locsubroi[loc]);
+    OUT(locsubloc[loc]);
+    cout<<"Triangles"<<endl;
+    CsvMpoint p = roimesh[locsubroi[loc]].get_point(locsubloc[loc]);
+    CsvTriangle t;
+    for(int i=0;i<p.ntriangles();i++){
+      int trID=p.get_trID(i);
+      t = roimesh[locsubroi[loc]].get_triangle(trID);
+      for(int j=0;j<3;j++)
+	cout<<t.get_vertice(j).get_coord().X<<" "<<t.get_vertice(j).get_coord().Y<<" "<<t.get_vertice(j).get_coord().Z<<endl;     
+    }    
+  }
 }
 
 void CSV::fill_volume(volume<float>& tmpvol,const int& roiind){
@@ -383,20 +616,20 @@ void CSV::load_volume(const string& filename){
 	if(roivol(x,y,z)==0)nvoxels++;
 	roivol(x,y,z) += 1;
 	nlocs++;
-	vol2bigmat(x,y,z,nvols) = nlocs;
+	vol2loc(x,y,z,nvols) = nlocs-1;
+
+	loctype.push_back(VOLUME);
+	locroi.push_back(nrois);
+	locsubroi.push_back(nvols);
+	locsubloc.push_back(nvoxels);
+
 	// update loc info
 	c<<x<<y<<z;
 	loccoords.push_back(c);
-	locrois.push_back(nrois);
-	locindex.push_back(-1);
-	// update loc2mesh 
-	mypair.first=-1;
-	mypair.second=-1;
-	loc2mesh.push_back(mypair);
       }
   volind.push_back(nrois);
-  volroiind.push_back(nvols);
-  surfroiind.push_back(-1);
+  roitype.push_back(VOLUME);
+  roisubind.push_back(nvols);
 
   nvols++;
   nrois++;
@@ -415,7 +648,6 @@ void CSV::load_surface(const string& filename){
   CsvMesh m;
   m.load(filename);
 
-  //cout<<"load surface"<<endl;
   // update mesh lookup table (in case only part of the surface is used
   vector<int> lu1;
   pair<int,int> mypair;
@@ -425,24 +657,22 @@ void CSV::load_surface(const string& filename){
   for(int i=0;i<m.nvertices();i++){
     npts++;
     if(allMesh || m.get_pvalue(i)!=0){
-      if(m.get_pvalue(i)==0){
-	m.set_pvalue(i,1.0);
-      }
+      m.set_pvalue(i,1.0);
 
-      //OUT((*it)->get_no());
       nlocs++;
-      lu1.push_back(nlocs);
+      lu1.push_back(nlocs-1);
+
+      loctype.push_back(SURFACE);
+      locroi.push_back(nrois);
+      locsubroi.push_back(nsurfs);
+      locsubloc.push_back(npts);
+
       // update locs
       c <<m.get_point(i).get_coord().X
         <<m.get_point(i).get_coord().Y
 	<<m.get_point(i).get_coord().Z;
       loccoords.push_back(c);
-      locrois.push_back(nrois);
-      locindex.push_back(m.get_point(i).get_no());
 
-      mypair.first=nsurfs;
-      mypair.second=npts;
-      loc2mesh.push_back(mypair);
     }
     else{
       lu1.push_back(-1);
@@ -451,35 +681,33 @@ void CSV::load_surface(const string& filename){
   mesh2loc.push_back(lu1);
 
   roimesh.push_back(m);
-
   surfind.push_back(nrois);
-  surfroiind.push_back(nsurfs);
-  volroiind.push_back(-1);
-  
+  roitype.push_back(SURFACE);
+  roisubind.push_back(nsurfs);
+
   nsurfs++;
   nrois++;
 
 }
 void CSV::load_rois(const string& filename,bool do_change_refvol){
   vector<string> fnames;
-  surfnames.clear();
-  volnames.clear();
+  roinames.clear();
 
   // filename is volume
   if(fsl_imageexists(filename)){
     fnames.push_back(filename);
     change_refvol(fnames);
-    vol2bigmat.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),1);
-    vol2bigmat=0;
+    vol2loc.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),1);
+    vol2loc=0;
     load_volume(fnames[0]);
-    volnames.push_back(fnames[0]);
+    roinames.push_back(fnames[0]);
   }
-  else if(meshExists(filename)){    
+  else if(meshExists(filename)){  
     fnames.push_back(filename);
-    vol2bigmat.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),1);
-    vol2bigmat=0;
+    vol2loc.reinitialize(vol2mat.xsize(),vol2mat.ysize(),vol2mat.zsize(),1);
+    vol2loc=0;
     load_surface(fnames[0]);
-    surfnames.push_back(fnames[0]);
+    roinames.push_back(fnames[0]);
   }
   else{
     // file name is ascii text file
@@ -498,16 +726,16 @@ void CSV::load_rois(const string& filename,bool do_change_refvol){
     }
     if(do_change_refvol)
       change_refvol(fnames);
-    init_vol2bigmat(fnames);
+    init_vol2loc(fnames);
 
     for(unsigned int i=0;i<fnames.size();i++){      
       if(fsl_imageexists(fnames[i])){
 	load_volume(fnames[i]);
-	volnames.push_back(fnames[i]);
+	roinames.push_back(fnames[i]);	
       }
       else{
 	load_surface(fnames[i]);
-	surfnames.push_back(fnames[i]);
+	roinames.push_back(fnames[i]);
       }
     }
   }
@@ -523,28 +751,32 @@ void CSV::reload_rois(const string& filename){
   load_rois(filename,false);
 }
 void CSV::save_roi(const int& roiind,const string& fname){
-  int ind = volroiind[roiind];
-  bool isvol=true;
-  if(ind<0){ind=surfroiind[roiind];isvol=false;}
-
-  if(isvol){//save volume
+  if(roitype[roiind]==VOLUME){//save volume
     volume<float> tmpvol;
     tmpvol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize());
     copybasicproperties(refvol,tmpvol);
     tmpvol=0;
-    fill_volume(tmpvol,ind+1);
+    fill_volume(tmpvol,roisubind[roiind]+1);
     tmpvol.setDisplayMaximumMinimum(tmpvol.max(),tmpvol.min());
     save_volume(tmpvol,fname);
-
   }
   else{
-    roimesh[ind].save_ascii(fname);
+    roimesh[roisubind[roiind]].save_ascii(fname);
+  }
+}
+void CSV::save_rois(const string& fname){
+  if(nrois==1)
+    save_roi(0,fname);
+  else{
+    for(int i=0;i<nrois;i++){
+      save_roi(i,fname+num2str(i+1));
+    }
   }
 }
 void CSV::cleanup(){
   nvols=0;nsurfs=0;nvoxels=0;nlocs=0;nrois=0;
   roivol=0;
-  vol2mat=0;vol2bigmat=0;
+  vol2mat=0;vol2loc=0;
   surfvol=0;
   clear_all();
 }
@@ -583,6 +815,10 @@ void CSV::set_convention(const string& conv){
     else{//radio
       mm2vox=vox2mm.i();
     }
+  }
+  else if(conv=="vox"){
+    vox2mm=IdentityMatrix(4);
+    mm2vox=IdentityMatrix(4);
   }
   else{
     cerr<<"CSV::set_convention: unknown convention "<<conv<<endl;
@@ -634,7 +870,7 @@ bool CSV::is_near_surface(const ColumnVector& pos,
 	float curdist;
 	for(unsigned int i=0;i<triangles[ind].size();i++){
 	  t = roimesh[ triangles[ind][i].first ].get_triangle( triangles[ind][i].second-1 );
-	  Pt cog=t.centroid();
+	  Vec cog=t.centroid();
 	  curdir<<cog.X-posmm(1)<<cog.Y-posmm(2)<<cog.Z-posmm(3);	  
 	  curdist=curdir.SumSquare();
 	  if(curdist<=d2){

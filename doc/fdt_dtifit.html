@@ -74,30 +74,24 @@ b_1 b_2 b_3 ... b_n<br></pre>
 <li><b>&lt;basename&gt;_MO</b> - mode of the anisotropy (oblate ~ -1; isotropic ~ 0; prolate ~ 1)</li>
 <li><b>&lt;basename&gt;_S0</b> - raw T2 signal with no diffusion weighting</li>
 </ul>
-<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>
+<TABLE WIDTH=70% BORDER=0 CELLPADDING=0 CELLSPACING=0>
 
 </TR><TR>
-<TD ALIGN=CENTER VALIGN=CENTER>
-<IMG SRC=fdt_images/fdt_lines_subs.gif HEIGHT=200>
+<TD ALIGN=CENTER>
+<IMG SRC=fdt_images/rgb.jpg HEIGHT=200>
 
 <TD ALIGN=CENTER>
-<IMG SRC=fdt_images/fdt_rgb_subs.gif HEIGHT=200>
+<IMG SRC=fdt_images/md.jpg HEIGHT=200>
 
 <TD ALIGN=CENTER>
-<IMG SRC=fdt_images/fdt_l1.gif HEIGHT=200>
-
-<TD ALIGN=CENTER>
-<IMG SRC=fdt_images/fdt_fa.gif HEIGHT=200>
+<IMG SRC=fdt_images/fa.jpg HEIGHT=200>
 
 </TR><TR>
-<TD ALIGN=CENTER VALIGN=CENTER>
-V1 Lines
-
 <TD ALIGN=CENTER>
 V1 RGB
 
 <TD ALIGN=CENTER>
-L1
+MD
 
 <TD ALIGN=CENTER>
 FA
@@ -112,8 +106,6 @@ in fslview
 <b>command line utility</b><br>
 <pre>
 
-dtifit
-
 Compulsory arguments (You MUST set one or more of):
 	-k,--data	dti data file
 	-o,--out	Output basename
@@ -124,8 +116,9 @@ Compulsory arguments (You MUST set one or more of):
 Optional arguments (You may optionally specify one or more of):
 	-V,--verbose	switch on diagnostic messages
 	-h,--help	display this message
-	--cni	        Input counfound regressors
+	--cni	        Input confound regressors
 	--sse	        Output sum of squared errors
+	-w,--wls	Fit the tensor with weighted least squares
 	--littlebit	Only process small area of brain
 	--save_tensor	Save the elements of the tensor
 	-z,--zmin	min z
@@ -134,6 +127,5 @@ Optional arguments (You may optionally specify one or more of):
 	-Y,--ymax	max y
 	-x,--xmin	min x
 	-X,--xmax	max x
-
 
 </pre>

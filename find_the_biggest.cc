@@ -4,10 +4,14 @@
 
 #include <iostream>
 #include <fstream>
+#include "meshclass/meshclass.h"
 #include "newimage/newimageall.h"
+#include "fslvtkio/fslvtkio.h"
 #include <vector>
 using namespace std;
 using namespace NEWIMAGE;
+using namespace mesh;
+using namespace fslvtkio;
 
 void biggest_from_volumes(vector<string> innames,string oname){
   vector<volume<float> > tmpvec;
@@ -33,18 +37,7 @@ void biggest_from_volumes(vector<string> innames,string oname){
 	    bum(i+1)=tmpvec[i](x,y,z);
 	} 
 	bugger=max(bum,index);
-	bool flag=true;
-	if(index.AsScalar()==1){
-	  // Check to see whether they're all zero.
-	  flag=false;
-	  for(unsigned int i=1;i<=innames.size();i++ ){
-	    if(bum(i)!=0){
-	      flag=true;break;
-	    }
-	      
-	  }
-	}
-	if(flag)
+	if(bum.MaximumAbsoluteValue()!=0)
 	  output(x,y,z)=(int)index.AsScalar();
 	else
 	  output(x,y,z)=0;
@@ -57,127 +50,59 @@ void biggest_from_volumes(vector<string> innames,string oname){
 
 }
 
-ReturnMatrix read_label(const string& labelfile,string& firstline){
-  Matrix L;
-  ifstream fs(labelfile.c_str());
-  if (!fs) { 
-    cerr << "Could not open label file " << labelfile << endl;
-    L.Release();
-    return L;
-  }
+void biggest_from_surfaces(vector<string> innames,string oname){
+  vector<Mesh> meshes;
+  Mesh m;int nv=0,nt=0;
 
-  // read first line
-  char str[200];
-  FILE *fp;
-  fp = fopen(labelfile.c_str(), "r");
-  fscanf(fp, "%[^\n]", str);
-  firstline = str;
-
-  string cline;
-  // skip header
-  cline = skip_alpha(fs);
-  // read number of vertices
-  string ss="";
-  fs >> ss;
-  float nrows = atof(ss.c_str());
-  L.ReSize(int(nrows),5);
-  for(int r=1;r<=nrows;r++)
-    for(int c=1;c<=5;c++){
-      if(!fs.eof()){
-	fs >> ss;
-	while ( !isNumber(ss) && !fs.eof() ) {
-	  fs >> ss;
-	}
-	L(r,c) = atof(ss.c_str());
+  cout<<"number of inputs "<<innames.size()<<endl;
+  cout<<"Indices"<<endl;
+  for(unsigned int i=0;i<innames.size();i++){
+    cout<<i+1<<" "<<innames[i]<<endl;
+    nt++;
+    m.load(innames[i]);
+    meshes.push_back(m);
+    // test size
+    if(i==0)nv=m.nvertices();
+    else{
+      if(m.nvertices()!=nv){
+	cerr<<"error: number of vertices incompatible amongst input"<<endl;
+	exit(1);
       }
     }
-  
-  L.Release();
-  return L;
-}
-void write_label(const Matrix& L,const string& filename,const string& firstline){
-  ofstream fs(filename.c_str());
-  if (!fs) { 
-    cerr << "Could not open file " << filename << " for writing" << endl;
-    exit(1);
   }
-  fs << firstline << endl;
-  fs << L.Nrows() << endl;
-
-#ifdef PPC64	
-  int n=0;
-#endif
-  for (int i=1; i<=L.Nrows(); i++) {
-    for (int j=1; j<=L.Ncols(); j++) {
-      fs << L(i,j) << "  ";
-#ifdef PPC64	
-      if ((n++ % 50) == 0) fs.flush();
-#endif
+    
+  fslvtkIO * fout = new fslvtkIO();
+  fout->setMesh(meshes[0]);
+  Matrix allvals(nv,nt);
+  for(unsigned int i=0;i<meshes.size();i++){
+    int cnt=1;
+    for(vector<Mpoint*>::iterator it = meshes[i]._points.begin();it!=meshes[i]._points.end();it++){
+      allvals(cnt,i+1)=(*it)->get_value();
+      cnt++;	
     }
-    fs << endl;
   }
+  //OUT(allvals.t());
+  // get max
+  Matrix values(nv,1);
+  values=0;
+  for(int i=1;i<=nv;i++){
+    if(allvals.Row(i).MaximumAbsoluteValue()==0)continue;
+    float vm=0;
+    for(int j=1;j<=nt;j++){
+      if(j==1)vm=allvals(i,j);
+      if(allvals(i,j)>=vm){values(i,1)=j;vm=allvals(i,j);}
+    }
+  }
+
+  fout->setScalars(values);
+  // set vectors so it can be loaded in fslview)
+  Matrix vec(nv,3);
+  vec=0;
+  fout->setVectors(vec);
   
- 
-  fs.close();
-}
+  fout->save(oname);
 
-void biggest_from_matrix(vector<string> innames,string oname){
-  if(innames.size()!=2){
-    cerr<<"usage: find_the_biggest <Matrix> <Label> <Output>"<<endl;
-    exit(1);
-  }
-
-  cout << innames[0] << endl;
-  Matrix M = read_ascii_matrix(innames[0]);
-  ColumnVector maxMrow(M.Nrows()),coordMax(M.Nrows());
-  maxMrow = sum(abs(M),2);
-
-  cout << "number of vertices: " << M.Nrows() << endl;
-  cout << "number of targets:  " << M.Ncols() << endl;
-
-  cout << endl << "read label file" << endl;
-  string firstline;
-  Matrix L = read_label(innames[1],firstline);
-  
-  cout << "number of vertices: " << L.Nrows() << endl;
-  cout << "number of columns:  " << L.Ncols() << endl;
-
-  if(M.Nrows() != L.Nrows()){
-    cerr<<"Error: matrix and label file do not have the same number of entries"<<endl;
-    exit(1);
-  }
-
-  // test this (i think M and L do not come in the same order...)
-  vector< pair<int,int> > labels(L.Nrows());
-  for(unsigned int i=0;i<labels.size();i++){
-    labels[i].first=(int)L(i+1,1);
-    labels[i].second=i+1;
-  }
-  sort(labels.begin(),labels.end());
-  Matrix sL=L;
-  for(int i=1;i<=L.Nrows();i++)
-    sL.Row(i)=L.Row(labels[i-1].second);
-  
 		      
-  vector< vector<int> > Clusters(M.Ncols());
-  float val;
-  int cmax;
-  for(int i=1;i<=M.Nrows();i++){
-    val=(M.Row(i)).MaximumAbsoluteValue1(cmax);
-    if(val!=0)
-      Clusters[cmax-1].push_back(int(i));
-  }
-  // now store these into files
-  for(unsigned int i=0;i<Clusters.size();i++){
-    if(Clusters[i].size()>0){
-      Matrix C(Clusters[i].size(),5);
-      for(unsigned int j=0;j<Clusters[i].size();j++){
-	C.Row(labels[j].second) = L.Row(Clusters[i][j]); 
-	C(labels[j].second,5) = i+1;
-      }
-      write_label(C,oname+"_"+num2str(i+1)+".label",firstline);
-    }
-  }
   
 }
 
@@ -186,7 +111,7 @@ int main ( int argc, char **argv ){
     cerr<<" "<<endl;
     cerr<<"usage: find_the_biggest <lots of volumes> output"<<endl;
     cerr<<"output is index in order of inputs"<<endl;
-    cerr<<"Or: find_the_biggest <singleMatrixFile> <labelfile> output"<<endl;
+    cerr<<"output will be of the same type as input, i.e. either volume or surface"<<endl;
     cerr<<" "<<endl;
     exit(1);
   }
@@ -197,7 +122,7 @@ int main ( int argc, char **argv ){
     innames.push_back(argv[i]);
   }
   if(!fsl_imageexists(innames[0])){
-    biggest_from_matrix(innames,argv[argc-1]);
+    biggest_from_surfaces(innames,argv[argc-1]);
   }
   else{
     biggest_from_volumes(innames,argv[argc-1]);

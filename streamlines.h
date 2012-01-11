@@ -41,6 +41,7 @@ namespace TRACT{
 
     volume<float>                 m_mask;
 
+
     // prior masks
     volume<int>                   m_skipmask;
     CSV                           m_rubbish;
@@ -116,7 +117,7 @@ namespace TRACT{
 		const float& x,const float& y,const float& z);
 
     int streamline(const float& x_init,const float& y_init, const float& z_init,
-		   const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
+		   const ColumnVector& dim_seeds,const int& fibst,const int& loc);
 
     
     // separate masks loading from class constructor
@@ -225,10 +226,15 @@ namespace TRACT{
     probtrackxOptions&           opts;
     Log&                         logger;
 
-    volume<float>                m_prob;      // spatial histogram of tract location
+    volume<float>                m_prob;      // spatial histogram of tract location within brain mask (in seed space)
+    volume4D<float>              m_localdir;
     volume<int>                  m_beenhere;
     Matrix                       m_I;
     vector<ColumnVector>         m_path;
+    CSV                          m_prob_alt;  // spatial histogram of tracts with alternative user-defined mask
+    CSV                          m_beenhere_alt;
+
+    vector< vector<ColumnVector> > m_save_paths;
 
     // do we still need these?
     vector<ColumnVector>         m_seedcounts;
@@ -283,6 +289,7 @@ namespace TRACT{
 		 << m_stline.get_seeds().ydim() 
 		 << m_stline.get_seeds().zdim();
       m_I=IdentityMatrix(4);      
+
     }
     ~Counter(){}
 
@@ -291,11 +298,32 @@ namespace TRACT{
     void initialise();
     
     void initialise_path_dist(){
+      if(opts.verbose.value()>0)
+	cout<<"Initialise pathdist"<<endl;
       m_prob.reinitialize(m_stline.get_seeds().xsize(),
 			  m_stline.get_seeds().ysize(),
 			  m_stline.get_seeds().zsize());
       copybasicproperties(m_stline.get_seeds().get_refvol(),m_prob);
       m_prob=0;
+      if(opts.opathdir.value()){
+	m_localdir.reinitialize(m_stline.get_seeds().xsize(),
+				m_stline.get_seeds().ysize(),
+				m_stline.get_seeds().zsize(),3);
+	copybasicproperties(m_stline.get_seeds().get_refvol(),m_localdir);
+	m_localdir=0;
+      }
+      if(opts.pathfile.set()){
+	m_prob_alt.reinitialize(m_stline.get_seeds().get_refvol());
+	m_prob_alt.set_convention(opts.meshspace.value());
+	m_prob_alt.load_rois(opts.pathfile.value());
+	m_prob_alt.reset_values();
+	m_beenhere_alt.reinitialize(m_stline.get_seeds().get_refvol());
+	m_beenhere_alt.set_convention(opts.meshspace.value());
+	m_beenhere_alt.load_rois(opts.pathfile.value());
+	m_beenhere_alt.set_vol_values(1);
+      }
+      if(opts.verbose.value()>0)
+	cout<<"....done"<<endl;
     }
     void initialise_seedcounts();
     
@@ -304,12 +332,7 @@ namespace TRACT{
     void initialise_matrix3();
     
     void forceNumSeeds(const int& n) {m_numseeds=n;}
-    void volumeSeeding(int roi)      {m_curtype="volume";m_seedroi=roi;}
-    bool volumeSeeding()             {if(m_curtype=="volume")return true;else return false;}
-    void surfaceSeeding(int surf)    {m_curtype="surface";m_seedroi=surf;}
-    bool surfaceSeeding()            {if(m_curtype=="surface")return true;else return false;}
     void updateSeedLocation(int loc) {m_curloc=loc;}
-    
 
     void store_path(){ m_path=m_stline.get_path();}
     void append_path(){
@@ -355,6 +378,9 @@ namespace TRACT{
     void save_matrix1();
     void save_matrix2();
     void save_matrix3();
+
+    void add_path();
+    void save_paths();
     
   };
   
@@ -380,7 +406,7 @@ namespace TRACT{
     int run(const float& x,const float& y,const float& z,
 	    bool onewayonly, int fibst,bool sampvox);
     int run(const float& x,const float& y,const float& z,
-	    bool onewayonly, int fibst,bool sampvox,const ColumnVector& dir);
+	    bool onewayonly, int fibst,bool sampvox,const int& loc);
 
 
 

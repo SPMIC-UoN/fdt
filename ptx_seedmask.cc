@@ -32,7 +32,7 @@ void seedmask()
   CSV seeds(refvol);
   seeds.set_convention(opts.meshspace.value());
   seeds.load_rois(opts.seedfile.value());
-
+  cout<<"done."<<endl;
   if(seeds.nVols()==0 && opts.seedref.value()==""){
     cerr<<"Warning: need to set a reference volume when defining a surface-based seed"<<endl;
   }
@@ -52,7 +52,6 @@ void seedmask()
     cout << "Volume seeds" << endl;
     for(int roi=1;roi<=seeds.nVols();roi++){
       cout<<"volume "<<roi<<endl;
-      counter.volumeSeeding(roi);
 
       for(int z=0;z<seeds.zsize();z++){
 	if(opts.verbose.value()>=1)
@@ -60,7 +59,7 @@ void seedmask()
 	for(int y=0;y<seeds.ysize();y++){
 	  for(int x=0;x<seeds.xsize();x++){
 	    if(seeds.isInRoi(x,y,z,roi)){
-	      counter.updateSeedLocation(seeds.get_loc(roi-1,x,y,z));
+	      counter.updateSeedLocation(seeds.get_volloc(roi-1,x,y,z));
 	      if(opts.verbose.value()>=1){
 		cout <<"run"<<endl;
 		cout <<x<<" "<<y<<" "<<z<<endl;
@@ -82,33 +81,42 @@ void seedmask()
     ColumnVector pos;//,dir;
     for(int i=0;i<seeds.nSurfs();i++){
       cout<<"surface "<<i<<endl;
-      counter.surfaceSeeding(i);
 
       // inform user if whole surface is used or not
       if( seeds.nActVertices(i) != seeds.nVertices(i) ){
 	cout << "  Using a subset of the vertices labelled active (i.e. non zero value)" << endl;
 	cout << "   set all values to 0 or non-zero to use entire surface" << endl;
       }
-      
+
       for(int p=0;p<seeds.get_mesh(i).nvertices();p++){
 	// check if active point	
 	if(seeds.get_mesh(i).get_pvalue(p)==0.0)
 	  continue;
 	
-	counter.updateSeedLocation(seeds.get_loc(i,p));
+	counter.updateSeedLocation(seeds.get_surfloc(i,p));
 	pos=seeds.get_vertex_as_vox(i,p);
-	//dir=seeds.get_normal_as_vox(i,p);
+// 	 if( (int)round((float)pos(1))!=131 ||
+//  	    (int)round((float)pos(2))!=134 ||
+//  	    (int)round((float)pos(3))!=95) continue;
+
+	ColumnVector dir(3);
+	dir=seeds.get_normal_as_vox(i,p);
 
 	//if(opts.meshspace.value()=="caret")
-	//  dir*=-1; // normals in caret point away from the brain
+	// dir*=-1; // normals in caret point away from the brain
 
 	if(opts.verbose.value()>=1){
 	  cout <<"run"<<endl;
 	  cout <<pos(1)<<" "<<pos(2)<<" "<<pos(3)<<endl;
 	}
-	keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
-				     false,-1,false);
-
+	if(!opts.onewayonly.value()){
+	  keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
+				       false,-1,false);
+	}
+	else{
+	  keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
+				       false,-1,false,seeds.get_surfloc(i,p));
+	}
 
       }
     }

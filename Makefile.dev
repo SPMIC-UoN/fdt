@@ -75,7 +75,7 @@ S2SOBJS=surf2surf.o csv.o csv_mesh.o
 S2V=surf2vol
 S2VOBJS=surf2vol.o csv.o csv_mesh.o
 L2S=label2surf
-L2SOBJS=label2surf.o
+L2SOBJS=label2surf.o csv_mesh.o
 
 
 SGEBEDPOST = bedpost 
@@ -84,7 +84,7 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
+XFILES = probtrackx surf2surf surf2vol label2surf
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
