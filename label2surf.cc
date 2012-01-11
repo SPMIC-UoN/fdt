@@ -9,12 +9,10 @@
 /*  CCOPYRIGHT */
 
 
-#include "meshclass/meshclass.h"
 #include "utils/options.h"
+#include "csv_mesh.h"
 
 using namespace Utilities;
-using namespace mesh;
-
 
 
 string title="label2surf \n\t Transform a group of labels into a surface";
@@ -27,10 +25,10 @@ Option<bool> help(string("-h,--help"),false,
 		       string("display this message"),
 		       false,no_argument);
 Option<string> isurf(string("-s,--surf"),"",
-		     string("input surface (freesurfer ascii)"),
+		     string("input surface"),
 		     true,requires_argument);
 Option<string> osurf(string("-o,--out"),"",
-		     string("output surface (freesurfer ascii)"),
+		     string("output surface"),
 		    true,requires_argument);
 Option<string> labels(string("-l,--labels"),"",
 		      string("ascii list of label files"),
@@ -54,6 +52,40 @@ void read_fnames(vector<string>& fnames,const string& filename){
   }
 }
 
+void read_label(vector<int>& IDs,const string& labelfile){
+  IDs.clear();
+  ifstream fs(labelfile.c_str());
+  if (!fs) { 
+    cerr << "Could not open label file " << labelfile << endl;
+    exit(1);
+  }
+  // read first line
+  char str[200];
+  FILE *fp;
+  string firstline;
+  fp = fopen(labelfile.c_str(), "r");
+  fscanf(fp, "%[^\n]", str);
+  firstline = str;
+  string cline;
+  // skip header
+  cline = skip_alpha(fs);
+  // read number of vertices
+  string ss="";
+  fs >> ss;
+  float nrows = atof(ss.c_str());
+  for(int r=1;r<=nrows;r++){
+    for(int c=1;c<=5;c++){
+      if(!fs.eof()){
+	fs >> ss;
+	while ( !isNumber(ss) && !fs.eof() ) {
+	  fs >> ss;
+	}
+	if(c==1){IDs.push_back(atoi(ss.c_str()));}
+      }
+    }
+  }
+}
+
 
 int main(int argc,char *argv[]){
   OptionParser options(title,examples);
@@ -74,18 +106,25 @@ int main(int argc,char *argv[]){
   if(verbose.value())
     cout<<"read input surface"<<endl;
   
-  Mesh m;
+  CsvMesh m;
   m.load(isurf.value());
+  m.reset_pvalues();
+  m.reset_tvalues();
   
   if(verbose.value())
     cout<<"read input labels"<<endl;
   
   vector<string> labs;
+  vector<int>    IDs;
   read_fnames(labs,labels.value());
-  for(unsigned int i=0;i<labs.size();i++)
-    m.load_fs_label(labs[i]);
+  for(unsigned int i=0;i<labs.size();i++){
+    if(verbose.value())
+      cout<<"   label " << i+1 << endl;
+    read_label(IDs,labs[i]);
+    m.set_pvalues(IDs,1);
+  }
 
-  m.save_fs(osurf.value());
+  m.save_ascii(osurf.value());
 
   return 0;
 }

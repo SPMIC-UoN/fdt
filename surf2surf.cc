@@ -18,10 +18,10 @@ string examples="";
 
 
 Option<string> surfin(string("--surfin"),string(""),
-		      string("input surface(s) - ascii list"),
+		      string("input surface(s)"),
 		      true,requires_argument);
 Option<string> surfout(string("--surfout"),string(""),
-		       string("output surface(s) - ascii list"),
+		       string("output surface(s)"),
 		       true,requires_argument);
 Option<string> convin(string("--convin"),string(""),
 		      string("input convention"),
@@ -36,7 +36,7 @@ Option<string> volout(string("--volout"),string(""),
 		      string("output volume [default=same as input]"),
 		      false,requires_argument);
 Option<string> xfm(string("--xfm"),"",
-		   string("in-to-out transformation (ascii matrix) [default=identity]"),
+		   string("in-to-out transformation (ascii matrix or warpfield) [default=identity]"),
 		   false,requires_argument);
 
 
