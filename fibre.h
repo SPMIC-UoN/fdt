@@ -741,7 +741,7 @@ namespace FIBRE{
 
     inline bool compute_d_prior(){
       m_d_old_prior=m_d_prior;
-      if(m_d<0)
+      if(m_d<0 || m_d>0.008)
 	return true;
       else{
 	m_d_prior=0;
