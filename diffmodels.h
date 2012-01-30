@@ -28,16 +28,35 @@ using namespace MISCMATHS;
 
 
 #define two_pi 0.636619772
+#define FSMALL 0.001
+
 #define f2x(x) (std::tan((x)/two_pi))   //fraction transformation used in the old model 1
 #define x2f(x) (std::abs(two_pi*std::atan((x))))
 
 #define f2beta(f) (std::asin(std::sqrt(f))) //fraction transformation used in the new model 1
 #define beta2f(beta) (std::pow(std::sin(beta),2.0))
 #define d2lambda(d) (std::sqrt(d))     //diffusivity transformation used in the new model 1
-#define lambda2d(lambda) (lambda*lambda)
+#define lambda2d(lambda) (lambda*lambda)   //d->lambda^2>=0
+
+#define lowlim 4.0                        //lowlim>0
+//#define k12l1(k1) (std::sqrt(k1-lowlim))  //transformation used in the fanning model for the Bingham principal eigenvalue k1
+//#define l12k1(l1) (l1*l1+lowlim)          //k1->l1^2+lowlim>=lowlim>0 
+#define UL 10000                        //lowlim>0
+#define k12l1(k1) (std::asin(std::sqrt((k1-lowlim)/UL)))    
+#define l12k1(l1) (pow(sin(l1),2.0)*UL+lowlim)        
+                     
+#define upperlim 100.0                     //upperlim>1
+//#define Invupperlim 0.034482758620690    //1/(upperlim-1)
+#define w2gam(w) (std::asin(std::sqrt((w-1)/(upperlim-1))))       //transformation used in the fanning model for the Bingham eigenvalue ratio k1/k2
+#define gam2w(gam) (1.0+std::pow(std::sin(gam),2.0)*(upperlim-1))  //w->1+(upperlim-1)*sin^2(gam), so that 1<=w<=upperlim
+
 
 #define bigger(a,b) ((a)>(b)?(a):(b))
 #define smaller(a,b) ((a)>(b)?(b):(a))
+
+#define nonzerosign(a) ((a)<0?-1:1)
+#define tiny 1.0e-5                             //Used for numerical diffenetiation
+#define SQRTtiny (sqrt(tiny))
 
 
 ////////////////////////////////////////////////
@@ -96,7 +115,7 @@ public:
     return x;
   }
   ColumnVector get_v(const int& i)const{if(i==1)return m_v1;else if(i==2)return m_v2;else return m_v3;}
-  ColumnVector get_prediction()const;
+  ReturnMatrix get_prediction()const;
   SymmetricMatrix get_covar()const{return m_covar;}
   ColumnVector get_data()const{return Y;}
   Matrix get_Amat()const{return Amat;}
@@ -232,19 +251,19 @@ protected:
   ColumnVector cosalpha;
   ColumnVector beta;
   
-  int   npts;
-  int   nfib;
-
+  int npts;
+  int nfib;
 };
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Model 1 : mono-exponential (for single shell). Contrained optimization for the diffusivity, fractions and their sum<1
+// Model 1 : mono-exponential (for single shell). Constrained optimization for the diffusivity, fractions and their sum<1
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class PVM_single_c : public PVM, public NonlinCF {
 public:
    PVM_single_c(const ColumnVector& iY,
 	     const Matrix& ibvecs, const Matrix& ibvals,
-	     const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0){
+		const int& nfibres, bool m_BIC=false, bool incl_f0=false, bool m_fan_angle=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0),m_eval_BIC(m_BIC),m_return_fanning(m_fan_angle){
 
     if (m_include_f0)
       nparams = nfib*3 + 3; 
@@ -254,6 +273,8 @@ public:
     m_f.ReSize(nfib);
     m_th.ReSize(nfib);
     m_ph.ReSize(nfib);
+    if (m_return_fanning)
+      m_fanning_angles.ReSize(nfib);
   }
   ~PVM_single_c(){}
 
@@ -262,56 +283,17 @@ public:
   boost::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,boost::shared_ptr<BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
+ 
 
   // other routines
   void fit();
-  void sort();
-  void fit_pvf(ColumnVector& x)const;
+  void sort();                                         //Sort compartments according to their volume fraction
+  void fit_pvf(ColumnVector& x)const;                  //Estimate the volume fractions given all the other parameters using Linear Least Squares. Used to better initialize the Nonlinear fitter
   void fix_fsum(ColumnVector& fs) const;
-
-  void print()const{
-    cout << "PVM (Single) FIT RESULTS " << endl;
-    cout << "S0   :" << m_s0 << endl;
-    cout << "D    :" << m_d << endl;
-    for(int i=1;i<=nfib;i++){
-      cout << "F" << i << "   :" << m_f(i) << endl;
-      ColumnVector x(3);
-      x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
-      if(x(3)<0)x=-x;
-      float _th,_ph;cart2sph(x,_th,_ph);
-      cout << "TH" << i << "  :" << _th*180.0/M_PI << " deg" << endl; 
-      cout << "PH" << i << "  :" << _ph*180.0/M_PI << " deg" << endl; 
-      cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
-    }
-    if (m_include_f0)
-      cout << "F0    :" << m_f0 << endl;
-  }
-
-  //Print the estimates using a vector with the untransformed parameter values
-  void print(const ColumnVector& p)const{
-    ColumnVector f(nfib);
-
-    cout << "PARAMETER VALUES " << endl;
-    cout << "S0   :" << p(1) << endl;
-    cout << "D    :" << p(2) << endl;
-    for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
-      f(ii) = beta2f(p(i))*partial_fsum(f,ii-1);
-      cout << "F" << ii << "   :" << f(ii) << endl;
-      cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
-      cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
-    }
-    if (m_include_f0)
-      cout << "F0    :" << beta2f(p(nparams))*partial_fsum(f,nfib);
-  }
-
-  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib)
-  //Used for transforming beta to f and vice versa
-  float partial_fsum(ColumnVector& fs, int ii) const{
-    float fsum=1.0;
-    for(int j=1;j<=ii;j++)
-	fsum-=fs(j);
-    return fsum;
-  }
+  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  void print()const;                                   //Print the final estimates (after having them transformed)
+  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the untransformed parameter values 
+  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values (true,non-transformed space)  
   
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
@@ -322,7 +304,20 @@ public:
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
-  ReturnMatrix get_prediction()const;
+  float get_BIC() const{return m_BIC;}
+  ColumnVector get_fanning_angles() const{return m_fanning_angles;}
+  float get_fanning_angle(const int& i) const{return m_fanning_angles(i);}
+  vector<ColumnVector> get_invHes_e1() const{return m_invprHes_e1;}
+  ColumnVector get_invHes_e1(const int& i) const{return m_invprHes_e1[i-1];}
+  vector<Matrix> get_Hessian() const{return m_Hessian;}
+  Matrix get_Hessian(const int& i) const{return m_Hessian[i-1];}
+
+
+  //Functions used to obtain a prediction of the fanning angle (if any), associated with each fibre compartment
+  void eval_Hessian_at_peaks();        //For each fibre, compute a 3x3 Hessian of the cartesian (x,y,z) coordinates of the orientation
+                                       //evaluated at the estimated parameters
+  void Fanning_angles_from_Hessian();  //For each fibre, get the projection of the 2nd eigenvector of the Hessian to the fanning plane and get a fanning angle in [0,pi).
+ 
 
   // useful functions for calculating signal and its derivatives
   // functions
@@ -343,7 +338,14 @@ private:
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
-  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
+  const bool m_include_f0;       //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
+  const bool m_eval_BIC;         //Indicate whether the Bayesian Information Criterion for the fitted model is computed
+  const bool m_return_fanning;   //Indicate whether fanning angles predictions are made. For each fitted fibre compartment i, use the second eigenvector of the inverse Hessian 
+                                 //evaluated at this fibre orientation to predict fanning angle for i.  
+  float m_BIC;                   //Bayesian Information Criterion for the fitted model
+  ColumnVector m_fanning_angles; //Use the second eigenvector of the inverse Hessian evaluated at each fibre orientation i to predict fanning angle for fibre compartment i.  
+  vector<Matrix> m_Hessian;      //Vector that keeps the Hessian matrix for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
+  vector<ColumnVector> m_invprHes_e1;  //Vector that keeps the first eigenvector of the projected inverse Hessian for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
 };
 
 
@@ -461,11 +463,11 @@ class PVM_multi : public PVM, public NonlinCF {
 public:
   PVM_multi(const ColumnVector& iY,
 	    const Matrix& ibvecs, const Matrix& ibvals,
-	    const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres), m_include_f0(incl_f0){
+	    const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0){
 
-   if (m_include_f0)
+    if (m_include_f0)
       nparams = nfib*3 + 4; 
-    else
+    else    
       nparams = nfib*3 + 3;
 
     m_f.ReSize(nfib);
@@ -542,12 +544,216 @@ private:
   int   nparams;
   float m_s0;
   float m_d;
-  float m_f0;
   float m_d_std;
+  float m_f0;
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
   const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
+};
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Ball & Binghams Fanning Model : Pseudo-Constrained optimization for the diffusivity, fractions and their sum<1, the eigenvalues
+//of the Bingham Matrices. Use Levenberg-Marquardt to fit and get the gradient numerically 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class PVM_Ball_Binghams : public PVM, public NonlinCF {
+public:
+   PVM_Ball_Binghams(const ColumnVector& iY,
+	     const Matrix& ibvecs, const Matrix& ibvals,
+		     const int& nfibres, bool eval_BIC=false, bool incl_f0=false, bool grid_search=false):PVM(iY,ibvecs,ibvals,nfibres),m_eval_BIC(eval_BIC),m_include_f0(incl_f0), m_gridsearch(grid_search){
+
+    nparams_per_fibre=6;
+
+    if (m_include_f0)
+      nparams = nfib*nparams_per_fibre + 3; 
+    else
+      nparams = nfib*nparams_per_fibre + 2;
+    
+    Matrix temp; ColumnVector gvec(3);
+    //For each DW direction contains the dyadic product Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T 
+    for(int i=1;i<=npts;i++){
+      gvec<< ibvecs(1,i) << ibvecs(2,i) << ibvecs(3,i);
+      temp<< gvec*gvec.t();
+      temp=ibvals(1,i)*temp;
+      bvecs_dyadic.push_back(temp); 
+    }
+
+    m_f.ReSize(nfib);
+    m_th.ReSize(nfib);
+    m_ph.ReSize(nfib);
+    m_psi.ReSize(nfib);
+    m_k1.ReSize(nfib);
+    m_k2.ReSize(nfib);
+    m_BIC=1e15;
+  }
+
+  ~PVM_Ball_Binghams(){}
+
+  // routines from NonlinCF
+  NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p) const;
+  boost::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,boost::shared_ptr<BFMatrix> iptr)const;
+  double cf(const NEWMAT::ColumnVector& p)const;
+  NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const; //Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)                                                                               
+  //Instead of returning the model predicted signal for each direction returns the individual signal contributions weighted by their fractions
+  //i.e. isotropic, anisotropic1, anisotropic2, etc. Summing those gives the signal
+  NEWMAT::ReturnMatrix forwardModel_compartments(const NEWMAT::ColumnVector& p)const;
+
+  //Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+  //Weights them with the fractions, scales with S0 and sums to get the signal.
+  NEWMAT::ReturnMatrix pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig) const;
+  
+  //Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+  //Weights them with the fractions, scales with S0 and sums to get the signal.
+  //The signal of the fibre compartment with index fib is recalculated.
+  NEWMAT::ReturnMatrix pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig,const int& fib) const;
+
+
+  // other routines
+  void fit();
+  void sort();                                         //Sort compartments according to their volume fraction
+  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  void print()const;                                   //Print the final estimates (after having them untransformed)
+  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
+  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)  
+  
+  float get_s0()const{return m_s0;}
+  float get_f0()const{return m_f0;}
+  float get_d()const{return m_d;}
+  ColumnVector get_f()const{return m_f;}
+  ColumnVector get_th()const{return m_th;}
+  ColumnVector get_ph()const{return m_ph;}
+  ColumnVector get_psi()const{return m_psi;}
+  ColumnVector get_k1()const{return m_k1;}
+  ColumnVector get_k2()const{return m_k2;}
+  float get_f(const int& i)const{return m_f(i);}
+  float get_th(const int& i)const{return m_th(i);}
+  float get_ph(const int& i)const{return m_ph(i);}
+  float get_psi(const int& i)const{return m_psi(i);}
+  ReturnMatrix get_fanning_vector(const int& i) const;  //Returns a vector that indicates the fanning orientation
+  float get_k1(const int& i)const{return m_k1(i);}
+  float get_k2(const int& i)const{return m_k2(i);}
+  float get_BIC() const{return m_BIC;}
+  
+ 
+
+  // useful functions for calculating signal and its derivatives
+  float isoterm(const int& pt,const float& _d)const;
+  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+
+private:  
+  vector<Matrix> bvecs_dyadic;   //For each DW direction contains the dyadic product Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T 
+  int nparams_per_fibre;
+  int   nparams;
+  float m_s0;
+  float m_d;
+  float m_f0;
+  ColumnVector m_f;
+  ColumnVector m_th;
+  ColumnVector m_ph;
+  ColumnVector m_psi;
+  ColumnVector m_k1;
+  ColumnVector m_k2;
+
+  float m_BIC;                   //Bayesian Information Criterion for the fitted model
+
+  const bool m_eval_BIC;         //Indicate whether the Bayesian Information Criterion for the fitted model is computed
+  const bool m_include_f0;       //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
+  const bool m_gridsearch;       //Indicate whether a grid search will be used to initialize the fanning eigenvalues. This can take much longer to run. 
+};
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Ball & Watsons Fanning Model : Pseudo-Constrained optimization for the diffusivity, fractions and their sum<1, the spread of the 
+//Watson distribution. Use Levenberg-Marquardt to fit and get the gradient numerically 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class PVM_Ball_Watsons : public PVM, public NonlinCF {
+public:
+   PVM_Ball_Watsons(const ColumnVector& iY,
+	     const Matrix& ibvecs, const Matrix& ibvals,
+		    const int& nfibres, bool eval_BIC=false, bool incl_f0=false, bool grid_search=false):PVM(iY,ibvecs,ibvals,nfibres),m_eval_BIC(eval_BIC),m_include_f0(incl_f0), m_gridsearch(grid_search){
+
+    nparams_per_fibre=4;
+
+    if (m_include_f0)
+      nparams = nfib*nparams_per_fibre + 3; 
+    else
+      nparams = nfib*nparams_per_fibre + 2;
+    
+    m_f.ReSize(nfib);
+    m_th.ReSize(nfib);
+    m_ph.ReSize(nfib);
+    m_k.ReSize(nfib);
+    m_BIC=1e15;
+  }
+
+  ~PVM_Ball_Watsons(){}
+
+  // routines from NonlinCF
+  NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p) const;
+  boost::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,boost::shared_ptr<BFMatrix> iptr)const;
+  double cf(const NEWMAT::ColumnVector& p)const;
+  NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const; //Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)                                                                               
+  //Instead of returning the model predicted signal for each direction returns the individual signal contributions weighted by their fractions
+  //i.e. isotropic, anisotropic1, anisotropic2, etc. Summing those gives the signal
+  NEWMAT::ReturnMatrix forwardModel_compartments(const NEWMAT::ColumnVector& p)const;
+
+  //Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+  //Weights them with the fractions, scales with S0 and sums to get the signal.
+  NEWMAT::ReturnMatrix pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig) const;
+  
+  //Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+  //Weights them with the fractions, scales with S0 and sums to get the signal.
+  //The signal of the fibre compartment with index fib is recalculated.
+  NEWMAT::ReturnMatrix pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig,const int& fib) const;
+
+
+  // other routines
+  void fit();
+  void sort();                                         //Sort compartments according to their volume fraction
+  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  void print()const;                                   //Print the final estimates (after having them untransformed)
+  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
+  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)  
+  
+  float get_s0()const{return m_s0;}
+  float get_f0()const{return m_f0;}
+  float get_d()const{return m_d;}
+  ColumnVector get_f()const{return m_f;}
+  ColumnVector get_th()const{return m_th;}
+  ColumnVector get_ph()const{return m_ph;}
+  ColumnVector get_k()const{return m_k;}
+  float get_f(const int& i)const{return m_f(i);}
+  float get_th(const int& i)const{return m_th(i);}
+  float get_ph(const int& i)const{return m_ph(i);}
+  float get_k(const int& i)const{return m_k(i);}
+  float get_BIC() const{return m_BIC;}
+  
+  // useful functions for calculating signal and its derivatives
+  float isoterm(const int& pt,const float& _d)const;
+  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+
+private:  
+  int nparams_per_fibre;
+  int   nparams;
+  float m_s0;
+  float m_d;
+  float m_f0;
+  ColumnVector m_f;
+  ColumnVector m_th;
+  ColumnVector m_ph;
+  ColumnVector m_k;
+
+  float m_BIC;                   //Bayesian Information Criterion for the fitted model
+
+  const bool m_eval_BIC;         //Indicate whether the Bayesian Information Criterion for the fitted model is computed
+  const bool m_include_f0;       //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
+  const bool m_gridsearch;       //Indicate whether a grid search will be used to initialize the fanning eigenvalues. This can take much longer to run. 
+
 };
 
 
