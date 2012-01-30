@@ -36,8 +36,12 @@ class pvmfitOptions {
   Option<string> bvalsfile;
   Option<int>    nfibres;
   Option<int>    modelnum;
-  Option<bool>   include_f0;
+  Option<bool>   all;
   Option<bool>   cnonlinear;
+  Option<bool>   cnonlinear_Fanning;
+  Option<bool>   gridsearch;
+  Option<bool>   use_f0;
+  Option<bool>   saveBIC;
 
   bool parse_command_line(int argc, char** argv);
   
@@ -85,13 +89,25 @@ class pvmfitOptions {
 	     string("number of fibres to fit - default=1"),
 	     false, requires_argument), 
    modelnum(string("--model"), 1,
-	     string("\t1:monoexponential;2:non mono-exponential"),
+	     string("\t1:Ball-Sticks (single-shell); 2:Ball-Sticks (multi-shells); 4:Ball-Binghams"),
 	     false, requires_argument), 
-   include_f0(string("--f0"),false, 
-	      string("\tInclude noise floor in the model (default=false)"),
+   all(string("--all"),false, 
+	      string("\tFanning models: Fit all models from 1 up to N fibres and choose the best using BIC"),
 	      false,no_argument),
    cnonlinear(string("--cnonlinear"),false, 
-	      string("Apply constrained nonlinear optimization on diffusivity, volume fractions (model1)"),
+	      string("Model1: Apply constrained nonlinear optimization on the diffusivity, volume fractions and their sum"),
+	      false,no_argument),
+   cnonlinear_Fanning(string("--cnonlinear_F"),false, 
+	      string("Model1: Apply constrained nonlinear optimization on the diffusivity, volume fractions and their sum.\n\t\t\tReturn n fanning angle estimates, using the Hessian of the cost function"),
+	      false,no_argument),
+   gridsearch(string("--gridsearch"),false, 
+	      string("Use grid search (on the fanning eigenvalues). Default=off"),
+	      false,no_argument),
+   use_f0(string("--f0"),false, 
+	      string("\tInclude noise floor parameter in the model"),
+	      false,no_argument),
+   saveBIC(string("--BIC"),false, 
+	      string("\tSave BIC for certain models"),
 	      false,no_argument),
    options("pvmfit", "pvmfit -k <datafile> -m <maskfile> -r <bvecsfile> -b <bvalsfile> [-n 2]\n")
    {
@@ -107,8 +123,12 @@ class pvmfitOptions {
        options.add(bvalsfile);
        options.add(nfibres);
        options.add(modelnum);
-       options.add(include_f0);
+       options.add(all);
        options.add(cnonlinear);
+       options.add(cnonlinear_Fanning);
+       options.add(gridsearch);
+       options.add(use_f0);
+       options.add(saveBIC);
      }
      catch(X_OptionError& e) {
        options.usage();
