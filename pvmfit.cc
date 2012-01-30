@@ -69,20 +69,20 @@ int main(int argc, char** argv)
   cout<<minx<<" "<<maxx<<" "<<miny<<" "<<maxy<<" "<<minz<<" "<<maxz<<endl;
 
   if(opts.verbose.value()) cout<<"setting up vols"<<endl;
-  volume<float> S0(maxx-minx,maxy-miny,maxz-minz);
+  volume<float> S0(maxx-minx,maxy-miny,maxz-minz), BIC, f0;
   volume<float> dvol(maxx-minx,maxy-miny,maxz-minz);
   volume<float> tmpvol(maxx-minx,maxy-miny,maxz-minz);
   volume4D<float> tmpvol4D(maxx-minx,maxy-miny,maxz-minz,3);
-  
-  vector< volume<float> > fvol,thvol,phvol;
+
+  vector< volume<float> > fvol,thvol,phvol,k1vol,k2vol, psivol;
   vector< volume4D<float> > dyads;
+  vector< volume4D<float> > fanning_vecs; 
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],S0);
   copybasicproperties(data[0],dvol);
   copybasicproperties(data[0],tmpvol);
   copybasicproperties(data[0],tmpvol4D);
-
 
   tmpvol = 0;
   tmpvol4D = 0;
@@ -91,25 +91,33 @@ int main(int argc, char** argv)
     thvol.push_back(tmpvol);
     phvol.push_back(tmpvol);
     dyads.push_back(tmpvol4D);
+    if (opts.cnonlinear_Fanning.value() || opts.modelnum.value()==4)
+      fanning_vecs.push_back(tmpvol4D);
+    if (opts.modelnum.value()==3)
+      k1vol.push_back(tmpvol);
+    if (opts.modelnum.value()==4){
+      k1vol.push_back(tmpvol);
+      k2vol.push_back(tmpvol);
+      psivol.push_back(tmpvol);
+    }
   }
 
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
   S0=0;dvol=0;
-  volume<float> dvol_std, f0vol;
+  volume<float> dvol_std;
   if(opts.modelnum.value()==2){
     dvol_std.reinitialize(maxx-minx,maxy-miny,maxz-minz);
     dvol_std=0;
   }
-
-  if(opts.include_f0.value()){
-    f0vol.reinitialize(maxx-minx,maxy-miny,maxz-minz);
-    f0vol=0;
-  }
+  BIC.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+  BIC=0;
+  f0.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+  f0=0;
+  
   
 
   if(opts.verbose.value()) cout<<"ok"<<endl;
 
-  //int counter=0;
   ColumnVector S(bvals.Ncols());
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   for(int k = minz; k < maxz; k++){
@@ -117,32 +125,52 @@ int main(int argc, char** argv)
     for(int j=miny; j < maxy; j++){
       for(int i =minx; i< maxx; i++){
 	if(mask(i,j,k)==0)continue;
+
 	for(int t=0;t < data.tsize();t++)
 	  S(t+1)=data(i,j,k,t);
-
+	///////////////////////////////////////////////////
+	//Fit Ball & sticks with "nfibres" compartments
+	///////////////////////////////////////////////////
 	if(opts.modelnum.value()==1){
-	  if (opts.cnonlinear.value()){
-	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
+	  if (opts.cnonlinear.value()){  //Use pseudo-constrained optimization
+	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value());
 	    pvm.fit();
 	  
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
-	    if (opts.include_f0.value())
-	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
+	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
+	    f0(i-minx,j-miny,k-minz) = pvm.get_f0();
 	    for(int f=0;f<opts.nfibres.value();f++){
 	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
 	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
 	    }
 	  }
-	  else{
-	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
+	  else if (opts.cnonlinear_Fanning.value()){  //Use pseudo-constrained optimization and return fanning angle estimates using the Hessian of the cost function
+	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),true);
 	    pvm.fit();
 	  
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
-	    if (opts.include_f0.value())
-	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
+	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
+	    f0(i-minx,j-miny,k-minz) = pvm.get_f0();
+	    for(int f=0;f<opts.nfibres.value();f++){
+	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
+	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
+	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	      ColumnVector tmp_vec= pvm.get_invHes_e1(f+1);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,0)=tmp_vec(1);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,1)=tmp_vec(2);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,2)=tmp_vec(3);
+	    }
+	  }
+	  else{  //Use original optimization
+	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value(), opts.use_f0.value());
+	    pvm.fit();
+	  
+	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
+	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    f0(i-minx,j-miny,k-minz) = pvm.get_f0();
 	    for(int f=0;f<opts.nfibres.value();f++){
 	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
@@ -150,32 +178,127 @@ int main(int argc, char** argv)
 	    }
 	  }
 	}
-	else{
-	  PVM_multi pvm(S,bvecs,bvals,opts.nfibres.value(),opts.include_f0.value());
+	/////////////////////////////////////////////////////////
+	//Fit Ball & sticks (model 2) with "nfibres" compartments
+	/////////////////////////////////////////////////////////
+	else if (opts.modelnum.value()==2){ 
+	  PVM_multi pvm(S,bvecs,bvals,opts.nfibres.value());
 	  pvm.fit();
-	  
+
 	  S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	  dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	  dvol_std(i-minx,j-miny,k-minz) = pvm.get_d_std();
-	  if (opts.include_f0.value())
-	      f0vol(i-minx,j-miny,k-minz)   = pvm.get_f0();
 	  for(int f=0;f<opts.nfibres.value();f++){
 	    fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
 	    thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
 	    phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
 	  }
 	}
-	
-	for(int f=0;f<opts.nfibres.value();f++){
-	  dyads[f](i-minx,j-miny,k-minz,0) = sin(thvol[f](i-minx,j-miny,k-minz)) * cos(phvol[f](i-minx,j-miny,k-minz));
-	  dyads[f](i-minx,j-miny,k-minz,1) = sin(thvol[f](i-minx,j-miny,k-minz)) * sin(phvol[f](i-minx,j-miny,k-minz));
-	  dyads[f](i-minx,j-miny,k-minz,2) = cos(thvol[f](i-minx,j-miny,k-minz));
+
+	///////////////////////////////////////////////////
+	//Fit Ball & Watsons with "nfibres" compartments
+	///////////////////////////////////////////////////
+	else if (opts.modelnum.value()==3){ 
+	  cout<<i<<" "<<j<<" "<<k<<endl;
+	  if (!opts.all.value()){
+	    PVM_Ball_Watsons pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),opts.gridsearch.value());
+	    pvm.fit();
+	    
+	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
+	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
+	    for (int f=0;f<opts.nfibres.value();f++){
+	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
+	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
+	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	      k1vol[f](i-minx,j-miny,k-minz) = pvm.get_k(f+1);
+	    } 
+	  }
+	  else{  //Fit all Ball & Watsons with up to "nfibres" compartments and choose the best using BIC
+	    float bestBIC=1.0e20;
+	    for (int n=1; n<=opts.nfibres.value(); n++){
+	      PVM_Ball_Watsons pvmn(S,bvecs,bvals,n,true,opts.use_f0.value(),opts.gridsearch.value());
+	      pvmn.fit();	    
+	      if (pvmn.get_BIC()<bestBIC){ //Keep the model with the smallest BIC
+		bestBIC=pvmn.get_BIC();
+		S0(i-minx,j-miny,k-minz)   = pvmn.get_s0();
+		dvol(i-minx,j-miny,k-minz) = pvmn.get_d();
+		BIC(i-minx,j-miny,k-minz) = pvmn.get_BIC();
+		for (int f=0;f<n;f++){   //compartments are not sorted here! 
+		  fvol[f](i-minx,j-miny,k-minz)  = pvmn.get_f(f+1);
+		  thvol[f](i-minx,j-miny,k-minz) = pvmn.get_th(f+1);
+		  phvol[f](i-minx,j-miny,k-minz) = pvmn.get_ph(f+1);
+		  k1vol[f](i-minx,j-miny,k-minz) = pvmn.get_k(f+1);
+		}
+	      }
+	    }
+	  }
 	}
+
+	///////////////////////////////////////////////////
+	//Fit Ball & Binghams with "nfibres" compartments
+	///////////////////////////////////////////////////
+	else if (opts.modelnum.value()==4){ 
+	  cout<<i<<" "<<j<<" "<<k<<endl;
+	  
+	  if (!opts.all.value()){
+	    PVM_Ball_Binghams pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),opts.gridsearch.value());
+	    pvm.fit();
+	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
+	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
+	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
+	    f0(i-minx,j-miny,k-minz) = pvm.get_f0();
+	    for (int f=0;f<opts.nfibres.value();f++){
+	      fvol[f](i-minx,j-miny,k-minz)  = pvm.get_f(f+1);
+	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
+	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
+	      k1vol[f](i-minx,j-miny,k-minz) = pvm.get_k1(f+1);
+	      k2vol[f](i-minx,j-miny,k-minz) = pvm.get_k2(f+1);
+	      psivol[f](i-minx,j-miny,k-minz) = pvm.get_psi(f+1);
+	      ColumnVector tmp_vec= pvm.get_fanning_vector(f+1);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,0)=tmp_vec(1);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,1)=tmp_vec(2);
+	      fanning_vecs[f](i-minx,j-miny,k-minz,2)=tmp_vec(3);
+	    } 
+	  }
+	  else{	//Fit all Ball & Binghams with up to "nfibres" compartments and choose the best using BIC
+	    float bestBIC=1.0e20;
+	    for (int n=1; n<=opts.nfibres.value(); n++){
+	      PVM_Ball_Binghams pvmn(S,bvecs,bvals,n,true,opts.use_f0.value(),opts.gridsearch.value());
+	      pvmn.fit();
+	      if (pvmn.get_BIC()<bestBIC){ //Keep the model with the smallest BIC
+		bestBIC=pvmn.get_BIC();
+		S0(i-minx,j-miny,k-minz)   = pvmn.get_s0();
+		dvol(i-minx,j-miny,k-minz) = pvmn.get_d();
+		BIC(i-minx,j-miny,k-minz) = pvmn.get_BIC();
+		f0(i-minx,j-miny,k-minz) = pvmn.get_f0();
+		for (int f=0;f<n;f++){   //compartments are not sorted here! 
+		  fvol[f](i-minx,j-miny,k-minz)  = pvmn.get_f(f+1);
+		  thvol[f](i-minx,j-miny,k-minz) = pvmn.get_th(f+1);
+		  phvol[f](i-minx,j-miny,k-minz) = pvmn.get_ph(f+1);
+		  k1vol[f](i-minx,j-miny,k-minz) = pvmn.get_k1(f+1);
+		  k2vol[f](i-minx,j-miny,k-minz) = pvmn.get_k2(f+1);
+		  psivol[f](i-minx,j-miny,k-minz) = pvmn.get_psi(f+1);
+		  ColumnVector tmp_vec= pvmn.get_fanning_vector(f+1);
+		  fanning_vecs[f](i-minx,j-miny,k-minz,0)=tmp_vec(1);
+		  fanning_vecs[f](i-minx,j-miny,k-minz,1)=tmp_vec(2);
+		  fanning_vecs[f](i-minx,j-miny,k-minz,2)=tmp_vec(3);
+		}
+	      }
+	    }
+	  }
+	}
+
+	for(int f=0;f<opts.nfibres.value();f++)
+	  if (fvol[f](i-minx,j-miny,k-minz)!=0){
+	    dyads[f](i-minx,j-miny,k-minz,0) = sin(thvol[f](i-minx,j-miny,k-minz))*cos(phvol[f](i-minx,j-miny,k-minz));
+	    dyads[f](i-minx,j-miny,k-minz,1) = sin(thvol[f](i-minx,j-miny,k-minz))*sin(phvol[f](i-minx,j-miny,k-minz));
+	    dyads[f](i-minx,j-miny,k-minz,2) = cos(thvol[f](i-minx,j-miny,k-minz));
+	  }
       }
     }
   }
-  
-  
+
   if(opts.verbose.value())
     cout << "saving results" << endl;
 
@@ -183,15 +306,21 @@ int main(int argc, char** argv)
   save_volume(S0,opts.ofile.value()+"_S0");
 
   dvol.setDisplayMaximumMinimum(dvol.max(),0);
-  save_volume(dvol,opts.ofile.value()+"_D");
+  save_volume(dvol,opts.ofile.value()+"_d");
 
   if(opts.modelnum.value()==2){
     dvol_std.setDisplayMaximumMinimum(dvol_std.max(),0);
-    save_volume(dvol_std,opts.ofile.value()+"_D_STD");
+    save_volume(dvol_std,opts.ofile.value()+"_d_std");
   }
-  if (opts.include_f0.value()){
-    f0vol.setDisplayMaximumMinimum(1,0);
-    save_volume(f0vol,opts.ofile.value()+"_f0");
+
+  if(opts.saveBIC.value()){
+    BIC.setDisplayMaximumMinimum(BIC.max(),BIC.min());
+    save_volume(BIC,opts.ofile.value()+"_BIC");
+  }
+
+  if(opts.use_f0.value()){
+    f0.setDisplayMaximumMinimum(1,0);
+    save_volume(f0,opts.ofile.value()+"_f0");
   }
 
   for(int f=1;f<=opts.nfibres.value();f++){
@@ -201,10 +330,39 @@ int main(int argc, char** argv)
     save_volume(thvol[f-1],opts.ofile.value()+"_th"+num2str(f));
     phvol[f-1].setDisplayMaximumMinimum(phvol[f-1].max(),phvol[f-1].min());
     save_volume(phvol[f-1],opts.ofile.value()+"_ph"+num2str(f));
-    dyads[f-1].setDisplayMaximumMinimum(-1,1);
+    dyads[f-1].setDisplayMaximumMinimum(1,-1);
     save_volume4D(dyads[f-1],opts.ofile.value()+"_dyads"+num2str(f));
-
+    if (opts.cnonlinear_Fanning.value()){
+      fanning_vecs[f-1].setDisplayMaximumMinimum(1,-1);
+      save_volume4D(fanning_vecs[f-1],opts.ofile.value()+"_fans"+num2str(f));
+    }
+    if (opts.modelnum.value()==3){
+      k1vol[f-1].setDisplayMaximumMinimum(k1vol[f-1].max(),k1vol[f-1].min());
+      save_volume(k1vol[f-1],opts.ofile.value()+"_k1_"+num2str(f));
+    }
+    if (opts.modelnum.value()==4){
+      k1vol[f-1].setDisplayMaximumMinimum(k1vol[f-1].max(),k1vol[f-1].min());
+      save_volume(k1vol[f-1],opts.ofile.value()+"_k1_"+num2str(f));
+      k2vol[f-1].setDisplayMaximumMinimum(k2vol[f-1].max(),k2vol[f-1].min());
+      save_volume(k2vol[f-1],opts.ofile.value()+"_k2_"+num2str(f));
+      psivol[f-1].setDisplayMaximumMinimum(psivol[f-1].max(),psivol[f-1].min());
+      save_volume(psivol[f-1],opts.ofile.value()+"_psi_"+num2str(f));
+      fanning_vecs[f-1].setDisplayMaximumMinimum(1,-1);
+      save_volume4D(fanning_vecs[f-1],opts.ofile.value()+"_fans"+num2str(f));
+    }
   }
-
-  return 0;
+ return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
