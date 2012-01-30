@@ -31,7 +31,7 @@ RARNG=rearrange
 XPRED=xfibres_pred
 
 
-DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
+DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
 FTBOBJS=find_the_biggest.o
@@ -39,7 +39,7 @@ PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
-XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o
+XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
 XFIBOBJS2=xfibres_2.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
@@ -49,7 +49,7 @@ TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
-PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
+PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o  Bingham_Watson_approx.o
 DTIGENOBJS=dtigen.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
