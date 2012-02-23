@@ -927,7 +927,7 @@ proc fdt:apply { w dialog } {
 		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $diff2stand -concat $str2stand $diff2str"
 		    fdt_monitor $w "${FSLDIR}/bin/convert_xfm -omat $stand2diff -inverse $diff2stand"
 		    if { $registration(nonlin_yn) } {
-			fdt_monitor $w "${FSLDIR}/bin/fnirt --in=$registration(nonlin_image) --aff=$str2strand --cout=$str2stand_warp --config=T1_2_MNI152_2mm"
+			fdt_monitor $w "${FSLDIR}/bin/fnirt --in=$registration(nonlin_image) --aff=$str2stand --cout=$str2stand_warp --config=T1_2_MNI152_2mm"
 			fdt_monitor $w "${FSLDIR}/bin/invwarp -w $str2stand_warp -o standard2str_warp -r ${diff}_mask"
 			fdt_monitor $w "${FSLDIR}/bin/convertwarp -o $diff2stand_warp -r ${FSLDIR}/data/standard/MNI152_T1_2mm -m $diff2str -w $str2stand_warp"
 			fdt_monitor $w "${FSLDIR}/bin/convertwarp -o $stand2diff_warp -r ${diff}_mask -w $stand2str_warp --postmat=$str2diff"
