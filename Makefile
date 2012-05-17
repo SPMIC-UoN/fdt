@@ -29,6 +29,7 @@ PVMFIT=pvmfit
 DTIGEN=dtigen
 RARNG=rearrange
 XPRED=xfibres_pred
+RUBIX=rubix
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
@@ -49,10 +50,11 @@ TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
-PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o  Bingham_Watson_approx.o
+PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o Bingham_Watson_approx.o
 DTIGENOBJS=dtigen.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
+RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -60,7 +62,7 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
+XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit rubix
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
@@ -138,3 +140,6 @@ ${RARNG}: 	${RARNGOBJS}
 
 ${XPRED}: 	${XPREDOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XPREDOBJS} ${DLIBS}
+
+${RUBIX}: 	${RUBIXOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
