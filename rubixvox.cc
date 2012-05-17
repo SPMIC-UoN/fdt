@@ -478,7 +478,7 @@ bool HRvoxel::propose_d_std(){
 
 void HRvoxel::reject_d_std(){
   m_d_std=m_d_std_old; 
-  m_d_prior=m_d_old_prior;
+  m_d_std_prior=m_d_std_old_prior;
   for(int f=0; f<m_numfibres; f++)
     m_fibres[f].restoreSignals();
   m_iso_SignalHR=m_iso_SignalHR_old;  
