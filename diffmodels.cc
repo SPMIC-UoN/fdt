@@ -548,7 +548,7 @@ void PVM_single_c::fix_fsum(ColumnVector& fs)const{
     sumf+=fs(i);
     if(sumf>=1){
       for(int j=i;j<=nfib;j++) 
-	fs(j)=FSMALL*0.1;  //make the fraction almost zero
+	fs(j)=FSMALL;  //make the fraction almost zero
       break;
     }
   }
@@ -1120,7 +1120,7 @@ void PVM_single::fix_fsum(){
     sumf=m_f0;
   for(int i=1;i<=nfib;i++){
     sumf+=m_f(i);
-    if(sumf>=1){for(int j=i;j<=nfib;j++)m_f(j)=FSMALL*0.1; break;}
+    if(sumf>=1){for(int j=i;j<=nfib;j++)m_f(j)=FSMALL; break;}
   }
 }
 
@@ -1430,8 +1430,9 @@ void PVM_multi::fix_fsum(){
   if (m_include_f0) 
     sumf=m_f0;
   for(int i=1;i<=nfib;i++){
+    if (m_f(i)==0) m_f(i)=FSMALL;
     sumf+=m_f(i);
-    if(sumf>=1){for(int j=i;j<=nfib;j++)m_f(j)=0;break;}
+    if(sumf>=1){for(int j=i;j<=nfib;j++)m_f(j)=FSMALL;break;}
   }
 }
 
