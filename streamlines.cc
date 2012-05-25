@@ -599,10 +599,10 @@ namespace TRACT{
 
     // seeds are CSV-format
     if(!opts.simple.value()){
+      m_s2t_count=m_stline.get_seeds();
+      m_s2t_count.reset_values();
       for(int m=0;m<m_targetmasks.nRois();m++){
-	CSV csv(m_stline.get_seeds());
-	csv.reset_values();
-	m_s2t_count.push_back(csv);
+	m_s2t_count.add_map();
       }
     }
     // seeds are text
@@ -939,10 +939,10 @@ namespace TRACT{
 
 	if(!opts.simple.value()){
 	  if(!opts.pathdist.value()){
-	    m_s2t_count[crossed[t]].add_value(m_curloc,1);
+	    m_s2t_count.add_map_value(m_curloc,1,crossed[t]);
 	  }
 	  else
-	    m_s2t_count[crossed[t]].add_value(m_curloc,pathlength);
+	    m_s2t_count.add_map_value(m_curloc,pathlength,crossed[t]);
 	}
 	if(opts.simple.value() || opts.s2tastext.value()){
 	  if(!opts.pathdist.value())
@@ -1163,12 +1163,12 @@ namespace TRACT{
       //only take things after the last pos
       tmpname=tmpname.substr(lastpos+1,tmpname.length()-lastpos-1);
 
-      if(m_s2t_count[m].nRois()>1){
-	for(int i=0;i<m_s2t_count[m].nRois();i++)
-	  m_s2t_count[m].save_roi(i,logger.appendDir("seeds_"+num2str(i)+"_to_"+tmpname));
+      if(m_s2t_count.nRois()>1){
+	for(int i=0;i<m_s2t_count.nRois();i++)
+	  m_s2t_count.save_map(i,m,logger.appendDir("seeds_"+num2str(i)+"_to_"+tmpname));
       }
       else{// keep this nomenclature for backward compatibility
-	m_s2t_count[m].save_roi(0,logger.appendDir("seeds_to_"+tmpname));
+	m_s2t_count.save_map(0,m,logger.appendDir("seeds_to_"+tmpname));
       }	
     }
 

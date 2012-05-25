@@ -113,8 +113,9 @@ private:
   vector<int>           roitype;
   vector<int>           roisubind;          // roi is which subindex?
 
-  volume<short int>     refvol;     // reference volume (in case no volume-like ROI is used)
+  volume<short int>     refvol;             // reference volume (in case no volume-like ROI is used)
 
+  vector<ColumnVector>  maps;               // extra maps associated with CSV locations
 
 public:
   CSV(){
@@ -163,7 +164,7 @@ public:
   void clear_all(){
     roimesh.clear();roinames.clear();
     loctype.clear();locroi.clear();locsubroi.clear();locsubloc.clear();
-    mesh2loc.clear();
+    mesh2loc.clear();maps.clear();
   }
 
   // get/set
@@ -173,6 +174,7 @@ public:
     _xdim=refvol.xdim();
     _ydim=refvol.ydim();
     _zdim=refvol.zdim();
+    _dims<<_xdim<<_ydim<<_zdim;
     roivol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize());
     copybasicproperties(refvol,roivol);
     roivol=0;
@@ -308,7 +310,7 @@ public:
   void cleanup();
 
   void set_convention(const string& conv);
-  void switch_convention(const string& new_convention,const Matrix& vox2vox);
+  void switch_convention(const string& new_convention,const Matrix& vox2vox,const ColumnVector& old_dims);
 
   void init_surfvol();
   void update_surfvol(const vector<ColumnVector>& v,const int& id,const int& meshid);
@@ -320,11 +322,31 @@ public:
   void  add_value(const int& loc,const float& val);
   void  set_value(const int& loc,const float& val);
   void  set_vol_values(const float& val);
-  float get_value(const int& loc);
+  float get_value(const int& loc)const;
   void  reset_values();
   void  reset_values(const vector<int>& locs);
+  ReturnMatrix  get_all_values()const;
+  void  set_all_values(const ColumnVector& vals);
   void  save_values(const int& roi);
   void  loc_info(const int& loc)const;
+
+  void  add_map_value(const int& loc,const float& val,const int& map);
+  void  set_map_value(const int& loc,const float& val,const int& map);
+  void  reset_maps(){maps.clear();}
+  void  add_map(){
+    ColumnVector map(nlocs);
+    maps.push_back(map);
+  }
+  void  add_map(const ColumnVector& map){
+    if(map.Nrows()!=nlocs){
+      cerr<<"CSV::add_map: map does not contain the correct number of entries"<<endl;
+      exit(1);
+    }
+    else{
+      maps.push_back(map);
+    }
+  }
+  void save_map(const int& roiind,const int& mapind,const string& fname);
 
   bool isInRoi(int x,int y,int z)const{return (roivol(x,y,z)!=0);}
   bool isInRoi(int x,int y,int z,int roi)const{
@@ -391,6 +413,7 @@ public:
     roitype=rhs.roitype;
     roisubind=rhs.roisubind;
     refvol=rhs.refvol;
+    maps=rhs.maps;
     return *this;
   }
 

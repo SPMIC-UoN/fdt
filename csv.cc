@@ -556,7 +556,7 @@ void CSV::set_value(const int& loc,const float& val){
     exit(1);
   }  
 }
-float CSV::get_value(const int& loc){
+float CSV::get_value(const int& loc)const{
   if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
     int x=(int)round((float)loccoords[loc](1));
@@ -575,6 +575,39 @@ float CSV::get_value(const int& loc){
     exit(1);
   }  
 }
+ReturnMatrix  CSV::get_all_values()const{
+  ColumnVector ret(nlocs);
+  for (int i=1;i<=nlocs;i++){
+    ret(i)=get_value(i-1);
+  }
+  ret.Release();
+  return ret;
+}
+void CSV::set_all_values(const ColumnVector& vals){
+  if(vals.Nrows()!=nlocs){
+    cerr<<"CSV::set_all_values:number of locs does not match target"<<endl;
+    exit(1);
+  }
+  for (int loc=0;loc<nlocs;loc++){
+    set_value(loc,vals(loc+1));
+  }
+}
+
+void CSV::add_map_value(const int& loc,const float& val,const int& map){
+  if(map>=(int)maps.size()){
+    cerr<<"CSV::add_map_value:trying to access uninitialised map"<<endl;
+    exit(1);
+  }
+  maps[map](loc+1) += val;  
+}
+void CSV::set_map_value(const int& loc,const float& val,const int& map){
+  if(map>=(int)maps.size()){
+    cerr<<"CSV::add_map_value:trying to access uninitialised map"<<endl;
+    exit(1);
+  }
+  maps[map](loc+1) = val;  
+}
+
 void CSV::loc_info(const int& loc)const{
   if(loctype[loc]==VOLUME){
     cout<<"Volume location"<<endl;
@@ -733,9 +766,12 @@ void CSV::load_rois(const string& filename,bool do_change_refvol){
 	load_volume(fnames[i]);
 	roinames.push_back(fnames[i]);	
       }
-      else{
+      else if(meshExists(fnames[i])){
 	load_surface(fnames[i]);
 	roinames.push_back(fnames[i]);
+      }
+      else{
+	cerr<<"CSV::load_rois:Unknown file type: "<<fnames[i]<<endl;exit(1);
       }
     }
   }
@@ -764,6 +800,29 @@ void CSV::save_roi(const int& roiind,const string& fname){
     roimesh[roisubind[roiind]].save_ascii(fname);
   }
 }
+
+void CSV::save_map(const int& roiind,const int& mapind,const string& fname){
+  ColumnVector tmpvals(nlocs);
+  tmpvals=get_all_values();
+  set_all_values(maps[mapind]);
+  
+  if(roitype[roiind]==VOLUME){//save volume
+    volume<float> tmpvol;
+    tmpvol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize());
+    copybasicproperties(refvol,tmpvol);
+    tmpvol=0;
+    fill_volume(tmpvol,roisubind[roiind]+1);
+    tmpvol.setDisplayMaximumMinimum(tmpvol.max(),tmpvol.min());
+    save_volume(tmpvol,fname);
+  }
+  else{
+    roimesh[roisubind[roiind]].save_ascii(fname);
+  }
+  
+  set_all_values(tmpvals);
+}
+
+
 void CSV::save_rois(const string& fname){
   if(nrois==1)
     save_roi(0,fname);
@@ -826,22 +885,24 @@ void CSV::set_convention(const string& conv){
   }
 }
 
-void CSV::switch_convention(const string& new_convention,const Matrix& vox2vox){
+void CSV::switch_convention(const string& new_convention,const Matrix& vox2vox,const ColumnVector& old_dims){
   Matrix old_mm2vox,old_vox2mm;
   old_vox2mm=vox2mm;
   old_mm2vox=mm2vox;
   set_convention(new_convention);
 
   // now transform surfaces coordinates  
-  ColumnVector x(4);
+  ColumnVector x4(4),x3(3);
   for(int i=0;i<nsurfs;i++){
     for(vector<CsvMpoint>::iterator it = roimesh[i]._points.begin();it!=roimesh[i]._points.end();it++){
-      x <<(*it).get_coord().X
+      x4 <<(*it).get_coord().X
         <<(*it).get_coord().Y
 	<<(*it).get_coord().Z
 	<< 1.0;
-      x=vox2mm*vox2vox*old_mm2vox*x;
-      Pt coord(x(1),x(2),x(3));
+      x3=vox_to_vox(old_mm2vox*x4,old_dims,_dims,vox2vox);
+      x4<<x3(1)<<x3(2)<<x3(3)<<1.0;
+      x4=vox2mm*x4;
+      Pt coord(x4(1),x4(2),x4(3));
       (*it).set_coord(coord);
     }
   }

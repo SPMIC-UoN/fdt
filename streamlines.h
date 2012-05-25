@@ -250,7 +250,7 @@ namespace TRACT{
     // classification targets
     CSV                          m_targetmasks;
     vector<bool>                 m_targflags;
-    vector<CSV>                  m_s2t_count;
+    CSV                          m_s2t_count;
     Matrix                       m_s2tastext;
     int                          m_s2trow;
 
