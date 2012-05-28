@@ -36,7 +36,7 @@ Option<string> volout(string("--volout"),string(""),
 		      string("output volume [default=same as input]"),
 		      false,requires_argument);
 Option<string> xfm(string("--xfm"),"",
-		   string("in-to-out transformation (ascii matrix or warpfield) [default=identity]"),
+		   string("in-to-out transformation (ascii matrix) [default=identity]"),
 		   false,requires_argument);
 
 
@@ -76,6 +76,8 @@ int main(int argc,char *argv[]){
   csv.load_rois(surfin.value());
 
   Matrix vox2vox;
+  ColumnVector old_dims(3);
+  old_dims << refvolin.xdim() << refvolin.ydim() << refvolin.zdim();
   if(xfm.set())
     vox2vox=read_ascii_matrix(xfm.value());
   else
@@ -83,25 +85,29 @@ int main(int argc,char *argv[]){
 
   csv.set_refvol(refvolout);
   if(convout.set())
-    csv.switch_convention(convout.value(),vox2vox);
+    csv.switch_convention(convout.value(),vox2vox,old_dims);
   else
-    csv.switch_convention(convin.value(),vox2vox);
+    csv.switch_convention(convin.value(),vox2vox,old_dims);
 
   vector<string> filenames;
-  ifstream fs(surfout.value().c_str());
-  string tmp;
-  if(fs){
-    fs>>tmp;
-    do{
-      filenames.push_back(tmp);
+  if(!meshExists(surfin.value())){
+    ifstream fs(surfout.value().c_str());
+    string tmp;
+    if(fs){
       fs>>tmp;
-    }while(!fs.eof());
+      do{
+	filenames.push_back(tmp);
+	fs>>tmp;
+      }while(!fs.eof());
+    }
+    else{
+      cerr<<surfout.value()<<" does not exist"<<endl;
+      exit(1);
+    }
   }
   else{
-    cerr<<surfout.value()<<" does not exist"<<endl;
-    exit(1);
+    filenames.push_back(surfout.value());
   }
-  
   for(int i=0;i<csv.nSurfs();i++){
     csv.save_roi(i,filenames[i]);
   }
