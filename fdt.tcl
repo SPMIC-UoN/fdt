@@ -118,7 +118,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     proc registration_packframe { w } {
        global registration
-       pack forget $w.registration.struct.yn $w.registration.struct.tf $w.registration.struct.yn $w.registration.struct.lb $w.registration.nonlin.yn $w.registration.nonlin.file
+       pack forget $w.registration.struct.yn $w.registration.struct.tf $w.registration.struct.yn $w.registration.struct.lb $w.registration.nonlin.yn $w.registration.nonlin.lb $w.registration.nonlin.file
        pack forget $w.registration.standard.yn $w.registration.standard.tf $w.registration.standard.yn $w.registration.standard.lb
        if { $registration(struct_yn) } { pack $w.registration.struct.yn $w.registration.struct.tf -side left -anchor w } else { pack $w.registration.struct.yn  $w.registration.struct.lb -side left -anchor w}
        if { $registration(struct_yn) } { pack $w.registration.nonlin.yn -side top -anchor w }
