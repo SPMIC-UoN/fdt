@@ -454,7 +454,8 @@ void PVM_single_c::fit(){
   ColumnVector start(nparams);
   //Initialize the non-linear fitter. Use the DTI estimates for most parameters, apart from the volume fractions
   start(1) = dti.get_s0();
-  start(2) = d2lambda(dti.get_md()>0?dti.get_md()*2:0.001); // empirically found that d~2*MD
+  //start(2) = d2lambda(dti.get_md()>0?dti.get_md()*2:0.001); // empirically found that d~2*MD
+  start(2) = d2lambda(dti.get_l1()>0?dti.get_l1():0.002); // empirically found that d~L1
   start(4) = _th;
   start(5) = _ph;
   for(int ii=2,i=6;ii<=nfib;ii++,i+=3){
@@ -1044,6 +1045,7 @@ void PVM_single::fit(){
   // initialise with a tensor
   DTI dti(Y,bvecs,bvals);
   dti.linfit();
+  //dti.print();
 
   // set starting parameters for nonlinear fitting
   float _th,_ph;
@@ -1051,7 +1053,8 @@ void PVM_single::fit(){
 
   ColumnVector start(nparams);
   start(1) = dti.get_s0();
-  start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
+  //start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
+  start(2) = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
   start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
   start(4) = _th;
   start(5) = _ph;
@@ -1364,8 +1367,10 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
 void PVM_multi::fit(){
 
   // initialise with simple pvm
-  PVM_single pvm1(Y,bvecs,bvals,nfib,m_include_f0);
+  PVM_single_c pvm1(Y,bvecs,bvals,nfib,m_include_f0);
   pvm1.fit();
+  //cout<<"Init with single"<<endl;
+  //pvm1.print();
 
   float _a,_b;
   _a = 1.0; // start with d=d_std
