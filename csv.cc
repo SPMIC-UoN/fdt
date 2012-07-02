@@ -251,13 +251,31 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
 	  ret=true;
 	  crossedrois.push_back( surfind[indmesh] );
 
-	  ind = t.get_vertice(ind).get_no();
+	  ind = t.get_vertice(0).get_no();	  
 	  ind = mesh2loc[indmesh][ind];
-	  if(ind<0){
-	    cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
-	    exit(1);
-	  }
-	  crossedlocs.push_back(ind);
+	  if(ind>=0)
+	    crossedlocs.push_back(ind);
+// 	  if(ind<0){
+// 	    cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
+// 	    exit(1);
+// 	  }
+	  ind = t.get_vertice(1).get_no();	  
+	  ind = mesh2loc[indmesh][ind];
+	  if(ind>=0)
+	    crossedlocs.push_back(ind);
+// 	  if(ind<0){
+// 	    cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
+// 	    exit(1);
+//	  }
+	  ind = t.get_vertice(2).get_no();	  
+	  ind = mesh2loc[indmesh][ind];
+	  if(ind>=0)
+	    crossedlocs.push_back(ind);
+// 	  if(ind<0){
+// 	    cerr<<"CSV::has_crossed:Location has not been indexed!!"<<endl;
+// 	    exit(1);
+//	  }
+
 	}	
       }
     }
@@ -844,10 +862,14 @@ void CSV::set_convention(const string& conv){
   mm2vox.ReSize(4,4);
   vox2mm.ReSize(4,4);
   if(conv=="freesurfer"){
-    mm2vox << -1 << 0 << 0  << (refvol.xsize())/2
-	   <<  0 << 0 << -1 << (refvol.zsize())/2
-	   <<  0 << 1 << 0  << (refvol.ysize())/2
-	   <<  0 << 0 << 0  << 1;
+     mm2vox << -1/refvol.xdim() << 0               << 0                << (refvol.xsize())/2
+ 	   <<  0                << 0               << -1/refvol.ydim() << (refvol.zsize())/2
+ 	   <<  0                << 1/refvol.zdim() << 0                << (refvol.ysize())/2
+ 	   <<  0                << 0               << 0                << 1;
+//     mm2vox << -1 << 0 << 0  << 128
+// 	   <<  0 << 0 << -1 << 128
+// 	   <<  0 << 1 << 0  << 128
+// 	   <<  0 << 0 << 0  << 1;
     vox2mm=mm2vox.i();
     
   }
@@ -900,6 +922,30 @@ void CSV::switch_convention(const string& new_convention,const Matrix& vox2vox,c
 	<<(*it).get_coord().Z
 	<< 1.0;
       x3=vox_to_vox(old_mm2vox*x4,old_dims,_dims,vox2vox);
+      x4<<x3(1)<<x3(2)<<x3(3)<<1.0;
+      x4=vox2mm*x4;
+      Pt coord(x4(1),x4(2),x4(3));
+      (*it).set_coord(coord);
+    }
+  }
+}
+void CSV::switch_convention(const string& new_convention,const volume4D<float>& new2old_warp,
+			    const volume<short int>& oldref,const volume<short int>& newref){
+  Matrix old_mm2vox,old_vox2mm;
+  old_vox2mm=vox2mm;
+  old_mm2vox=mm2vox;
+  set_convention(new_convention);
+
+  // now transform surfaces coordinates  
+  ColumnVector x4(4),x3(3);
+  for(int i=0;i<nsurfs;i++){
+    for(vector<CsvMpoint>::iterator it = roimesh[i]._points.begin();it!=roimesh[i]._points.end();it++){
+      x4 <<(*it).get_coord().X
+        <<(*it).get_coord().Y
+	<<(*it).get_coord().Z
+	<< 1.0;
+      x3 = NewimageCoord2NewimageCoord(new2old_warp,false,oldref,newref,old_mm2vox*x4);
+
       x4<<x3(1)<<x3(2)<<x3(3)<<1.0;
       x4=vox2mm*x4;
       Pt coord(x4(1),x4(2),x4(3));
