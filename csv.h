@@ -30,6 +30,9 @@
 #include "fslvtkio/fslvtkio.h"
 #include "utils/tracer_plus.h"
 #include "csv_mesh.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
+
 //#include "fslsurface/fslsurface.h"
 //#include "fslsurface/fslsurfaceio.h"
 //#include "fslsurface/fslsurface_dataconv.h"
@@ -311,6 +314,9 @@ public:
 
   void set_convention(const string& conv);
   void switch_convention(const string& new_convention,const Matrix& vox2vox,const ColumnVector& old_dims);
+  void switch_convention(const string& new_convention,const volume4D<float>& new2old_warp,
+			 const volume<short int>& oldref,const volume<short int>& newref);
+
 
   void init_surfvol();
   void update_surfvol(const vector<ColumnVector>& v,const int& id,const int& meshid);
