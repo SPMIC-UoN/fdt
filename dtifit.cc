@@ -2,6 +2,10 @@
 
 /*  CCOPYRIGHT  */
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include <iostream>
 #include <cmath>
 #include "miscmaths/miscmaths.h"
@@ -237,6 +241,82 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
 }
 
 
+//Correct bvals/bvecs accounting for Gradient Nonlinearities
+//ColumnVector grad_nonlin has 9 entries, corresponding to the 3 components of each of the x,y and z gradient deviation
+void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, const Matrix& Qform, const Matrix& Qform_inv, Matrix& bvals_c, Matrix& bvecs_c){
+  bvals_c=bvals; bvecs_c=bvecs;
+  Matrix L(3,3);  //gradient coil tensor
+  float mag;
+  L(1,1)=grad_nonlin(1);  L(1,2)=grad_nonlin(4);  L(1,3)=grad_nonlin(7);
+  L(2,1)=grad_nonlin(2);  L(2,2)=grad_nonlin(5);  L(2,3)=grad_nonlin(8);
+  L(3,1)=grad_nonlin(3);  L(3,2)=grad_nonlin(6);  L(3,3)=grad_nonlin(9);
+
+  IdentityMatrix Id(3);
+  
+  for (int l=1; l<=bvals.Ncols(); l++){
+    if (bvals(1,l)>0){ //do not correct b0s
+      //Rotate bvecs to scanner's coordinate system
+      ColumnVector bvec_tmp(3);
+      bvec_tmp=Qform*bvecs.Column(l);
+      bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
+
+      //Correct for grad-nonlin in scanner's coordinate system
+      bvecs_c.Column(l)=(Id+L)*bvec_tmp;//bvecs.Column(l);
+      mag=sqrt(bvecs_c(1,l)*bvecs_c(1,l)+bvecs_c(2,l)*bvecs_c(2,l)+bvecs_c(3,l)*bvecs_c(3,l));
+      if (mag!=0)
+	bvecs_c.Column(l)=bvecs_c.Column(l)/mag;
+      bvals_c(1,l)=mag*mag*bvals(1,l);
+      bvec_tmp=bvecs_c.Column(l);
+
+      //Rotate corrected bvecs back to voxel coordinate system
+      bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
+      bvecs_c.Column(l)=Qform_inv*bvec_tmp;
+    }
+  }
+}
+
+
+//Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
+//After applying this matrix, make sure to sign flip the x coordinate of the resulted bvecs!
+//If you apply the inverse of the matrix, sign flip the x coordinate of the input bvecs
+void Return_Qform(const Matrix& qform_mat, Matrix& QMat, const float xdim, const float ydim, const float zdim){ 
+  Matrix QMat_tmp; DiagonalMatrix Scale(3);
+   
+  QMat_tmp=qform_mat.SubMatrix(1,3,1,3);
+  Scale(1)=xdim; Scale(2)=ydim; Scale(3)=zdim;
+  QMat_tmp=Scale.i()*QMat_tmp;
+  QMat=QMat_tmp;
+ 
+ /*
+ int icode,jcode,kcode,count; ColumnVector codevec(3);
+  mat44 Qform_mat44=newmat2mat44(qform_mat);
+  nifti_mat44_to_orientation(Qform_mat44,&icode,&jcode,&kcode);
+  codevec << icode << jcode << kcode;
+  
+  //Make sure that the matrix follows the LPI convention!
+  count=1;
+  while (count<=3){
+    if ((codevec(count)==NIFTI_L2R) || (codevec(count)==NIFTI_R2L)) break;
+   count++;
+  }
+  QMat.SubMatrix(1,3,1,1)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_R2L?-1:1);
+  
+  count=1;
+  while (count<=3){
+    if ((codevec(count)==NIFTI_P2A) || (codevec(count)==NIFTI_A2P)) break;
+   count++;
+  }
+  QMat.SubMatrix(1,3,2,2)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_A2P?-1:1);
+  
+  count=1;
+  while (count<=3){
+    if ((codevec(count)==NIFTI_I2S) || (codevec(count)==NIFTI_S2I)) break;
+   count++;
+  }
+  QMat.SubMatrix(1,3,3,3)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_S2I?-1:1); */
+}
+
+
 
 int main(int argc, char** argv)
 {
@@ -285,6 +365,14 @@ int main(int argc, char** argv)
   if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
   if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
 
+  //Read Gradient Non_linearity Maps if provided
+  volume4D<float> grad, bvalmap; Matrix Qform, Qform_inv;
+  if (opts.grad_file.set()){
+    read_volume4D(grad,opts.grad_file.value());
+    //Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
+    Return_Qform(data.qform_mat(), Qform, data.xdim(), data.ydim(), data.zdim());
+    Qform_inv=Qform.i();
+  }
 
   int minx=opts.littlebit.value() ? opts.x_min.value():0;
   int maxx=opts.littlebit.value() ? opts.x_max.value():mask.xsize();
@@ -305,6 +393,8 @@ int main(int argc, char** argv)
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
+  if (opts.save_bvals.value())
+    bvalmap.reinitialize(maxx-minx,maxy-miny,maxz-minz,data.tsize());
   volume4D<float> cni_cope;
   volume<float> sse;
 
@@ -321,6 +411,11 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
   copybasicproperties(data[0],Delements[0]);
+  if (opts.save_bvals.value()){
+    copybasicproperties(data[0],bvalmap[0]);
+    bvalmap=0;
+  }
+
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
   l1=0;l2=0;l3=0;MD=0;MODE=0;FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
@@ -360,9 +455,30 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    if (opts.wls.value())
-	      pinv_Amat=WLS_pinv(Amat,S);
+	    if (!opts.grad_file.set()){ //Check whether Gradient-Nonlinearities are considered. If not proceed as normal
+	      if (opts.wls.value())
+		pinv_Amat=WLS_pinv(Amat,S);
+	    }
+	    else{   //If they are, correct the bvals and bvecs and get a new Amat for each voxel
+	      Matrix bvals_c, bvecs_c;
+	      ColumnVector gradm(9);
+	      for (int t=0; t<9; t++)
+		gradm(t+1)=grad(i,j,k,t);
+	      correct_bvals_bvecs(b,r, gradm,Qform,Qform_inv,bvals_c,bvecs_c);
+	      if (opts.save_bvals.value()){
+		for (int t=0; t<data.tsize(); t++)
+		  bvalmap(i-minx,j-miny,k-minz,t)=bvals_c(1,t+1);
+	      }
+	      if(opts.cni.value()!="")
+		Amat=form_Amat(bvecs_c,bvals_c,cni);
+	      else
+		Amat=form_Amat(bvecs_c,bvals_c);
+	      pinv_Amat=pinv(Amat);
+	      if (opts.wls.value())
+		pinv_Amat=WLS_pinv(Amat,S);
+	    }
 	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,pinv_Amat,S);
+	      
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
@@ -470,6 +586,12 @@ int main(int argc, char** argv)
     if(opts.savetensor.value()) {
       Delements.setDisplayMaximumMinimum(l1.max(),0);
       save_volume4D(Delements,tensfile);
+    }
+
+    if(opts.save_bvals.value()) {
+      bvalmap.setDisplayMaximumMinimum(bvalmap.max(),0);
+      string tmpfile=opts.ofile.value()+"_bvals";
+      save_volume4D(bvalmap,tmpfile);
     }
 
     if(opts.cni.value()!=""){
