@@ -45,6 +45,8 @@ class dtifitOptions {
   Option<int> y_max;
   Option<int> x_min;
   Option<int> x_max;
+  Option<string> grad_file;
+  Option<bool> save_bvals;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -120,6 +122,12 @@ class dtifitOptions {
    x_max(string("-X,--xmax"), 128, 
 	 string("max x"), 
 	 false, requires_argument),
+   grad_file(string("--gradnonlin"), string("gradnonlin"),
+	     string("Gradient Nonlinearity Tensor file"),
+	     false, requires_argument),
+   save_bvals(string("--savebvals"), false,
+	     string("Save 4D file with bvalues, corrected for gradient nonlinearities"),
+	     false,  no_argument),
    options("dtifit", "dtifit -k <filename>\n dtifit --verbose\n")
    {
      
@@ -143,7 +151,8 @@ class dtifitOptions {
        options.add(y_max);
        options.add(x_min);
        options.add(x_max);
-       
+       options.add(grad_file);
+       options.add(save_bvals);
      }
      catch(X_OptionError& e) {
        options.usage();
