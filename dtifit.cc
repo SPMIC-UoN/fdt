@@ -286,34 +286,6 @@ void Return_Qform(const Matrix& qform_mat, Matrix& QMat, const float xdim, const
   Scale(1)=xdim; Scale(2)=ydim; Scale(3)=zdim;
   QMat_tmp=Scale.i()*QMat_tmp;
   QMat=QMat_tmp;
- 
- /*
- int icode,jcode,kcode,count; ColumnVector codevec(3);
-  mat44 Qform_mat44=newmat2mat44(qform_mat);
-  nifti_mat44_to_orientation(Qform_mat44,&icode,&jcode,&kcode);
-  codevec << icode << jcode << kcode;
-  
-  //Make sure that the matrix follows the LPI convention!
-  count=1;
-  while (count<=3){
-    if ((codevec(count)==NIFTI_L2R) || (codevec(count)==NIFTI_R2L)) break;
-   count++;
-  }
-  QMat.SubMatrix(1,3,1,1)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_R2L?-1:1);
-  
-  count=1;
-  while (count<=3){
-    if ((codevec(count)==NIFTI_P2A) || (codevec(count)==NIFTI_A2P)) break;
-   count++;
-  }
-  QMat.SubMatrix(1,3,2,2)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_A2P?-1:1);
-  
-  count=1;
-  while (count<=3){
-    if ((codevec(count)==NIFTI_I2S) || (codevec(count)==NIFTI_S2I)) break;
-   count++;
-  }
-  QMat.SubMatrix(1,3,3,3)=QMat_tmp.SubMatrix(1,3,count,count)*(codevec(count)==NIFTI_S2I?-1:1); */
 }
 
 
