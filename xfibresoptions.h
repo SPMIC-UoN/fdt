@@ -52,7 +52,7 @@ class xfibresOptions {
   Option<bool> rician;
   Option<bool> f0;
   Option<bool> ardf0;
-  Option<string> grad_file;
+  FmribOption<string> grad_file;
 
   void parse_command_line(int argc, char** argv,  Log& logger);
   
