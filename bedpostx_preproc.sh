@@ -1,6 +1,7 @@
 #!/bin/sh
 
 subjdir=$1
+gflag=$2
 
 echo Copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
@@ -12,4 +13,8 @@ fi
 
 ${FSLDIR}/bin/fslslice ${subjdir}/data
 ${FSLDIR}/bin/fslslice ${subjdir}/nodif_brain_mask
+if [ ${gflag} -eq 1 ]; then
+    ${FSLDIR}/bin/fslslice ${subjdir}/grad_dev
+fi
+
 echo Done
