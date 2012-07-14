@@ -57,6 +57,9 @@ if [ `imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
       rm -rf ${subjdir}.bedpostX/diff_slices
       rm -f ${subjdir}/data_slice_*
       rm -f ${subjdir}/nodif_brain_mask_slice_*
+      if [ `imtest ${subjdir}/grad_dev_slice_0000` -eq 1 ];then
+	  rm -f ${subjdir}/grad_dev_slice_*
+      fi	  
     fi
   fi
 fi
