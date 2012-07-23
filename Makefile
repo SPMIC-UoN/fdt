@@ -10,8 +10,6 @@ DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lutils -lmiscmaths -lnewm
 DTIFIT=dtifit
 CCOPS=ccops
 PTX=probtrackx
-FTB=find_the_biggest
-PJ=proj_thresh
 MED=medianfilter
 ROM=reord_OM
 SAUS=sausages
@@ -35,8 +33,6 @@ RUBIX=rubix
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
-FTBOBJS=find_the_biggest.o
-PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
@@ -62,7 +58,7 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit 
+XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit 
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
