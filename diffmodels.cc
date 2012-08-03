@@ -1367,7 +1367,7 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
 void PVM_multi::fit(){
 
   // initialise with simple pvm
-  PVM_single_c pvm1(Y,bvecs,bvals,nfib,m_include_f0);
+  PVM_single_c pvm1(Y,bvecs,bvals,nfib,false,m_include_f0);
   pvm1.fit();
   //cout<<"Init with single"<<endl;
   //pvm1.print();
@@ -1696,7 +1696,7 @@ boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost:
 
 void PVM_Ball_Binghams::fit(){
   // Fit the ball & stick first to initialize some of the parameters
-  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,m_include_f0,false,true);  //Return a fanning angle estimate as well
+  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,false,m_include_f0,true);  //Return a fanning angle estimate as well
   pvmbs.fit();
   // pvmbs.print();
 
@@ -2431,7 +2431,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams:: get_fanning_vector(const int& i) const{
 
 void PVM_Ball_Watsons::fit(){
   // Fit the ball & stick first to initialize some of the parameters
-  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,m_include_f0);  
+  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,false,m_include_f0);  
   pvmbs.fit();
   //  pvmbs.print();
   
