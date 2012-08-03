@@ -594,7 +594,7 @@ public:
 	}
       }
       else{   //Do constrained optimization
-      	PVM_single_c pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
+      	PVM_single_c pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false,opts.f0.value());
 	pvm.fit(); // this will give th,ph,f in the correct order
       
 	pvmf  = pvm.get_f();
@@ -610,7 +610,7 @@ public:
 	  //If the full model gives values that are considered implausible, or we are in a CSF voxel (f1<0.05)
 	  //then fit a model without the f0 and drive f0_init to almost zero 
 	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
-	    PVM_single_c pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    PVM_single_c pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false,false);
 	    pvm2.fit(); // this will give th,ph,f in the correct order
 	    pvmf0=0.001;
 	    pvmS0=pvm2.get_s0();
