@@ -1,3 +1,8 @@
+/*    Copyright (C) 2012 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>

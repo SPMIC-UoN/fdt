@@ -1,3 +1,6 @@
+/*    Copyright (C) 2012 University of Oxford  */
+
+/*  CCOPYRIGHT  */
 #include <fstream>
 #ifndef EXPOSE_TREACHEROUS
 #define EXPOSE_TREACHEROUS

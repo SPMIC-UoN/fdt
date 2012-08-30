@@ -1,5 +1,7 @@
 #!/bin/sh
-
+#   Copyright (C) 2012 University of Oxford
+#
+#   SHCOPYRIGHT
 subjdir=$1
 gflag=$2
 

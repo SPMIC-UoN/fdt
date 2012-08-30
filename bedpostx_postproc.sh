@@ -1,5 +1,7 @@
 #!/bin/sh
-
+#   Copyright (C) 2012 University of Oxford
+#
+#   SHCOPYRIGHT
 subjdir=$1
 
 numfib=`${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_0000/f*samples* | wc -w | awk '{print $1}'`

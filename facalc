@@ -1,4 +1,7 @@
 #!/bin/sh
+#   Copyright (C) 2012 University of Oxford
+#
+#   SHCOPYRIGHT
 
 if [ $# -lt 1 ]; then
 echo "Usage: facalc <basename> [-mode]"

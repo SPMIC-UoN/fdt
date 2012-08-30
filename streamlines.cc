@@ -1,3 +1,7 @@
+/*    Copyright (C) 2012 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "streamlines.h"
 #include "warpfns/fnirt_file_reader.h"
 #include "warpfns/warpfns.h"
