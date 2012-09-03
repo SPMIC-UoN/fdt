@@ -23,7 +23,7 @@ using namespace NEWIMAGE;
 using namespace MISCMATHS;
 
 
-string title="reorder_dyadic_vectors (Version 1.0)\nReordering of the dyadic vectors with direction preservation";
+string title="reorder_dyadic_vectors \nReordering of the dyadic vectors with direction preservation";
 string examples="reorder_dyadic_vectors -b <dirname> [-m mask]\n<dirname> is supposed to contain mean_fisamples and dyadsi for i=1:n";
 
 Option<bool> verbose(string("-v,--verbose"),false,

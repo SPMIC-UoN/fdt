@@ -13,7 +13,7 @@
 
 using namespace Utilities;
 
-string title="vecreg (Version 1.1)\nVector Affine/NonLinear Tranformation with Orientation Preservation";
+string title="vecreg \nVector Affine/NonLinear Tranformation with Orientation Preservation";
 string examples="vecreg -i <input4D> -o <output4D> -r <refvol> -t <transform>";
 
 Option<bool> verbose(string("-v,--verbose"),false,
