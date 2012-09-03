@@ -459,14 +459,14 @@ proc fdt:dialog { w tclstartupfile } {
 
     # Matrix Stuff
     set probtrack(omatrix1_yn) 0
-    checkbutton $w.matadvanced.omatrix1_yn -text "Output Seed x Seed Matrix" -variable probtrack(omatrix1_yn)
+    checkbutton $w.matadvanced.omatrix1_yn -text "Matrix1: Seed x Seed Matrix" -variable probtrack(omatrix1_yn)
 
     set probtrack(omatrix2_yn) 0
-    checkbutton $w.matadvanced.omatrix2_yn -text "Output Seed x Mask2 Matrix" -variable probtrack(omatrix2_yn) -command "fdt:matrix_mode $w"
+    checkbutton $w.matadvanced.omatrix2_yn -text "Matrix2: Seed x Mask2 Matrix" -variable probtrack(omatrix2_yn) -command "fdt:matrix_mode $w"
     FileEntry $w.matadvanced.omatrix2_mask -textvariable probtrack(mask22) -label "Tract space mask" -title "Select tract space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
 
     set probtrack(omatrix3_yn) 0
-    checkbutton $w.matadvanced.omatrix3_yn -text "Output Mask1 x Mask2 Matrix" -variable probtrack(omatrix3_yn) -command "fdt:matrix_mode $w"
+    checkbutton $w.matadvanced.omatrix3_yn -text "Matrix3: Mask1 x Mask2 Matrix" -variable probtrack(omatrix3_yn) -command "fdt:matrix_mode $w"
     FileEntry $w.matadvanced.omatrix3_mask1 -textvariable probtrack(mask31) -label "Row space mask" -title "Select row space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
     FileEntry $w.matadvanced.omatrix3_mask2 -textvariable probtrack(mask32) -label "Column space mask" -title "Select column space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
 
