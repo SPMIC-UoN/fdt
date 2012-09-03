@@ -237,7 +237,7 @@ proc fdt:dialog { w tclstartupfile } {
     $w.probtrack insert 1 options -text "Options"
     #-------- Mode specific option --------
     frame $w.data
-    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOSTX directory" -title "Choose BEDPOSTX directory" -filetypes * -command "probtrack_update_files $w"
+    FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOSTX directory" -title "Choose BEDPOSTX directory" -filetypes { } -command "probtrack_update_files $w"
 
     TitleFrame  $w.data.seed -text "Seed Space"
  
@@ -272,7 +272,7 @@ proc fdt:dialog { w tclstartupfile } {
     optionMenu2  $w.data.seed.ssf.typelabel.type probtrack(meshspace) caret "Caret" freesurfer "FreeSurfer" first "FIRST" vox "Voxel"
     FileEntry $w.data.seed.ssf.surfref -textvariable probtrack(surfref)  -label "Surface Reference Image" -title "Select surface reference volume" -filetypes IMAGE
 
-    FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes { *.nii *.nii.gz *.gii }
+    FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed Image/Surface" -title "Choose Image/Surface" -filetypes "{*.nii,*.nii.gz,*.gii}"
     pack $w.data.seed.ssf.ssd -side top -anchor nw
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
     pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side left -anchor w -pady 2
@@ -283,7 +283,7 @@ proc fdt:dialog { w tclstartupfile } {
     listbox $w.data.seed.targets -height 6 -width 50 -yscrollcommand "$w.data.seed.sb set"
     scrollbar $w.data.seed.sb -command "$w.data.seed.targets yview " 
     frame $w.data.seed.tb
-    button $w.data.seed.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] { *.nii *.nii.gz *.gii } {Select File} {fdt_add $w $w.data.seed.targets} {}" 
+    button $w.data.seed.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] {{*.nii,*.nii.gz,*.gii}} {Select File} {fdt_add $w $w.data.seed.targets} {}" 
     button $w.data.seed.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.seed.targets" 
     button $w.data.seed.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.seed.targets} {}"
     button $w.data.seed.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.seed.targets} {}"
@@ -336,7 +336,7 @@ proc fdt:dialog { w tclstartupfile } {
     listbox $w.data.targets.wf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.wf.tf.sb set"
     scrollbar $w.data.targets.wf.tf.sb -command "$w.data.targets.wf.tf.targets yview " 
     frame $w.data.targets.wf.tf.tb
-    button $w.data.targets.wf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] { *.nii *.nii.gz *.gii } {Select File} {fdt_add $w $w.data.targets.wf.tf.targets} {}"
+    button $w.data.targets.wf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] {{*.nii,*.nii.gz,*.gii}} {Select File} {fdt_add $w $w.data.targets.wf.tf.targets} {}"
     button $w.data.targets.wf.tf.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.targets.wf.tf.targets" 
     button $w.data.targets.wf.tf.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets.wf.tf.targets} {}"
     button $w.data.targets.wf.tf.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets.wf.tf.targets} {}"
@@ -350,12 +350,12 @@ proc fdt:dialog { w tclstartupfile } {
     option add *targets*Checkbutton*anchor w
     frame  $w.data.targets.ef
     checkbutton $w.data.targets.ef.srt -text "Exclusion mask" -variable probtrack(exclude_yn)  -command " pack forget $w.data.targets.ef.rubbish ; if { \$probtrack(exclude_yn) } { pack $w.data.targets.ef.rubbish } ; $w.probtrack compute_size"
-    FileEntry $w.data.targets.ef.rubbish -textvariable probtrack(exclude) -title "Select exclusion image" -filetypes { *.nii *.nii.gz *.gii }
+    FileEntry $w.data.targets.ef.rubbish -textvariable probtrack(exclude) -title "Select exclusion image" -filetypes "{*.nii,*.nii.gz,*.gii}"
     pack $w.data.targets.ef.srt -side left
 
     frame  $w.data.targets.sf
     checkbutton $w.data.targets.sf.sst -text "Termination mask" -variable probtrack(terminate_yn)  -command " pack forget $w.data.targets.sf.stop ; if { \$probtrack(terminate_yn) } { pack $w.data.targets.sf.stop } ; $w.probtrack compute_size"
-    FileEntry $w.data.targets.sf.stop -textvariable probtrack(stop) -title "Select termination image" -filetypes { *.nii *.nii.gz *.gii }
+    FileEntry $w.data.targets.sf.stop -textvariable probtrack(stop) -title "Select termination image" -filetypes "{*.nii,*.nii.gz,*.gii}"
     pack $w.data.targets.sf.sst -side left
 
     frame $w.data.targets.cf    
@@ -364,7 +364,7 @@ proc fdt:dialog { w tclstartupfile } {
     listbox $w.data.targets.cf.tf.targets -height 6 -width 50 -yscrollcommand "$w.data.targets.cf.tf.sb set"
     scrollbar $w.data.targets.cf.tf.sb -command "$w.data.targets.cf.tf.targets yview " 
     frame $w.data.targets.cf.tf.tb
-    button $w.data.targets.cf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] { *.nii *.nii.gz *.gii } {Select File} {fdt_add $w $w.data.targets.cf.tf.targets} {}"
+    button $w.data.targets.cf.tf.tb.add -text "Add Image"  -command "feat_file:setup_dialog $w a a a [namespace current] {{*.nii,*.nii.gz,*.gii}} {Select File} {fdt_add $w $w.data.targets.cf.tf.targets} {}"
     button $w.data.targets.cf.tf.tb.del -text "Remove Image"  -command "fdt_sub $w $w.data.targets.cf.tf.targets" 
     button $w.data.targets.cf.tf.tb.imp -text "Load List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_imp $w $w.data.targets.cf.tf.targets} {}"
     button $w.data.targets.cf.tf.tb.exp -text "Save List" -command "feat_file:setup_dialog $w a a a [namespace current] * {Select File} {fdt_exp $w $w.data.targets.cf.tf.targets} {}"
@@ -394,7 +394,7 @@ proc fdt:dialog { w tclstartupfile } {
 	}
     }
 
-    FileEntry $w.data.dir -textvariable probtrack(output) -label  "Output directory:" -title  "Name the output directory" -filetypes *
+    FileEntry $w.data.dir -textvariable probtrack(output) -label  "Output directory:" -title  "Name the output directory" -filetypes { }
 
     pack $w.data.directory $w.data.seed $w.data.targets $w.data.dir -padx 3 -pady 3 -anchor nw
 
@@ -463,12 +463,12 @@ proc fdt:dialog { w tclstartupfile } {
 
     set probtrack(omatrix2_yn) 0
     checkbutton $w.matadvanced.omatrix2_yn -text "Output Seed x Mask2 Matrix" -variable probtrack(omatrix2_yn) -command "fdt:matrix_mode $w"
-    FileEntry $w.matadvanced.omatrix2_mask -textvariable probtrack(mask22) -label "Tract space mask" -title "Select tract space mask" -filetypes { *.nii *.nii.gz *.gii }
+    FileEntry $w.matadvanced.omatrix2_mask -textvariable probtrack(mask22) -label "Tract space mask" -title "Select tract space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
 
     set probtrack(omatrix3_yn) 0
     checkbutton $w.matadvanced.omatrix3_yn -text "Output Mask1 x Mask2 Matrix" -variable probtrack(omatrix3_yn) -command "fdt:matrix_mode $w"
-    FileEntry $w.matadvanced.omatrix3_mask1 -textvariable probtrack(mask31) -label "Row space mask" -title "Select row space mask" -filetypes { *.nii *.nii.gz *.gii }
-    FileEntry $w.matadvanced.omatrix3_mask2 -textvariable probtrack(mask32) -label "Column space mask" -title "Select column space mask" -filetypes { *.nii *.nii.gz *.gii }
+    FileEntry $w.matadvanced.omatrix3_mask1 -textvariable probtrack(mask31) -label "Row space mask" -title "Select row space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
+    FileEntry $w.matadvanced.omatrix3_mask2 -textvariable probtrack(mask32) -label "Column space mask" -title "Select column space mask" -filetypes "{*.nii,*.nii.gz,*.gii}"
 
     pack \
 	$w.options.nparticles \
@@ -587,7 +587,7 @@ proc fdt:probtrack_mode { w } {
 	seedmask {
             pack forget $w.data.seed.ssf.ssd
 	    pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-	    $w.data.seed.ssf.reference configure -label "Seed image/surface:" -title "Choose mask image" 
+	    $w.data.seed.ssf.reference configure -label "Seed Image/Surface:" -title "Choose Image/Surface" 
             pack $w.data.seed.ssf.reference  $w.data.seed.ssf.ssd -side top -anchor w -pady 2
 
 	    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.nonlinear $w.data.seed.ssf.xfm -side top -anchor w -pady 2 }
@@ -817,11 +817,11 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(wayorder_yn) == 1 } { set flags "$flags --wayorder" }
 
 	    if { $probtrack(omatrix1_yn) == 1 } { set flags "$flags --omatrix1" }
-	    if { $probtrack(omatrix2_yn) && && $probtrack(mask22) == "" } { set errorStr "$errorStr You must specify a tract space mask!" }
+	    if { $probtrack(omatrix2_yn) && $probtrack(mask22) == "" } { set errorStr "$errorStr You must specify a tract space mask!" }
 	    if { $probtrack(omatrix2_yn) == 1 } { set flags "$flags --omatrix2 --target2=$probtrack(mask22)" }
-	    if { $probtrack(omatrix3_yn) && && $probtrack(mask31) == "" } { set errorStr "$errorStr You must specify a row space mask!" }
-	    if { $probtrack(omatrix3_yn) && && $probtrack(mask32) == "" } { set errorStr "$errorStr You must specify a column space mask!" }
-	    if { $probtrack(omatrix3_yn) == 1 } { set flags "$flags --omatrix3 --target3=$probtrack(mask31) --lrtarget3=$probtrackx(mask32)" }
+	    if { $probtrack(omatrix3_yn) && $probtrack(mask31) == "" } { set errorStr "$errorStr You must specify a row space mask!" }
+	    if { $probtrack(omatrix3_yn) && $probtrack(mask32) == "" } { set errorStr "$errorStr You must specify a column space mask!" }
+	    if { $probtrack(omatrix3_yn) == 1 } { set flags "$flags --omatrix3 --target3=$probtrack(mask31) --lrtarget3=$probtrack(mask32)" }
 
             if { $probtrack(pd) } { set flags "$flags --pd"  }
 	    set flags "$flags -c $probtrack(curvature) -S $probtrack(nsteps) --steplength=$probtrack(steplength) -P $probtrack(nparticles)"
@@ -870,7 +870,7 @@ proc fdt:apply { w dialog } {
 		}
 		if { $probtrack(useSurface) } {
 		    set flags "$flags --meshspace=$probtrack(meshspace) --seedref=$probtrack(surfref)"
-		    puts $log "set probtrack(useSurface) $probtrack(surface)"
+		    puts $log "set probtrack(useSurface) $probtrack(useSurface)"
 		    puts $log "set probtrack(meshspace) $probtrack(meshspace)"
 		    puts $log "set probtrack(surfref) $probtrack(surfref)"
 		}
@@ -955,31 +955,30 @@ proc fdt:apply { w dialog } {
                     exec chmod 777 ${filebase}_script.sh
                     puts $script "#!/bin/sh"
                     puts $script "cd $probtrack(output)"
-                    #puts $script "$FSLDIR/bin/probtrackx2 $flags"
-		    puts $script "~saad/fsl/src/ptx2/probtrackx2 $flags"
+                    puts $script "$FSLDIR/bin/probtrackx2 $flags"		    
                     if { $probtrack(classify_yn) == 1 } {
-			puts $script "$FSLDIR/bin/find_the_biggest seeds_to_* biggest >> fdt_seed_classification.txt"
+			puts $script "$FSLDIR/bin/find_the_biggest seeds_to_* $probtrack(output)/biggest >> fdt_seed_classification.txt"
 		    }
-                    if { $probtrack(mode) == "simple" } {
-                    puts $script "rm ${filebase}_coordinates.txt"
-		    }
+                    #if { $probtrack(mode) == "simple" } {
+                    #puts $script "rm ${filebase}_coordinates.txt"
+		    #}
                     puts $script "mv $logfile $copylog"
                     puts $script "rm ${filebase}_script.sh"
 		    close $script
 		    exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
 		} else {
 
-		    fdt_monitor_short $w "~saad/fsl/src/ptx2/probtrackx2 $flags"
+		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx2 $flags"
 		    if { $probtrack(classify_yn) == 1 } {
-			exec sh -c "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* biggest >> $probtrack(output)/fdt_seed_classification.txt"
+			exec sh -c "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* $probtrack(output)/biggest >> $probtrack(output)/fdt_seed_classification.txt"
 		    }
 		}
        	    }
             if { !$FSLPARALLEL } {
-		if { $probtrack(mode) == "simple" } {
-		    puts "rm ${filebase}_coordinates.txt"
-		    exec rm ${filebase}_coordinates.txt
-		}
+		#if { $probtrack(mode) == "simple" } {
+		    #puts "rm ${filebase}_coordinates.txt"
+		    #exec rm ${filebase}_coordinates.txt
+		#}
 		if { $copylog != "" } {
 		    puts "mv $logfile $copylog"
 		    exec mv $logfile $copylog
