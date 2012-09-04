@@ -29,6 +29,16 @@ do
 
 done
 
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/mean_f1samples` -eq 1 ];then
+    ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_f1samples -mul 0 ${subjdir}.bedpostX/mean_fsamples
+    fib=1
+    while [ $fib -le $numfib ]
+    do
+	fslmaths ${subjdir}.bedpostX/mean_fsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsamples
+	fib=$(($fib + 1))
+    done	
+fi
+
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_0000/mean_dsamples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpostX/mean_dsamples  `${FSLDIR}/bin/imglob ${subjdir}.bedpostX/diff_slices/data_slice_*/mean_dsamples*`
