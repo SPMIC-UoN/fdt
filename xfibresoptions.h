@@ -139,7 +139,7 @@ class xfibresOptions {
    grad_file(string("--gradnonlin"), string("gradnonlin"),
 	     string("Gradient Nonlinearity Tensor file"),
 	     false, requires_argument),  
-   options("xfibres v1.11", "xfibres --help (for list of options)\n")
+   options("xfibres","xfibres --help (for list of options)\n")
      {
        try {
        options.add(verbose);
