@@ -78,10 +78,10 @@ int do_dtigen(){
 	for(int t=1;t<=data.tsize();t++){
 	  data(x,y,z,t-1) = S0(x,y,z);
 	  data(x,y,z,t-1) *= exp( -b(1,t) * r(1,t) * r(1,t) * tensor(x,y,z,0) );
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(1,t) * r(2,t) * tensor(x,y,z,1) );
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(1,t) * r(3,t) * tensor(x,y,z,2) );
+	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(1,t) * r(2,t) * tensor(x,y,z,1) );
+	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(1,t) * r(3,t) * tensor(x,y,z,2) );
 	  data(x,y,z,t-1) *= exp( -b(1,t) * r(2,t) * r(2,t) * tensor(x,y,z,3) );
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(2,t) * r(3,t) * tensor(x,y,z,4) );
+	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(2,t) * r(3,t) * tensor(x,y,z,4) );
 	  data(x,y,z,t-1) *= exp( -b(1,t) * r(3,t) * r(3,t) * tensor(x,y,z,5) );
 	  
 	}
