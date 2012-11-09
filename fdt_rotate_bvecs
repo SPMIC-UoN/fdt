@@ -3,7 +3,7 @@
 if [ "$3" == "" ] ; then 
  echo "Usage: <original bvecs> <rotated bvecs> <ecclog>"
  echo ""
- echo "<ecclog>	is the output log file from ecc"
+ echo "<ecclog>	is the output log file from eddy_correct"
  echo ""
  exit 1;
 fi
