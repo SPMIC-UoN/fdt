@@ -1,5 +1,10 @@
 include $(FSLCONFDIR)/default.mk
 
+ifeq ($(COMPILE_GPU), 1)
+	COMPILE_WITH_GPU=libbedpostx_cuda.so xfibres_gpu.o splitter_gpu splitter_multigpu
+	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_multigpu_SGE CUDA/bedpostx_multigpu_LSF
+endif
+
 PROJNAME = fdt
 
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
@@ -28,6 +33,10 @@ DTIGEN=dtigen
 RARNG=rearrange
 XPRED=xfibres_pred
 RUBIX=rubix
+LIBBEDPOSTX_CUDA=libbedpostx_cuda.so
+XFIBRES_GPU=xfibres_gpu
+SPLITTERGPU=splitter_gpu
+SPLITTERMULTIGPU=splitter_multigpu
 
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
@@ -51,14 +60,17 @@ DTIGENOBJS=dtigen.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
 RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
+XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o 
+SPLITTERGPUOBJS=splitter_gpu.o xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
+SPLITTERMULTIGPUOBJS=splitter_multigpu.o xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
-SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
+SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen
+XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen ${COMPILE_WITH_GPU}
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
@@ -139,3 +151,15 @@ ${XPRED}: 	${XPREDOBJS}
 
 ${RUBIX}: 	${RUBIXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
+
+${LIBBEDPOSTX_CUDA}: 
+		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 -arch sm_20  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${CUDA}/include/thrust -I${FSLDIR}/include 
+
+${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lbedpostx_cuda -LCUDA -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include
+
+${SPLITTERGPU}:	   ${SPLITTERGPUOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLITTERGPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
+
+${SPLITTERMULTIGPU}:	   ${SPLITTERMULTIGPUOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLITTERMULTIGPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
