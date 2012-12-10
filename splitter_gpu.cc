@@ -1,3 +1,11 @@
+/*  splitter_gpu.cc
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>

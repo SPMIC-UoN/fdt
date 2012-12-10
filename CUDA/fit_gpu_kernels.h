@@ -1,3 +1,11 @@
+/*  fit_gpu_kernels.h
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 extern "C" __global__ void fit_PVM_single_kernel(	//INPUT
 							const double* 		data, 
 							const double* 		bvecs, 

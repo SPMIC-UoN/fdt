@@ -1,3 +1,11 @@
+/*  diffmodels_utils.h
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #ifndef __DIFFMODELS_UTILS
 #define __DIFFMODELS_UTILS
 

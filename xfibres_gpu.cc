@@ -1,3 +1,10 @@
+/*  xfibres_gpu.cc
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
 
 #ifndef EXPOSE_TREACHEROUS
 #define EXPOSE_TREACHEROUS

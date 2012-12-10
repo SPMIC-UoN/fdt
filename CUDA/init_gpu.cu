@@ -1,3 +1,11 @@
+/*  init_gpu.cu
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "sync_check.h"
 #include <fstream>
 

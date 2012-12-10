@@ -1,3 +1,11 @@
+/*  PVM_single.cu
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include "diffmodels_utils.h"
 #include "levenberg_marquardt.cu"
 #include "options.h"

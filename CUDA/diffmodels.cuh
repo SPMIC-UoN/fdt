@@ -1,3 +1,11 @@
+/*  diffmodels.cuh
+
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
+
+    Copyright (C) 2005 University of Oxford  */
+
+/*  CCOPYRIGHT  */
+
 #include <device_vector.h>
 
 void fit_PVM_single(	//INPUT
