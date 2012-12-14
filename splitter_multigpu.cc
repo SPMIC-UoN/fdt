@@ -53,11 +53,11 @@ int main(int argc, char *argv[]){
 	}
 
 	if(gflag==1){
-		    extras[nextras] = (char*)malloc((35+strlen(subjdir))*sizeof(char));	
-		    strcpy(extras[nextras],"--gradnonlin=");
-		    strcat(extras[nextras],subjdir);
-		    strcat(extras[nextras],"/grad_dev_slice_");	
-		    strcat(extras[nextras],slice_str);
+		    extras[nextras-1] = (char*)malloc((35+strlen(subjdir))*sizeof(char));	
+		    strcpy(extras[nextras-1],"--gradnonlin=");
+		    strcat(extras[nextras-1],subjdir);
+		    strcat(extras[nextras-1],"/grad_dev_slice_");	
+		    strcat(extras[nextras-1],slice_str);
 	}
 
 	xfibres_gpu(subjdir,slice,nextras,extras);
