@@ -153,7 +153,7 @@ ${RUBIX}: 	${RUBIXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
 
 ${LIBBEDPOSTX_CUDA}: 
-		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 -arch sm_20  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${CUDA}/include/thrust -I${FSLDIR}/include 
+		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 -arch sm_20  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${CUDA}/include/thrust -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost
 
 ${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lbedpostx_cuda -LCUDA -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include
