@@ -55,65 +55,67 @@ void xfibres_gpu(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
 	///// FIT /////
-	thrust::host_vector<double> datam_host, bvecs_host, bvals_host, alpha_host, beta_host, params_host;
-	thrust::host_vector<float> tau_host;
-	vector<ColumnVector> datam_vec;
-	vector<Matrix> bvecs_vec, bvals_vec;
-
-	prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,Qform,Qform_inv,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
-
 	int nvox = datam.Ncols();
 	int nfib= opts.nfibres.value(); 
 
-	thrust::device_vector<double> datam_gpu=datam_host;
-	thrust::device_vector<double> bvecs_gpu=bvecs_host;
-	thrust::device_vector<double> bvals_gpu=bvals_host;	
-	thrust::device_vector<double> params_gpu=params_host;
-	thrust::host_vector<int> vox_repeat;	//contains the id's of voxels repeated
-	vox_repeat.resize(nvox);
-	int nrepeat=0;
+	if(nvox>0){
+		thrust::host_vector<double> datam_host, bvecs_host, bvals_host, alpha_host, beta_host, params_host;
+		thrust::host_vector<float> tau_host;
+		vector<ColumnVector> datam_vec;
+		vector<Matrix> bvecs_vec, bvals_vec;
 
-	fit(datam_vec,bvecs_vec,bvals_vec,datam_host,bvecs_host,bvals_host,datam_gpu,bvecs_gpu,bvals_gpu,gpu_log,params_gpu,vox_repeat,nrepeat);
+		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,Qform,Qform_inv,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
 
-	if(opts.rician.value()){
-		calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,gpu_log, tau_host);
+		thrust::device_vector<double> datam_gpu=datam_host;
+		thrust::device_vector<double> bvecs_gpu=bvecs_host;
+		thrust::device_vector<double> bvals_gpu=bvals_host;	
+		thrust::device_vector<double> params_gpu=params_host;
+		thrust::host_vector<int> vox_repeat;	//contains the id's of voxels repeated
+		vox_repeat.resize(nvox);
+		int nrepeat=0;
+
+		fit(datam_vec,bvecs_vec,bvals_vec,datam_host,bvecs_host,bvals_host,datam_gpu,bvecs_gpu,bvals_gpu,gpu_log,params_gpu,vox_repeat,nrepeat);
+
+		if(opts.rician.value()){
+			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,gpu_log, tau_host);
+		}
+
+		bvecs_gpu.clear();		//free bvecs_gpu
+		bvecs_gpu.shrink_to_fit();
+	
+		//////   RUN MCMC  //////
+		thrust::host_vector<double> signals_host,isosignals_host;
+		thrust::host_vector<FibreGPU> fibres_host;
+		thrust::host_vector<MultifibreGPU> multifibres_host;
+	
+		prepare_data_gpu_MCMC(nvox, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
+
+		thrust::device_vector<double> signals_gpu=signals_host;
+		thrust::device_vector<double> isosignals_gpu=isosignals_host;
+		thrust::device_vector<FibreGPU> fibres_gpu=fibres_host;
+		thrust::device_vector<MultifibreGPU> multifibres_gpu=multifibres_host;
+		thrust::device_vector<float> tau_gpu = tau_host;
+		thrust::device_vector<double> alpha_gpu=alpha_host;
+		thrust::device_vector<double> beta_gpu=beta_host;
+
+		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, gpu_log, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu);
+
+		srand(opts.seed.value());
+		//double seed1 = rand(); 
+		//double seed2 = rand(); 
+
+		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, rand(), gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
+
+		thrust::device_vector<int> multirecords_gpu;
+		thrust::device_vector<float> rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu;
+
+		prepare_data_gpu_MCMC_record(nvox, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu);
+
+		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, rand(), gpu_log, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu);
+
+		/////// FINISH ALL VOXELS  ///////
+		record_finish_voxels(vol2matrixkey, matrix2volkey, mask, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu, nvox);
 	}
-
-	bvecs_gpu.clear();		//free bvecs_gpu
-	bvecs_gpu.shrink_to_fit();
-	
-	//////   RUN MCMC  //////
-	thrust::host_vector<double> signals_host,isosignals_host;
-	thrust::host_vector<FibreGPU> fibres_host;
-	thrust::host_vector<MultifibreGPU> multifibres_host;
-	
-	prepare_data_gpu_MCMC(nvox, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
-
-	thrust::device_vector<double> signals_gpu=signals_host;
-	thrust::device_vector<double> isosignals_gpu=isosignals_host;
-	thrust::device_vector<FibreGPU> fibres_gpu=fibres_host;
-	thrust::device_vector<MultifibreGPU> multifibres_gpu=multifibres_host;
-	thrust::device_vector<float> tau_gpu = tau_host;
-	thrust::device_vector<double> alpha_gpu=alpha_host;
-	thrust::device_vector<double> beta_gpu=beta_host;
-
-	init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, gpu_log, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu);
-
-	srand(opts.seed.value());
-	//double seed1 = rand(); 
-	//double seed2 = rand(); 
-
-	runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, rand(), gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
-
-	thrust::device_vector<int> multirecords_gpu;
-	thrust::device_vector<float> rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu;
-
-	prepare_data_gpu_MCMC_record(nvox, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu);
-
-	runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, rand(), gpu_log, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu);
-
-	/////// FINISH ALL VOXELS  ///////
-	record_finish_voxels(vol2matrixkey, matrix2volkey, mask, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu, nvox);
 }
 
 
