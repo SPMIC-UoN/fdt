@@ -10,13 +10,16 @@
 #include <fstream>
 
 void init_gpu(){
-	int device;
-  	cudaGetDevice(&device);
-  
-  	printf ("\n...................In the GPU launcher on the device %d...................\n", device); 
+	
 	int *q;
 	cudaMalloc((void **)&q, sizeof(int));
 	cudaFree(q);
+	sync_check("init_gpu");
+
+	int device;
+  	cudaGetDevice(&device);
+  	printf ("\n...................In the GPU launcher on the device %d...................\n", device); 
+	
 	sync_check("init_gpu");
 } 
 
