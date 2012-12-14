@@ -115,6 +115,10 @@ void xfibres_gpu(	//INPUT
 
 		/////// FINISH ALL VOXELS  ///////
 		record_finish_voxels(vol2matrixkey, matrix2volkey, mask, multirecords_gpu, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu, rlikelihood_energy_gpu, nvox);
+	}else{
+		/////// FINISH EMPTY SLICE  ///////	
+		Samples samples(vol2matrixkey,matrix2volkey,nvox,NDIRECTIONS);
+		samples.save(mask);
 	}
 }
 
