@@ -137,9 +137,9 @@ mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 mkdir -p ${subjdir}.bedpostX/xfms
 
 if [ ${gflag} -eq 1 ]; then
-    echo "bedpostx_gpu "${subjdir}  $opts "-g" >> ${subjdir}.bedpostX/commands.txt
+    echo "bedpostx_multigpu_LSF "${subjdir}  $opts "-g" >> ${subjdir}.bedpostX/commands.txt
 else
-    echo "bedpostx_gpu "${subjdir}  $opts >> ${subjdir}.bedpostX/commands.txt
+    echo "bedpostx_multigpu_LSF "${subjdir}  $opts >> ${subjdir}.bedpostX/commands.txt
 fi
 
 echo "..............Compiling CUDA-gpu code .................."
