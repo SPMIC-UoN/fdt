@@ -10,6 +10,16 @@ if [ -z $PE_NAME ] ; then
 	exit 1
 fi
 
+if [ -z $QUEUE_GPU ] ; then
+	echo "Please set QUEUE_GPU environment variable with a Queue Instance name used in SGE for process slices in GPUs"
+	exit 1
+fi
+
+if [ -z $QUEUE_GENERAL ] ; then
+	echo "Please set QUEUE_GENERAL environment variable with a Queue Instance name used in SGE for process the post processing stage in CPU"
+	exit 1
+fi
+
 beforet=`date +%s`
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
