@@ -85,7 +85,7 @@ bool RFibre::compute_th_ph_prior(){
       m_th_ph_prior=-maxarg-log(m_th_ph_prior); //Convert to -log Energy
     }
     //m_th_ph_prior=m_th_ph_prior-log(0.5*fabs(sin(m_th)));  //Correct with the Jacobian of the transformation! We jump spherical coordinates instead of Cartesian!!
-    m_th_ph_prior=m_th_ph_prior-log(fabs(sin(m_th)/(4*M_PI)));  //Correct with the Jacobian of the transformation! We jump spherical coordinates instead of Cartesian!!
+    m_th_ph_prior=m_th_ph_prior-log(fabs(sin(m_th)));        //Correct with the Jacobian of the transformation! We jump spherical coordinates instead of Cartesian!!
     return false; //set instant rejection flag to false
   }
   else{  //if no orientation prior imposed, use uniform prior
@@ -290,8 +290,8 @@ bool HRvoxel::compute_d_std_prior(){
   if(m_d_std<=0 || m_d_std>0.01)
     return true;
   else{
-    m_d_std_prior=0;
-    //m_d_std_prior=std::log(m_d_std);
+    //m_d_std_prior=0;
+    m_d_std_prior=std::log(m_d_std); //Use ARD
     return false;
   }
 }
