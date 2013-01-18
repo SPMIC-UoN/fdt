@@ -212,6 +212,10 @@ void LRSamples::record(const LRvoxel& LRv, int vox, int samp){
 
   if (m_rician)
     m_tauLRsamples(samp,vox)=LRv.get_tauLR();
+  if (m_fsumPrior)
+    m_sumfsamples(samp,vox)=LRv.get_mean_fsum();
+  if (m_dPrior)
+    m_meandsamples(samp,vox)=LRv.get_meand();
 
   m_lik_energy(samp,vox)=LRv.get_likelihood_energy();
   m_prior_energy(samp,vox)=LRv.get_prior_energy();
@@ -229,7 +233,11 @@ void LRSamples::finish_voxel(int vox){
   m_mean_S0samples(vox)=m_S0samples.Column(vox).Sum()/m_nsamps;
   if (m_rician)
     m_mean_tausamples(vox)=m_tauLRsamples.Column(vox).Sum()/m_nsamps;
- 
+  if (m_fsumPrior)
+    m_mean_sumfsamples(vox)=m_sumfsamples.Column(vox).Sum()/m_nsamps;
+  if (m_dPrior)
+    m_mean_meandsamples(vox)=m_meandsamples.Column(vox).Sum()/m_nsamps;
+
   for(int m=0; m<m_Nmodes; m++){
     m_mean_ksamples[m](vox)=m_ksamples[m].Column(vox).Sum()/m_nsamps;
 
@@ -281,21 +289,32 @@ void LRSamples::save(const volume<float>& mask){
   Log& logger = LogSingleton::getInstance();
   tmp.setmatrix(m_mean_S0samples,mask);
   tmp.setDisplayMaximumMinimum(tmp.max(),0);
-  save_volume(tmp[0],logger.appendDir("mean_S0LRsamples"));
+  save_volume(tmp[0],logger.appendDir("mean_S0_LRsamples"));
   
-  tmp.setmatrix(m_lik_energy,mask);
-  tmp.setDisplayMaximumMinimum(tmp.max(),0);
-  save_volume4D(tmp,logger.appendDir("En_Lik_samples"));
+  //tmp.setmatrix(m_lik_energy,mask);
+  //tmp.setDisplayMaximumMinimum(tmp.max(),0);
+  //save_volume4D(tmp,logger.appendDir("En_Lik_LRsamples"));
 
-  tmp.setmatrix(m_prior_energy,mask);
-  tmp.setDisplayMaximumMinimum(tmp.max(),0);
-  save_volume4D(tmp,logger.appendDir("En_Prior_samples"));
+  //tmp.setmatrix(m_prior_energy,mask);
+  //tmp.setDisplayMaximumMinimum(tmp.max(),0);
+  //save_volume4D(tmp,logger.appendDir("En_Prior_LRsamples"));
 
   if (m_rician){
     tmp.setmatrix(m_mean_tausamples,mask);
     tmp.setDisplayMaximumMinimum(tmp.max(),0);
-    save_volume(tmp[0],logger.appendDir("mean_tauLRsamples"));
+    save_volume(tmp[0],logger.appendDir("mean_tau_LRsamples"));
   }
+  if (m_fsumPrior){
+    tmp.setmatrix(m_mean_sumfsamples,mask);
+    tmp.setDisplayMaximumMinimum(1,0);
+    save_volume(tmp[0],logger.appendDir("mean_fsumPriorMode_LRsamples"));
+  }
+  if (m_dPrior){
+    tmp.setmatrix(m_mean_meandsamples,mask);
+    tmp.setDisplayMaximumMinimum(tmp.max(),0);
+    save_volume(tmp[0],logger.appendDir("mean_dPriorMode_LRsamples"));
+  }
+
 
   //Sort the output based on mean_invksamples
   vector<Matrix> sumk;
@@ -371,7 +390,7 @@ void LRVoxelManager::initialise(){
   ColumnVector pvmf,pvmth,pvmph,pvm2invk,pvm2th,pvm2ph,predicted_signal;
   
   //Initialise each HR voxel using the HR data
-  float sumd=0, sumd2=0;
+  float sumd=0, sumd2=0, sumf=0;
   for (int n=0; n<m_HRvoxnumber.Nrows(); n++){
     if (opts.modelnum.value()==1){ //Model 1
 
@@ -394,7 +413,6 @@ void LRVoxelManager::initialise(){
       
       pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
       pvmS0 =fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
-      OUT(pvmf);
       if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
       if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
 
@@ -413,6 +431,7 @@ void LRVoxelManager::initialise(){
     }
     sumd+=pvmd;
     sumd2+=pvmd*pvmd;
+    sumf+=pvmf.Sum();
   } 
 
   sumd/=m_HRvoxnumber.Nrows();
@@ -420,6 +439,8 @@ void LRVoxelManager::initialise(){
   m_LRv.set_stdevd(sumd/100);//sqrt((sumd2-m_HRvoxnumber.Nrows()*sumd*sumd)/(m_HRvoxnumber.Nrows()-1.0)));
   
   m_LRv.set_mean_fsum(0.6);
+  sumf/=m_HRvoxnumber.Nrows();
+  //m_LRv.set_mean_fsum(sumf); //does not make a big difference compared to initialising with a constant sumf=0.6
   m_LRv.set_stdev_fsum(0.01);
 
   //Initialise the orientation prior parameters using the LR data
@@ -601,7 +622,7 @@ int main(int argc, char *argv[])
     float zratio=maskLR.zdim()/maskHR.zdim();
 
     HRSamples HRsampl(datamHR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nfibres.value(), opts.rician.value(), opts.modelnum.value());
-    LRSamples LRsampl(datamLR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nmodes.value(), opts.rician.value());
+    LRSamples LRsampl(datamLR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nmodes.value(), opts.rician.value(),opts.fsumPrior.value(),opts.dPrior.value());
 
     //dHR.push_back(datamHR.Column(1)); dHR.push_back(datamHR.Column(2));
     //dHR.push_back(datamHR.Column(3)); dHR.push_back(datamHR.Column(4));

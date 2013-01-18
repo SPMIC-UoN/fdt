@@ -111,6 +111,8 @@ namespace RUBIX{
     vector<Matrix> m_ksamples;
     Matrix m_S0samples;
     Matrix m_tauLRsamples;
+    Matrix m_sumfsamples;
+    Matrix m_meandsamples;
     Matrix m_lik_energy;
     Matrix m_prior_energy;
 
@@ -119,17 +121,21 @@ namespace RUBIX{
     vector<RowVector> m_mean_ksamples;
     RowVector m_mean_S0samples;
     RowVector m_mean_tausamples;
+    RowVector m_mean_sumfsamples;
+    RowVector m_mean_meandsamples;
 
     int m_nsamps;
     const int m_njumps;
     const int m_sample_every;
     const int m_Nmodes;
     const bool m_rician;
+    const bool m_fsumPrior;
+    const bool m_dPrior;
     //const string m_logdir;
     
   public:
-  LRSamples(int nvoxels, const int njumps, const int sample_every, const int Nmodes, const bool rician=false):
-    m_njumps(njumps),m_sample_every(sample_every), m_Nmodes(Nmodes), m_rician(rician){
+  LRSamples(int nvoxels, const int njumps, const int sample_every, const int Nmodes, const bool rician=false, const bool fsumPrior=false, const bool dPrior=false):
+    m_njumps(njumps),m_sample_every(sample_every), m_Nmodes(Nmodes), m_rician(rician), m_fsumPrior(fsumPrior), m_dPrior(dPrior){
       int count=0;
       int nsamples=0;
     
@@ -150,6 +156,16 @@ namespace RUBIX{
 	m_tauLRsamples.ReSize(nsamples,nvoxels); m_tauLRsamples=0;
 	m_mean_tausamples.ReSize(nvoxels);     m_mean_tausamples=0;
       }
+      if (m_fsumPrior){
+	m_sumfsamples.ReSize(nsamples,nvoxels); m_sumfsamples=0;
+	m_mean_sumfsamples.ReSize(nvoxels);     m_mean_sumfsamples=0;
+      }
+
+      if (m_dPrior){
+	m_meandsamples.ReSize(nsamples,nvoxels); m_meandsamples=0;
+	m_mean_meandsamples.ReSize(nvoxels);     m_mean_meandsamples=0;
+      }
+      
       Matrix tmpvecs(3,nvoxels);  tmpvecs=0;  
     
       for(int f=0; f<m_Nmodes; f++){
@@ -193,7 +209,7 @@ namespace RUBIX{
 		   const ColumnVector& dataLR,const vector<ColumnVector>& dataHR, 
 		 const Matrix& bvecsLR, const Matrix& bvalsLR, const Matrix& bvecsHR, const Matrix& bvalsHR, const ColumnVector& HRweights):
     opts(rubixOptions::getInstance()), m_HRsamples(Hsamples), m_LRsamples(Lsamples), m_LRvoxnumber(LRvoxnum),m_HRvoxnumber(HRvoxnum), 
-      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts. dPrior.value(), opts.rician.value()),
+      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts.dPrior.value(), opts.rician.value()),
       m_dataLR(dataLR), m_dataHR(dataHR),m_bvecsLR(bvecsLR), m_bvalsLR(bvalsLR), m_bvecsHR(bvecsHR), m_bvalsHR(bvalsHR), m_HRweights(HRweights) { } 
     
     ~LRVoxelManager() { }
