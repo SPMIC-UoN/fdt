@@ -6,10 +6,6 @@
 
 /*  CCOPYRIGHT  */
 
-#ifndef EXPOSE_TREACHEROUS
-#define EXPOSE_TREACHEROUS
-#endif
-
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -515,8 +511,8 @@ public:
 	if(!opts.localinit.value())
 	  if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
 	    initialise_tensor(Amat);
-	  else
-	    initialise_tensor(Amat);
+	else
+	  initialise_tensor(Amat);
       }
     }
     m_multifibre.initialise_energies();
@@ -764,23 +760,10 @@ public:
 };
 
 
-//Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
-//After applying this matrix, make sure to sign flip the x coordinate of the resulted bvecs!
-//If you apply the inverse of the matrix, sign flip the x coordinate of the input bvecs
-void Return_Qform(const Matrix& qform_mat, Matrix& QMat, const float xdim, const float ydim, const float zdim){ 
-  Matrix QMat_tmp; DiagonalMatrix Scale(3);
-   
-  QMat_tmp=qform_mat.SubMatrix(1,3,1,3);
-  Scale(1)=xdim; Scale(2)=ydim; Scale(3)=zdim;
-  QMat_tmp=Scale.i()*QMat_tmp;
-  QMat=QMat_tmp;
-}
-
-
 
 //Correct bvals/bvecs accounting for Gradient Nonlinearities
 //ColumnVector grad_nonlin has 9 entries, corresponding to the 3 components of each of the x,y and z gradient deviation
-void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, const Matrix& Qform, const Matrix& Qform_inv, Matrix& bvals_c, Matrix& bvecs_c){
+void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, Matrix& bvals_c, Matrix& bvecs_c){
   bvals_c=bvals; bvecs_c=bvecs;
   Matrix L(3,3);  //gradient coil tensor
   float mag;
@@ -788,26 +771,16 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
   L(2,1)=grad_nonlin(2);  L(2,2)=grad_nonlin(5);  L(2,3)=grad_nonlin(8);
   L(3,1)=grad_nonlin(3);  L(3,2)=grad_nonlin(6);  L(3,3)=grad_nonlin(9);
 
-  IdentityMatrix Id(3);
+  IdentityMatrix Id(3); 
   
+  //Correct each gradient
   for (int l=1; l<=bvals.Ncols(); l++){
     if (bvals(1,l)>0){ //do not correct b0s
-      //Rotate bvecs to scanner's coordinate system
-      ColumnVector bvec_tmp(3);
-      bvec_tmp=Qform*bvecs.Column(l);
-      bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
-
-      //Correct for grad-nonlin in scanner's coordinate system
-      bvecs_c.Column(l)=(Id+L)*bvec_tmp;//bvecs.Column(l);
+      bvecs_c.Column(l)=(Id+L)*bvecs.Column(l);
       mag=sqrt(bvecs_c(1,l)*bvecs_c(1,l)+bvecs_c(2,l)*bvecs_c(2,l)+bvecs_c(3,l)*bvecs_c(3,l));
       if (mag!=0)
 	bvecs_c.Column(l)=bvecs_c.Column(l)/mag;
-      bvals_c(1,l)=mag*mag*bvals(1,l);
-      bvec_tmp=bvecs_c.Column(l);
-
-      //Rotate corrected bvecs back to voxel coordinate system
-      bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
-      bvecs_c.Column(l)=Qform_inv*bvec_tmp;
+      bvals_c(1,l)=mag*mag*bvals(1,l); //mag^2 as b propto |G|^2
     }
   }
 }
@@ -852,13 +825,10 @@ int main(int argc, char *argv[])
     Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols(),datam.Nrows());
 
     //Read Gradient Non_linearity Maps if provided
-    volume4D<float> grad; Matrix gradm, Qform, Qform_inv;
+    volume4D<float> grad; Matrix gradm;
     if (opts.grad_file.set()){
       read_volume4D(grad,opts.grad_file.value());
       gradm=grad.matrix(mask);
-      //Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
-      Return_Qform(data.qform_mat(), Qform, data.xdim(), data.ydim(), data.zdim());
-      Qform_inv=Qform.i();
     }
 
     Matrix Amat; ColumnVector alpha, beta;
@@ -879,7 +849,7 @@ int main(int argc, char *argv[])
 	Matrix Amat_c, bvals_c, bvecs_c;
 	ColumnVector alpha_c, beta_c;
 	
-	correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox),Qform,Qform_inv,bvals_c,bvecs_c); //correct for gradient nonlinearities
+	correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox),bvals_c,bvecs_c); //correct for gradient nonlinearities
 	Amat_c=form_Amat(bvecs_c,bvals_c);
 	cart2sph(bvecs_c,alpha_c,beta_c);
 	xfibresVoxelManager  vm(datam.Column(vox),alpha_c,beta_c,bvecs_c,bvals_c,samples,vox);
