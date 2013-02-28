@@ -22,7 +22,11 @@
 #define d2lambda_gpu(d) (sqrt(double(d))) 
 
 //defined in diffmodels.h
-#define beta2f_gpu(beta) (pow(sin(double(beta)),2.0))
+//#define beta2f_gpu(beta) (pow(sin(double(beta)),2.0))
+__device__ inline  double beta2f_gpu(double beta){ 
+	double sinbeta= sin(beta);
+	return sinbeta*sinbeta;
+}
 
 //defined in diffmodels.h
 #define lambda2d_gpu(lambda) (lambda*lambda) 
@@ -36,7 +40,6 @@ __device__ inline double f2x_gpu(double x){
 __device__ inline double x2f_gpu(double x){         
 	return abs(two_pi*atan(x));
 }
-
 
 //defined in miscmaths.h 
 __device__ inline  int sign_gpu(int x){ if (x>0) return 1; else { if (x<0) return -1; else return 0; } }
