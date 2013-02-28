@@ -41,23 +41,31 @@ void fit_PVM_multi(	//INPUT
 
 void calculate_tau(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>&	params_gpu,
+			thrust::device_vector<double>	params_gpu,
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
-			thrust::host_vector<int>&	vox_repeat,
+			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,		
 			string 				output_file,	
 			//OUTPUT
 			thrust::host_vector<float>&	tau);
 
 
-__device__ double cf_PVM_single(	//INPUT
+__device__ void cf_PVM_single(		//INPUT
 					const double*			params,
 					const double*			data,
 					const double*			bvecs, 
 					const double*			bvals,
 					const int 			nparams, 
-					const bool 			m_include_f0);
+					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
+					//OUTPUT
+					double 				&cfv);
 
 __device__ void grad_PVM_single(	//INPUT
 					const double*			params,
@@ -66,7 +74,13 @@ __device__ void grad_PVM_single(	//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
-					// OUTPUT
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
+					//OUTPUT
 					double*				grad);
 
 __device__ void hess_PVM_single(	//INPUT
@@ -75,16 +89,31 @@ __device__ void hess_PVM_single(	//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,
+					double* 			fs,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
 					//OUTPUT
 					double*				hess);
 
-__device__ double cf_PVM_single_c(	//INPUT
+__device__ void cf_PVM_single_c(	//INPUT
 					const double*			params,
 					const double*			data,
 					const double*			bvecs, 
 					const double*			bvals,
 					const int 			nparams, 
-					const bool 			m_include_f0);
+					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,
+					double* 			fs,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
+					//OUTPUT
+					double 				&cfv);
+
 
 __device__ void grad_PVM_single_c(	//INPUT
 					const double*			params,
@@ -93,6 +122,13 @@ __device__ void grad_PVM_single_c(	//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double* 			f_deriv,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
 					//OUTPUT
 					double*				grad);
 
@@ -102,16 +138,32 @@ __device__ void hess_PVM_single_c(	//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double* 			f_deriv,
+					double*				x,
+					double 				&_d,
+					double 				&sumf,
 					//OUTPUT
 					double*				hess);
 
-__device__ double cf_PVM_multi(		//INPUT
+__device__ void cf_PVM_multi(		//INPUT
 					const double*			params,
 					const double*			data,
 					const double*			bvecs, 
 					const double*			bvals,
 					const int 			nparams, 
-					const bool 			m_include_f0);
+					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double*				x,
+					double 				&_a,
+					double 				&_b,
+					double 				&sumf,
+					//OUTPUT
+					double 				&cfv);
 
 __device__ void grad_PVM_multi(		//INPUT
 					const double*			params,
@@ -120,6 +172,13 @@ __device__ void grad_PVM_multi(		//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double*				x,
+					double 				&_a,
+					double 				&_b,
+					double 				&sumf,
 					//OUTPUT
 					double*				grad);
 
@@ -129,6 +188,12 @@ __device__ void hess_PVM_multi(		//INPUT
 					const double*			bvals,
 					const int 			nparams,
 					const bool 			m_include_f0,
+					const int			idB,
+					double*				shared,					
+					double* 			fs,
+					double*				x,
+					double 				&_a,
+					double 				&_b,
+					double 				&sumf,
 					//OUTPUT
 					double*				hess);
-

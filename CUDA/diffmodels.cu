@@ -46,6 +46,9 @@ void fit_PVM_single(	//INPUT
       		nparams = nfib*3 + 3; 
     	else
       		nparams = nfib*3 + 2;
+
+	thrust::host_vector<double> params_host;
+	params_host.resize(nvox*nparams);
 	
 	for(int vox=0;vox<nvox;vox++){
 		// initialise with a tensor
@@ -56,32 +59,33 @@ void fit_PVM_single(	//INPUT
   		float _th,_ph;
   		cart2sph(dti.get_v1(),_th,_ph);
 
-  		params_gpu[vox*nparams] = dti.get_s0();
+  		params_host[vox*nparams] = dti.get_s0();
   		//start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
-  		params_gpu[vox*nparams+1] = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
-	  	params_gpu[vox*nparams+2] = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
-	  	params_gpu[vox*nparams+3] = _th;
-	  	params_gpu[vox*nparams+4] = _ph;
-	  	float sumf=x2f(params_gpu[vox*nparams+2]);
+  		params_host[vox*nparams+1] = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
+	  	params_host[vox*nparams+2] = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
+	  	params_host[vox*nparams+3] = _th;
+	  	params_host[vox*nparams+4] = _ph;
+	  	float sumf=x2f(params_host[vox*nparams+2]);
 	  	float tmpsumf=sumf;
 	  	for(int ii=2,i=5;ii<=nfib;ii++,i+=3){
 		    	float denom=2;
 		    	do{
-		      		params_gpu[vox*nparams+i] = f2x(x2f(params_gpu[vox*nparams+i-3])/denom);
+		      		params_host[vox*nparams+i] = f2x(x2f(params_host[vox*nparams+i-3])/denom);
 		      		denom *= 2;
-		      		tmpsumf = sumf + x2f(params_gpu[vox*nparams+i]);
+		      		tmpsumf = sumf + x2f(params_host[vox*nparams+i]);
 		    	}while(tmpsumf>=1);
-		    	sumf += x2f(params_gpu[vox*nparams+i]);
+		    	sumf += x2f(params_host[vox*nparams+i]);
 		    	cart2sph(dti.get_v(ii),_th,_ph);
-		    	params_gpu[vox*nparams+i+1] = _th;
-		    	params_gpu[vox*nparams+i+2] = _ph;
+		    	params_host[vox*nparams+i+1] = _th;
+		    	params_host[vox*nparams+i+2] = _ph;
 	  	}
 	  	if (m_include_f0)
-	    		params_gpu[vox*nparams+nparams-1]=f2x(FSMALL);
+	    		params_host[vox*nparams+nparams-1]=f2x(FSMALL);
 	}
 
-	int blocks = nvox/THREADS_X_BLOCK_FIT;
-        if (nvox % THREADS_X_BLOCK_FIT) blocks++;
+	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
+
+	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
 
@@ -108,6 +112,9 @@ void fit_PVM_single_c(	//INPUT
       		nparams = nfib*3 + 3; 
     	else
       		nparams = nfib*3 + 2;
+
+	thrust::host_vector<double> params_host;
+	params_host.resize(nvox*nparams);
 
 	for(int vox=0;vox<nvox;vox++){
 		// initialise with a tensor
@@ -136,12 +143,13 @@ void fit_PVM_single_c(	//INPUT
   		pvm.fit_pvf(start);
 
 		for(int i=0;i<nparams;i++){ 
-			params_gpu[vox*nparams+i]=start(i+1);
+			params_host[vox*nparams+i]=start(i+1);
 		}
 	}
 
-	int blocks = nvox/THREADS_X_BLOCK_FIT;
-        if (nvox % THREADS_X_BLOCK_FIT) blocks++;
+	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
+
+	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
 
@@ -161,8 +169,7 @@ void fit_PVM_multi(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib = opts.nfibres.value();
 
-	int blocks = nvox/THREADS_X_BLOCK_FIT;
-        if (nvox % THREADS_X_BLOCK_FIT) blocks++;
+	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
 
@@ -183,10 +190,10 @@ void fit_PVM_multi(	//INPUT
 
 void calculate_tau(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>&	params_gpu,
+			thrust::device_vector<double>	params_gpu,
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
-			thrust::host_vector<int>&	vox_repeat,
+			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,		
 			string 				output_file,	
 			//OUTPUT
@@ -216,8 +223,7 @@ void calculate_tau(	//INPUT
 		}
 	}
 
-	int blocks = nvox/THREADS_X_BLOCK_FIT;
-        if (nvox % THREADS_X_BLOCK_FIT) blocks++;
+	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
 
@@ -239,11 +245,15 @@ void calculate_tau(	//INPUT
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 
+	thrust::host_vector<double> residuals_host;
+	residuals_host.resize(nvox*NDIRECTIONS);
+	thrust::copy(residuals_gpu.begin(), residuals_gpu.end(), residuals_host.begin());	
+
 	ColumnVector res(NDIRECTIONS);
 	for(int vox=0;vox<nvox;vox++){	
-		for(int i=0;i<NDIRECTIONS;i++) res(i+1)= residuals_gpu[vox*NDIRECTIONS+i];  
+		for(int i=0;i<NDIRECTIONS;i++) res(i+1)= residuals_host[vox*NDIRECTIONS+i];  
 
-	float variance=var(res).AsScalar();  
+		float variance=var(res).AsScalar();  
 		tau[vox]=1.0/variance;
 	}
 
