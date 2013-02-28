@@ -35,8 +35,6 @@ void prepare_data_gpu_FIT(	//INPUT
 				const Matrix				bvecs,
 				const Matrix				bvals,
 				const Matrix	 			gradm, 
-				const Matrix 				Qform, 
-				const Matrix 				Qform_inv,
 				//OUTPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,

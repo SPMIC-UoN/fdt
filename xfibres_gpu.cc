@@ -6,10 +6,6 @@
 
 /*  CCOPYRIGHT  */
 
-#ifndef EXPOSE_TREACHEROUS
-#define EXPOSE_TREACHEROUS
-#endif
-
 #include "CUDA/xfibres_gpu.h"
 #include "xfibresoptions.h"
 #include "newmat.h"
@@ -21,9 +17,6 @@
 
 
 using namespace Xfibres;
-
-
-void Return_Qform(const Matrix& qform_mat, Matrix& QMat, const float xdim, const float ydim, const float zdim);
 
 //////////////////////////////////////////////////////////
 //       XFIBRES CPU PART. IT CALLS TO GPU PART
@@ -114,13 +107,10 @@ int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
     	//Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols(),datam.Nrows());	//in xfibres_gpu.cu
 
 	//Read Gradient Non_linearity Maps if provided
-    	NEWIMAGE::volume4D<float> grad; Matrix gradm, Qform, Qform_inv;
+    	NEWIMAGE::volume4D<float> grad; Matrix gradm;
     	if (opts.grad_file.set()){
       		read_volume4D(grad,opts.grad_file.value());
       		gradm=grad.matrix(mask);
-      		//Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
-      		Return_Qform(data.qform_mat(), Qform, data.xdim(), data.ydim(), data.zdim());
-      		Qform_inv=Qform.i();
     	}
 	
 	myfile << "Number of Voxels: " << datam.Ncols() << endl;  
@@ -129,7 +119,7 @@ int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
     	if(opts.rician.value() && !opts.nonlin.value()) 
       		cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl;
 
-	xfibres_gpu(datam,bvecs,bvals,gradm,Qform,Qform_inv,vol2matrixkey,matrix2volkey,mask,slice,subjdir);
+	xfibres_gpu(datam,bvecs,bvals,gradm,vol2matrixkey,matrix2volkey,mask,slice,subjdir);
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1); 
@@ -139,15 +129,3 @@ int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
   	return 0;
 }
 
-
-
-//Get the scale-free Qform matrix to rotate bvecs back to scanner's coordinate system 
-//After applying this matrix, make sure to sign flip the x coordinate of the resulted bvecs!
-//If you apply the inverse of the matrix, sign flip the x coordinate of the input bvecs
-void Return_Qform(const Matrix& qform_mat, Matrix& QMat, const float xdim, const float ydim, const float zdim){ 
-  	Matrix QMat_tmp; DiagonalMatrix Scale(3); 
-  	QMat_tmp=qform_mat.SubMatrix(1,3,1,3);
-  	Scale(1)=xdim; Scale(2)=ydim; Scale(3)=zdim;
-  	QMat_tmp=Scale.i()*QMat_tmp;
-  	QMat=QMat_tmp;
-}

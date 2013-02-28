@@ -31,8 +31,6 @@ void xfibres_gpu(	//INPUT
 			const Matrix			bvecs,
 			const Matrix			bvals,
 			const Matrix	 		gradm, 
-			const Matrix 			Qform, 
-			const Matrix 			Qform_inv,
 			const NEWIMAGE::volume<int> 	vol2matrixkey,
 			const NEWMAT::Matrix		matrix2volkey,
 			const NEWIMAGE::volume<float>	mask,
@@ -64,7 +62,7 @@ void xfibres_gpu(	//INPUT
 		vector<Matrix> bvecs_vec, bvals_vec;
 
 		///// FIT /////
-		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,Qform,Qform_inv,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
+		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
 
 		thrust::device_vector<double> datam_gpu=datam_host;
 		thrust::device_vector<double> bvecs_gpu=bvecs_host;
@@ -125,7 +123,7 @@ void xfibres_gpu(	//INPUT
 
 // Correct bvals/bvecs accounting for Gradient Nonlinearities
 // ColumnVector grad_nonlin has 9 entries, corresponding to the 3 components of each of the x,y and z gradient deviation
-void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, const Matrix& Qform, const Matrix& Qform_inv, Matrix& bvals_c, Matrix& bvecs_c){
+void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, Matrix& bvals_c, Matrix& bvecs_c){
   	bvals_c=bvals; bvecs_c=bvecs;
   	Matrix L(3,3);  //gradient coil tensor
   	float mag;
@@ -137,22 +135,11 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
   
   	for (int l=1; l<=bvals.Ncols(); l++){
     		if (bvals(1,l)>0){ //do not correct b0s
-      			//Rotate bvecs to scanner's coordinate system
-      			ColumnVector bvec_tmp(3);
-      			bvec_tmp=Qform*bvecs.Column(l);
-      			bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
-
-      			//Correct for grad-nonlin in scanner's coordinate system
-     		 	bvecs_c.Column(l)=(Id+L)*bvec_tmp;//bvecs.Column(l);
+     		 	bvecs_c.Column(l)=(Id+L)*bvecs.Column(l);
       			mag=sqrt(bvecs_c(1,l)*bvecs_c(1,l)+bvecs_c(2,l)*bvecs_c(2,l)+bvecs_c(3,l)*bvecs_c(3,l));
       			if (mag!=0)
 				bvecs_c.Column(l)=bvecs_c.Column(l)/mag;
-      			bvals_c(1,l)=mag*mag*bvals(1,l);
-      			bvec_tmp=bvecs_c.Column(l);
-
-      			//Rotate corrected bvecs back to voxel coordinate system
-      			bvec_tmp(1)=-bvec_tmp(1); //Sign-flip X coordinate
-      			bvecs_c.Column(l)=Qform_inv*bvec_tmp;
+      			bvals_c(1,l)=mag*mag*bvals(1,l);//mag^2 as b propto |G|^2
     		}
   	}
 }
@@ -335,8 +322,6 @@ void prepare_data_gpu_FIT(	//INPUT
 				const Matrix				bvecs,
 				const Matrix				bvals,
 				const Matrix	 			gradm, 
-				const Matrix 				Qform, 
-				const Matrix 				Qform_inv,
 				//OUTPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,
@@ -373,7 +358,7 @@ void prepare_data_gpu_FIT(	//INPUT
 
 	if (opts.grad_file.set()){
 		for(int vox=0;vox<nvox;vox++){
-			correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox+1),Qform,Qform_inv,bvals_vec[vox],bvecs_vec[vox]); //correct for gradient nonlinearities
+			correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox+1),bvals_vec[vox],bvecs_vec[vox]); //correct for gradient nonlinearities
  			MISCMATHS::cart2sph(bvecs_vec[vox],alpha,beta);
 			
 			for(int dir=0;dir<NDIRECTIONS;dir++){

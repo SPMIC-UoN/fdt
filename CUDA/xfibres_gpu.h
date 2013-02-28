@@ -17,8 +17,6 @@ void xfibres_gpu(	//INPUT
 			const NEWMAT::Matrix			bvals,
 			const NEWMAT::Matrix			bvecs,
 			const NEWMAT::Matrix	 		gradm, 
-			const NEWMAT::Matrix 			Qform, 
-			const NEWMAT::Matrix 			Qform_inv,
 			const NEWIMAGE::volume<int> 		vol2matrixkey,
 			const NEWMAT::Matrix			matrix2volkey,
 			const NEWIMAGE::volume<float>		mask,
