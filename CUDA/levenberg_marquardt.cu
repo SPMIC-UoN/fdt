@@ -11,6 +11,7 @@
 
 #include "solver_mult_inverse.cu"
 #include "diffmodels.cuh"
+#include "dim_blocks.h"
 #include "options.h"
 
 //CPU version in nonlin.h
@@ -27,72 +28,93 @@ __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
 							const double*		bvals, 
 							const int 		nparams,
 							const bool 		m_include_f0,
+							const int		idB,
+							double* 		step,		//shared memory
+							double*			grad,           //shared memory     	          
+						   	double* 		hess,		//shared memory
+							double* 		inverse,	//shared memory
+							double 			&pcf,		//shared memory
+							double 			&ncf,		//shared memory
+							double 			&lambda,	//shared memory
+							double 			&cftol,		//shared memory
+							double 			&ltol,		//shared memory
+							double 			&olambda,	//shared memory
+							bool 			&success,    	//shared memory
+							bool 			&end,    	//shared memory
+							double*			shared,		//shared memory
+							double* 		fs,		//shared memory
+						  	double*			x,		//shared memory
+							double 			&_d,		//shared memory
+						  	double 			&sumf,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)
+							double*			myparams)	//shared memory
 {
-   	double pcf;
-   	double lambda=0.1;
-   	double cftol=1.0e-8;
-   	double ltol=1.0e20;                  
+	int niter=0; 
+	int maxiter=200;
 
-   	bool success = true;             
-   	double olambda = 0.0;              
-   	double grad[NPARAMS];                          
-   	double hess[NPARAMS*NPARAMS];   
-   	double inverse[NPARAMS];
-   	double step[NPARAMS];	
+   	if(idB==0){
+		end=false;
+   		lambda=0.1;
+   		cftol=1.0e-8;
+   		ltol=1.0e20;                  
+   		success = true;               
+   		olambda = 0.0;              
+   		ncf=0;  
+	}
 
-   	double ncf=0;
+   	cf_PVM_single(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,pcf);  
+	__syncthreads();
 
-   	int maxiter=200;
-   	int niter=0;     
-
-   	pcf=cf_PVM_single(myparams,mydata,bvecs,bvals,nparams,m_include_f0); 
-	
-   	while (!(success&&niter++ >= maxiter)){ 	//if success we not increase niter (first condition is true)
-							//function cost has decreise, we have advanced.
+   	while (!(success&&niter++>=maxiter)){ 	//if success we not increase niter (first condition is true)
+						//function cost has decreise, we have advanced.
    		if(success){
-    			grad_PVM_single(myparams,mydata,bvecs,bvals,nparams,m_include_f0,grad);   
-    			hess_PVM_single(myparams,bvecs,bvals,nparams,m_include_f0,hess);  
+    			grad_PVM_single(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,grad); 
+			__syncthreads(); 
+    			hess_PVM_single(myparams,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,hess);  
     		}
 
-    		for (int i=0; i<nparams; i++) {                         
-			hess[(i*nparams)+i]+=lambda-olambda;	
-    		}
+		if(idB==0){
+    			for (int i=0; i<nparams; i++) {                         
+				hess[(i*nparams)+i]+=lambda-olambda;	//Levenberg LM_L
+    			}
 
-    		solver(hess,grad,nparams,inverse);
+    			solver(hess,grad,nparams,inverse);
 
-    		for (int i=0;i<nparams;i++){
-			step[i]=-inverse[i];		
-    		}
+    			for (int i=0;i<nparams;i++){
+				step[i]=-inverse[i];		
+    			}
 
-   		for(int i=0;i<nparams;i++){
-			step[i]=myparams[i]+step[i];
-   		}
-
-   		ncf = cf_PVM_single(step,mydata,bvecs,bvals,nparams,m_include_f0);
-
-   		if (success = (ncf < pcf)) {
-			olambda = 0.0;
-        		for(int i=0;i<nparams;i++){
-				myparams[i]=step[i];
+   			for(int i=0;i<nparams;i++){
+				step[i]=myparams[i]+step[i];
    			}
-        		lambda=lambda/10.0;
+		}
+		
+		__syncthreads();
+   		cf_PVM_single(step,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,ncf); 
 
-			if (zero_cf_diff_conv(pcf,ncf,cftol)){
-				return;
-			}
-			pcf=ncf;
-    		}else{
-			olambda=lambda;
-			lambda=lambda*10.0;
-			if(lambda> ltol){ 
-				return;
+		if(idB==0){
+   			if (success = (ncf < pcf)){ 
+				olambda = 0.0;
+        			for(int i=0;i<nparams;i++){
+					myparams[i]=step[i];
+   				}
+        			lambda=lambda/10.0;
+
+				if (zero_cf_diff_conv(pcf,ncf,cftol)){
+					end=true;
+				}
+				pcf=ncf;
+    			}else{
+				olambda=lambda;
+				lambda=lambda*10.0;
+				if(lambda> ltol){ 
+					end=true;
+				}
 			}
     		}	
+		__syncthreads();
+		if(end) return;		
    	}
-	
-	return;
 }
 
 __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
@@ -101,72 +123,94 @@ __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
 							const double*		bvals, 
 							const int 		nparams,
 							const bool 		m_include_f0,
+							const int		idB,
+							double* 		step,		//shared memory
+							double*			grad,           //shared memory     	          
+						   	double* 		hess,		//shared memory
+							double* 		inverse,	//shared memory
+							double 			&pcf,		//shared memory
+							double 			&ncf,		//shared memory
+							double 			&lambda,	//shared memory
+							double 			&cftol,		//shared memory
+							double 			&ltol,		//shared memory
+							double 			&olambda,	//shared memory
+							bool 			&success,    	//shared memory
+							bool 			&end,    	//shared memory
+							double*			shared,		//shared memory
+							double* 		fs,		//shared memory
+							double*			f_deriv,	//shared memory
+						  	double*			x,		//shared memory
+							double 			&_d,		//shared memory
+						  	double 			&sumf,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)
+							double*			myparams)	//shared memory
 {
-   	double pcf;
-   	double lambda=0.1;
-   	double cftol=1.0e-8;
-   	double ltol=1.0e20;                  
+	int niter=0; 
+	int maxiter=200;
 
-   	bool success = true;             
-   	double olambda = 0.0;              
-   	double grad[NPARAMS];                          
-   	double hess[NPARAMS*NPARAMS];   
-   	double inverse[NPARAMS];
-   	double step[NPARAMS];	
-
-   	double ncf=0;
-
-   	int maxiter=200;
-   	int niter=0;     
-
-   	pcf=cf_PVM_single_c(myparams,mydata,bvecs,bvals,nparams,m_include_f0);
+   	if(idB==0){
+		end=false;
+   		lambda=0.1;
+   		cftol=1.0e-8;
+   		ltol=1.0e20;                  
+   		success = true;               
+   		olambda = 0.0;              
+   		ncf=0;  
+	}
+			
+	cf_PVM_single_c(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,pcf);  
+	__syncthreads();
 	
    	while (!(success&&niter++ >= maxiter)){ 	//if success we not increase niter (first condition is true)
 							//function cost has decreise, we have advanced.
    		if(success){
-    			grad_PVM_single_c(myparams,mydata,bvecs,bvals,nparams,m_include_f0,grad);   
-    			hess_PVM_single_c(myparams,bvecs,bvals,nparams,m_include_f0,hess);  
+			grad_PVM_single_c(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,f_deriv,x,_d,sumf,grad);  
+			__syncthreads();
+    			hess_PVM_single_c(myparams,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,f_deriv,x,_d,sumf,hess);  
     		}
 
-    		for (int i=0; i<nparams; i++) {                         
-			hess[(i*nparams)+i]+=lambda-olambda;	
-    		}
+		if(idB==0){
+    			for (int i=0; i<nparams; i++) {                         
+				hess[(i*nparams)+i]+=lambda-olambda;	//Levenberg LM_L
+    			}
 
-    		solver(hess,grad,nparams,inverse);
+    			solver(hess,grad,nparams,inverse);
 
-    		for (int i=0;i<nparams;i++){
-			step[i]=-inverse[i];		
-    		}
+    			for (int i=0;i<nparams;i++){
+				step[i]=-inverse[i];		
+    			}
 
-   		for(int i=0;i<nparams;i++){
-			step[i]=myparams[i]+step[i];
-   		}
-
-   		ncf = cf_PVM_single_c(step,mydata,bvecs,bvals,nparams,m_include_f0);
-		
-   		if (success = (ncf < pcf)) {
-			olambda = 0.0;
-        		for(int i=0;i<nparams;i++){
-				myparams[i]=step[i];
+   			for(int i=0;i<nparams;i++){
+				step[i]=myparams[i]+step[i];
    			}
-        		lambda=lambda/10.0;
+		}
 
-			if (zero_cf_diff_conv(pcf,ncf,cftol)){
-				return;
-			}
-			pcf=ncf;
-    		}else{
-			olambda=lambda;
-			lambda=lambda*10.0;
-			if(lambda> ltol){ 
-				return;
-			}
-    		}	
+		__syncthreads();
+   		cf_PVM_single_c(step,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_d,sumf,ncf); 
+
+		if(idB==0){
+   			if (success = (ncf < pcf)) {
+				olambda = 0.0;
+        			for(int i=0;i<nparams;i++){
+					myparams[i]=step[i];
+   				}
+        			lambda=lambda/10.0;
+
+				if (zero_cf_diff_conv(pcf,ncf,cftol)){
+					end=true;
+				}
+				pcf=ncf;
+    			}else{
+				olambda=lambda;
+				lambda=lambda*10.0;
+				if(lambda> ltol){ 
+					end=true;
+				}
+    			}
+		}
+		__syncthreads();
+		if(end) return;		
    	}
-	
-	return;
 }
 
 
@@ -176,71 +220,93 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
 							const double*		bvals, 
 							const int 		nparams,
 							const bool 		m_include_f0,
+							const int		idB,
+							double* 		step,		//shared memory
+							double*			grad,           //shared memory     	          
+						   	double* 		hess,		//shared memory
+							double* 		inverse,	//shared memory
+							double 			&pcf,		//shared memory
+							double 			&ncf,		//shared memory
+							double 			&lambda,	//shared memory
+							double 			&cftol,		//shared memory
+							double 			&ltol,		//shared memory
+							double 			&olambda,	//shared memory
+							bool 			&success,    	//shared memory
+							bool 			&end,    	//shared memory
+							double*			shared,		//shared memory
+							double* 		fs,		//shared memory
+						  	double*			x,		//shared memory
+							double 			&_a,		//shared memory
+							double 			&_b,		//shared memory
+						  	double 			&sumf,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)
+							double*			myparams)	//shared memory
 {
-   	double pcf;
-   	double lambda=0.1;
-   	double cftol=1.0e-8;
-   	double ltol=1.0e20;                  
+	int niter=0; 
+	int maxiter=200;
 
-   	bool success = true;             
-   	double olambda = 0.0;              
-   	double grad[NPARAMS];                          
-   	double hess[NPARAMS*NPARAMS];   
-   	double inverse[NPARAMS];
-   	double step[NPARAMS];	
+   	if(idB==0){
+		end=false;
+   		lambda=0.1;
+   		cftol=1.0e-8;
+   		ltol=1.0e20;                  
+   		success = true;               
+   		olambda = 0.0;              
+   		ncf=0;  
+	}
 
-   	double ncf=0;
-
-   	int maxiter=200;
-   	int niter=0;     
-
-   	pcf=cf_PVM_multi(myparams,mydata,bvecs,bvals,nparams,m_include_f0);
+	cf_PVM_multi(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_a,_b,sumf,pcf);  
+	__syncthreads();
 	
    	while (!(success&&niter++ >= maxiter)){ 	//if success we not increase niter (first condition is true)
 							//function cost has decreise, we have advanced.
    		if(success){
-    			grad_PVM_multi(myparams,mydata,bvecs,bvals,nparams,m_include_f0,grad);   
-    			hess_PVM_multi(myparams,bvecs,bvals,nparams,m_include_f0,hess);  
+			grad_PVM_multi(myparams,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_a,_b,sumf,grad);  
+			__syncthreads(); 
+    			hess_PVM_multi(myparams,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_a,_b,sumf,hess);  
     		}
 
-    		for (int i=0; i<nparams; i++) {                         
-			hess[(i*nparams)+i]+=lambda-olambda;	
-    		}
+		if(idB==0){
+    			for (int i=0; i<nparams; i++) {                         
+				hess[(i*nparams)+i]+=lambda-olambda;	//Levenberg LM_L
+    			}
 
-    		solver(hess,grad,nparams,inverse);
+    			solver(hess,grad,nparams,inverse);
 
-    		for (int i=0;i<nparams;i++){
-			step[i]=-inverse[i];		
-    		}
+    			for (int i=0;i<nparams;i++){
+				step[i]=-inverse[i];		
+    			}
 
-   		for(int i=0;i<nparams;i++){
-			step[i]=myparams[i]+step[i];
-   		}
-
-   		ncf = cf_PVM_multi(step,mydata,bvecs,bvals,nparams,m_include_f0);
-
-   		if (success = (ncf < pcf)) {
-			olambda = 0.0;
-        		for(int i=0;i<nparams;i++){
-				myparams[i]=step[i];
+   			for(int i=0;i<nparams;i++){
+				step[i]=myparams[i]+step[i];
    			}
-        		lambda=lambda/10.0;
+		}
 
-			if (zero_cf_diff_conv(pcf,ncf,cftol)){
-				return;
-			}
-			pcf=ncf;
-    		}else{
-			olambda=lambda;
-			lambda=lambda*10.0;
-			if(lambda> ltol){ 
-				return;
-			}
-    		}	
+		__syncthreads();
+   		cf_PVM_multi(step,mydata,bvecs,bvals,nparams,m_include_f0,idB,shared,fs,x,_a,_b,sumf,ncf); 
+
+		if(idB==0){
+   			if (success = (ncf < pcf)) {
+				olambda = 0.0;
+        			for(int i=0;i<nparams;i++){
+					myparams[i]=step[i];
+   				}
+        			lambda=lambda/10.0;
+
+				if (zero_cf_diff_conv(pcf,ncf,cftol)){
+					end=true;
+				}
+				pcf=ncf;
+    			}else{
+				olambda=lambda;
+				lambda=lambda*10.0;
+				if(lambda> ltol){ 
+					end=true;
+				}
+    			}
+		}
+		__syncthreads();
+		if(end) return;				
    	}
-	
-	return;
 }
 #endif
