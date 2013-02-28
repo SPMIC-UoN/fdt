@@ -205,7 +205,6 @@ echo "Compilation Time: $diff seconds" >> ${subjdir}.bedpostX/times
 
 echo "CUDA CODE compiled successfully"
 
-mailto=`whoami`@fmrib.ox.ac.uk
 before=`date +%s`
 echo Preprocessing stages
 ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}
@@ -224,21 +223,27 @@ post_string="bsub -o ${subjdir}'.bedpostX/logs/output.log -e ${subjdir}.bedpostX
 post_string=$post_string" -w "
 
 echo Submitting slices to GPUs
+first_job=1
 while [ $slice -lt $nslices ];do
+	slicezp=`$FSLDIR/bin/zeropad $slice 4`
+	if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ];then
+		echo "Slice $slice has already been processed"
+	else
+   		string=$(bsub -o ${subjdir}'.bedpostX/logs/output.log' -e ${subjdir}'.bedpostX/logs/error.log' -W 0:30 -n 1  ${FSLDIR}'/bin/splitter_multigpu' $subjdir $gflag $nfibres $slice $opts)
+    		array=(`echo $string | tr "<" ' '`)
+    		aux=${array[1]}
+    		array=(`echo $aux | tr ">" ' '`)
+    		job=${array[0]}
+    		#echo $job
 
-    string=$(bsub -o ${subjdir}'.bedpostX/logs/output.log' -e ${subjdir}'.bedpostX/logs/error.log' -W 0:15 -n 1  ${FSLDIR}'/bin/splitter_multigpu' $subjdir $gflag $nfibres $slice $opts)
-    array=(`echo $string | tr "<" ' '`)
-    aux=${array[1]}
-    array=(`echo $aux | tr ">" ' '`)
-    job=${array[0]}
-    #echo $job
-
-if [ $slice -eq $(($nslices-1)) ];then
-     post_string=$post_string"done("${job}")"
-else
-     post_string=$post_string"done("${job}")&&"
-fi
-    slice=$(($slice + 1))
+		if [ $first_job -eq 1 ];then
+     			post_string=$post_string"done("${job}")"
+			first_job=0
+		else
+     			post_string=$post_string"&&done("${job}")"
+		fi
+	fi
+	slice=$(($slice + 1))
 done
 
 post_string=$post_string" ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir"
