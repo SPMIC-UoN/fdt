@@ -68,7 +68,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 
 //implemented and used in xfibres_gpu.cu
 void mix_params(	//INPUT
-			thrust::device_vector<double>   		params_repeat_gpu,
+			thrust::host_vector<double>   		params_repeat_gpu,
 			thrust::host_vector<int>			vox_repeat,
 			int						nrepeat,
 			int						nvox,
