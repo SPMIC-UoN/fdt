@@ -54,7 +54,6 @@ void xfibres_gpu(	//INPUT
 
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
-	///// FIT /////
 	int nvox = datam.Ncols();
 	int nfib= opts.nfibres.value(); 
 
@@ -64,6 +63,7 @@ void xfibres_gpu(	//INPUT
 		vector<ColumnVector> datam_vec;
 		vector<Matrix> bvecs_vec, bvals_vec;
 
+		///// FIT /////
 		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,Qform,Qform_inv,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
 
 		thrust::device_vector<double> datam_gpu=datam_host;
@@ -197,11 +197,13 @@ void fit(	//INPUT
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
-
+				thrust::host_vector<double> params_host;
+				params_host.resize(nvox*nparams_fit);
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){			
-					md = params_gpu[vox*nparams_fit+(1)];
-					mf = params_gpu[vox*nparams_fit+(2)];
-					f0 = params_gpu[vox*nparams_fit+(nparams_fit-1)];
+					md = params_host[vox*nparams_fit+(1)];
+					mf = params_host[vox*nparams_fit+(2)];
+					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
 					if ((opts.nfibres.value()>0 && mf<0.05) || md>0.007 || f0>0.4){		//if true we need to repeat this voxel
 						vox_repeat[nrepeat]=vox;
 						nrepeat++;
@@ -225,9 +227,9 @@ void fit(	//INPUT
 					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
 				
 		 			fit_PVM_single(datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_gpu, bvecs_repeat_gpu, bvals_repeat_gpu, false, params_repeat_gpu);
-
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 					//mix all the parameteres: repeated and not repeated
-					mix_params(params_repeat_gpu,vox_repeat, nrepeat, params_gpu);
+					mix_params(params_repeat_host,vox_repeat, nrepeat, nvox, params_gpu);
 				}
 	  		}
 		}else{
@@ -235,11 +237,13 @@ void fit(	//INPUT
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
-	
+				thrust::host_vector<double> params_host;
+				params_host.resize(nvox*nparams_fit);
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){		
-					md = params_gpu[vox*nparams_fit+(1)];
-					mf = params_gpu[vox*nparams_fit+(2)];
-					f0 = params_gpu[vox*nparams_fit+(nparams_fit-1)];
+					md = params_host[vox*nparams_fit+(1)];
+					mf = params_host[vox*nparams_fit+(2)];
+					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
 					if ((opts.nfibres.value()>0 && mf<0.05) || md>0.007 || f0>0.4){		//if true we need to repeat this voxel
 						vox_repeat[nrepeat]=vox;
 						nrepeat++;
@@ -263,9 +267,10 @@ void fit(	//INPUT
 					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
 				
 		 			fit_PVM_single_c(datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_gpu, bvecs_repeat_gpu, bvals_repeat_gpu, false, params_repeat_gpu);
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 
 					//mix all the parameteres: repeated and not repeated
-					mix_params(params_repeat_gpu ,vox_repeat, nrepeat, params_gpu);
+					mix_params(params_repeat_host ,vox_repeat, nrepeat, nvox, params_gpu);
 				}
 	  		}
 		}
@@ -277,11 +282,13 @@ void fit(	//INPUT
 
 		if (opts.f0.value()){
 				float md,mf,f0;	
-	
+				thrust::host_vector<double> params_host;
+				params_host.resize(nvox*nparams_fit);
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){			
-					md = params_gpu[vox*nparams_fit+(1)];
-					mf = params_gpu[vox*nparams_fit+(3)];
-					f0 = params_gpu[vox*nparams_fit+(nparams_fit-1)];
+					md = params_host[vox*nparams_fit+(1)];
+					mf = params_host[vox*nparams_fit+(3)];
+					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
 					if ((opts.nfibres.value()>0 && mf<0.05) || md>0.007 || f0>0.4){		//if true we need to repeat this voxel
 						vox_repeat[nrepeat]=vox;
 						nrepeat++;
@@ -307,9 +314,10 @@ void fit(	//INPUT
 		 			fit_PVM_single_c(datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_gpu, bvecs_repeat_gpu, bvals_repeat_gpu, false, params_repeat_gpu);
 
 					fit_PVM_multi(datam_repeat_gpu, bvecs_repeat_gpu, bvals_repeat_gpu, nrepeat, false, params_repeat_gpu);
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 		
 					//mix all the parameteres: repeated and not repeated
-					mix_params(params_repeat_gpu ,vox_repeat, nrepeat,params_gpu);
+					mix_params(params_repeat_host ,vox_repeat, nrepeat,  nvox, params_gpu);
 				}
 	  		}	
 	}
@@ -319,7 +327,6 @@ void fit(	//INPUT
    	myfile << "TIME TOTAL: " << time << " seconds\n"; 
 	myfile << "--------------------------------------------" << "\n\n" ; 
 	myfile.close();
-
 }
 
 //prepare the structures for copy all neccesary data to FIT in GPU
@@ -469,24 +476,29 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 
 
 void mix_params(	//INPUT
-			thrust::device_vector<double>   		params_repeat_gpu,
-			thrust::host_vector<int>			vox_repeat,
-			int						nrepeat,
+			thrust::host_vector<double>   		params_repeat_host,
+			thrust::host_vector<int>		vox_repeat,
+			int					nrepeat,
+			int					nvox,
 			//INPUT-OUTPUT
-			thrust::device_vector<double>&   		params_gpu)
+			thrust::device_vector<double>&   	params_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib= opts.nfibres.value();
-	int nparams;
-	nparams=2+nfib*3;	
+	int nparams = 2+3*opts.nfibres.value();
 	if(opts.modelnum.value()==2) nparams++;
+
+	thrust::host_vector<double> params_host;
+	params_host.resize(nvox*(nparams+1));
+	thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 
 	for(int vox=0;vox<nrepeat;vox++){
 		for(int par=0;par<nparams;par++){
-			params_gpu[vox_repeat[vox]*(nparams+1)+par] = params_repeat_gpu[vox*nparams+par]; //(nparams+1) to count f0
+			params_host[vox_repeat[vox]*(nparams+1)+par] = params_repeat_host[vox*nparams+par]; //(nparams+1) to count f0
 		}
-		params_gpu[vox_repeat[vox]*(nparams+1)+nparams] = 0.001;	//pvmf0=0.001
+		params_host[vox_repeat[vox]*(nparams+1)+nparams] = 0.001;	//pvmf0=0.001
 	}
+	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
 }
 
 void prepare_data_gpu_MCMC(	//INPUT
