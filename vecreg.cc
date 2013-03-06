@@ -216,8 +216,10 @@ void vecreg_aff(const volume4D<float>& tens,
   seeddim << tens.xdim() << tens.ydim() << tens.zdim();
   targetdim  << refvol.xdim() << refvol.ydim() << refvol.zdim();
   SymmetricMatrix Tens(3);
+  Matrix FullTens(3,3);
   ColumnVector X_seed(3),X_target(3); 
   ColumnVector V_seed(3),V_target(3);
+
   for(int z=0;z<oV1.zsize();z++)
     for(int y=0;y<oV1.ysize();y++)
       for(int x=0;x<oV1.xsize();x++){
@@ -234,14 +236,25 @@ void vecreg_aff(const volume4D<float>& tens,
 	
 
 	 // compute interpolated tensor
-	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
-
-
+	if(oV1.tsize()!=9){
+	  Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	}
+	else{
+	  FullTens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[6].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  FullTens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[7].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  FullTens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[8].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	}
 
 	 if(warp2.value()!=""){
 	   // Local Jacobian of the backward warpfield
@@ -251,12 +264,11 @@ void vecreg_aff(const volume4D<float>& tens,
 	   // compute local forward affine transformation	
 	   F = (I + Jw).i();
 	 }
-	 
 	 if(oV1.tsize()==3){ // case where input is a vector
 	   // compute first eigenvector
 	   EigenValues(Tens,d,v);
 	   V_seed = v.Column(3);
-	   
+
 	   // rotate vector
 	   V_target=F*V_seed;
 	   if(V_target.MaximumAbsoluteValue()>0)
@@ -267,7 +279,7 @@ void vecreg_aff(const volume4D<float>& tens,
 	   oV1(x,y,z,2)=V_target(3);
 	 }
 	
-	 // create tensor
+	 // create Symmetric tensor
 	 if(oV1.tsize()==6){
 	   if(warp2.value()!=""){
 	     EigenValues(Tens,d,v);
@@ -277,19 +289,38 @@ void vecreg_aff(const volume4D<float>& tens,
 	   else{
 	     Tens << R*Tens*R.t();
 	   }
-	   
 	   oV1(x,y,z,0)=Tens(1,1);
 	   oV1(x,y,z,1)=Tens(2,1);
 	   oV1(x,y,z,2)=Tens(3,1);
 	   oV1(x,y,z,3)=Tens(2,2);
 	   oV1(x,y,z,4)=Tens(3,2);
 	   oV1(x,y,z,5)=Tens(3,3);
-	   
 	 }
-	
+
+	 // create Non-Symmetric tensor
+	 if(oV1.tsize()==9){
+	   if(warp2.value()!=""){
+	     SVD(FullTens,d,u);
+	     R=ppd(F,u.Column(3),u.Column(2));
+	     FullTens << R*FullTens*R.t();
+	   }
+	   else{
+	     FullTens << R*FullTens*R.t();
+	   }
+	   oV1(x,y,z,0)=FullTens(1,1);
+	   oV1(x,y,z,1)=FullTens(2,1);
+	   oV1(x,y,z,2)=FullTens(3,1);
+	   oV1(x,y,z,3)=FullTens(1,2);
+	   oV1(x,y,z,4)=FullTens(2,2);
+	   oV1(x,y,z,5)=FullTens(3,2);
+	   oV1(x,y,z,6)=FullTens(1,3);
+	   oV1(x,y,z,7)=FullTens(2,3);
+	   oV1(x,y,z,8)=FullTens(3,3);
+	 }
+
       }
-  
 }
+
 
 
 void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
@@ -342,6 +373,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
   Matrix R(3,3),I(3,3);I<<1<<0<<0<<0<<1<<0<<0<<0<<1;
   Matrix Jw(3,3);
   SymmetricMatrix Tens(3);
+  Matrix FullTens(3,3);
   for(int z=0;z<oV1.zsize();z++)
     for(int y=0;y<oV1.ysize();y++)
        for(int x=0;x<oV1.xsize();x++){
@@ -357,12 +389,25 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	  continue;
 	
 	 // compute interpolated tensor
-	 Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
-	 Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
-		     << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	if(oV1.tsize()!=9){
+	  Tens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  Tens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  Tens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+		      << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	}
+	else{
+	  FullTens.Row(1) << tens[0].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[3].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[6].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  FullTens.Row(2) << tens[1].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[4].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[7].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	  FullTens.Row(3) << tens[2].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[5].interpolate(X_seed(1),X_seed(2),X_seed(3))
+			  << tens[8].interpolate(X_seed(1),X_seed(2),X_seed(3));
+	}
 
 	 // F will not change if matrix2 is set
 	 if(matrix2.value()==""){
@@ -388,9 +433,9 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	   oV1(x,y,z,1)=V_target(2);
 	   oV1(x,y,z,2)=V_target(3);
 	 }
-	 // create tensor
-	 if(oV1.tsize()==6){
 
+	 // create Symmetric tensor
+	 if(oV1.tsize()==6){
 	   if(matrix2.value()==""){
 	     EigenValues(Tens,d,v);
 	     R=ppd(F,v.Column(3),v.Column(2));
@@ -399,20 +444,36 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	   else{
 	     Tens << F*Tens*F.t();
 	   }
-
 	   oV1(x,y,z,0)=Tens(1,1);
 	   oV1(x,y,z,1)=Tens(2,1);
 	   oV1(x,y,z,2)=Tens(3,1);
 	   oV1(x,y,z,3)=Tens(2,2);
 	   oV1(x,y,z,4)=Tens(3,2);
 	   oV1(x,y,z,5)=Tens(3,3);
-
 	 }
-	 
+	
+	 // create Non-Symmetric tensor
+	 if(oV1.tsize()==9){
+	   if(matrix2.value()==""){
+	     SVD(FullTens,d,u);
+	     R=ppd(F,u.Column(3),u.Column(2));
+	     FullTens << R*FullTens*R.t();
+	   }
+	   else{
+	     FullTens << F*FullTens*F.t();
+	   }
+	   oV1(x,y,z,0)=FullTens(1,1);
+	   oV1(x,y,z,1)=FullTens(2,1);
+	   oV1(x,y,z,2)=FullTens(3,1);
+	   oV1(x,y,z,3)=FullTens(1,2);
+	   oV1(x,y,z,4)=FullTens(2,2);
+	   oV1(x,y,z,5)=FullTens(3,2);
+	   oV1(x,y,z,6)=FullTens(1,3);
+	   oV1(x,y,z,7)=FullTens(2,3);
+	   oV1(x,y,z,8)=FullTens(3,3);
+	 }
 
        }
-  
-  
 }
 
 
@@ -466,7 +527,8 @@ int do_vecreg(){
   // tensor for interpolation
   volume4D<float> tens(ivol.xsize(),ivol.ysize(),ivol.zsize(),6);
   copybasicproperties(ivol,tens);
-  if(ivol.tsize()==3)
+  if(ivol.tsize()==3){   //vector
+    cout<<"Registering vector..."<<endl;
     for(int z=0;z<ivol.zsize();z++) 
       for(int y=0;y<ivol.ysize();y++)  
 	for(int x=0;x<ivol.xsize();x++){
@@ -477,7 +539,14 @@ int do_vecreg(){
 	  tens(x,y,z,4)=ivol(x,y,z,2)*ivol(x,y,z,1);
 	  tens(x,y,z,5)=ivol(x,y,z,2)*ivol(x,y,z,2);
 	}
-  else{
+  }
+  else if (ivol.tsize()==6){ //symmetric tensor
+    cout<<"Registering symmetric tensor..."<<endl;
+    tens=ivol;
+  }
+  else{                     //Nonsymmetric tensor: Input elements are expected to be stored in Column-Order: (D11, D21, D31, D12, D22, D32, D13, D23, D33)
+    cout<<"Registering non-symmetric tensor..."<<endl;
+    tens.reinitialize(ivol.xsize(),ivol.ysize(),ivol.zsize(),9);
     tens=ivol;
   }
 
