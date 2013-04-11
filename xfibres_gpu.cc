@@ -15,30 +15,16 @@
 #include <sys/time.h>
 #include "CUDA/init_gpu.h"
 
+#define SIZE_SUB_PART 9000 
 
 using namespace Xfibres;
 
 //////////////////////////////////////////////////////////
 //       XFIBRES CPU PART. IT CALLS TO GPU PART
 //////////////////////////////////////////////////////////
+// last 2 parameters are idPart and nParts
 
-int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
-{
-	char slice_str[8];
-	char aux[8];
-	sprintf(slice_str,"%d",slice);
-	while(strlen(slice_str)<4){
-		strcpy(aux,"0");
-		strcat(aux,slice_str);
-		strcpy(slice_str,aux);
-	}
-	string log_file(subjdir);		//logfile
-	log_file += ".bedpostX/logs/log_";
-	log_file += slice_str;
-
-	ofstream myfile;
-	myfile.open (log_file.data(),ios::out | ios::app );
-	myfile << "----------------- SLICE " << slice << " -----------------" << endl;  
+int main(int argc, char *argv[]){
 
 	struct timeval t1,t2;
 	double time;
@@ -47,42 +33,9 @@ int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
 	// Setup logging:
     	Log& logger = LogSingleton::getInstance();
     	xfibresOptions& opts = xfibresOptions::getInstance();
-	char **argv=new char*[7+nextras];
-    	argv[0] = (char*)malloc(7*sizeof(char));
-    	argv[1] = (char*)malloc((40+strlen(subjdir))*sizeof(char));
-    	argv[2] = (char*)malloc((40+strlen(subjdir))*sizeof(char));
-    	argv[3] = (char*)malloc((40+strlen(subjdir))*sizeof(char));
-    	argv[4] = (char*)malloc((40+strlen(subjdir))*sizeof(char));
-    	argv[5] = (char*)malloc(10*sizeof(char));
-    	argv[6] = (char*)malloc((60+strlen(subjdir))*sizeof(char));
-	
-    	strcpy (argv[0],"xfibres");    
-    	strcpy (argv[1],"--data=");
-	strcat (argv[1],subjdir);
-	strcat (argv[1],"/data_slice_");
-	strcat (argv[1],slice_str);
-    	strcpy (argv[2],"--mask=");
-	strcat (argv[2],subjdir);
-	strcat (argv[2],"/nodif_brain_mask_slice_");
-	strcat (argv[2],slice_str);
-    	strcpy (argv[3],"--bvals=");
-	strcat (argv[3],subjdir);
-	strcat (argv[3],"/bvals");
-    	strcpy (argv[4],"--bvecs=");
-	strcat (argv[4],subjdir);
-	strcat (argv[4],"/bvecs");
-    	strcpy (argv[5],"--forcedir");
-    	strcpy (argv[6],"--logdir=");
-    	strcat (argv[6],subjdir);
-    	strcat (argv[6],".bedpostX/diff_slices/data_slice_");
-    	strcat (argv[6],slice_str);	
-	for (int i=0;i<nextras;i++){
-		argv[7+i] = (char*)malloc(strlen(extras[i])*sizeof(char));
-		strcpy (argv[7+i],extras[i]); 
-	}
-    	opts.parse_command_line(7+nextras,argv,logger);
+	opts.parse_command_line(argc-2,argv,logger);
 
-	Matrix datam, bvals,bvecs,matrix2volkey;
+	Matrix datam, bvals,bvecs;
     	NEWIMAGE::volume<float> mask;
     	NEWIMAGE::volume<int> vol2matrixkey;
     	bvals=read_ascii_matrix(opts.bvalsfile.value());
@@ -102,30 +55,156 @@ int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras)
     	read_volume4D(data,opts.datafile.value());
     	read_volume(mask,opts.maskfile.value());
     	datam=data.matrix(mask); 
-    	matrix2volkey=data.matrix2volkey(mask);
-    	vol2matrixkey=data.vol2matrixkey(mask);
-    	//Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols(),datam.Nrows());	//in xfibres_gpu.cu
+	
+	///////////////////////////////////////////
+	////////// Read my part of data ///////////
+	///////////////////////////////////////////
+	int idPart = atoi(argv[argc-2]);
+	int nParts = atoi(argv[argc-1]);
+	int ndirections = bvals.Ncols();
+	int dirs_grad = 0;
+	int totalNvox = datam.Ncols();
 
+	int size_part = totalNvox / nParts;
+	Matrix mydatam;
+	Matrix mygradm;
+	if(idPart!=(nParts-1)){
+		mydatam = datam.SubMatrix(1,ndirections,idPart*size_part+1,(idPart+1)*size_part);
+	}else{
+		mydatam = datam.SubMatrix(1,ndirections,idPart*size_part+1,totalNvox);
+	}
+	
 	//Read Gradient Non_linearity Maps if provided
     	NEWIMAGE::volume4D<float> grad; Matrix gradm;
     	if (opts.grad_file.set()){
       		read_volume4D(grad,opts.grad_file.value());
       		gradm=grad.matrix(mask);
+		dirs_grad = gradm.Nrows();
+		if(idPart!=(nParts-1)){
+			mygradm = gradm.SubMatrix(1,dirs_grad,idPart*size_part+1,(idPart+1)*size_part);
+		}else{
+			mygradm = gradm.SubMatrix(1,dirs_grad,idPart*size_part+1,totalNvox);
+		}
     	}
-	
-	myfile << "Number of Voxels: " << datam.Ncols() << endl;  
-	myfile << "Number of Directions: " << datam.Nrows() << endl;  
+
+	if(idPart==(nParts-1)) size_part = totalNvox - ((nParts-1)*size_part);
+	 
+	cout << "Number of Voxels to compute in this part: " << size_part << endl;  
+	cout << "Number of Directions: " << ndirections << endl;  
 
     	if(opts.rician.value() && !opts.nonlin.value()) 
-      		cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl;
+      	cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl;
 
-	xfibres_gpu(datam,bvecs,bvals,gradm,vol2matrixkey,matrix2volkey,mask,slice,subjdir);
+	//////////////////////////////////////////////////////////////
+	////////// Divide the process in Subparts ////////////////////
+	//////////////////////////////////////////////////////////////
 
+	int nsubparts = (size_part/SIZE_SUB_PART); 			//SIZE_SUB_PART voxels per iteration
+	int size_sub_part = SIZE_SUB_PART;
+	if(size_part%SIZE_SUB_PART) nsubparts++;
+	int last_sub_part = size_part - ((nsubparts-1)*SIZE_SUB_PART);
+
+	if(last_sub_part<(SIZE_SUB_PART*0.5)){ 	//if is too small the last part we distribute it between the others
+		size_sub_part = size_sub_part + last_sub_part/(nsubparts-1);
+		nsubparts--;
+		last_sub_part = size_part - ((nsubparts-1)*size_sub_part);		
+	}
+
+	Matrix mydatam_part;	
+	Matrix mygradm_part;	
+	
+	for(int i=0;i<nsubparts-1;i++){
+		cout << endl << "///////////////////////////////////////////////////////" << endl;
+		cout <<         "/////////////////  SubPart " << i+1 << " of  " << nsubparts << "/////////////////////" << endl;
+		cout <<  "///////////////////////////////////////////////////////" << endl;
+		cout <<  "Processing " << size_sub_part << " voxels" << endl;
+		mydatam_part = mydatam.SubMatrix(1,ndirections,i*size_sub_part+1,(i+1)*size_sub_part);
+		if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,i*size_sub_part+1,(i+1)*size_sub_part);
+		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,i);
+		cout << endl;
+	}
+
+	cout << endl << "///////////////////////////////////////////////////////" << endl;
+	cout <<         "/////////////////  SubPart " << nsubparts << " of  " << nsubparts << "/////////////////////" << endl;
+	cout <<  "///////////////////////////////////////////////////////" << endl;
+	cout <<  "Processing " << last_sub_part << " voxels" << endl;
+	mydatam_part = mydatam.SubMatrix(1,ndirections,(nsubparts-1)*size_sub_part+1,size_part);
+	if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,(nsubparts-1)*size_sub_part+1,size_part);
+	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,nsubparts-1);
+	cout << endl;
+
+	//////////////////////////////////////////////////////////////
+	////////// JOIN Results of the Subparts //////////////////////
+	//////////////////////////////////////////////////////////////
+
+	if(opts.modelnum.value()==1){
+		join_subParts("mean_dsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+	}else if(opts.modelnum.value()==2){
+		join_subParts("mean_dsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+		join_subParts("mean_d_stdsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+		//join_subParts("dsamples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+		//join_subParts("d_stdsamples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+	}	
+	if (opts.f0.value()){
+      		join_subParts("mean_f0samples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+		//join_subParts("f0samples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+    	}
+    	if (opts.rician.value()){
+		join_subParts("mean_tausamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+    	}
+
+	for(int f=0;f<opts.nfibres.value();f++){
+		join_subParts("th"+num2str(f+1)+"samples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+		join_subParts("ph"+num2str(f+1)+"samples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+		join_subParts("f"+num2str(f+1)+"samples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+
+		//join_subParts("mean_f"+num2str(f+1)+"samples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+		//join_subParts("dyads"+num2str(f+1),size_part,nsubparts,size_sub_part,last_sub_part,false);
+	}	
+
+	join_subParts("mean_S0samples",size_part,nsubparts,size_sub_part,last_sub_part,true); //the last one to control with monitor
+		
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1); 
-	myfile << "Slice processed in: " << time << " seconds" << endl;
-	myfile.close();  
+	cout << "Part processed in: " << time << " seconds" << endl;
 
   	return 0;
 }
 
+void join_subParts(string name, int size_part, int nsubparts, int size_sub_part, int last_sub_part, bool mean){
+	Log& logger = LogSingleton::getInstance();
+    	xfibresOptions& opts = xfibresOptions::getInstance();
+
+	int nsamples = opts.njumps.value()/opts.sampleevery.value();
+	if(mean) nsamples=1;
+
+	Matrix tmp(nsamples,0);
+	Matrix part; 
+	ifstream in;
+	ofstream out;
+
+	string file_name;
+		
+	for(int i=0;i<nsubparts-1;i++){
+		part.ReSize(nsamples,size_sub_part);
+		file_name = logger.appendDir(name+"_"+num2str(i));
+		in.open(file_name.data(), ios::in | ios::binary);
+		in.read((char*)&part(1,1), size_sub_part*nsamples*sizeof(Real));
+		in.close();
+		remove (file_name.data());
+		tmp = tmp | part;
+	}
+	part.ReSize(nsamples,last_sub_part);
+	file_name = logger.appendDir(name+"_"+num2str(nsubparts-1));
+	in.open (file_name.data(), ios::in | ios::binary);
+	in.read((char*)&part(1,1), last_sub_part*nsamples*sizeof(Real));
+	in.close();
+	remove (file_name.data());
+	tmp = tmp | part;
+
+	file_name = logger.appendDir(name+"J");
+	out.open(file_name.data(), ios::out | ios::binary);
+	out.write((char*)&tmp(1,1),size_part*nsamples*sizeof(Real));
+	out.close();
+
+}
