@@ -4,7 +4,6 @@
 #
 #   SHCOPYRIGHT
 
-beforet=`date +%s`
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
 	. /usr/local/share/sge/default/common/settings.sh
@@ -28,6 +27,7 @@ Usage() {
     echo "-s (sample every, default 25)"
     echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
     echo "-g (consider gradient nonlinearities, default off)"
+    echo "-NGPU (number of jobs to queue, the data is divided in NGPU parts, default 1)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -60,6 +60,7 @@ subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 echo subjectdir is $subjdir
 
 #parse option arguments
+njobs=1
 nfibres=2
 fudge=1
 burnin=1000
@@ -67,32 +68,26 @@ njumps=1250
 sampleevery=25
 model=1
 gflag=0
-f0=0
-rician=0
 
 shift
 while [ ! -z "$1" ]
 do
   case "$1" in
+      -NGPU) njobs=$2;shift;;
       -n) nfibres=$2;shift;;
-      --nf=?) nfibres=`echo $1 | sed s/"--nf="//g`;;
-      --model=?) model=`echo $1 | sed s/"--model="//g`;;
       -w) fudge=$2;shift;;
       -b) burnin=$2;shift;;
       -j) njumps=$2;shift;;
       -s) sampleevery=$2;shift;;
-      --f0) f0=1 others="$others $1";;
-      --rician) rician=1 others="$others $1";; 	
       -model) model=$2;shift;;
       -g) gflag=1;; 
-      *) others="$others $1";;
+      *) break;;
   esac
   shift
 done
-
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
-opts="$opts $defopts $others"  
+opts="$opts $defopts $*"  
 
 #check that all required files exist
 
@@ -131,117 +126,138 @@ fi
 echo Making bedpostx directory structure
 
 mkdir -p ${subjdir}.bedpostX/
-mkdir -p ${subjdir}.bedpostX/diff_slices
+mkdir -p ${subjdir}.bedpostX/diff_parts
 mkdir -p ${subjdir}.bedpostX/logs
 mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 mkdir -p ${subjdir}.bedpostX/xfms
 
-if [ ${gflag} -eq 1 ]; then
-    echo "bedpostx_gpu "${subjdir}  $opts "-g" >> ${subjdir}.bedpostX/commands.txt
-else
-    echo "bedpostx_gpu "${subjdir}  $opts >> ${subjdir}.bedpostX/commands.txt
-fi
-
-
-echo "..............Compiling CUDA-gpu code .................."
-
-export LD_LIBRARY_PATH=${CUDA}/lib64:${subjdir}.bedpostX:${CUDA}/lib:$LD_LIBRARY_PATH
-export DYLD_LIBRARY_PATH=${CUDA}/lib64:${subjdir}.bedpostX:${CUDA}/lib:$LD_LIBRARY_PATH
-export PATH=${FSLDIR}/bin:$PATH
-
-volumes=`${FSLDIR}/bin/fslval ${subjdir}/data dim4`
-echo "DIRECTIONS NUMBER: $volumes"
-
-filename="${subjdir}.bedpostX/options.h"
-
-if [ $volumes -le 64 ]; then
-	threadsBlock=$volumes
-else 
-	threadsBlock=64
-fi
-
-params=$((2+3*$nfibres)) 
-
-if [ $f0 -eq 1 ]; then
-	params=$(($params+1))
-fi
-
-if [ $model -eq 2 ]; then
-	params=$(($params+1))
-fi
-
-if [ $rician -eq 1 ]; then
-	params=$(($params+1))
-fi
-
-rem=$(($volumes%$threadsBlock))
-maxndirs=$(($volumes/$threadsBlock))
-
-if [ $rem -ne 0 ]; then
-	maxndirs=$(($maxndirs+1))
-fi
-
-dstd=$(($model-1));
-
-params_rep=$(($params-1))
-params_step0_m2_rep=$(($params_step0_m2-1))
-
-echo "#define NDIRECTIONS $volumes 
-#define NFIBRES $nfibres 
-#define NPARAMS $params
-#define MAXNDIRS_PER_THREAD $maxndirs
-#define THREADS_BLOCK $threadsBlock">$filename
-
-before=`date +%s`
-
-${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o ${subjdir}.bedpostX/libbedpostx_cuda.so ${FSLDIR}/src/fdt/CUDA/init_gpu.cu ${FSLDIR}/src/fdt/CUDA/samples.cu ${FSLDIR}/src/fdt/CUDA/diffmodels.cu ${FSLDIR}/src/fdt/CUDA/runmcmc.cu ${FSLDIR}/src/fdt/CUDA/xfibres_gpu.cu -O3 -arch sm_20  -lcudart -lcuda -lcurand -L${CUDA}/lib64 -L${CUDA}/lib -I${subjdir}.bedpostX -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/extras/include/boost -I${FSLDIR}/include -I${CUDA}/include/thrust -I${FSLDIR}/src/fdt 
-
-file=${subjdir}.bedpostX/libbedpostx_cuda.so
-
-if [ -f $file ];
-then
-after=`date +%s`
-diff=$(($after-$before))
-echo "Compilation Time: $diff seconds" >> ${subjdir}.bedpostX/times
-
-echo "CUDA CODE compiled successfully"
-
 mailto=`whoami`@fmrib.ox.ac.uk
-before=`date +%s`
-echo Preprocessing stages
-${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}
 
-after=`date +%s`
-diff=$(($after-$before))
-echo "Preprocessing Time: $diff seconds" >> ${subjdir}.bedpostX/times
-
-before=`date +%s`
-nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
-
-${FSLDIR}/bin/splitter_gpu $subjdir $gflag $nfibres $nslices $opts
-
-after=`date +%s`
-diff=$(($after-$before))
-echo "Execution Time: $diff seconds" >> ${subjdir}.bedpostX/times
-
-before=`date +%s`
-
-
-echo Post processing stage
-${FSLDIR}/bin/bedpostx_postproc.sh $subjdir
-
-after=`date +%s`
-difd=$(($after-$before))
-echo "Post-Processing Time : $diff seconds" >> ${subjdir}.bedpostX/times
-
-aftert=`date +%s`
-diff=$(($aftert-$beforet))
-echo "TOTAL Time: $diff seconds" >> ${subjdir}.bedpostX/times
-
-else
-	echo
-	echo
-	echo "CUDA COMPILER ERROR. Please be sure that you have set correctly CUDA environment variable with your CUDA path"
-	echo 
+echo Copying files to bedpost directory
+cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
+${FSLDIR}/bin/imcp ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` = 1 ] ; then
+    ${FSLDIR}/bin/fslmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/nodif_brain
 fi
 
+echo Queuing parallel processing stage
+[ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+if [ "x$SGE_ROOT" = "x" ]; then
+
+# 
+# Need to set off a backgrounded monitoring task
+# 
+    cat <<EOM > ${subjdir}.bedpostX/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpostX/logs
+
+check() {
+    if [ \$finished -eq 1 ];then
+        echo "\$nfin parts processed of "$njobs
+    else
+        nfin=0
+        part=0
+        while [ "\$part" -le $njobs ];do
+            partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
+            if [ -f ${subjdir}.bedpostX/diff_parts/data_part_\$partzp/mean_S0samplesJ ];then
+                nfin=\$((\$nfin + 1))
+            fi
+                part=\$((\$part + 1))
+        done
+        if [ \$nfin -eq $njobs ] ; then
+            finished=1
+        fi
+        echo "\$nfin parts processed of "$njobs
+    fi
+}
+exit_test() {
+    isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/dyads1\`
+    if [ \$isimg -eq 0 ] ; then
+	echo For some reason the bedpostX process DOES NOT appear
+	echo to have successfully completed. Please examine your
+	echo results carefully.
+    else
+	echo All parts processed
+    fi
+}
+
+check
+n=0
+while [ \$finished -eq 0 ] ; do
+    sleep 10
+    if [ \$n -eq 60 ] ; then
+        check
+        n=0
+    else
+        n=\$((\$n + 1))
+    fi
+done
+exit_test
+EOM
+    chmod +x ${subjdir}.bedpostX/monitor
+    ${subjdir}.bedpostX/monitor&
+    monitorpid=$!
+fi
+part=0
+while [ $part -lt $njobs ]
+do
+    	partzp=`$FSLDIR/bin/zeropad $part 4`
+    
+	if [ ${gflag} -eq 1 ]; then
+	    gopts="$opts --gradnonlin=${subjdir}/grad_dev"
+	else
+	    gopts=$opts
+	fi    
+	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
+    
+    	part=$(($part + 1))
+done
+
+bedpostid=`${FSLDIR}/bin/fsl_sub -q cuda.q -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx_gpu -t ${subjdir}.bedpostX/commands.txt`
+
+echo Queuing post processing stage
+nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V   | cut -d ' ' -f1 `
+mergeid=`${FSLDIR}/bin/fsl_sub -q cuda.q -j $bedpostid -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
+
+[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
+if [ "x$SGE_ROOT" != "x" ]; then
+    echo
+    echo Type ${subjdir}.bedpostX/monitor to show progress.
+    cat <<EOM > ${subjdir}.bedpostX/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpostX/logs
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    part=0
+    while [ "\$part" -le $njobs ];do
+        partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
+        if [ -f ${subjdir}.bedpostX/diff_parts/data_part_\$partzp/mean_S0samplesJ ];then
+          nfin=\$((\$nfin + 1))
+        fi
+        part=\$((\$part + 1))
+    done
+    echo "\$nfin parts processed of "$njobs
+
+    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+        finished=1
+        echo "All parts processed"
+    fi
+
+    sleep 60;
+done
+EOM
+    chmod +x ${subjdir}.bedpostX/monitor
+
+    echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
+    cat <<EOC > ${subjdir}.bedpostX/cancel
+#!/bin/sh
+qdel $mergeid $bedpostid $preprocid
+EOC
+    chmod +x ${subjdir}.bedpostX/cancel
+
+    echo
+    echo You will get an email at the end of the post-processing stage.
+    echo
+fi
