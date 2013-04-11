@@ -8,17 +8,21 @@
 
 #include "options.h"
 
-// X = A.i() * B . Used in Levenberg-Marquardt
-// MATRIX INVERSE AS NEWMAT LU SOLVER
-// implemented in NEWMAT:newmat7.cpp GeneralSolvI.
-__device__ void solver(	// INPUT
+//X = A.i() * B . Used in Levenberg-Marquardt
+//MATRIX INVERSE AS NEWMAT LU SOLVER
+//implemented in NEWMAT:newmat7.cpp GeneralSolvI.
+__device__ void solver(	//INPUT
 			double *A, 
 			double *P,
 			int length,
+			//TO USE
+			double *C,
+			double *el,
+			int *indx,	
 			//OUTPUT
 			double *B)  
 {  
-	double C[NPARAMS*NPARAMS];
+	//double C[NPARAMS*NPARAMS];
 
 	for(int i=0;i<length;i++){
 		for(int j=0;j<length;j++){
@@ -27,7 +31,7 @@ __device__ void solver(	// INPUT
 	}
 	
  	bool d=true; 
-  	int indx[NPARAMS];
+  	//int indx[NPARAMS];
 
    	double* akk = C;   
 	double big = fabs(*akk); 
@@ -98,68 +102,66 @@ __device__ void solver(	// INPUT
 
 //////////////////////////////
 
-	double el[NPARAMS];
+	//double el[NPARAMS];
 
-
-		for(int e=0;e<length;e++){
-			el[e]=P[e];		
-    		}
+	for(int e=0;e<length;e++){
+		el[e]=P[e];		
+    	}
 		
-   		int j;
-		int ii = length; 
-		int ip;    
-		double temp;
-		int i;
+   	int j;
+	int ii = length; 
+	int ip;    
+	double temp;
+	int i;
      
-		for (i=0; i<length; i++){
- 			ip = indx[i]; 
-			temp = el[ip]; 
-			el[ip] = el[i];
-			el[i] = temp;
-      			if (temp != 0.0) { ii = i; break; }
-   		}
+	for (i=0; i<length; i++){
+ 		ip = indx[i]; 
+		temp = el[ip]; 
+		el[ip] = el[i];
+		el[i] = temp;
+      		if (temp != 0.0) { ii = i; break; }
+   	}
 	
-   		double* bi; 
-		double* ai2;
-   		i = ii + 1;
+  	double* bi; 
+	double* ai2;
+   	i = ii + 1;
 
-  	 	if (i < length){
-      			bi = el + ii; 
-			ai2 = C + ii + i * length;
-      			for (;;){
-         			int ip = indx[i]; 
-				double sum = el[ip]; 
-				el[ip] = el[i];
-         			double* aij = ai2; 
-				double* bj = bi; 
-				j = i - ii;
-         			while (j--){ 
-					sum -=  *aij++* *bj++; 
-				}
-         			el[i] = sum;
-         			if (++i == length) break;
-         			ai2 += length;
-      			}
-   		}
-
-   		ai2 = C + length*length;
-
-   		for (i = length - 1; i >= 0; i--){
-      			double* bj = el+i; 
-			ai2 -= length; 
-			double* ajx = ai2+i;
-      			double sum = *bj; 
-			double diag = *ajx;
-      			j = length - i; 
-			while(--j){ 
-				sum -= *(++ajx)* *(++bj);  
+  	if (i < length){
+      		bi = el + ii; 
+		ai2 = C + ii + i * length;
+      		for (;;){
+         		int ip = indx[i]; 
+			double sum = el[ip]; 
+			el[ip] = el[i];
+         		double* aij = ai2; 
+			double* bj = bi; 
+			j = i - ii;
+         		while (j--){ 
+				sum -=  *aij++* *bj++; 
 			}
-      			el[i] = sum / diag;
+         		el[i] = sum;
+         		if (++i == length) break;
+         		ai2 += length;
+      		}
+   	}
+
+   	ai2 = C + length*length;
+
+   	for (i = length - 1; i >= 0; i--){
+      		double* bj = el+i; 
+		ai2 -= length; 
+		double* ajx = ai2+i;
+      		double sum = *bj; 
+		double diag = *ajx;
+      		j = length - i; 
+		while(--j){ 
+			sum -= *(++ajx)* *(++bj);  
+		}
+      		el[i] = sum / diag;
 			
-   		}
-		for(int e=0;e<length;e++){
-			B[e]=el[e];
-    		}
-      
+   	}
+	for(int e=0;e<length;e++){
+		B[e]=el[e];
+    	}
 }
-//END SOLVER WITH LU MATRIX INVERSE
+
