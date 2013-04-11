@@ -69,18 +69,14 @@ class Samples{
   	////////////////////////////////////////////////
   
   	int m_nsamps;
-  
-  	NEWIMAGE::volume<int> m_vol2matrixkey;
-  	Matrix m_matrix2volkey;
-  	NEWIMAGE::volume<int> m_beenhere;
 
 	public:
 
-  	Samples(NEWIMAGE::volume<int> vol2matrixkey,Matrix matrix2volkey,int nvoxels,int nmeasures);
+  	Samples(int nvoxels,int nmeasures);
     
 	void record(float rd,float rf0,float rtau,float rdstd,float rs0,float rlikelihood_energy, float *rth,float *rph, float *rf, int vox, int samp);
   
   	void finish_voxel(int vox);
   
-  	void save(const NEWIMAGE::volume<float>& mask);
+  	void save(int idpart);
 };
