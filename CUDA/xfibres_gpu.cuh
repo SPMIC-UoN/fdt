@@ -23,7 +23,7 @@ void fit(	//INPUT
 		thrust::device_vector<double> 	datam_gpu, 
 		thrust::device_vector<double>	bvecs_gpu, 
 		thrust::device_vector<double>	bvals_gpu,
-		string 				output_file, 
+		int				ndirections,
 		//OUTPUT
 		thrust::device_vector<double>&	params_gpu,
 		thrust::host_vector<int>&	vox_repeat,
@@ -55,6 +55,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 					thrust::host_vector<double>		bvals_host,
 					thrust::host_vector<int>		vox_repeat,
 					int					nrepeat,
+					int					ndirections,
 					//OUTPUT
 					vector<ColumnVector>&			datam_repeat_vec,
 					vector<Matrix>&				bvecs_repeat_vec,
@@ -77,6 +78,7 @@ void mix_params(	//INPUT
 //implemented and used in xfibres_gpu.cu
 void prepare_data_gpu_MCMC(	//INPUT
 				int 					nvox,
+				int					ndirections,
 				int 					nfib,
 				//OUTPUT
 				thrust::host_vector<double>&		signals_host,
@@ -101,9 +103,6 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 
 //implemented and used in xfibres_gpu.cu
 void record_finish_voxels(	//INPUT
-				const NEWIMAGE::volume<int> 			vol2matrixkey,
-				const NEWMAT::Matrix				matrix2volkey,
-				const NEWIMAGE::volume<float>			mask,
 				thrust::device_vector<int>&			multirecords_gpu,
 				thrust::device_vector<float>&			rf0_gpu,
 				thrust::device_vector<float>&			rtau_gpu,
@@ -114,5 +113,7 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,
 				thrust::device_vector<float>&			rlikelihood_energy_gpu,
-				int 						nvox);
+				int 						nvox,
+				int						ndirections,
+				int						idpart);
 
