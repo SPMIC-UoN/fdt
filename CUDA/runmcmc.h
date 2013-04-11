@@ -17,7 +17,7 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<double> 			bvals_gpu,
 				thrust::device_vector<double> 			alpha_gpu,
 				thrust::device_vector<double> 			beta_gpu,
-				string 						output_file, 
+				const int 					ndirections,
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
@@ -29,8 +29,8 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<double> 			bvals_gpu,
 			thrust::device_vector<double> 			alpha_gpu,
 			thrust::device_vector<double> 			beta_gpu,
+			const int 					ndirections,
 			double 						seed,
-			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
@@ -47,8 +47,8 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<MultifibreGPU> 		multifibres_gpu,
 			thrust::device_vector<double>			signals_gpu,
 			thrust::device_vector<double>			isosignals_gpu,
+			const int 					ndirections,
 			double 						seed,
-			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<int>&			multirecords_gpu,
 			thrust::device_vector<float>&			rf0_gpu,
