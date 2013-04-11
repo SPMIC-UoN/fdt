@@ -10,16 +10,14 @@
 #include "newimage/newimageall.h"
 #include <string>
 
-int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras);
+//int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras);
+
+void join_subParts(string name, int size_part, int nsubparts, int size_sub_part, int last_sub_part, bool mean);
 
 void xfibres_gpu(	//INPUT
 			const NEWMAT::Matrix			datam,
 			const NEWMAT::Matrix			bvals,
 			const NEWMAT::Matrix			bvecs,
 			const NEWMAT::Matrix	 		gradm, 
-			const NEWIMAGE::volume<int> 		vol2matrixkey,
-			const NEWMAT::Matrix			matrix2volkey,
-			const NEWIMAGE::volume<float>		mask,
-			const int 				slice,
-			const char*				subjdir);
+			int					idpart);
 
