@@ -4,8 +4,6 @@
 #
 #   SHCOPYRIGHT
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${FSLDIR}/src/fdt/CUDA
-
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
 	. /usr/local/share/sge/default/common/settings.sh
