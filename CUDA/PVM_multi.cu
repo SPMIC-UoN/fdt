@@ -589,3 +589,4 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 
 		dir_iter+=THREADS_BLOCK_FIT;
 	}
+}
