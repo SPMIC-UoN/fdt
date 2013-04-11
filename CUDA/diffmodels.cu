@@ -15,7 +15,6 @@
 #include "PVM_single_c.cu"
 #include "PVM_multi.cu"
 #include "fit_gpu_kernels.h"
-#include "dim_blocks.h"	
 #include "sync_check.h"
 
 #include <time.h>
@@ -33,7 +32,8 @@ void fit_PVM_single(	//INPUT
 			const vector<Matrix> 		bvals_vec,
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,	
+			thrust::device_vector<double>	bvals_gpu,
+			int				ndirections,	
 			bool 				m_include_f0,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -87,9 +87,13 @@ void fit_PVM_single(	//INPUT
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
-  	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
+  	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
-	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, nfib, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
+	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
+
+	printf("Shared Memory Used in fit_PVM_single: %i\n",amount_shared);
+
+	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_kernel");
 }
 
@@ -99,7 +103,8 @@ void fit_PVM_single_c(	//INPUT
 			const vector<Matrix> 		bvals_vec,
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,	
+			thrust::device_vector<double>	bvals_gpu,
+			int				ndirections,		
 			bool 				m_include_f0,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -151,9 +156,13 @@ void fit_PVM_single_c(	//INPUT
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
-  	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
+  	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
-	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, nfib, false, m_include_f0, false, thrust::raw_pointer_cast(params_gpu.data()));
+	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+nfib*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
+
+	printf("Shared Memory Used in fit_PVM_single_c: %i\n",amount_shared);
+
+	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, false, m_include_f0, false, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_c_kernel");
 }
 
@@ -161,7 +170,8 @@ void fit_PVM_multi(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,	
-			int 				nvox,		
+			int 				nvox,	
+			int				ndirections,		
 			bool 				m_include_f0,
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -171,7 +181,7 @@ void fit_PVM_multi(	//INPUT
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
-  	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
+  	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
 	int nparams;
 	if (m_include_f0)
@@ -184,7 +194,11 @@ void fit_PVM_multi(	//INPUT
 	thrust::copy(params_gpu.begin(), params_gpu.end(), params_PVM_single_c_gpu.begin());	
 								//maybe 1 block finish before other one read their params.
 
-	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, nfib, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
+	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+9)*sizeof(double)+(2+nparams)*sizeof(int);
+
+	printf("Shared Memory Used in fit_PVM_multi: %i\n",amount_shared);
+
+	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_multi_kernel");
 }
 
@@ -194,16 +208,14 @@ void calculate_tau(	//INPUT
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
 			thrust::host_vector<int>	vox_repeat,
-			int				nrepeat,		
-			string 				output_file,	
+			int				nrepeat,
+			int				ndirections,		
 			//OUTPUT
 			thrust::host_vector<float>&	tau)
 {
-	std::ofstream myfile;
-	myfile.open (output_file.data(), ios::out | ios::app );
-	myfile << "----------------------------------------------------- " << "\n"; 
-   	myfile << "--------- CALCULATE TAU/RESIDULAS IN GPU ------------ " << "\n"; 
-   	myfile << "----------------------------------------------------- " << "\n"; 
+	cout << "----------------------------------------------------- " << "\n"; 
+   	cout << "--------- CALCULATE TAU/RESIDULAS IN GPU ------------ " << "\n"; 
+   	cout << "----------------------------------------------------- " << "\n"; 
 
 	struct timeval t1,t2;
    	double time;
@@ -212,6 +224,13 @@ void calculate_tau(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = vox_repeat.size(); 
 	int nfib = opts.nfibres.value();
+
+	int nparams;
+	if (opts.f0.value())
+      		nparams = nfib*3 + 3; 
+    	else
+      		nparams = nfib*3 + 2;
+	if(opts.modelnum.value()==2) nparams++;
 	
 	thrust::device_vector<bool> includes_f0_gpu;
 	includes_f0_gpu.resize(nvox);
@@ -225,42 +244,43 @@ void calculate_tau(	//INPUT
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
-  	dim3 Dim_Block(THREADS_X_BLOCK_FIT,1);
+  	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
+
+	int amount_shared = (nparams+4*nfib+3)*sizeof(double) + sizeof(int);
 
 	thrust::device_vector<double> residuals_gpu;
-	residuals_gpu.resize(nvox*NDIRECTIONS);
+	residuals_gpu.resize(nvox*ndirections);
 
 	if(opts.modelnum.value()==1){
 		if(opts.nonlin.value()){ 
-			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, nfib, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_kernel");
 
 		}else{
-			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, nfib, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_c_kernel");
 		}
 	}else{
       		//model 2 : non-mono-exponential
-		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, nfib, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 
 	thrust::host_vector<double> residuals_host;
-	residuals_host.resize(nvox*NDIRECTIONS);
+	residuals_host.resize(nvox*ndirections);
 	thrust::copy(residuals_gpu.begin(), residuals_gpu.end(), residuals_host.begin());	
 
-	ColumnVector res(NDIRECTIONS);
+	ColumnVector res(ndirections);
 	for(int vox=0;vox<nvox;vox++){	
-		for(int i=0;i<NDIRECTIONS;i++) res(i+1)= residuals_host[vox*NDIRECTIONS+i];  
+		for(int i=0;i<ndirections;i++) res(i+1)= residuals_host[vox*ndirections+i];  
 
-		float variance=var(res).AsScalar();  
+		float variance=var(res).AsScalar();
 		tau[vox]=1.0/variance;
 	}
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
-	myfile << "--------------------------------------------" << "\n\n" ; 
-	myfile.close();					
+   	cout << "TIME TOTAL: " << time << " seconds\n"; 
+	cout << "--------------------------------------------" << "\n\n" ; 				
 }
 
