@@ -145,12 +145,19 @@ void runmcmc_burnin(	//INPUT
 		nrandoms = totalrandoms;
 		iters_step= opts.nburn.value();
 		steps = 0;
-  	 }   
+  	}
+	if(nrandoms%2){							//CURAND must generates multiples of 2 randoms
+		nrandoms++;
+	}   
 
    	myfile << "Process " << opts.nburn.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
 
    	int last_step = opts.nburn.value() - (iters_step*steps);
    	int last_randoms= (last_step*minrandoms); 
+	if(last_randoms%2){					//CURAND must generates multiples of 2 randoms
+		last_randoms++;
+	}
+
 
    	myfile << "Last step with " << last_step << " iterations" << "\n"; 
 	
@@ -317,12 +324,19 @@ void runmcmc_record(	//INPUT
 		nrandoms = totalrandoms;
 		iters_step= opts.njumps.value();
 		steps = 0;
-  	 }   
+  	}
+	if(nrandoms%2){						//CURAND must generates multiples of 2 randoms
+		nrandoms++;
+	}   
 
    	myfile << "Process " << opts.njumps.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
 
    	int last_step = opts.njumps.value() - (iters_step*steps);
    	int last_randoms= (last_step*minrandoms); 
+	if(last_randoms%2){					//CURAND must generates multiples of 2 randoms
+		last_randoms++;
+	}
+
 
    	myfile << "Last step with " << last_step << " iterations" << "\n"; 
 	
