@@ -1,8 +1,8 @@
 include $(FSLCONFDIR)/default.mk
 
 ifeq ($(COMPILE_GPU), 1)
-	COMPILE_WITH_GPU=libbedpostx_cuda.so xfibres_gpu.o splitter_gpu splitter_multigpu
-	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_multigpu_SGE CUDA/bedpostx_multigpu_LSF
+	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu
+	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_multigpu_LSF CUDA/bedpostx_postproc_gpu.sh
 endif
 
 PROJNAME = fdt
@@ -34,10 +34,8 @@ RARNG=rearrange
 XPRED=xfibres_pred
 RUBIX=rubix
 LIBBEDPOSTX_CUDA=libbedpostx_cuda.so
+MERGE_PARTS_GPU=merge_parts_gpu
 XFIBRES_GPU=xfibres_gpu
-SPLITTERGPU=splitter_gpu
-SPLITTERMULTIGPU=splitter_multigpu
-
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -60,9 +58,8 @@ DTIGENOBJS=dtigen.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
 RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
-XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o 
-SPLITTERGPUOBJS=splitter_gpu.o xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
-SPLITTERMULTIGPUOBJS=splitter_multigpu.o xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
+MERGE_PARTS_GPUOBJS=merge_parts_gpu.o xfibresoptions.o
+XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -153,13 +150,10 @@ ${RUBIX}: 	${RUBIXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
 
 ${LIBBEDPOSTX_CUDA}: 
-		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 -arch sm_20  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${CUDA}/include/thrust -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost
+		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3  -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\"  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${CUDA}/include/thrust -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost -maxrregcount=64
+
+${MERGE_PARTS_GPU}: ${MERGE_PARTS_GPUOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MERGE_PARTS_GPUOBJS} ${DLIBS}
 
 ${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lbedpostx_cuda -LCUDA -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include
-
-${SPLITTERGPU}:	   ${SPLITTERGPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLITTERGPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
-
-${SPLITTERMULTIGPU}:	   ${SPLITTERMULTIGPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLITTERMULTIGPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
