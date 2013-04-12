@@ -22,7 +22,7 @@ using namespace Xfibres;
 //////////////////////////////////////////////////////////
 //       XFIBRES CPU PART. IT CALLS TO GPU PART
 //////////////////////////////////////////////////////////
-// last 2 parameters are idPart and nParts
+// last 3 parameters are subjdir, idPart and nParts
 
 int main(int argc, char *argv[]){
 
@@ -33,7 +33,9 @@ int main(int argc, char *argv[]){
 	// Setup logging:
     	Log& logger = LogSingleton::getInstance();
     	xfibresOptions& opts = xfibresOptions::getInstance();
-	opts.parse_command_line(argc-2,argv,logger);
+	opts.parse_command_line(argc-3,argv,logger);
+
+	string subjdir=argv[argc-3];
 
 	Matrix datam, bvals,bvecs;
     	NEWIMAGE::volume<float> mask;
@@ -92,8 +94,8 @@ int main(int argc, char *argv[]){
 	cout << "Number of Voxels to compute in this part: " << size_part << endl;  
 	cout << "Number of Directions: " << ndirections << endl;  
 
-    	if(opts.rician.value() && !opts.nonlin.value()) 
-      	cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl;
+    	if(opts.rician.value() && !opts.nonlin.value())
+      		cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl<<endl;
 
 	//////////////////////////////////////////////////////////////
 	////////// Divide the process in Subparts ////////////////////
@@ -114,24 +116,17 @@ int main(int argc, char *argv[]){
 	Matrix mygradm_part;	
 	
 	for(int i=0;i<nsubparts-1;i++){
-		cout << endl << "///////////////////////////////////////////////////////" << endl;
-		cout <<         "/////////////////  SubPart " << i+1 << " of  " << nsubparts << "/////////////////////" << endl;
-		cout <<  "///////////////////////////////////////////////////////" << endl;
-		cout <<  "Processing " << size_sub_part << " voxels" << endl;
+		
+		cout << "SubPart " << i+1 << " of  " << nsubparts << ": processing " << size_sub_part << " voxels" <<  endl;
 		mydatam_part = mydatam.SubMatrix(1,ndirections,i*size_sub_part+1,(i+1)*size_sub_part);
 		if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,i*size_sub_part+1,(i+1)*size_sub_part);
-		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,i);
-		cout << endl;
+		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,i,subjdir);
 	}
 
-	cout << endl << "///////////////////////////////////////////////////////" << endl;
-	cout <<         "/////////////////  SubPart " << nsubparts << " of  " << nsubparts << "/////////////////////" << endl;
-	cout <<  "///////////////////////////////////////////////////////" << endl;
-	cout <<  "Processing " << last_sub_part << " voxels" << endl;
+	cout << "SubPart " << nsubparts << " of  " << nsubparts << ": processing " << last_sub_part << " voxels" <<  endl;
 	mydatam_part = mydatam.SubMatrix(1,ndirections,(nsubparts-1)*size_sub_part+1,size_part);
 	if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,(nsubparts-1)*size_sub_part+1,size_part);
-	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,nsubparts-1);
-	cout << endl;
+	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,nsubparts-1,subjdir);
 
 	//////////////////////////////////////////////////////////////
 	////////// JOIN Results of the Subparts //////////////////////
@@ -166,7 +161,7 @@ int main(int argc, char *argv[]){
 		
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1); 
-	cout << "Part processed in: " << time << " seconds" << endl;
+	cout << endl << "Part processed in: " << time << " seconds" << endl;
 
   	return 0;
 }

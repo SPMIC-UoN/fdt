@@ -27,7 +27,7 @@ Usage() {
     echo "-s (sample every, default 25)"
     echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
     echo "-g (consider gradient nonlinearities, default off)"
-    echo "-NGPU (number of jobs to queue, the data is divided in NGPU parts, default 1)"
+    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -73,7 +73,7 @@ shift
 while [ ! -z "$1" ]
 do
   case "$1" in
-      -NGPU) njobs=$2;shift;;
+      -NJOBS) njobs=$2;shift;;
       -n) nfibres=$2;shift;;
       -w) fudge=$2;shift;;
       -b) burnin=$2;shift;;
@@ -128,6 +128,7 @@ echo Making bedpostx directory structure
 mkdir -p ${subjdir}.bedpostX/
 mkdir -p ${subjdir}.bedpostX/diff_parts
 mkdir -p ${subjdir}.bedpostX/logs
+mkdir -p ${subjdir}.bedpostX/logs/logs_gpu
 mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 mkdir -p ${subjdir}.bedpostX/xfms
 
@@ -209,7 +210,7 @@ do
 	else
 	    gopts=$opts
 	fi    
-	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
+	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
     
     	part=$(($part + 1))
 done

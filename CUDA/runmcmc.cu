@@ -32,15 +32,16 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<double> 			alpha_gpu,
 				thrust::device_vector<double> 			beta_gpu,
 				const int 					ndirections,
+				string 						output_file, 
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 				thrust::device_vector<double>&			signals_gpu,
 				thrust::device_vector<double>&			isosignals_gpu)
 {
-	cout << "----------------------------------------------------- " << "\n"; 
-   	cout << "------MCMC ALGORITHM PART INITIALITATION IN GPU ----- " << "\n"; 
-   	cout << "----------------------------------------------------- " << "\n"; 	
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+   	myfile << "----- MCMC ALGORITHM PART INITIALITATION IN GPU ----- " << "\n";  	
 
    	struct timeval t1,t2;
    	double time;
@@ -71,15 +72,16 @@ void init_Fibres_Multifibres(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_MCMC+1)*sizeof(double) + (3*nfib + 8)*sizeof(float);
 
-	printf("Shared Memory Used in init_Fibres_Multifibres: %i\n",amount_shared);
+	myfile << "Shared Memory Used in init_Fibres_Multifibres: " << amount_shared << "\n";
 
 	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
 	sync_check("init_Fibres_Multifibres_kernel");
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	cout << "TIME TOTAL: " << time << " seconds\n"; 
-	cout << "--------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+	myfile << "-----------------------------------------------------" << "\n\n" ; 
+	myfile.close();
 }
 
 void runmcmc_burnin(	//INPUT
@@ -89,6 +91,7 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<double> 			beta_gpu,
 			const int 					ndirections,
 			double 						seed,
+			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
@@ -97,9 +100,9 @@ void runmcmc_burnin(	//INPUT
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	
-	cout << "----------------------------------------------------- " << "\n"; 
-   	cout << "--------- MCMC ALGORITHM PART BURNIN IN GPU --------- " << "\n"; 
-   	cout << "----------------------------------------------------- " << "\n"; 	
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app ); 
+   	myfile << "--------- MCMC ALGORITHM PART BURNIN IN GPU --------- " << "\n";  	
 
    	struct timeval t1,t2,t_tot1,t_tot2;
    	double time,timecurand,timemcmc;
@@ -123,12 +126,12 @@ void runmcmc_burnin(	//INPUT
    	unsigned int totalrandoms=(opts.nburn.value() * nvox * nparams);
 
    	cuMemGetInfo(&free,&total);
-   	cout << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
+   	myfile << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
    	//4 bytes each float, 2 random arrays, and 80% of total memory at this moment 
    	unsigned int maxrandoms=((free*0.8)/(4*2)); 
 
-   	cout << "Total randoms: " << totalrandoms << "\n"; 
-   	cout << "Max randoms: " << maxrandoms << "\n"; 
+   	myfile << "Total randoms: " << totalrandoms << "\n"; 
+   	myfile << "Max randoms: " << maxrandoms << "\n"; 
    
    	int steps; //num iter if not enough memory
    	int minrandoms; //min num of randoms ensamble
@@ -150,7 +153,7 @@ void runmcmc_burnin(	//INPUT
 		nrandoms++;
 	}
 	
-   	cout << "Process " << opts.nburn.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
+   	myfile << "Process " << opts.nburn.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
 
    	int last_step = opts.nburn.value() - (iters_step*steps);
    	int last_randoms = (last_step*minrandoms);
@@ -158,7 +161,7 @@ void runmcmc_burnin(	//INPUT
 		last_randoms++;
 	}
 
-   	cout << "Last step with " << last_step << " iterations" << "\n"; 
+   	myfile << "Last step with " << last_step << " iterations" << "\n"; 
 	
 	thrust::device_vector<float> randomsN_gpu;
 	thrust::device_vector<float> randomsU_gpu;	
@@ -166,14 +169,14 @@ void runmcmc_burnin(	//INPUT
 	randomsU_gpu.resize(nrandoms);
 
    	cuMemGetInfo(&free,&total);
-   	cout << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
+   	myfile << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
    
   	int blocks = nvox;        
   	dim3 Dim_Grid(blocks, 1);
   	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
 
-   	cout << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
-   	cout << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
+   	myfile << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
 
    	curandGenerator_t gen;
    	curandCreateGenerator(&gen,CURAND_RNG_PSEUDO_DEFAULT);
@@ -193,7 +196,7 @@ void runmcmc_burnin(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_MCMC+1)*sizeof(double) + (10*nfib + 2*nparams + 24)*sizeof(float) + (7*nfib + 16)*sizeof(int);
 
-	printf("Shared Memory Used in runmcmc_burnin: %i\n",amount_shared);
+	myfile << "Shared Memory Used in runmcmc_burnin: " << amount_shared << "\n";
 	
    	for(int i=0;i<steps;i++){
 
@@ -257,15 +260,16 @@ void runmcmc_burnin(	//INPUT
    	gettimeofday(&t2,NULL);
    	timemcmc+=timeval_diff(&t2,&t1);
 
-    	cout << "TIME CURAND: " << timecurand << " seconds\n"; 
-    	cout << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
+    	myfile << "TIME CURAND: " << timecurand << " seconds\n"; 
+    	myfile << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
    
    	curandDestroyGenerator(gen);
 
 	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	cout << "TIME TOTAL: " << time << " seconds\n"; 
-	cout << "--------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+	myfile << "-----------------------------------------------------" << "\n\n" ; 
+	myfile.close();
 
    	sync_check("runmcmc_burnin");
 }
@@ -282,6 +286,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<double>			isosignals_gpu,
 			const int 					ndirections,
 			double 						seed,
+			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<int>&			multirecords_gpu,
 			thrust::device_vector<float>&			rf0_gpu,
@@ -296,9 +301,9 @@ void runmcmc_record(	//INPUT
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	
-	cout << "----------------------------------------------------- " << "\n"; 
-   	cout << "--------- MCMC ALGORITHM PART RECORD IN GPU --------- " << "\n"; 
-   	cout << "----------------------------------------------------- " << "\n"; 	
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+   	myfile << "--------- MCMC ALGORITHM PART RECORD IN GPU --------- " << "\n"; 	
 
    	struct timeval t1,t2,t_tot1,t_tot2;
    	double time,timecurand,timemcmc;
@@ -324,12 +329,12 @@ void runmcmc_record(	//INPUT
    	unsigned int totalrandoms=(opts.njumps.value() * nvox * nparams);
 
    	cuMemGetInfo(&free,&total);
-   	cout << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
+   	myfile << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
    	//4 bytes each float, 2 random arrays, and 80% of total memory at this moment 
    	unsigned int maxrandoms=((free*0.8)/(4*2)); 
 
-   	cout << "Total randoms: " << totalrandoms << "\n"; 
-   	cout << "Max randoms: " << maxrandoms << "\n"; 
+   	myfile << "Total randoms: " << totalrandoms << "\n"; 
+   	myfile << "Max randoms: " << maxrandoms << "\n"; 
    
    	int steps; //num iter if not enough memory
    	int minrandoms; //min num of randoms ensamble
@@ -351,7 +356,7 @@ void runmcmc_record(	//INPUT
 		nrandoms++;
 	}
 
-   	cout << "Process " << opts.njumps.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
+   	myfile << "Process " << opts.njumps.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
 
    	int last_step = opts.njumps.value() - (iters_step*steps);
    	int last_randoms = (last_step*minrandoms); 
@@ -359,7 +364,7 @@ void runmcmc_record(	//INPUT
 		last_randoms++;
 	}
 
-   	cout << "Last step with " << last_step << " iterations" << "\n"; 
+   	myfile << "Last step with " << last_step << " iterations" << "\n"; 
 	
 	thrust::device_vector<float> randomsN_gpu;
 	thrust::device_vector<float> randomsU_gpu;	
@@ -367,14 +372,14 @@ void runmcmc_record(	//INPUT
 	randomsU_gpu.resize(nrandoms);
 
    	cuMemGetInfo(&free,&total);
-   	cout << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
+   	myfile << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
    
   	int blocks = nvox;        
   	dim3 Dim_Grid(blocks, 1);
   	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
 
-   	cout << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
-   	cout << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
+   	myfile << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
 
    	curandGenerator_t gen;
    	curandCreateGenerator(&gen,CURAND_RNG_PSEUDO_DEFAULT);
@@ -405,7 +410,7 @@ void runmcmc_record(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_MCMC+1)*sizeof(double) + (10*nfib + 2*nparams + 24)*sizeof(float) + (7*nfib + 18)*sizeof(int);
 
-	printf("Shared Memory Used in runmcmc_record: %i\n",amount_shared);
+	myfile << "Shared Memory Used in runmcmc_record: " << amount_shared << "\n";
 
    	for(int i=0;i<steps;i++){
 
@@ -467,15 +472,16 @@ void runmcmc_record(	//INPUT
    	timemcmc+=timeval_diff(&t2,&t1);
 
 
-    	cout << "TIME CURAND: " << timecurand << " seconds\n"; 
-    	cout << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
+    	myfile << "TIME CURAND: " << timecurand << " seconds\n"; 
+    	myfile << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
    
    	curandDestroyGenerator(gen);
 
 	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	cout << "TIME TOTAL: " << time << " seconds\n"; 
-	cout << "--------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+	myfile << "-----------------------------------------------------" << "\n" ;
+	myfile.close(); 
 	
    	sync_check("runmcmc_record");
 }

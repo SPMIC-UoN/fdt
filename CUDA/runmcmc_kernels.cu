@@ -1477,7 +1477,7 @@ extern "C" __global__ void runmcmc_burnin_kernel(	//INPUT
 		multifibres[*idVOX].m_d_rej=*m_d_rej;
 	
 		multifibres[*idVOX].m_prior_en=*m_prior_en;
-		multifibres[*idVOX].m_energy=*m_energy;		if(*idVOX==2){ if(*idVOX==2){ printf("BURIN FIN ENERGY: %.20f\n",*m_energy);} printf("GUARDO BURIN ENERGY: %.20f\n",multifibres[*idVOX].m_energy);}
+		multifibres[*idVOX].m_energy=*m_energy;
 		multifibres[*idVOX].m_likelihood_en=*m_likelihood_en;
 
 		if(m_include_f0){

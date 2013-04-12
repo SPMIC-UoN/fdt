@@ -34,10 +34,14 @@ void fit_PVM_single(	//INPUT
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
 			int				ndirections,	
-			bool 				m_include_f0,		
+			bool 				m_include_f0,
+			string 				output_file,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
 {
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = datam_vec.size();
 	int nfib = opts.nfibres.value();
@@ -91,10 +95,12 @@ void fit_PVM_single(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
 
-	printf("Shared Memory Used in fit_PVM_single: %i\n",amount_shared);
+	myfile << "Shared Memory Used in fit_PVM_single: " << amount_shared << "\n"; 
 
 	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_kernel");
+
+	myfile.close();
 }
 
 void fit_PVM_single_c(	//INPUT
@@ -105,10 +111,14 @@ void fit_PVM_single_c(	//INPUT
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
 			int				ndirections,		
-			bool 				m_include_f0,		
+			bool 				m_include_f0,	
+			string 				output_file,	
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
 {
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = datam_vec.size(); 
 	int nfib = opts.nfibres.value();
@@ -160,10 +170,12 @@ void fit_PVM_single_c(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+nfib*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
 
-	printf("Shared Memory Used in fit_PVM_single_c: %i\n",amount_shared);
+	myfile << "Shared Memory Used in fit_PVM_single_c: " << amount_shared << "\n"; 
 
 	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, false, m_include_f0, false, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_c_kernel");
+
+	myfile.close();
 }
 
 void fit_PVM_multi(	//INPUT
@@ -173,9 +185,13 @@ void fit_PVM_multi(	//INPUT
 			int 				nvox,	
 			int				ndirections,		
 			bool 				m_include_f0,
+			string 				output_file,
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
 {
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib = opts.nfibres.value();
 
@@ -196,10 +212,12 @@ void fit_PVM_multi(	//INPUT
 
 	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+9)*sizeof(double)+(2+nparams)*sizeof(int);
 
-	printf("Shared Memory Used in fit_PVM_multi: %i\n",amount_shared);
+	myfile << "Shared Memory Used in fit_PVM_multi: " << amount_shared << "\n"; 
 
 	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_multi_kernel");
+
+	myfile.close();
 }
 
 void calculate_tau(	//INPUT
@@ -209,13 +227,14 @@ void calculate_tau(	//INPUT
 			thrust::device_vector<double>	bvals_gpu,
 			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,
-			int				ndirections,		
+			int				ndirections,	
+			string 				output_file,	
 			//OUTPUT
 			thrust::host_vector<float>&	tau)
 {
-	cout << "----------------------------------------------------- " << "\n"; 
-   	cout << "--------- CALCULATE TAU/RESIDULAS IN GPU ------------ " << "\n"; 
-   	cout << "----------------------------------------------------- " << "\n"; 
+	std::ofstream myfile;
+	myfile.open (output_file.data(), ios::out | ios::app );
+   	myfile << "--------- CALCULATE TAU/RESIDULAS IN GPU ------------ " << "\n"; 
 
 	struct timeval t1,t2;
    	double time;
@@ -280,7 +299,8 @@ void calculate_tau(	//INPUT
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	cout << "TIME TOTAL: " << time << " seconds\n"; 
-	cout << "--------------------------------------------" << "\n\n" ; 				
+   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+	myfile << "-----------------------------------------------------" << "\n\n" ; 	
+	myfile.close();			
 }
 

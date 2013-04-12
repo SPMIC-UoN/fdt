@@ -19,5 +19,7 @@ void xfibres_gpu(	//INPUT
 			const NEWMAT::Matrix			bvals,
 			const NEWMAT::Matrix			bvecs,
 			const NEWMAT::Matrix	 		gradm, 
-			int					idpart);
+			int					idpart,
+			int					idSubpart,
+			string					subjdir);
 

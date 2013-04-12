@@ -24,6 +24,7 @@ void fit(	//INPUT
 		thrust::device_vector<double>	bvecs_gpu, 
 		thrust::device_vector<double>	bvals_gpu,
 		int				ndirections,
+		string 				output_file,
 		//OUTPUT
 		thrust::device_vector<double>&	params_gpu,
 		thrust::host_vector<int>&	vox_repeat,
