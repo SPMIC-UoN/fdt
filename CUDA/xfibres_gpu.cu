@@ -395,17 +395,16 @@ void prepare_data_gpu_FIT(	//INPUT
 		
 	}else{
  		MISCMATHS::cart2sph(bvecs,alpha,beta);
-
 		bvecs_vec[0]=bvecs;
 		bvals_vec[0]=bvals;
 		for(int dir=0;dir<ndirections;dir++){
-			bvecs_host[ndirections*3+dir] = bvecs(1,dir+1);
-			bvecs_host[ndirections*3+ndirections+dir] = bvecs(2,dir+1);
-			bvecs_host[ndirections*3+ndirections*2+dir] = bvecs(3,dir+1);
-        		bvals_host[ndirections+dir] = bvals(1,dir+1);
+			bvecs_host[dir] = bvecs(1,dir+1);
+			bvecs_host[ndirections+dir] = bvecs(2,dir+1);
+			bvecs_host[ndirections*2+dir] = bvecs(3,dir+1);
+        		bvals_host[dir] = bvals(1,dir+1);
 			
-			alpha_host[ndirections+dir] = alpha(dir+1);
-        		beta_host[ndirections+dir] = beta(dir+1);
+			alpha_host[dir] = alpha(dir+1);
+        		beta_host[dir] = beta(dir+1);
 		}
 	}
 	
@@ -485,15 +484,15 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 		}
 	}else{
 		for(int dir=0;dir<ndirections;dir++){
-			bvecs_repeat_host[ndirections*3+dir] = bvecs_host[ndirections*3+dir];
-			bvecs_repeat_host[ndirections*3+ndirections+dir] = bvecs_host[ndirections*3+ndirections+dir];
-			bvecs_repeat_host[ndirections*3+ndirections*2+dir] = bvecs_host[ndirections*3+ndirections*2+dir];
-			bvals_repeat_host[ndirections+dir] = bvals_host[ndirections+dir];
+			bvecs_repeat_host[dir] = bvecs_host[dir];
+			bvecs_repeat_host[ndirections+dir] = bvecs_host[ndirections+dir];
+			bvecs_repeat_host[ndirections*2+dir] = bvecs_host[ndirections*2+dir];
+			bvals_repeat_host[dir] = bvals_host[dir];
 			
-			bvecs(1,dir+1)= bvecs_host[ndirections*3+dir];
-			bvecs(2,dir+1)= bvecs_host[ndirections*3+ndirections+dir];
-			bvecs(3,dir+1)= bvecs_host[ndirections*3+ndirections*2+dir];
-			bvals(1,dir+1)= bvals_host[ndirections+dir];
+			bvecs(1,dir+1)= bvecs_host[dir];
+			bvecs(2,dir+1)= bvecs_host[ndirections+dir];
+			bvecs(3,dir+1)= bvecs_host[ndirections*2+dir];
+			bvals(1,dir+1)= bvals_host[dir];
 		}
 		bvecs_repeat_vec[0]=bvecs;
 		bvals_repeat_vec[0]=bvals;
