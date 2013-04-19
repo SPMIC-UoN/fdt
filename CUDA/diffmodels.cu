@@ -35,6 +35,7 @@ void fit_PVM_single(	//INPUT
 			int				ndirections,	
 			int 				nfib,
 			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -54,7 +55,10 @@ void fit_PVM_single(	//INPUT
 	
 	for(int vox=0;vox<nvox;vox++){
 		// initialise with a tensor
-  		DTI dti(datam_vec[vox],bvecs_vec[vox],bvals_vec[vox]);
+		int pos_bv;
+		if (gradnonlin) pos_bv=vox;
+		else pos_bv=0;
+  		DTI dti(datam_vec[vox],bvecs_vec[pos_bv],bvals_vec[pos_bv]);
   		dti.linfit();
 
   		// set starting parameters for nonlinear fitting
@@ -95,7 +99,7 @@ void fit_PVM_single(	//INPUT
 
 	myfile << "Shared Memory Used in fit_PVM_single: " << amount_shared << "\n"; 
 
-	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
+	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_kernel");
 
 	myfile.close();
@@ -110,7 +114,8 @@ void fit_PVM_single_c(	//INPUT
 			thrust::device_vector<double>	bvals_gpu,
 			int				ndirections,
 			int 				nfib,		
-			bool 				m_include_f0,	
+			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,	
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -130,7 +135,10 @@ void fit_PVM_single_c(	//INPUT
 
 	for(int vox=0;vox<nvox;vox++){
 		// initialise with a tensor
-  		DTI dti(datam_vec[vox],bvecs_vec[vox],bvals_vec[vox]);
+		int pos_bv;
+		if (gradnonlin) pos_bv=vox;
+		else pos_bv=0;
+  		DTI dti(datam_vec[vox],bvecs_vec[pos_bv],bvals_vec[pos_bv]);
   		dti.linfit();
 
   		// set starting parameters for nonlinear fitting
@@ -151,7 +159,7 @@ void fit_PVM_single_c(	//INPUT
   		}
   
   		// do a better job for initializing the volume fractions
-		PVM_single_c pvm(datam_vec[vox],bvecs_vec[vox],bvals_vec[vox],nfib,false,m_include_f0,false);
+		PVM_single_c pvm(datam_vec[vox],bvecs_vec[pos_bv],bvals_vec[pos_bv],nfib,false,m_include_f0,false);
   		pvm.fit_pvf(start);
 
 		for(int i=0;i<nparams;i++){ 
@@ -169,7 +177,7 @@ void fit_PVM_single_c(	//INPUT
 
 	myfile << "Shared Memory Used in fit_PVM_single_c: " << amount_shared << "\n"; 
 
-	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, false, m_include_f0, false, thrust::raw_pointer_cast(params_gpu.data()));
+	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, false, m_include_f0, false, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_c_kernel");
 
 	myfile.close();
@@ -183,6 +191,7 @@ void fit_PVM_multi(	//INPUT
 			int				ndirections,
 			int				nfib,		
 			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu)
@@ -209,7 +218,7 @@ void fit_PVM_multi(	//INPUT
 
 	myfile << "Shared Memory Used in fit_PVM_multi: " << amount_shared << "\n"; 
 
-	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(params_gpu.data()));
+	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_multi_kernel");
 
 	myfile.close();
@@ -227,6 +236,7 @@ void calculate_tau(	//INPUT
 			int 				model,
 			bool 				m_include_f0,
 			bool 				nonlin,
+			bool				gradnonlin,
 			string 				output_file,	
 			//OUTPUT
 			thrust::host_vector<float>&	tau)
@@ -269,16 +279,16 @@ void calculate_tau(	//INPUT
 
 	if(model==1){
 		if(nonlin){ 
-			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0,gradnonlin, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_kernel");
 
 		}else{
-			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_c_kernel");
 		}
 	}else{
       		//model 2 : non-mono-exponential
-		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 

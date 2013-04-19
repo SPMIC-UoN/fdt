@@ -68,6 +68,7 @@ void xfibres_gpu(	//INPUT
 	int nvox = datam.Ncols();
 	int ndirections = datam.Nrows();
 	int nfib= opts.nfibres.value(); 
+	bool gradnonlin=opts.grad_file.set();
 
 	if(nvox>0){
 		thrust::host_vector<double> datam_host, bvecs_host, bvals_host, alpha_host, beta_host, params_host;
@@ -89,7 +90,7 @@ void xfibres_gpu(	//INPUT
 		fit(datam_vec,bvecs_vec,bvals_vec,datam_host,bvecs_host,bvals_host,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,gpu_log,params_gpu,vox_repeat,nrepeat);
 
 		if(opts.rician.value()){
-			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,ndirections,nfib,opts.modelnum.value(),opts.f0.value(),opts.nonlin.value(),gpu_log,tau_host);
+			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,ndirections,nfib,opts.modelnum.value(),opts.f0.value(),opts.nonlin.value(),gradnonlin,gpu_log,tau_host);
 		}
 
 		bvecs_gpu.clear();		//free bvecs_gpu
@@ -187,10 +188,11 @@ void fit(	//INPUT
 	int nparams_fit = 2+3*opts.nfibres.value();
 	if(opts.modelnum.value()==2) nparams_fit++;
 	if(opts.f0.value()) nparams_fit++;
+	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.modelnum.value()==1){
 		if(opts.nonlin.value()){ 
-			fit_PVM_single(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),output_file,params_gpu);
+			fit_PVM_single(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
@@ -223,14 +225,14 @@ void fit(	//INPUT
 					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
 					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
 				
-		 			fit_PVM_single(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,output_file,params_repeat_gpu);
+		 			fit_PVM_single(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 					//mix all the parameteres: repeated and not repeated
 					mix_params(params_repeat_host,vox_repeat, nrepeat, nvox, params_gpu);
 				}
 	  		}
 		}else{
-			fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),output_file,params_gpu);
+			fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
@@ -263,7 +265,7 @@ void fit(	//INPUT
 					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
 					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
 				
-		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,output_file,params_repeat_gpu);
+		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 
 					//mix all the parameteres: repeated and not repeated
@@ -273,9 +275,9 @@ void fit(	//INPUT
 		}
 	}else{
       		//model 2 : non-mono-exponential
-		fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),output_file,params_gpu);
+		fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 	
-		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),output_file,params_gpu);	
+		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);	
 
 		if (opts.f0.value()){
 				float md,mf,f0;	
@@ -308,9 +310,9 @@ void fit(	//INPUT
 					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
 					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
 				
-		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,output_file,params_repeat_gpu);
+		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 
-					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,output_file,params_repeat_gpu);	
+					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);	
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 		
 					//mix all the parameteres: repeated and not repeated
@@ -357,14 +359,22 @@ void prepare_data_gpu_FIT(	//INPUT
 		}
 	}
 
-	bvecs_vec.resize(nvox);
-	bvals_vec.resize(nvox);
-	bvecs_host.resize(nvox*bvecs.Nrows()*bvecs.Ncols());
-	bvals_host.resize(nvox*bvals.Ncols());
+	if (opts.grad_file.set()){
+		bvecs_vec.resize(nvox);
+		bvals_vec.resize(nvox);
+		bvecs_host.resize(nvox*bvecs.Nrows()*bvecs.Ncols());
+		bvals_host.resize(nvox*bvals.Ncols());
+		alpha_host.resize(nvox*bvecs.Ncols());
+		beta_host.resize(nvox*bvecs.Ncols());
+	}else{
+		bvecs_vec.resize(1);
+		bvals_vec.resize(1);
+		bvecs_host.resize(1*bvecs.Nrows()*bvecs.Ncols());
+		bvals_host.resize(1*bvals.Ncols());
+		alpha_host.resize(1*bvecs.Ncols());
+		beta_host.resize(1*bvecs.Ncols());
+	}
 
-	alpha_host.resize(nvox*bvecs.Ncols());
-	beta_host.resize(nvox*bvecs.Ncols());
-	
 	ColumnVector alpha,beta;
 
 	if (opts.grad_file.set()){
@@ -386,18 +396,16 @@ void prepare_data_gpu_FIT(	//INPUT
 	}else{
  		MISCMATHS::cart2sph(bvecs,alpha,beta);
 
-		for(int vox=0;vox<nvox;vox++){
-			bvecs_vec[vox]=bvecs;
-			bvals_vec[vox]=bvals;
-			for(int dir=0;dir<ndirections;dir++){
-				bvecs_host[vox*ndirections*3+dir] = bvecs(1,dir+1);
-				bvecs_host[vox*ndirections*3+ndirections+dir] = bvecs(2,dir+1);
-				bvecs_host[vox*ndirections*3+ndirections*2+dir] = bvecs(3,dir+1);
-        			bvals_host[vox*ndirections+dir] = bvals(1,dir+1);
+		bvecs_vec[0]=bvecs;
+		bvals_vec[0]=bvals;
+		for(int dir=0;dir<ndirections;dir++){
+			bvecs_host[ndirections*3+dir] = bvecs(1,dir+1);
+			bvecs_host[ndirections*3+ndirections+dir] = bvecs(2,dir+1);
+			bvecs_host[ndirections*3+ndirections*2+dir] = bvecs(3,dir+1);
+        		bvals_host[ndirections+dir] = bvals(1,dir+1);
 			
-				alpha_host[vox*ndirections+dir] = alpha(dir+1);
-        			beta_host[vox*ndirections+dir] = beta(dir+1);
-			}
+			alpha_host[ndirections+dir] = alpha(dir+1);
+        		beta_host[ndirections+dir] = beta(dir+1);
 		}
 	}
 	
@@ -437,29 +445,58 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 
 	datam_repeat_vec.resize(nrepeat);
 	datam_repeat_host.resize(nrepeat*ndirections); 
-	bvecs_repeat_vec.resize(nrepeat);
-	bvals_repeat_vec.resize(nrepeat);
-	bvecs_repeat_host.resize(nrepeat*3*ndirections);
-	bvals_repeat_host.resize(nrepeat*ndirections);
+	
+	if (opts.grad_file.set()){
+		bvecs_repeat_vec.resize(nrepeat);
+		bvals_repeat_vec.resize(nrepeat);
+		bvecs_repeat_host.resize(nrepeat*3*ndirections);
+		bvals_repeat_host.resize(nrepeat*ndirections);
+	}else{
+		bvecs_repeat_vec.resize(1);
+		bvals_repeat_vec.resize(1);
+		bvecs_repeat_host.resize(1*3*ndirections);
+		bvals_repeat_host.resize(1*ndirections);
+	}
 
+	
 	for(int vox=0;vox<nrepeat;vox++){
 		for(int dir=0;dir<ndirections;dir++){
 			datam(dir+1)= datam_host[vox_repeat[vox]*ndirections+dir]; 
 			datam_repeat_host[vox*ndirections+dir]=datam_host[vox_repeat[vox]*ndirections+dir];
-
-			bvecs_repeat_host[vox*ndirections*3+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+dir];
-			bvecs_repeat_host[vox*ndirections*3+ndirections+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
-			bvecs_repeat_host[vox*ndirections*3+ndirections*2+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
-        		bvals_repeat_host[vox*ndirections+dir] = bvals_host[vox_repeat[vox]*ndirections+dir];
-			
-			bvecs(1,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+dir];
-			bvecs(2,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
-			bvecs(3,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
-			bvals(1,dir+1)= bvals_host[vox_repeat[vox]*ndirections+dir];
 		}
-		datam_repeat_vec[vox]=datam;	
-		bvecs_repeat_vec[vox]=bvecs;
-		bvals_repeat_vec[vox]=bvals;
+		datam_repeat_vec[vox]=datam;
+	}
+
+	if (opts.grad_file.set()){
+		for(int vox=0;vox<nrepeat;vox++){
+			for(int dir=0;dir<ndirections;dir++){
+				bvecs_repeat_host[vox*ndirections*3+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+dir];
+				bvecs_repeat_host[vox*ndirections*3+ndirections+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
+				bvecs_repeat_host[vox*ndirections*3+ndirections*2+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
+				bvals_repeat_host[vox*ndirections+dir] = bvals_host[vox_repeat[vox]*ndirections+dir];
+			
+				bvecs(1,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+dir];
+				bvecs(2,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
+				bvecs(3,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
+				bvals(1,dir+1)= bvals_host[vox_repeat[vox]*ndirections+dir];
+			}
+			bvecs_repeat_vec[vox]=bvecs;
+			bvals_repeat_vec[vox]=bvals;
+		}
+	}else{
+		for(int dir=0;dir<ndirections;dir++){
+			bvecs_repeat_host[ndirections*3+dir] = bvecs_host[ndirections*3+dir];
+			bvecs_repeat_host[ndirections*3+ndirections+dir] = bvecs_host[ndirections*3+ndirections+dir];
+			bvecs_repeat_host[ndirections*3+ndirections*2+dir] = bvecs_host[ndirections*3+ndirections*2+dir];
+			bvals_repeat_host[ndirections+dir] = bvals_host[ndirections+dir];
+			
+			bvecs(1,dir+1)= bvecs_host[ndirections*3+dir];
+			bvecs(2,dir+1)= bvecs_host[ndirections*3+ndirections+dir];
+			bvecs(3,dir+1)= bvecs_host[ndirections*3+ndirections*2+dir];
+			bvals(1,dir+1)= bvals_host[ndirections+dir];
+		}
+		bvecs_repeat_vec[0]=bvecs;
+		bvals_repeat_vec[0]=bvals;
 	}
 	
 	int nfib= opts.nfibres.value();
