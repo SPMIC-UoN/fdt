@@ -16,8 +16,8 @@ void join_subParts(string name, int size_part, int nsubparts, int size_sub_part,
 
 void xfibres_gpu(	//INPUT
 			const NEWMAT::Matrix			datam,
-			const NEWMAT::Matrix			bvals,
 			const NEWMAT::Matrix			bvecs,
+			const NEWMAT::Matrix			bvals,
 			const NEWMAT::Matrix	 		gradm, 
 			int					idpart,
 			int					idSubpart,
