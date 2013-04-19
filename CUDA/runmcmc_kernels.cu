@@ -1543,10 +1543,12 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 							const double*			bvals,
 							const double*			alpha,
 							const double*			beta,
-							const FibreGPU*			fibres,
-							const MultifibreGPU*		multifibres,
+							//INPUT-OUTPUT
+							FibreGPU*			fibres,
+							MultifibreGPU*			multifibres,
 							double*				signals,
 							double*				isosignals,
+							//INPUT 
 							float*				randomsN,
 							float*				randomsU,
 							const int			ndirections,
@@ -1566,16 +1568,14 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 							const int 			totalrecords,		//total number of records to do
 							
 							//OUTPUT
-							int*				multirecords,		//id for each sample in each voxel
-							float*				rf0,			//records od parameters
+							float*				rf0,			//records of parameters
 							float*				rtau,
 							float*				rs0,
 							float*				rd,
 							float*				rdstd,
 							float*				rth,
 							float*				rph, 
-							float*				rf,
-							float*				rlikelihood_energy)
+							float*				rf)
 
 {
 	int idSubVOX= threadIdx.x;
@@ -2576,13 +2576,11 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 			if(rician) rtau[(*idVOX*totalrecords)+*sample-1]= *m_tau;
 			if(model==2) rdstd[(*idVOX*totalrecords)+*sample-1]= *m_dstd;
 			rs0[(*idVOX*totalrecords)+*sample-1]= *m_S0;
-			rlikelihood_energy[(*idVOX*totalrecords)+*sample-1]= *m_likelihood_en;
 			for(int j=0;j<nfib;j++){
 				rth[(*idVOX*totalrecords*nfib)+(j*totalrecords)+*sample-1]=m_th[j];
 				rph[(*idVOX*totalrecords*nfib)+(j*totalrecords)+*sample-1]=m_ph[j];
 				rf[(*idVOX*totalrecords*nfib)+(j*totalrecords)+*sample-1]=m_f[j];
 			}
-			multirecords[(*idVOX*totalrecords)+*sample-1]=*sample;
 			*sample=*sample+1;
         	}
 
@@ -2639,5 +2637,79 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 		__syncthreads();	
 
         } //end while iterations
+
+	if(leader){
+		multifibres[*idVOX].m_S0=*m_S0;
+		multifibres[*idVOX].m_S0_prior=*m_S0_prior;
+		multifibres[*idVOX].m_S0_prop=*m_S0_prop;
+		multifibres[*idVOX].m_S0_acc=*m_S0_acc;
+		multifibres[*idVOX].m_S0_rej=*m_S0_rej;
+
+		multifibres[*idVOX].m_d=*m_d;
+		multifibres[*idVOX].m_d_prior=*m_d_prior;
+		multifibres[*idVOX].m_d_prop=*m_d_prop;
+		multifibres[*idVOX].m_d_acc=*m_d_acc;
+		multifibres[*idVOX].m_d_rej=*m_d_rej;
+	
+		multifibres[*idVOX].m_prior_en=*m_prior_en;
+		multifibres[*idVOX].m_energy=*m_energy;
+		multifibres[*idVOX].m_likelihood_en=*m_likelihood_en;
+
+		if(m_include_f0){
+			multifibres[*idVOX].m_f0_prior=*m_f0_prior;
+			multifibres[*idVOX].m_f0=*m_f0;
+			multifibres[*idVOX].m_f0_acc=*m_f0_acc;
+			multifibres[*idVOX].m_f0_rej=*m_f0_rej;
+			multifibres[*idVOX].m_f0_prop=*m_f0_prop;
+		}
+		if(rician){
+			multifibres[*idVOX].m_tau_prior=*m_tau_prior;
+			multifibres[*idVOX].m_tau=*m_tau;
+			multifibres[*idVOX].m_tau_acc=*m_tau_acc;
+			multifibres[*idVOX].m_tau_rej=*m_tau_rej;
+			multifibres[*idVOX].m_tau_prop=*m_tau_prop;
+		}
+		if(model==2){
+			multifibres[*idVOX].m_dstd_prior=*m_dstd_prior;
+			multifibres[*idVOX].m_dstd=*m_dstd;
+			multifibres[*idVOX].m_dstd_acc=*m_dstd_acc;
+			multifibres[*idVOX].m_dstd_rej=*m_dstd_rej;
+			multifibres[*idVOX].m_dstd_prop=*m_dstd_prop;
+		}
+	}
+	
+	if(idSubVOX<nfib){
+		int pos = (*idVOX*nfib)+idSubVOX;
+	
+		fibres[pos].m_th=m_th[idSubVOX];
+		fibres[pos].m_ph=m_ph[idSubVOX];
+		fibres[pos].m_f=m_f[idSubVOX];
+
+		fibres[pos].m_th_acc=m_th_acc[idSubVOX];
+		fibres[pos].m_th_rej=m_th_rej[idSubVOX];
+		fibres[pos].m_ph_acc=m_ph_acc[idSubVOX];
+		fibres[pos].m_ph_rej=m_ph_rej[idSubVOX];
+		fibres[pos].m_f_acc=m_f_acc[idSubVOX];
+		fibres[pos].m_f_rej=m_f_rej[idSubVOX];
+
+		fibres[pos].m_prior_en=fm_prior_en[idSubVOX];
+		fibres[pos].m_th_prior=m_th_prior[idSubVOX];
+		fibres[pos].m_ph_prior=m_ph_prior[idSubVOX];
+		fibres[pos].m_f_prior=m_f_prior[idSubVOX];
+
+		fibres[pos].m_th_prop=m_th_prop[idSubVOX];
+		fibres[pos].m_ph_prop=m_ph_prop[idSubVOX];
+		fibres[pos].m_f_prop=m_f_prop[idSubVOX];
+
+		fibres[pos].m_lam_jump=m_lam_jump[idSubVOX];		
+	}
+
+	for(int i=0; i<mydirs; i++){	
+		isosignals[(*idVOX*ndirections)+idSubVOX+i*threadsBlock] = myisosig[i];
+
+		for(int f=0;f<nfib;f++){
+			signals[(*idVOX*ndirections*nfib)+(f*ndirections)+idSubVOX+i*threadsBlock]=mysig[i*nfib+f];
+		}
+	}
 }
 
