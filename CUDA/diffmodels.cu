@@ -21,7 +21,6 @@
 #include <sys/time.h>
 #include "init_gpu.h"
 
-using namespace Xfibres;
 
 ////////////////////////////////////////////////////// 
 //   FIT IN GPU
@@ -34,6 +33,7 @@ void fit_PVM_single(	//INPUT
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
 			int				ndirections,	
+			int 				nfib,
 			bool 				m_include_f0,
 			string 				output_file,		
 			//OUTPUT
@@ -42,9 +42,7 @@ void fit_PVM_single(	//INPUT
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
 
-	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = datam_vec.size();
-	int nfib = opts.nfibres.value();
 	int nparams;
 	if (m_include_f0)
       		nparams = nfib*3 + 3; 
@@ -110,7 +108,8 @@ void fit_PVM_single_c(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
-			int				ndirections,		
+			int				ndirections,
+			int 				nfib,		
 			bool 				m_include_f0,	
 			string 				output_file,	
 			//OUTPUT
@@ -119,9 +118,7 @@ void fit_PVM_single_c(	//INPUT
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
 
-	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = datam_vec.size(); 
-	int nfib = opts.nfibres.value();
 	int nparams;
 	if (m_include_f0)
       		nparams = nfib*3 + 3; 
@@ -154,7 +151,7 @@ void fit_PVM_single_c(	//INPUT
   		}
   
   		// do a better job for initializing the volume fractions
-		PVM_single_c pvm(datam_vec[vox],bvecs_vec[vox],bvals_vec[vox],opts.nfibres.value(),false,m_include_f0,false);
+		PVM_single_c pvm(datam_vec[vox],bvecs_vec[vox],bvals_vec[vox],nfib,false,m_include_f0,false);
   		pvm.fit_pvf(start);
 
 		for(int i=0;i<nparams;i++){ 
@@ -183,7 +180,8 @@ void fit_PVM_multi(	//INPUT
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,	
 			int 				nvox,	
-			int				ndirections,		
+			int				ndirections,
+			int				nfib,		
 			bool 				m_include_f0,
 			string 				output_file,
 			//OUTPUT
@@ -191,9 +189,6 @@ void fit_PVM_multi(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-
-	xfibresOptions& opts = xfibresOptions::getInstance();
-	int nfib = opts.nfibres.value();
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
@@ -227,7 +222,11 @@ void calculate_tau(	//INPUT
 			thrust::device_vector<double>	bvals_gpu,
 			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,
-			int				ndirections,	
+			int				ndirections,
+			int				nfib,
+			int 				model,
+			bool 				m_include_f0,
+			bool 				nonlin,
 			string 				output_file,	
 			//OUTPUT
 			thrust::host_vector<float>&	tau)
@@ -240,22 +239,20 @@ void calculate_tau(	//INPUT
    	double time;
    	gettimeofday(&t1,NULL);
 
-	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nvox = vox_repeat.size(); 
-	int nfib = opts.nfibres.value();
 
 	int nparams;
-	if (opts.f0.value())
+	if (m_include_f0)
       		nparams = nfib*3 + 3; 
     	else
       		nparams = nfib*3 + 2;
-	if(opts.modelnum.value()==2) nparams++;
+	if(model==2) nparams++;
 	
 	thrust::device_vector<bool> includes_f0_gpu;
 	includes_f0_gpu.resize(nvox);
-	thrust::fill(includes_f0_gpu.begin(), includes_f0_gpu.end(), opts.f0.value());
+	thrust::fill(includes_f0_gpu.begin(), includes_f0_gpu.end(), m_include_f0);
 
-	if(opts.f0.value()){
+	if(m_include_f0){
 		for(int i=0;i<nrepeat;i++){
 			includes_f0_gpu[vox_repeat[i]]=false;	//if has been reprocessed f0 will be 0.
 		}
@@ -270,18 +267,18 @@ void calculate_tau(	//INPUT
 	thrust::device_vector<double> residuals_gpu;
 	residuals_gpu.resize(nvox*ndirections);
 
-	if(opts.modelnum.value()==1){
-		if(opts.nonlin.value()){ 
-			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+	if(model==1){
+		if(nonlin){ 
+			get_residuals_PVM_single_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_kernel");
 
 		}else{
-			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+			get_residuals_PVM_single_c_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 			sync_check("get_residuals_PVM_single_c_kernel");
 		}
 	}else{
       		//model 2 : non-mono-exponential
-		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, opts.f0.value(), thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 

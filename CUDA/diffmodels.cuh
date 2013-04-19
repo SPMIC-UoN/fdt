@@ -15,7 +15,8 @@ void fit_PVM_single(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
-			int				ndirections,		
+			int				ndirections,
+			int 				nfib,	
 			bool 				m_include_f0,
 			string 				output_file,		
 			//OUTPUT
@@ -28,7 +29,8 @@ void fit_PVM_single_c(	//INPUT
 			thrust::device_vector<double> 	datam_gpu, 
 			thrust::device_vector<double>	bvecs_gpu, 
 			thrust::device_vector<double>	bvals_gpu,
-			int				ndirections,		
+			int				ndirections,
+			int 				nfib,		
 			bool 				m_include_f0,
 			string 				output_file,		
 			//OUTPUT
@@ -40,6 +42,7 @@ void fit_PVM_multi(	//INPUT
 			thrust::device_vector<double>	bvals_gpu,	
 			int 				nvox,		
 			int				ndirections,	
+			int				nfib,
 			bool 				m_include_f0,
 			string 				output_file,
 			//OUTPUT
@@ -53,6 +56,10 @@ void calculate_tau(	//INPUT
 			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,
 			int				ndirections,
+			int				nfib,
+			int 				model,
+			bool 				m_include_f0,
+			bool 				nonlin,
 			string 				output_file,				
 			//OUTPUT
 			thrust::host_vector<float>&	tau);
