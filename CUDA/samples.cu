@@ -17,7 +17,7 @@ using namespace Xfibres;
 //       MCMC SAMPLE STORAGE
 ////////////////////////////////////////////
 
-Samples::Samples(int nvoxels,int nmeasures):
+Samples::Samples(int nvoxels,int nsamples):
 opts(xfibresOptions::getInstance()){
 
 	/////////////// GPU version /////////////////////
@@ -33,23 +33,11 @@ opts(xfibresOptions::getInstance()){
     	m_sum_lam=new vector<float> [nvoxels];	
     	////////////////////////////////////////////////
     
-    	//m_beenhere=m_vol2matrixkey*0;
-    	int count=0;
-    	int nsamples=0;
-    
-    	for(int i=0;i<opts.njumps.value();i++){
-      		count++;
-      		if(count==opts.sampleevery.value()){
-			count=0;nsamples++;
-      		}
-    	}
- 
     	m_dsamples.ReSize(nsamples,nvoxels);
     	m_dsamples=0;
     	m_S0samples.ReSize(nsamples,nvoxels);
     	m_S0samples=0;
-    	m_lik_energy.ReSize(nsamples,nvoxels);
-    
+
     	m_mean_dsamples.ReSize(nvoxels);
     	m_mean_dsamples=0;
     	m_mean_S0samples.ReSize(nvoxels);
@@ -133,7 +121,7 @@ opts(xfibresOptions::getInstance()){
 }
 
 	//new version for GPU
-void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float rlikelihood_energy, float *rth,float *rph, float *rf, int vox, int samp){
+void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float *rth,float *rph, float *rf, int vox, int samp){
     	m_dsamples(samp,vox)=rd;
     	m_sum_d[vox-1]+=rd;
 
@@ -151,7 +139,7 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float r
 
     	m_S0samples(samp,vox)=rs0;
     	m_sum_S0[vox-1]+=rs0;
-    	m_lik_energy(samp,vox)=rlikelihood_energy;
+
     	for(int f=0;f<opts.nfibres.value();f++){
       		float th=rth[f];
       		float ph=rph[f];

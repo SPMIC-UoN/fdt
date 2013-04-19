@@ -288,7 +288,6 @@ void runmcmc_record(	//INPUT
 			double 						seed,
 			string 						output_file, 
 			//OUTPUT
-			thrust::device_vector<int>&			multirecords_gpu,
 			thrust::device_vector<float>&			rf0_gpu,
 			thrust::device_vector<float>&			rtau_gpu,
 			thrust::device_vector<float>&			rs0_gpu,
@@ -296,8 +295,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>&			rdstd_gpu,
 			thrust::device_vector<float>&			rth_gpu,
 			thrust::device_vector<float>&			rph_gpu,
-			thrust::device_vector<float>&			rf_gpu,
-			thrust::device_vector<float>&			rlikelihood_energy_gpu)
+			thrust::device_vector<float>&			rf_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	
@@ -397,7 +395,6 @@ void runmcmc_record(	//INPUT
 	double *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
 	double *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
 	
-	int *multirecords_ptr = thrust::raw_pointer_cast(multirecords_gpu.data());
 	float *rf0_ptr = thrust::raw_pointer_cast(rf0_gpu.data());
 	float *rtau_ptr = thrust::raw_pointer_cast(rtau_gpu.data());
 	float *rs0_ptr = thrust::raw_pointer_cast(rs0_gpu.data());
@@ -406,7 +403,6 @@ void runmcmc_record(	//INPUT
 	float *rth_ptr = thrust::raw_pointer_cast(rth_gpu.data());
 	float *rph_ptr = thrust::raw_pointer_cast(rph_gpu.data());
 	float *rf_ptr = thrust::raw_pointer_cast(rf_gpu.data());
-	float *rlikelihood_energy_ptr = thrust::raw_pointer_cast(rlikelihood_energy_gpu.data());
 
 	int amount_shared = (THREADS_BLOCK_MCMC+1)*sizeof(double) + (10*nfib + 2*nparams + 24)*sizeof(float) + (7*nfib + 18)*sizeof(int);
 
@@ -434,7 +430,7 @@ void runmcmc_record(	//INPUT
 
 	   	gettimeofday(&t1,NULL);
 
-	   	runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, multirecords_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr, rlikelihood_energy_ptr);   
+	   	runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
 	   	sync_check("runmcmc_record_kernel");
 
  	   	gettimeofday(&t2,NULL);
@@ -464,7 +460,7 @@ void runmcmc_record(	//INPUT
    	gettimeofday(&t1,NULL);
 
    	if(nvox!=0){
-		runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, multirecords_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr, rlikelihood_energy_ptr);   
+		runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords,rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
    		sync_check("runmcmc_record_kernel");
    	}
 

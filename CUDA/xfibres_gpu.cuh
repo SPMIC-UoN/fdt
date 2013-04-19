@@ -91,7 +91,6 @@ void prepare_data_gpu_MCMC(	//INPUT
 void prepare_data_gpu_MCMC_record(	//INPUT
 					int 						nvox,
 					//OUTPUT
-					thrust::device_vector<int>&			multirecords_gpu,
 					thrust::device_vector<float>&			rf0_gpu,
 					thrust::device_vector<float>&			rtau_gpu,
 					thrust::device_vector<float>&			rs0_gpu,
@@ -99,12 +98,10 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 					thrust::device_vector<float>&			rdstd_gpu,
 					thrust::device_vector<float>&			rth_gpu,
 					thrust::device_vector<float>&			rph_gpu,
-					thrust::device_vector<float>&			rf_gpu,
-					thrust::device_vector<float>&			rlikelihood_energy_gpu);
+					thrust::device_vector<float>&			rf_gpu);
 
 //implemented and used in xfibres_gpu.cu
 void record_finish_voxels(	//INPUT
-				thrust::device_vector<int>&			multirecords_gpu,
 				thrust::device_vector<float>&			rf0_gpu,
 				thrust::device_vector<float>&			rtau_gpu,
 				thrust::device_vector<float>&			rs0_gpu,
@@ -113,8 +110,6 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rth_gpu,
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,
-				thrust::device_vector<float>&			rlikelihood_energy_gpu,
 				int 						nvox,
-				int						ndirections,
 				int						idpart);
 

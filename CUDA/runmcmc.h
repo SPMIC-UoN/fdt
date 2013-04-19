@@ -53,7 +53,6 @@ void runmcmc_record(	//INPUT
 			double 						seed,
 			string 						output_file, 
 			//OUTPUT
-			thrust::device_vector<int>&			multirecords_gpu,
 			thrust::device_vector<float>&			rf0_gpu,
 			thrust::device_vector<float>&			rtau_gpu,
 			thrust::device_vector<float>&			rs0_gpu,
@@ -61,5 +60,4 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>&			rdstd_gpu,
 			thrust::device_vector<float>&			rth_gpu,
 			thrust::device_vector<float>&			rph_gpu,
-			thrust::device_vector<float>&			rf_gpu,
-			thrust::device_vector<float>&			rlikelihood_energy_gpu);
+			thrust::device_vector<float>&			rf_gpu);

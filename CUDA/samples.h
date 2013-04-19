@@ -23,7 +23,6 @@ class Samples{
   	Matrix m_d_stdsamples;
   	Matrix m_S0samples;
   	Matrix m_f0samples;
-  	Matrix m_lik_energy;
 
 	//   // storing signal
 	//   Matrix m_mean_sig;
@@ -74,7 +73,7 @@ class Samples{
 
   	Samples(int nvoxels,int nmeasures);
     
-	void record(float rd,float rf0,float rtau,float rdstd,float rs0,float rlikelihood_energy, float *rth,float *rph, float *rf, int vox, int samp);
+	void record(float rd,float rf0,float rtau,float rdstd,float rs0,float *rth,float *rph, float *rf, int vox, int samp);
   
   	void finish_voxel(int vox);
   
