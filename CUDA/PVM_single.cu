@@ -390,7 +390,8 @@ extern "C" __global__ void fit_PVM_single_kernel(	//INPUT
 							const int		ndirections,
 							const int 		nfib, 
 							const int		nparams,
-							const bool 		m_include_f0, 
+							const bool 		m_include_f0,
+							const bool		gradnonlin,
 							//INPUT-OUTPUT
 							double* 		params)
 {
@@ -432,8 +433,16 @@ extern "C" __global__ void fit_PVM_single_kernel(	//INPUT
 
 	__syncthreads();
 
+	int pos_bvals, pos_bvecs;
+	if(gradnonlin){ 
+		pos_bvals=idVOX*ndirections;
+		pos_bvecs=idVOX*3*ndirections;
+	}else{ 
+		pos_bvals=0;
+		pos_bvecs=0;
+	}
 	// do the fit
-	levenberg_marquardt_PVM_single_gpu(&data[idVOX*ndirections],&bvecs[idVOX*3*ndirections],&bvals[idVOX*ndirections],ndirections,nfib,nparams,m_include_f0,idSubVOX,step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,reduction,fs,x,_d,sumf,C,el,indx,myparams);
+	levenberg_marquardt_PVM_single_gpu(&data[idVOX*ndirections],&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections,nfib,nparams,m_include_f0,idSubVOX,step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,reduction,fs,x,_d,sumf,C,el,indx,myparams);
 
 	__syncthreads();
 	
@@ -470,6 +479,7 @@ extern "C" __global__ void get_residuals_PVM_single_kernel(	//INPUT
 								const int 		nfib, 
 								const int		nparams,
 								const bool 		m_include_f0,
+								const bool		gradnonlin,
 								const bool* 		includes_f0,
 								//OUTPUT
 								double*			residuals)
@@ -537,6 +547,15 @@ extern "C" __global__ void get_residuals_PVM_single_kernel(	//INPUT
 
 	__syncthreads();
 
+	int pos_bvals, pos_bvecs;
+	if(gradnonlin){ 
+		pos_bvals=idVOX*ndirections;
+		pos_bvecs=idVOX*3*ndirections;
+	}else{ 
+		pos_bvals=0;
+		pos_bvecs=0;
+	}
+
 	for(int dir=0;dir<ndir;dir++){
 		mydata = data[(idVOX*ndirections)+dir_iter];
   		predicted_signal=0;	//pred = 0;
@@ -545,13 +564,13 @@ extern "C" __global__ void get_residuals_PVM_single_kernel(	//INPUT
 			x2.x=x[k*3];
 			x2.y=x[k*3+1];
 			x2.z=x[k*3+2];	 
-      			val += fs[k]*anisoterm_PVM_single(dir_iter,_d,x2,&bvecs[idVOX*3*ndirections],&bvals[idVOX*ndirections],ndirections);
+      			val += fs[k]*anisoterm_PVM_single(dir_iter,_d,x2,&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections);
     		}	
     		if (*my_include_f0){
       			double temp_f0=x2f_gpu(myparams[nparams-1]);
-      			predicted_signal = myparams[0]*(temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_single(dir_iter,_d,&bvals[idVOX*ndirections])+val);
+      			predicted_signal = myparams[0]*(temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_single(dir_iter,_d,&bvals[pos_bvals])+val);
     		}else{
-      			predicted_signal = myparams[0]*((1-*sumf)*isoterm_PVM_single(dir_iter,_d,&bvals[idVOX*ndirections])+val); 
+      			predicted_signal = myparams[0]*((1-*sumf)*isoterm_PVM_single(dir_iter,_d,&bvals[pos_bvals])+val); 
 		}
 	
 		//residuals=m_data-predicted_signal;

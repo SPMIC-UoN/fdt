@@ -15,6 +15,7 @@ extern "C" __global__ void fit_PVM_single_kernel(	//INPUT
 							const int 		nfib,
 							const int		nparams, 
 							const bool 		m_include_f0, 
+							const bool		gradnonlin,
 							//INPUT-OUTPUT
 							double* 		params);
 
@@ -29,6 +30,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 							const bool		m_eval_BIC,
 							const bool 		m_include_f0,
 							const bool	 	m_return_fanning,
+							const bool		gradnonlin,
 							//INPUT-OUTPUT
 							double* 		params);
 
@@ -42,6 +44,7 @@ extern "C" __global__ void fit_PVM_multi_kernel(	//INPUT
 							const int 		nfib, 	
 							const int		nparams,	
 							const bool 		m_include_f0,
+							const bool		gradnonlin,
 							//OUTPUT
 							double* 		params);
 
@@ -55,7 +58,8 @@ extern "C" __global__ void get_residuals_PVM_single_kernel(	//INPUT
 								const int 		nfib, 
 								const int		nparams,
 								const bool 		m_include_f0,
-								const bool* 		includes_f0,
+								const bool		gradnonlin,
+								const bool* 		includes_f0,								
 								//OUTPUT
 								double*			residuals);
 
@@ -69,7 +73,8 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 								const int 		nfib, 
 								const int		nparams,
 								const bool 		m_include_f0,
-								const bool* 		includes_f0,
+								const bool		gradnonlin,
+								const bool* 		includes_f0,								
 								//OUTPUT
 								double*			residuals);
 
@@ -84,7 +89,8 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 								const int 		nfib, 
 								const int		nparams,
 								const bool 		m_include_f0,
-								const bool* 		includes_f0,
+								const bool		gradnonlin,
+								const bool* 		includes_f0,								
 								//OUTPUT
 								double*			residuals);
 

@@ -146,6 +146,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 								const bool 			m_ardf0,	// opts.ardf0.value()
 								const bool 			ard_value,	// opts.all_ard.value()
 								const bool 			no_ard_value,	// opts.no_ard.value()
+								const bool			gradnonlin,
 								//OUTPUT
 								FibreGPU*			fibres,
 								MultifibreGPU*			multifibres,
@@ -297,9 +298,22 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	for(int i=0; i<mydirs; i++){	
 		int pos = (idVOX*ndirections)+idSubVOX+i*threadsBlock;
 		mydata[i] = datam[pos];
-		mybvals[i] = bvals[pos];
-		myalpha[i] = alpha[pos];
-		mybeta[i] = beta[pos];
+	}
+	if(gradnonlin){
+		for(int i=0; i<mydirs; i++){	
+			int pos = (idVOX*ndirections)+idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
+	}else{
+		for(int i=0; i<mydirs; i++){	
+			int pos = idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
+
 	}
 
 	__syncthreads();
@@ -413,6 +427,7 @@ extern "C" __global__ void runmcmc_burnin_kernel(	//INPUT
 							const bool 			m_ardf0,
 							const bool 			can_use_ard, 
 							const bool 			rician,
+							const bool			gradnonlin,
 							const int 			updateproposalevery, 	//update every this number of iterations	
 							const int 			iterations,		//num of iterations to do this time (maybe is a part of the total)
 							const int 			current_iter,		//the number of the current iteration over the total iterations
@@ -608,11 +623,24 @@ extern "C" __global__ void runmcmc_burnin_kernel(	//INPUT
 		int pos = (*idVOX*ndirections)+idSubVOX+i*threadsBlock;
 		myisosig[i] = isosignals[pos];
 		mydata[i] = datam[pos];
-		mybvals[i] = bvals[pos];
-		myalpha[i] = alpha[pos];
-		mybeta[i] = beta[pos];
 	}
+	if(gradnonlin){
+		for(int i=0; i<mydirs; i++){	
+			int pos = (*idVOX*ndirections)+idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
+	}else{
+		for(int i=0; i<mydirs; i++){	
+			int pos = idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
 
+	}
+	
 	for(int f=0;f<nfib;f++){
 		for(int i=0; i<mydirs; i++){	
 			mysig[i*nfib+f]= signals[(*idVOX*ndirections*nfib)+(f*ndirections)+idSubVOX+i*threadsBlock];	
@@ -1560,6 +1588,7 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 							const bool 			m_ardf0,
 							const bool 			can_use_ard, 
 							const bool 			rician,
+							const bool			gradnonlin,
 							const int 			updateproposalevery, 	//update every this number of iterations	
 							const int 			iterations,		//num of iterations to do this time (maybe is a part of the total)	
 							const int 			current_iter,		//the number of the current iteration over the total iterations
@@ -1768,9 +1797,22 @@ extern "C" __global__ void runmcmc_record_kernel(	//INPUT
 		int pos = (*idVOX*ndirections)+idSubVOX+i*threadsBlock;
 		myisosig[i] = isosignals[pos];
 		mydata[i] = datam[pos];
-		mybvals[i] = bvals[pos];
-		myalpha[i] = alpha[pos];
-		mybeta[i] = beta[pos];
+	}
+	if(gradnonlin){
+		for(int i=0; i<mydirs; i++){	
+			int pos = (*idVOX*ndirections)+idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
+	}else{
+		for(int i=0; i<mydirs; i++){	
+			int pos = idSubVOX+i*threadsBlock;
+			mybvals[i] = bvals[pos];
+			myalpha[i] = alpha[pos];
+			mybeta[i] = beta[pos];
+		}
+
 	}
 
 	for(int f=0;f<nfib;f++){

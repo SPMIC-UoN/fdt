@@ -18,6 +18,7 @@ void fit_PVM_single(	//INPUT
 			int				ndirections,
 			int 				nfib,	
 			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu);
@@ -32,6 +33,7 @@ void fit_PVM_single_c(	//INPUT
 			int				ndirections,
 			int 				nfib,		
 			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,		
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu);
@@ -44,6 +46,7 @@ void fit_PVM_multi(	//INPUT
 			int				ndirections,	
 			int				nfib,
 			bool 				m_include_f0,
+			bool				gradnonlin,
 			string 				output_file,
 			//OUTPUT
 			thrust::device_vector<double>&	params_gpu);
@@ -60,6 +63,7 @@ void calculate_tau(	//INPUT
 			int 				model,
 			bool 				m_include_f0,
 			bool 				nonlin,
+			bool				gradnonlin,
 			string 				output_file,				
 			//OUTPUT
 			thrust::host_vector<float>&	tau);

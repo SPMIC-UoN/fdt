@@ -55,6 +55,8 @@ void init_Fibres_Multifibres(	//INPUT
 	if(opts.modelnum.value()==2) nparams_fit++;
 	if(opts.f0.value()) nparams_fit++;
 
+	bool gradnonlin = opts.grad_file.set();
+
 	int blocks = nvox; 
   	dim3 Dim_Grid_MCMC(blocks, 1);
   	dim3 Dim_Block_MCMC(THREADS_BLOCK_MCMC ,1);	///dimensions for MCMC
@@ -74,7 +76,7 @@ void init_Fibres_Multifibres(	//INPUT
 
 	myfile << "Shared Memory Used in init_Fibres_Multifibres: " << amount_shared << "\n";
 
-	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
+	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), gradnonlin, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
 	sync_check("init_Fibres_Multifibres_kernel");
 
 	gettimeofday(&t2,NULL);
@@ -117,6 +119,8 @@ void runmcmc_burnin(	//INPUT
 	int nvox = multifibres_gpu.size();
    	int nfib= opts.nfibres.value();
 	int nparams;
+
+	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.f0.value()) nparams=3+nfib*3;
 	else nparams=2+nfib*3;	
@@ -220,7 +224,7 @@ void runmcmc_burnin(	//INPUT
 
 	   	gettimeofday(&t1,NULL);
 
-	   	runmcmc_burnin_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), iters_step, (i*iters_step), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);   
+	   	runmcmc_burnin_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);   
 	   	sync_check("runmcmc_burnin_kernel");
 
  	   	gettimeofday(&t2,NULL);
@@ -253,7 +257,7 @@ void runmcmc_burnin(	//INPUT
    	gettimeofday(&t1,NULL);
 
    	if(nvox!=0){
-		runmcmc_burnin_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), last_step, (steps*iters_step), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);   
+		runmcmc_burnin_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);   
    		sync_check("runmcmc_burnin_kernel");
    	}
 
@@ -318,6 +322,8 @@ void runmcmc_record(	//INPUT
 	int nvox = multifibres_gpu.size();
    	int nfib= opts.nfibres.value();
 	int nparams;
+
+	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.f0.value()) nparams=3+nfib*3;
 	else nparams=2+nfib*3;	
@@ -430,7 +436,7 @@ void runmcmc_record(	//INPUT
 
 	   	gettimeofday(&t1,NULL);
 
-	   	runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
+	   	runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
 	   	sync_check("runmcmc_record_kernel");
 
  	   	gettimeofday(&t2,NULL);
@@ -460,7 +466,7 @@ void runmcmc_record(	//INPUT
    	gettimeofday(&t1,NULL);
 
    	if(nvox!=0){
-		runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords,rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
+		runmcmc_record_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords,rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
    		sync_check("runmcmc_record_kernel");
    	}
 
