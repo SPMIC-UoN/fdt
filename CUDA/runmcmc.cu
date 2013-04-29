@@ -231,9 +231,6 @@ void runmcmc_burnin(	//INPUT
     	   	timemcmc+=timeval_diff(&t2,&t1);
    	}
 
-	MultifibreGPU mult = multifibres_gpu[0];
-	FibreGPU fib = fibres_gpu[0];
-
    	gettimeofday(&t1,NULL); 
 
    	if(nvox!=0){
