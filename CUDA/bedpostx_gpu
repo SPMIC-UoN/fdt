@@ -21,7 +21,10 @@ Usage() {
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data and nodif_brain_mask in subject directory"
     echo "expects to find grad_dev in subject directory, if -g is set"
-    echo "options (old syntax)"
+    echo ""
+    echo "<options>:"
+    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
+    echo "-Q (name of the GPU(s) queue, default cuda.q)"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
@@ -29,8 +32,6 @@ Usage() {
     echo "-s (sample every, default 25)"
     echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
     echo "-g (consider gradient nonlinearities, default off)"
-    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
-    echo "-Q (name of the GPU(s) queue, default cuda.q)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -259,7 +260,7 @@ EOM
     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
     cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
-qdel $mergeid $bedpostid $preprocid
+qdel $mergeid $bedpostid
 EOC
     chmod +x ${subjdir}.bedpostX/cancel
 
