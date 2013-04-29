@@ -6,14 +6,6 @@
 
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib
 
-if [ "x$SGE_ROOT" = "x" ] ; then
-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-	. /usr/local/share/sge/default/common/settings.sh
-    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
-	. /usr/local/sge/default/common/settings.sh
-    fi
-fi
-
 Usage() {
     echo ""
     echo "Usage: bedpostx <subject directory> [options]"
@@ -21,7 +13,9 @@ Usage() {
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data and nodif_brain_mask in subject directory"
     echo "expects to find grad_dev in subject directory, if -g is set"
-    echo "options (old syntax)"
+    echo ""
+    echo "<options>:"
+    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
@@ -29,7 +23,6 @@ Usage() {
     echo "-s (sample every, default 25)"
     echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
     echo "-g (consider gradient nonlinearities, default off)"
-    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -139,8 +132,6 @@ if [ ${gflag} -eq 1 ]; then
 else
     echo "bedpostx_multigpu_LSF "${subjdir}  $opts >> ${subjdir}.bedpostX/commands.txt
 fi
-
-mailto=`whoami`@fmrib.ox.ac.uk
 
 echo Copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
