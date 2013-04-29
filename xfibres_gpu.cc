@@ -108,12 +108,12 @@ int main(int argc, char *argv[]){
 
 	if(last_sub_part<(SIZE_SUB_PART*0.5)){ 	//if is too small the last part we distribute it between the others
 		if(nsubparts-1){
-			size_sub_partLR = size_sub_partLR + last_sub_partLR/(nsubparts-1);
+			size_sub_part = size_sub_part + last_sub_part/(nsubparts-1);
 			nsubparts--;
 		}else{
-			size_sub_partLR = 0;
+			size_sub_part = 0;
 		}
-		last_sub_partLR = size_partLR - ((nsubparts-1)*size_sub_partLR);
+		last_sub_part = size_part - ((nsubparts-1)*size_sub_part);
 	}
 
 	Matrix mydatam_part;	
