@@ -4,7 +4,8 @@
 #
 #   SHCOPYRIGHT
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib:${CUDA}/lib64
+export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH
 
 Usage() {
     echo ""
