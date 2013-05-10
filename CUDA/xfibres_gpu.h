@@ -10,8 +10,6 @@
 #include "newimage/newimageall.h"
 #include <string>
 
-//int xfibres_gpu(char *subjdir,int slice, int nextras, char** extras);
-
 void join_subParts(string name, int size_part, int nsubparts, int size_sub_part, int last_sub_part, bool mean);
 
 void xfibres_gpu(	//INPUT
