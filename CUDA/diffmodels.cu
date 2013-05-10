@@ -29,16 +29,16 @@ void fit_PVM_single(	//INPUT
 			const vector<ColumnVector> 	datam_vec, 
 			const vector<Matrix> 		bvecs_vec,
 			const vector<Matrix> 		bvals_vec,
-			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,
+			thrust::device_vector<float> 	datam_gpu, 
+			thrust::device_vector<float>	bvecs_gpu, 
+			thrust::device_vector<float>	bvals_gpu,
 			int				ndirections,	
 			int 				nfib,
 			bool 				m_include_f0,
 			bool				gradnonlin,
 			string 				output_file,		
 			//OUTPUT
-			thrust::device_vector<double>&	params_gpu)
+			thrust::device_vector<float>&	params_gpu)
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
@@ -50,7 +50,7 @@ void fit_PVM_single(	//INPUT
     	else
       		nparams = nfib*3 + 2;
 
-	thrust::host_vector<double> params_host;
+	thrust::host_vector<float> params_host;
 	params_host.resize(nvox*nparams);
 	
 	for(int vox=0;vox<nvox;vox++){
@@ -95,7 +95,7 @@ void fit_PVM_single(	//INPUT
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
-	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
+	int amount_shared = 6*sizeof(double)+(THREADS_BLOCK_FIT*nparams+THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+2)*sizeof(float)+(2+nparams)*sizeof(int);
 
 	myfile << "Shared Memory Used in fit_PVM_single: " << amount_shared << "\n"; 
 
@@ -109,16 +109,16 @@ void fit_PVM_single_c(	//INPUT
 			const vector<ColumnVector> 	datam_vec, 
 			const vector<Matrix> 		bvecs_vec,
 			const vector<Matrix> 		bvals_vec,
-			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,
+			thrust::device_vector<float> 	datam_gpu, 
+			thrust::device_vector<float>	bvecs_gpu, 
+			thrust::device_vector<float>	bvals_gpu,
 			int				ndirections,
 			int 				nfib,		
 			bool 				m_include_f0,
 			bool				gradnonlin,
 			string 				output_file,	
 			//OUTPUT
-			thrust::device_vector<double>&	params_gpu)
+			thrust::device_vector<float>&	params_gpu)
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
@@ -130,7 +130,7 @@ void fit_PVM_single_c(	//INPUT
     	else
       		nparams = nfib*3 + 2;
 
-	thrust::host_vector<double> params_host;
+	thrust::host_vector<float> params_host;
 	params_host.resize(nvox*nparams);
 
 	for(int vox=0;vox<nvox;vox++){
@@ -173,7 +173,7 @@ void fit_PVM_single_c(	//INPUT
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
-	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+nfib*nfib+8)*sizeof(double)+(2+nparams)*sizeof(int);
+	int amount_shared = 6*sizeof(double)+(THREADS_BLOCK_FIT*nparams+THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+nfib*nfib+6)*sizeof(float)+(2+nparams)*sizeof(int);
 
 	myfile << "Shared Memory Used in fit_PVM_single_c: " << amount_shared << "\n"; 
 
@@ -184,9 +184,9 @@ void fit_PVM_single_c(	//INPUT
 }
 
 void fit_PVM_multi(	//INPUT
-			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,	
+			thrust::device_vector<float> 	datam_gpu, 
+			thrust::device_vector<float>	bvecs_gpu, 
+			thrust::device_vector<float>	bvals_gpu,	
 			int 				nvox,	
 			int				ndirections,
 			int				nfib,		
@@ -194,7 +194,7 @@ void fit_PVM_multi(	//INPUT
 			bool				gradnonlin,
 			string 				output_file,
 			//OUTPUT
-			thrust::device_vector<double>&	params_gpu)
+			thrust::device_vector<float>&	params_gpu)
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
@@ -209,12 +209,12 @@ void fit_PVM_multi(	//INPUT
     	else
       		nparams = nfib*3 + 3;
 
-	thrust::device_vector<double> params_PVM_single_c_gpu; 	//copy params to an auxiliar structure because there are different number of nparams
+	thrust::device_vector<float> params_PVM_single_c_gpu; 	//copy params to an auxiliar structure because there are different number of nparams
 	params_PVM_single_c_gpu.resize(nvox*nparams);		//between single_c and multi. We must read and write in different structures, 
 	thrust::copy(params_gpu.begin(), params_gpu.end(), params_PVM_single_c_gpu.begin());	
 								//maybe 1 block finish before other one read their params.
 
-	int amount_shared = (THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+9)*sizeof(double)+(2+nparams)*sizeof(int);
+	int amount_shared = 6*sizeof(double)+(THREADS_BLOCK_FIT*nparams+THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+3)*sizeof(float)+(2+nparams)*sizeof(int);
 
 	myfile << "Shared Memory Used in fit_PVM_multi: " << amount_shared << "\n"; 
 
@@ -225,10 +225,10 @@ void fit_PVM_multi(	//INPUT
 }
 
 void calculate_tau(	//INPUT
-			thrust::device_vector<double> 	datam_gpu, 
-			thrust::device_vector<double>	params_gpu,
-			thrust::device_vector<double>	bvecs_gpu, 
-			thrust::device_vector<double>	bvals_gpu,
+			thrust::device_vector<float> 	datam_gpu, 
+			thrust::device_vector<float>	params_gpu,
+			thrust::device_vector<float>	bvecs_gpu, 
+			thrust::device_vector<float>	bvals_gpu,
 			thrust::host_vector<int>	vox_repeat,
 			int				nrepeat,
 			int				ndirections,
@@ -272,9 +272,9 @@ void calculate_tau(	//INPUT
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
 
-	int amount_shared = (nparams+4*nfib+3)*sizeof(double) + sizeof(int);
+	int amount_shared = (nparams+4*nfib+3)*sizeof(float) + sizeof(int);
 
-	thrust::device_vector<double> residuals_gpu;
+	thrust::device_vector<float> residuals_gpu;
 	residuals_gpu.resize(nvox*ndirections);
 
 	if(model==1){
@@ -292,7 +292,7 @@ void calculate_tau(	//INPUT
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 
-	thrust::host_vector<double> residuals_host;
+	thrust::host_vector<float> residuals_host;
 	residuals_host.resize(nvox*ndirections);
 	thrust::copy(residuals_gpu.begin(), residuals_gpu.end(), residuals_host.begin());	
 

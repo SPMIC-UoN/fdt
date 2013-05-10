@@ -19,44 +19,44 @@
 /////////////////////////////////////
 
 __device__ 
-inline double isoterm_PVM_single_c(const int pt,const double* _d,const double *bvals){
+inline float isoterm_PVM_single_c(const int pt,const float* _d,const float *bvals){
   	return exp(-bvals[pt]**_d);
 }
 
 __device__ 
-inline double isoterm_lambda_PVM_single_c(const int pt,const double lambda,const double *bvals){
+inline float isoterm_lambda_PVM_single_c(const int pt,const float lambda,const float *bvals){
   	return(-2*bvals[pt]*lambda*exp(-bvals[pt]*lambda*lambda));
 }
 
 __device__ 
-inline double anisoterm_PVM_single_c(const int pt,const double* _d,const double3 x, const double *bvecs, const double *bvals, const int ndirections){
-	double dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
+inline float anisoterm_PVM_single_c(const int pt,const float* _d,const float3 x, const float *bvecs, const float *bvals, const int ndirections){
+	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
 	return exp(-bvals[pt]**_d*dp*dp);
 }
 
 __device__ 
-inline double anisoterm_lambda_PVM_single_c(const int pt,const double lambda,const double3 x, const double *bvecs, const double *bvals, const int ndirections){
-	double dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
+inline float anisoterm_lambda_PVM_single_c(const int pt,const float lambda,const float3 x, const float *bvecs, const float *bvals, const int ndirections){
+	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
 	return(-2*bvals[pt]*lambda*dp*dp*exp(-bvals[pt]*lambda*lambda*dp*dp));
 }
 
 __device__ 
-inline double anisoterm_th_PVM_single_c(const int pt,const double* _d,const double3 x, const double _th,const double _ph,const double *bvecs, const double *bvals, const int ndirections){
-	double sinth,costh,sinph,cosph;
+inline float anisoterm_th_PVM_single_c(const int pt,const float* _d,const float3 x, const float _th,const float _ph,const float *bvecs, const float *bvals, const int ndirections){
+	float sinth,costh,sinph,cosph;
 	sincos(_th,&sinth,&costh);
 	sincos(_ph,&sinph,&cosph);
-	double dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
-	double dp1 = costh*(bvecs[pt]*cosph+bvecs[ndirections+pt]*sinph)-bvecs[(2*ndirections)+pt]*sinth;
+	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
+	float dp1 = costh*(bvecs[pt]*cosph+bvecs[ndirections+pt]*sinph)-bvecs[(2*ndirections)+pt]*sinth;
   	return(-2*bvals[pt]**_d*dp*dp1*exp(-bvals[pt]**_d*dp*dp));
 }
 
 __device__ 
-inline double anisoterm_ph_PVM_single_c(const int pt,const double* _d,const double3 x, const double _th,const double _ph,const double *bvecs, const double *bvals, const int ndirections){
-	double sinth,sinph,cosph;
+inline float anisoterm_ph_PVM_single_c(const int pt,const float* _d,const float3 x, const float _th,const float _ph,const float *bvecs, const float *bvals, const int ndirections){
+	float sinth,sinph,cosph;
 	sinth=sin(_th);
 	sincos(_ph,&sinph,&cosph);
-  	double dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
-	double dp1 = sinth*(-bvecs[pt]*sinph+bvecs[ndirections+pt]*cosph);
+  	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
+	float dp1 = sinth*(-bvecs[pt]*sinph+bvecs[ndirections+pt]*cosph);
   	return(-2*bvals[pt]**_d*dp*dp1*exp(-bvals[pt]**_d*dp*dp));
 }
 
@@ -66,9 +66,9 @@ inline double anisoterm_ph_PVM_single_c(const int pt,const double* _d,const doub
 __device__ void fix_fsum_PVM_single_c(		//INPUT 
 						int nfib,
 						//INPUT - OUTPUT){
-						double *fs)
+						float *fs)
 {
-  	double sumf=0.0;
+  	float sumf=0.0;
   	for(int i=0;i<nfib;i++){
     		sumf+=fs[i];
     		if(sumf>=1){
@@ -80,9 +80,9 @@ __device__ void fix_fsum_PVM_single_c(		//INPUT
 }
 
 //in diffmodel.cc
-__device__ void sort_PVM_single_c(int nfib,double* params)
+__device__ void sort_PVM_single_c(int nfib,float* params)
 {
-	double temp_f, temp_th, temp_ph;
+	float temp_f, temp_th, temp_ph;
 	// Order vector descending using f parameters as index
   	for(int i=1; i<(nfib); i++){ 
     		for(int j=0; j<(nfib-i); j++){ 
@@ -102,22 +102,22 @@ __device__ void sort_PVM_single_c(int nfib,double* params)
 }
 
 __device__  void fractions_deriv_PVM_single_c(	//INPUT
-						const double*	params,
-						const double* 	fs, 
+						const float*	params,
+						const float* 	fs, 
 						const int	nfib,
 						const int	idSubVOX,
 						//OUTPUT
-						double* 	Deriv) 
+						float* 		Deriv) 
 {
 	int nparams_per_fibre=3;
-  	double fsum;
+  	float fsum;
 	int k=idSubVOX%nfib;
 	for (int j=0; j<nfib; j++){
 		Deriv[j*nfib+k]=0;
     	}
 
   	int kk = 2+(k*nparams_per_fibre);
-	double sinparamkk = sin(2*params[kk]);
+	float sinparamkk = sin(2*params[kk]);
 
 	for (int j=0; j<nfib; j++){
 		int jj = 2+(j*nparams_per_fibre);
@@ -128,7 +128,7 @@ __device__  void fractions_deriv_PVM_single_c(	//INPUT
 			}
 			Deriv[j*nfib+k]=sinparamkk*fsum;
       		}else if (j>k){
-			double sinparam = sin(params[jj]);
+			float sinparam = sin(params[jj]);
 			fsum=0;
 			for (int n=0; n<=(j-1); n++){
 	  			fsum+=Deriv[n*nfib+k];
@@ -140,26 +140,26 @@ __device__  void fractions_deriv_PVM_single_c(	//INPUT
 
 //cost function PVM_single_c
 __device__ void cf_PVM_single_c(	//INPUT
-					const double*		params,
-					const double*		mdata,
-					const double*		bvecs, 
-					const double*		bvals,
+					const float*		params,
+					const float*		mdata,
+					const float*		bvecs, 
+					const float*		bvals,
 					const int 		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
 					const int		idSubVOX,
-					double*			reduction,	//shared memory
-					double* 		fs,		//shared memory
-					double*			x,		//shared memory	
-					double* 		_d,		//shared memory
-					double* 		sumf,		//shared memory
+					float*			reduction,	//shared memory
+					float* 			fs,		//shared memory
+					float*			x,		//shared memory	
+					float* 			_d,		//shared memory
+					float* 			sumf,		//shared memory
 					//OUTPUT
 					double*			cfv)
 {
 	if(idSubVOX<nfib){
 		int kk = 2+3*(idSubVOX);
-		double sinth,costh,sinph,cosph;
+		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
 		x[idSubVOX*3] = sinth*cosph;
@@ -170,7 +170,7 @@ __device__ void cf_PVM_single_c(	//INPUT
 		*_d = lambda2d_gpu(params[1]);
 		*cfv = 0.0;
 		*sumf=0;
-		double partial_fsum;
+		float partial_fsum;
 		for(int k=0;k<nfib;k++){
 			int kk = 2+3*(k);
     			//partial_fsum ///////////
@@ -186,8 +186,8 @@ __device__ void cf_PVM_single_c(	//INPUT
 	int ndir = ndirections/THREADS_BLOCK_FIT;
 	if(idSubVOX<(ndirections%THREADS_BLOCK_FIT)) ndir++;
 	
-	double err;
-	double3 x2;
+	float err;
+	float3 x2;
 	int dir_iter=idSubVOX;
 
 	__syncthreads();
@@ -203,11 +203,11 @@ __device__ void cf_PVM_single_c(	//INPUT
     		}
 		if(m_include_f0){
 			//partial_fsum ///////////
-			double partial_fsum=1.0;
+			float partial_fsum=1.0;
 			for(int j=0;j<nfib;j++)
 				partial_fsum-=fs[j];
 	     		//////////////////////////
-			double temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
+			float temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
 			err= (params[0]*((temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_single_c(dir_iter,_d,bvals))+err))-mdata[dir_iter];
 		}else{
 			err = params[0]*((1-*sumf)*isoterm_PVM_single_c(dir_iter,_d,bvals)+err)-mdata[dir_iter];
@@ -228,27 +228,28 @@ __device__ void cf_PVM_single_c(	//INPUT
 
 //gradient function PVM_single_c
 __device__ void grad_PVM_single_c(	//INPUT
-					const double*		params,
-					const double*		mdata,
-					const double*		bvecs, 
-					const double*		bvals,
+					const float*		params,
+					const float*		mdata,
+					const float*		bvecs, 
+					const float*		bvals,
 					const int		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
-					const int		idSubVOX,		
-					double*			reduction,	//shared memory
-					double* 		fs,		//shared memory
-					double*			f_deriv,	//shared memory
-					double*			x,		//shared memory
-					double* 		_d,		//shared memory
-					double* 		sumf,		//shared memory
+					const int		idSubVOX,	
+					float*			J,		//shared memory	
+					float*			reduction,	//shared memory
+					float* 			fs,		//shared memory
+					float*			f_deriv,	//shared memory
+					float*			x,		//shared memory
+					float* 			_d,		//shared memory
+					float* 			sumf,		//shared memory
 					//OUTPUT
-					double*			grad)
+					float*			grad)
 {
 	if(idSubVOX<nfib){
 		int kk = 2+3*(idSubVOX);
-		double sinth,costh,sinph,cosph;
+		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
     		x[idSubVOX*3] = sinth*cosph;
@@ -258,7 +259,7 @@ __device__ void grad_PVM_single_c(	//INPUT
 	if(idSubVOX==0){
 		*_d = lambda2d_gpu(params[1]);
 		*sumf=0;
-		double partial_fsum;
+		float partial_fsum;
 		for(int k=0;k<nfib;k++){
 			int kk = 2+3*(k);
     			//partial_fsum ///////////
@@ -283,25 +284,27 @@ __device__ void grad_PVM_single_c(	//INPUT
 	int max_dir = ndirections/THREADS_BLOCK_FIT;
 	if(ndirections%THREADS_BLOCK_FIT) max_dir++;
 
-	double J[MAXNPARAMS];
-	double diff;
-  	double sig;
-	double Iso_term;
-	double3 xx;
+	float* myJ = &J[idSubVOX*nparams];
+	float diff;
+  	float sig;
+	float Iso_term;
+	float3 xx;
 	int dir_iter=idSubVOX;
-  	double Aniso_terms[MAXNFIBRES];
+  	//float Aniso_terms[MAXNFIBRES];  //reuse Shared J --- myJ[kk+1]
 
 	__syncthreads();
 
   	for(int dir=0;dir<max_dir;dir++){
-		for (int p=0; p<nparams; p++) J[p]=0;
+		for (int p=0; p<nparams; p++) myJ[p]=0;
 		if(dir<ndir){
     			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
     			for(int k=0;k<nfib;k++){
+				int kk = 2+3*(k) +1;
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
      				xx.z=x[k*3+2];	
-      				Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
+      				//Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
+				myJ[kk] = anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
     			}
     			sig = 0;
     			for(int k=0;k<nfib;k++){
@@ -309,39 +312,46 @@ __device__ void grad_PVM_single_c(	//INPUT
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
       				xx.z=x[k*3+2];		
-      				sig += fs[k]*Aniso_terms[k];
-     				J[1] += params[0]*fs[k]*anisoterm_lambda_PVM_single_c(dir_iter,params[1],xx,bvecs,bvals,ndirections);
-     				J[kk] = 0;
+      				sig += fs[k]*myJ[kk+1];//Aniso_terms[k];
+     				myJ[1] += params[0]*fs[k]*anisoterm_lambda_PVM_single_c(dir_iter,params[1],xx,bvecs,bvals,ndirections);
+     				myJ[kk] = 0;
       				for (int j=0;j<nfib;j++){
 					if(f_deriv[j*nfib+k]!=0){
-	  					J[kk] += params[0]*(Aniso_terms[j]-Iso_term)*f_deriv[j*nfib+k]; 
+	  					//myJ[kk] += params[0]*(Aniso_terms[j]-Iso_term)*f_deriv[j*nfib+k]; 
+						myJ[kk] += params[0]*(myJ[2+j*3+1]-Iso_term)*f_deriv[j*nfib+k]; 
 					}
       				}
-      				J[kk+1] = params[0]*fs[k]*anisoterm_th_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
-      				J[kk+2] = params[0]*fs[k]*anisoterm_ph_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+			}
+			for(int k=0;k<nfib;k++){
+     				int kk = 2+3*(k);
+      				xx.x=x[k*3];
+      				xx.y=x[k*3+1];
+      				xx.z=x[k*3+2];		
+      				myJ[kk+1] = params[0]*fs[k]*anisoterm_th_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+      				myJ[kk+2] = params[0]*fs[k]*anisoterm_ph_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
     			}
     			if(m_include_f0){
 				//partial_fsum ///////////
-    				double partial_fsum=1.0;
+    				float partial_fsum=1.0;
     				for(int j=0;j<(nfib);j++)
 					partial_fsum-=fs[j];
 				//////////////////////////
-				double temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
+				float temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
 
     				//derivative with respect to f0
-    				J[nparams-1]= params[0]*(1-Iso_term)*sin(double(2*params[nparams-1]))*partial_fsum; 
+    				myJ[nparams-1]= params[0]*(1-Iso_term)*sin(float(2*params[nparams-1]))*partial_fsum; 
 				sig=params[0]*((temp_f0+(1-*sumf-temp_f0)*Iso_term)+sig);
-    				J[1] += params[0]*(1-*sumf-temp_f0)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
+    				myJ[1] += params[0]*(1-*sumf-temp_f0)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
     			}else{
 				sig = params[0]*((1-*sumf)*Iso_term+sig);
-	    			J[1] += params[0]*(1-*sumf)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
+	    			myJ[1] += params[0]*(1-*sumf)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
     			}
     			diff = sig - mdata[dir_iter];
-    			J[0] = sig/params[0]; 
+    			myJ[0] = sig/params[0]; 
 		}
 
 		for (int p=0;p<nparams;p++){ 
-			reduction[idSubVOX]=2*J[p]*diff;
+			reduction[idSubVOX]=2*myJ[p]*diff;
 
 			__syncthreads();
 			if(idSubVOX==0){
@@ -358,26 +368,27 @@ __device__ void grad_PVM_single_c(	//INPUT
 
 //hessian function PVM_single_c
 __device__ void hess_PVM_single_c(	//INPUT
-					const double*		params,
-					const double*		bvecs, 
-					const double*		bvals,
+					const float*		params,
+					const float*		bvecs, 
+					const float*		bvals,
 					const int 		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
 					const int		idSubVOX,		
-					double*			reduction,	//shared memory
-					double* 		fs,		//shared memory
-					double*			f_deriv,	//shared memory
-					double*			x,		//shared memory
-					double* 		_d,		//shared memory
-					double* 		sumf,		//shared memory
+					float*			J,		//shared memory
+					float*			reduction,	//shared memory
+					float* 			fs,		//shared memory
+					float*			f_deriv,	//shared memory
+					float*			x,		//shared memory
+					float* 			_d,		//shared memory
+					float* 			sumf,		//shared memory
 					//OUTPUT
-					double*			hess)
+					float*			hess)
 {
 	if(idSubVOX<nfib){
 		int kk = 2+3*(idSubVOX);
-		double sinth,costh,sinph,cosph;
+		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
     		x[idSubVOX*3] = sinth*cosph;
@@ -387,7 +398,7 @@ __device__ void hess_PVM_single_c(	//INPUT
 	if(idSubVOX==0){
 		*_d = lambda2d_gpu(params[1]);
 		*sumf=0;
-		double partial_fsum;
+		float partial_fsum;
 		for(int k=0;k<nfib;k++){
 			int kk = 2+3*(k);
     			//partial_fsum ///////////
@@ -416,24 +427,26 @@ __device__ void hess_PVM_single_c(	//INPUT
 	int max_dir = ndirections/THREADS_BLOCK_FIT;
 	if(ndirections%THREADS_BLOCK_FIT) max_dir++;
 
-	double J[MAXNPARAMS];
-  	double sig;
-	double Iso_term;
-	double3 xx;
+	float* myJ = &J[idSubVOX*nparams];
+  	float sig;
+	float Iso_term;
+	float3 xx;
 	int dir_iter=idSubVOX;
-  	double Aniso_terms[MAXNFIBRES];
+  	//float Aniso_terms[MAXNFIBRES]; //reuse Shared J --- myJ[kk+1]
 
 	__syncthreads();
 
   	for(int dir=0;dir<max_dir;dir++){
-		for (int p=0; p<nparams; p++) J[p]=0;
+		for (int p=0; p<nparams; p++) myJ[p]=0;
 		if(dir<ndir){
     			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
     			for(int k=0;k<nfib;k++){
+				int kk = 2+3*(k) +1;
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
       				xx.z=x[k*3+2];	
-      				Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
+      				//Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
+				myJ[kk] = anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
     			}
     			sig = 0;
     			for(int k=0;k<nfib;k++){
@@ -441,38 +454,44 @@ __device__ void hess_PVM_single_c(	//INPUT
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
       				xx.z=x[k*3+2];		 
-      				sig += fs[k]*Aniso_terms[k];
-      				J[1] += params[0]*fs[k]*anisoterm_lambda_PVM_single_c(dir_iter,params[1],xx,bvecs,bvals,ndirections);	 
-      				J[kk] = 0;
+      				sig += fs[k]*myJ[kk+1];//Aniso_terms[k];
+      				myJ[1] += params[0]*fs[k]*anisoterm_lambda_PVM_single_c(dir_iter,params[1],xx,bvecs,bvals,ndirections);	 
       				for (int j=0; j<nfib; j++){
 					if (f_deriv[j*nfib+k]!=0)
-	  				J[kk] += params[0]*(Aniso_terms[j]-Iso_term)*f_deriv[j*nfib+k]; 
+	  				//myJ[kk] += params[0]*(Aniso_terms[j]-Iso_term)*f_deriv[j*nfib+k]; 
+					myJ[kk] += params[0]*(myJ[2+3*j+1]-Iso_term)*f_deriv[j*nfib+k]; 
       				}
-      				J[kk+1] = params[0]*fs[k]*anisoterm_th_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
-      				J[kk+2] = params[0]*fs[k]*anisoterm_ph_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+			}
+			for(int k=0;k<nfib;k++){
+				int kk = 2+3*(k);
+      				xx.x=x[k*3];
+      				xx.y=x[k*3+1];
+      				xx.z=x[k*3+2];
+      				myJ[kk+1] = params[0]*fs[k]*anisoterm_th_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+      				myJ[kk+2] = params[0]*fs[k]*anisoterm_ph_PVM_single_c(dir_iter,_d,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
     			}
     			if(m_include_f0){
 				//partial_fsum ///////////
-	    			double partial_fsum=1.0;
+	    			float partial_fsum=1.0;
 	    			for(int j=0;j<(nfib);j++)
 					partial_fsum-=fs[j];
 	    			//////////////////////////
-    				double temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
+    				float temp_f0=beta2f_gpu(params[nparams-1])*partial_fsum;
     				//derivative with respect to f0
-    				J[nparams-1]= params[0]*(1-Iso_term)*sin(double(2*params[nparams-1]))*partial_fsum; 
+    				myJ[nparams-1]= params[0]*(1-Iso_term)*sin(float(2*params[nparams-1]))*partial_fsum; 
 				sig= params[0]*((temp_f0+(1-*sumf-temp_f0)*Iso_term)+sig);
-    				J[1] += params[0]*(1-*sumf-temp_f0)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
+    				myJ[1] += params[0]*(1-*sumf-temp_f0)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
     			}else{
 	    			sig = params[0]*((1-*sumf)*Iso_term+sig);
-	    			J[1] += params[0]*(1-*sumf)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
+	    			myJ[1] += params[0]*(1-*sumf)*isoterm_lambda_PVM_single_c(dir_iter,params[1],bvals);
     			}
-    			J[0] = sig/params[0]; 
+    			myJ[0] = sig/params[0]; 
 		}
 
 		for (int p=0;p<nparams;p++){
 			for (int p2=p;p2<nparams;p2++){ 
 
-				reduction[idSubVOX]=2*(J[p]*J[p2]);
+				reduction[idSubVOX]=2*(myJ[p]*myJ[p2]);
 				__syncthreads();
 				if(idSubVOX==0){
 					for(int i=0;i<THREADS_BLOCK_FIT;i++){
@@ -495,9 +514,9 @@ __device__ void hess_PVM_single_c(	//INPUT
 }
 //in diffmodel.cc
 extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
-							const double* 		data, 
-							const double* 		bvecs, 
-							const double* 		bvals, 
+							const float* 		data, 
+							const float* 		bvecs, 
+							const float* 		bvals, 
 							const int 		nvox,
 							const int		ndirections, 
 							const int 		nfib,
@@ -507,7 +526,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 							const bool	 	m_return_fanning,
 							const bool		gradnonlin,
 							//INPUT - OUTPUT
-							double* 		params)
+							float* 		params)
 {
 	int idSubVOX = threadIdx.x;
 	int idVOX = blockIdx.x;
@@ -515,27 +534,29 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 
 	////////// DYNAMIC SHARED MEMORY ///////////
 	extern __shared__ double shared[];
-	double* reduction = (double*)shared;				//threadsBlock
-	double* myparams = (double*) &reduction[threadsBlock];		//nparams
-	double* grad = (double*) &myparams[nparams];			//nparams      
-   	double* hess = (double*) &grad[nparams];			//nparams*nparams   
-	double* step = (double*) &hess[nparams*nparams];		//nparams      
- 	double* inverse = (double*) &step[nparams];			//nparams   
-	double* pcf = (double*) &inverse[nparams];			//1   
+	double* pcf = (double*) shared;					//1   
 	double* ncf = (double*) &pcf[1];				//1   
 	double* lambda = (double*) &ncf[1];				//1  
 	double* cftol = (double*) &lambda[1];				//1  
 	double* ltol = (double*) &cftol[1];				//1  
 	double* olambda = (double*) &ltol[1];				//1  
 
-	double* fs = (double*) &olambda[1];				//nfib
-	double* f_deriv = (double*) &fs[nfib];				//nfib*nfib
-  	double* x = (double*) &f_deriv[nfib*nfib];			//nfib*3
-	double* _d = (double*) &x[nfib*3];				//1
-  	double* sumf = (double*) &_d[1];				//1
+	float* J = (float*)&olambda[1];					//threadsBlock*nparams
+	float* reduction = (float*)&J[threadsBlock*nparams];		//threadsBlock
+	float* myparams = (float*) &reduction[threadsBlock];		//nparams
+	float* grad = (float*) &myparams[nparams];			//nparams      
+   	float* hess = (float*) &grad[nparams];				//nparams*nparams   
+	float* step = (float*) &hess[nparams*nparams];			//nparams      
+	float* inverse = (float*) &step[nparams];			//nparams   
 
-	double* C = (double*)&sumf[1];					//nparams*nparams;
-	double* el =  (double*)&C[nparams*nparams];			//nparams
+	float* fs = (float*) &inverse[nparams];				//nfib
+	float* f_deriv = (float*) &fs[nfib];				//nfib*nfib
+  	float* x = (float*) &f_deriv[nfib*nfib];			//nfib*3
+	float* _d = (float*) &x[nfib*3];				//1
+  	float* sumf = (float*) &_d[1];					//1
+
+	float* C = (float*)&sumf[1];					//nparams*nparams;
+	float* el =  (float*)&C[nparams*nparams];			//nparams
 
 	int* indx = (int*)&el[nparams];					//nparams
 	int* success = (int*) &indx[nparams];				//1
@@ -557,7 +578,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 		pos_bvecs=0;
 	}
 	//do the fit
-	levenberg_marquardt_PVM_single_c_gpu(&data[idVOX*ndirections],&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections,nfib,nparams,m_include_f0,idSubVOX,step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,reduction,fs,f_deriv,x,_d,sumf,C,el,indx,myparams);
+	levenberg_marquardt_PVM_single_c_gpu(&data[idVOX*ndirections],&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections,nfib,nparams,m_include_f0,idSubVOX,step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,J,reduction,fs,f_deriv,x,_d,sumf,C,el,indx,myparams);
 
 	__syncthreads();
 
@@ -569,7 +590,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
   		for(int k=0;k<nfib;k++){
     			int kk = 2 + 3*(k);
     			//partial_fsum ///////////
-			double partial_fsum=1.0;
+			float partial_fsum=1.0;
 			for(int j=0;j<k;j++)
 				partial_fsum-=myparams[2 + 3*j];
     			//////////////////////////
@@ -578,7 +599,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
   
   		if (m_include_f0){
 			//partial_fsum ///////////
-	    		double partial_fsum=1.0;
+	    		float partial_fsum=1.0;
 	    		for(int j=0;j<(nfib);j++){
 				partial_fsum-=myparams[2 + 3*j];
 			}
@@ -596,10 +617,10 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 
 //in diffmodel.cc
 extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
-								const double* 		data, 
-								const double* 		params,
-								const double* 		bvecs, 
-								const double* 		bvals, 
+								const float* 		data, 
+								const float* 		params,
+								const float* 		bvecs, 
+								const float* 		bvals, 
 								const int 		nvox, 
 								const int		ndirections,
 								const int 		nfib, 
@@ -608,7 +629,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 								const bool		gradnonlin,
 								const bool* 		includes_f0,								
 								//OUTPUT
-								double*			residuals)
+								float*			residuals)
 {
 	int idSubVOX = threadIdx.x;
 	int idVOX = blockIdx.x;
@@ -616,17 +637,17 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 
 	////////// DYNAMIC SHARED MEMORY ///////////
 	extern __shared__ double shared[];
-	double* myparams = (double*) shared;			//nparams
-	double* fs = (double*) &myparams[nparams];		//nfib
-  	double* x = (double*) &fs[nfib];			//nfib*3
-	double* _d = (double*) &x[nfib*3];			//1
-  	double* sumf = (double*) &_d[1];			//1
+	float* myparams = (float*) shared;			//nparams
+	float* fs = (float*) &myparams[nparams];		//nfib
+  	float* x = (float*) &fs[nfib];				//nfib*3
+	float* _d = (float*) &x[nfib*3];			//1
+  	float* sumf = (float*) &_d[1];				//1
 	int* my_include_f0 = (int*) &sumf[1];			//1		
 	////////// DYNAMIC SHARED MEMORY ///////////
 	
-	double val; 
-	double predicted_signal;
-	double mydata;
+	float val; 
+	float predicted_signal;
+	float mydata;
 	
 
 	if(idSubVOX==0){
@@ -638,7 +659,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 		if(myparams[1]<0)  myparams[1] = 0;	//This can be due to numerical errors..sqrt
   		else myparams[1] = d2lambda_gpu(params[(idVOX*nparams)+1]);
 
-		double partial_fsum;	
+		float partial_fsum;	
   		for(int k=0;k<nfib;k++){
     			int kk = 2+3*k;
 			//partial_fsum ///////////
@@ -647,7 +668,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 				partial_fsum-=fs[j];
 	     		//////////////////////////
 			fs[k] = params[(idVOX*nparams)+kk];
-			double tmpr=fs[k]/partial_fsum;
+			float tmpr=fs[k]/partial_fsum;
     			if (tmpr>1.0) tmpr=1; //This can be due to numerical errors
 			if (tmpr<0.0) tmpr=0; //This can be due to numerical errors..sqrt
     			myparams[kk]   = f2beta_gpu(tmpr);
@@ -660,7 +681,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 			for(int j=0;j<nfib;j++)
 				partial_fsum-=fs[j];
 	     		//////////////////////////	
-			double tmpr=params[(idVOX*nparams)+nparams-1]/partial_fsum;
+			float tmpr=params[(idVOX*nparams)+nparams-1]/partial_fsum;
     			if (tmpr>1.0) tmpr=1; //This can be due to numerical errors..asin
 			if (tmpr<0.0) tmpr=0; //This can be due to numerical errors..sqrt
     			myparams[nparams-1]= f2beta_gpu(tmpr);	
@@ -671,7 +692,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 
 	if(idSubVOX<nfib){
 		int kk = 2+3*idSubVOX;
-		double sinth,costh,sinph,cosph;
+		float sinth,costh,sinph,cosph;
 		sincos(myparams[kk+1],&sinth,&costh);
 		sincos(myparams[kk+2],&sinph,&cosph);
     		x[idSubVOX*3] = sinth*cosph;
@@ -680,7 +701,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
   	}
 
 	if(idSubVOX==0){
-		double partial_fsum;	
+		float partial_fsum;	
 		*sumf=0;
 		for(int k=0;k<nfib;k++){
     			int kk = 2+3*k;
@@ -698,7 +719,7 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
 	int ndir = ndirections/threadsBlock;
 	if(idSubVOX<(ndirections%threadsBlock)) ndir++;
 	
-	double3 x2;
+	float3 x2;
 	int dir_iter=idSubVOX; 
 
 	__syncthreads();
@@ -724,11 +745,11 @@ extern "C" __global__ void get_residuals_PVM_single_c_kernel(	//INPUT
     		}	
     		if (*my_include_f0){
 			//partial_fsum ///////////
-			double partial_fsum=1.0;
+			float partial_fsum=1.0;
 			for(int j=0;j<nfib;j++)
 				partial_fsum-=fs[j];
 	     		//////////////////////////
-      			double temp_f0= beta2f_gpu(myparams[nparams-1])*partial_fsum;
+      			float temp_f0= beta2f_gpu(myparams[nparams-1])*partial_fsum;
       			predicted_signal = myparams[0]*(temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_single_c(dir_iter,_d,&bvals[pos_bvals])+val);
     		}else{
       			predicted_signal = myparams[0]*((1-*sumf)*isoterm_PVM_single_c(dir_iter,_d,&bvals[pos_bvals])+val); 
