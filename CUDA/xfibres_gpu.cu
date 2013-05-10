@@ -71,7 +71,8 @@ void xfibres_gpu(	//INPUT
 	bool gradnonlin=opts.grad_file.set();
 
 	if(nvox>0){
-		thrust::host_vector<double> datam_host, bvecs_host, bvals_host, alpha_host, beta_host, params_host;
+		thrust::host_vector<float> datam_host, bvecs_host, bvals_host, params_host;
+		thrust::host_vector<double> alpha_host, beta_host;
 		thrust::host_vector<float> tau_host;
 		vector<ColumnVector> datam_vec;
 		vector<Matrix> bvecs_vec, bvals_vec;
@@ -79,10 +80,10 @@ void xfibres_gpu(	//INPUT
 		///// FIT /////
 		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
 
-		thrust::device_vector<double> datam_gpu=datam_host;
-		thrust::device_vector<double> bvecs_gpu=bvecs_host;
-		thrust::device_vector<double> bvals_gpu=bvals_host;	
-		thrust::device_vector<double> params_gpu=params_host;
+		thrust::device_vector<float> datam_gpu=datam_host;
+		thrust::device_vector<float> bvecs_gpu=bvecs_host;
+		thrust::device_vector<float> bvals_gpu=bvals_host;	
+		thrust::device_vector<float> params_gpu=params_host;
 		thrust::host_vector<int> vox_repeat;	//contains the id's of voxels repeated
 		vox_repeat.resize(nvox);
 		int nrepeat=0;
@@ -161,16 +162,16 @@ void fit(	//INPUT
 		const vector<ColumnVector> 	datam_vec, 
 		const vector<Matrix> 		bvecs_vec,
 		const vector<Matrix> 		bvals_vec,
-		thrust::host_vector<double> 	datam_host,
-		thrust::host_vector<double>	bvecs_host, 
-		thrust::host_vector<double>	bvals_host,
-		thrust::device_vector<double> 	datam_gpu, 
-		thrust::device_vector<double>	bvecs_gpu, 
-		thrust::device_vector<double>	bvals_gpu,
+		thrust::host_vector<float> 	datam_host,
+		thrust::host_vector<float>	bvecs_host, 
+		thrust::host_vector<float>	bvals_host,
+		thrust::device_vector<float> 	datam_gpu, 
+		thrust::device_vector<float>	bvecs_gpu, 
+		thrust::device_vector<float>	bvals_gpu,
 		int 				ndirections,
 		string 				output_file,
 		//OUTPUT
-		thrust::device_vector<double>&	params_gpu,
+		thrust::device_vector<float>&	params_gpu,
 		thrust::host_vector<int>&	vox_repeat,	//for get residuals with or withot f0
 		int&				nrepeat)
 {
@@ -196,7 +197,7 @@ void fit(	//INPUT
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
-				thrust::host_vector<double> params_host;
+				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
 				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){			
@@ -213,17 +214,17 @@ void fit(	//INPUT
 					vector<ColumnVector> 	datam_repeat_vec; 
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
-					thrust::host_vector<double> 	datam_repeat_host;
-					thrust::host_vector<double> 	bvecs_repeat_host;	
-					thrust::host_vector<double> 	bvals_repeat_host;	
-					thrust::host_vector<double> 	params_repeat_host;	
+					thrust::host_vector<float> 	datam_repeat_host;
+					thrust::host_vector<float> 	bvecs_repeat_host;	
+					thrust::host_vector<float> 	bvals_repeat_host;	
+					thrust::host_vector<float> 	params_repeat_host;	
 								
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host, bvals_repeat_host, params_repeat_host);
 
-					thrust::device_vector<double> datam_repeat_gpu=datam_repeat_host;
-					thrust::device_vector<double> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
-					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
+					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
+					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
 				
 		 			fit_PVM_single(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
@@ -236,7 +237,7 @@ void fit(	//INPUT
 
 			if (opts.f0.value()){
 				float md,mf,f0;	
-				thrust::host_vector<double> params_host;
+				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
 				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){		
@@ -253,17 +254,17 @@ void fit(	//INPUT
 					vector<ColumnVector> 	datam_repeat_vec; 
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
-					thrust::host_vector<double> 	datam_repeat_host;
-					thrust::host_vector<double> 	bvecs_repeat_host;	
-					thrust::host_vector<double> 	bvals_repeat_host;	
-					thrust::host_vector<double> 	params_repeat_host;	
+					thrust::host_vector<float> 	datam_repeat_host;
+					thrust::host_vector<float> 	bvecs_repeat_host;	
+					thrust::host_vector<float> 	bvals_repeat_host;	
+					thrust::host_vector<float> 	params_repeat_host;	
 								
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host, bvals_repeat_host, params_repeat_host);
 
-					thrust::device_vector<double> datam_repeat_gpu=datam_repeat_host;
-					thrust::device_vector<double> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
-					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
+					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
+					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
 				
 		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
@@ -281,7 +282,7 @@ void fit(	//INPUT
 
 		if (opts.f0.value()){
 				float md,mf,f0;	
-				thrust::host_vector<double> params_host;
+				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
 				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 				for(int vox=0;vox<nvox;vox++){			
@@ -298,17 +299,17 @@ void fit(	//INPUT
 					vector<ColumnVector> 	datam_repeat_vec; 
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
-					thrust::host_vector<double> 	datam_repeat_host;
-					thrust::host_vector<double> 	bvecs_repeat_host;	
-					thrust::host_vector<double> 	bvals_repeat_host;	
-					thrust::host_vector<double> 	params_repeat_host;		
+					thrust::host_vector<float> 	datam_repeat_host;
+					thrust::host_vector<float> 	bvecs_repeat_host;	
+					thrust::host_vector<float> 	bvals_repeat_host;	
+					thrust::host_vector<float> 	params_repeat_host;		
 								
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host,  bvals_repeat_host, params_repeat_host);
 
-					thrust::device_vector<double> datam_repeat_gpu=datam_repeat_host;
-					thrust::device_vector<double> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<double> bvals_repeat_gpu=bvals_repeat_host;	
-					thrust::device_vector<double> params_repeat_gpu=params_repeat_host;
+					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
+					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
 				
 		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 
@@ -338,12 +339,12 @@ void prepare_data_gpu_FIT(	//INPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,
 				vector<Matrix>&				bvals_vec,
-				thrust::host_vector<double>&   		datam_host,	//data prepared for copy to GPU
-				thrust::host_vector<double>&		bvecs_host,				
-				thrust::host_vector<double>&		bvals_host,
+				thrust::host_vector<float>&   		datam_host,	//data prepared for copy to GPU
+				thrust::host_vector<float>&		bvecs_host,				
+				thrust::host_vector<float>&		bvals_host,
 				thrust::host_vector<double>&		alpha_host,
 				thrust::host_vector<double>&		beta_host,
-				thrust::host_vector<double>&		params_host,
+				thrust::host_vector<float>&		params_host,
 				thrust::host_vector<float>&		tau_host)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
@@ -421,9 +422,9 @@ void prepare_data_gpu_FIT(	//INPUT
 
 //prepare the structures for copy all neccesary data to FIT in GPU when is repeated because f0. Only some voxels
 void prepare_data_gpu_FIT_repeat(	//INPUT
-					thrust::host_vector<double>   		datam_host,	
-					thrust::host_vector<double>		bvecs_host,				
-					thrust::host_vector<double>		bvals_host,
+					thrust::host_vector<float>   		datam_host,	
+					thrust::host_vector<float>		bvecs_host,				
+					thrust::host_vector<float>		bvals_host,
 					thrust::host_vector<int>		vox_repeat,
 					int					nrepeat,
 					int					ndirections,
@@ -431,10 +432,10 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 					vector<ColumnVector>&			datam_repeat_vec,
 					vector<Matrix>&				bvecs_repeat_vec,
 					vector<Matrix>&				bvals_repeat_vec,
-					thrust::host_vector<double>&   		datam_repeat_host,	//data prepared for copy to GPU
-					thrust::host_vector<double>&		bvecs_repeat_host,				
-					thrust::host_vector<double>&		bvals_repeat_host,
-					thrust::host_vector<double>&		params_repeat_host)
+					thrust::host_vector<float>&   		datam_repeat_host,	//data prepared for copy to GPU
+					thrust::host_vector<float>&		bvecs_repeat_host,				
+					thrust::host_vector<float>&		bvals_repeat_host,
+					thrust::host_vector<float>&		params_repeat_host)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
@@ -509,19 +510,19 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 
 
 void mix_params(	//INPUT
-			thrust::host_vector<double>   		params_repeat_host,
+			thrust::host_vector<float>   		params_repeat_host,
 			thrust::host_vector<int>		vox_repeat,
 			int					nrepeat,
 			int					nvox,
 			//INPUT-OUTPUT
-			thrust::device_vector<double>&   	params_gpu)
+			thrust::device_vector<float>&   	params_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib= opts.nfibres.value();
 	int nparams = 2+3*opts.nfibres.value();
 	if(opts.modelnum.value()==2) nparams++;
 
-	thrust::host_vector<double> params_host;
+	thrust::host_vector<float> params_host;
 	params_host.resize(nvox*(nparams+1));
 	thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
 

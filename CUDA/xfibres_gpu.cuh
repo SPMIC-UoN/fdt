@@ -17,16 +17,16 @@ void fit(	//INPUT
 		const vector<ColumnVector> 	datam_vec, 
 		const vector<Matrix> 		bvecs_vec,
 		const vector<Matrix> 		bvals_vec,
-		thrust::host_vector<double> 	datam_host,	
-		thrust::host_vector<double>	bvecs_host, 
-		thrust::host_vector<double>	bvals_host,
-		thrust::device_vector<double> 	datam_gpu, 
-		thrust::device_vector<double>	bvecs_gpu, 
-		thrust::device_vector<double>	bvals_gpu,
+		thrust::host_vector<float> 	datam_host,	
+		thrust::host_vector<float>	bvecs_host, 
+		thrust::host_vector<float>	bvals_host,
+		thrust::device_vector<float> 	datam_gpu, 
+		thrust::device_vector<float>	bvecs_gpu, 
+		thrust::device_vector<float>	bvals_gpu,
 		int				ndirections,
 		string 				output_file,
 		//OUTPUT
-		thrust::device_vector<double>&	params_gpu,
+		thrust::device_vector<float>&	params_gpu,
 		thrust::host_vector<int>&	vox_repeat,
 		int&				nrepeat);
 
@@ -40,20 +40,20 @@ void prepare_data_gpu_FIT(	//INPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,
 				vector<Matrix>&				bvals_vec,
-				thrust::host_vector<double>&   		datam_host,	
-				thrust::host_vector<double>&		bvecs_host,				
-				thrust::host_vector<double>&		bvals_host,
+				thrust::host_vector<float>&   		datam_host,	
+				thrust::host_vector<float>&		bvecs_host,				
+				thrust::host_vector<float>&		bvals_host,
 				thrust::host_vector<double>&		alpha_host,
 				thrust::host_vector<double>&		beta_host,
-				thrust::host_vector<double>&		params_host,
+				thrust::host_vector<float>&		params_host,
 				thrust::host_vector<float>&		tau_host);
 
 
 //implemented and used in xfibres_gpu.cu
 void prepare_data_gpu_FIT_repeat(	//INPUT
-					thrust::host_vector<double>   		datam_host,	
-					thrust::host_vector<double>		bvecs_host,				
-					thrust::host_vector<double>		bvals_host,
+					thrust::host_vector<float>   		datam_host,	
+					thrust::host_vector<float>		bvecs_host,				
+					thrust::host_vector<float>		bvals_host,
 					thrust::host_vector<int>		vox_repeat,
 					int					nrepeat,
 					int					ndirections,
@@ -61,19 +61,19 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 					vector<ColumnVector>&			datam_repeat_vec,
 					vector<Matrix>&				bvecs_repeat_vec,
 					vector<Matrix>&				bvals_repeat_vec,
-					thrust::host_vector<double>&   		datam_repeat_host,
-					thrust::host_vector<double>&		bvecs_repeat_host,				
-					thrust::host_vector<double>&		bvals_repeat_host,
-					thrust::host_vector<double>&		params_repeat_host);
+					thrust::host_vector<float>&   		datam_repeat_host,
+					thrust::host_vector<float>&		bvecs_repeat_host,				
+					thrust::host_vector<float>&		bvals_repeat_host,
+					thrust::host_vector<float>&		params_repeat_host);
 
 //implemented and used in xfibres_gpu.cu
 void mix_params(	//INPUT
-			thrust::host_vector<double>   		params_repeat_gpu,
+			thrust::host_vector<float>   		params_repeat_gpu,
 			thrust::host_vector<int>			vox_repeat,
 			int						nrepeat,
 			int						nvox,
 			//INPUT-OUTPUT
-			thrust::device_vector<double>&   		params_gpu);
+			thrust::device_vector<float>&   		params_gpu);
 
 
 //implemented and used in xfibres_gpu.cu

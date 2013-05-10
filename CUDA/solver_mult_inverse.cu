@@ -12,15 +12,15 @@
 //MATRIX INVERSE AS NEWMAT LU SOLVER
 //implemented in NEWMAT:newmat7.cpp GeneralSolvI.
 __device__ void solver(	//INPUT
-			double *A, 
-			double *P,
+			float *A, 
+			float *P,
 			int length,
 			//TO USE
-			double *C,
-			double *el,
+			float *C,
+			float *el,
 			int *indx,	
 			//OUTPUT
-			double *B)  
+			float *B)  
 {  
 	//double C[NPARAMS*NPARAMS];
 
@@ -33,15 +33,15 @@ __device__ void solver(	//INPUT
  	bool d=true; 
   	//int indx[NPARAMS];
 
-   	double* akk = C;   
-	double big = fabs(*akk); 
+   	float* akk = C;   
+	float big = fabs(*akk); 
 	int mu = 0; 
-	double* ai = akk; 
+	float* ai = akk; 
 	int k;
 
 	for (k = 1; k<length; k++){
       		ai += length; 
-		const double trybig = fabs(*ai);
+		const float trybig = fabs(*ai);
       		if (big < trybig){ 
 			big = trybig; 
 			mu = k; 
@@ -52,18 +52,18 @@ __device__ void solver(	//INPUT
 
 		indx[k] = mu;
 		if (mu != k){
-         		double* a1 = C + length*k; 
-			double* a2 = C + length*mu; 
+         		float* a1 = C + length*k; 
+			float* a2 = C + length*mu; 
 			d = !d;
          		int j = length;
          		while (j--){ 
-				const double temp = *a1; 
+				const float temp = *a1; 
 				*a1++ = *a2; 
 				*a2++ = temp; 
 			}
       		}
 
-      		double diag = *akk; 
+      		float diag = *akk; 
 		big = 0; 
 		mu = k + 1;
       		if (diag != 0){
@@ -71,24 +71,24 @@ __device__ void solver(	//INPUT
 			int i = length - k - 1;
          		while (i--){
             			ai += length; 
-				double* al = ai; 
-				double mult = *al / diag; 
+				float* al = ai; 
+				float mult = *al / diag; 
 				*al = mult;
             			int l = length - k - 1; 
-				double* aj = akk;
+				float* aj = akk;
 				if (l-- != 0){
 				
-					double aux=al[1]-(mult* *(++aj));
+					float aux=al[1]-(mult* *(++aj));
 					*(++al) = aux;
 					//*(++al) = __dadd_rn (*al,-mult* *(++aj)); //FAIL in cuda 4.2 compiler
 					
-               				const double trybig = fabs(*al);
+               				const float trybig = fabs(*al);
                				if (big < trybig){ 
 						big = trybig; 
 						mu = length - i - 1; 
 					}
                				while (l--){ 
-						double aux= al[1]-(mult* *(++aj));
+						float aux= al[1]-(mult* *(++aj));
 						*(++al) = aux;
 						//*(++al) = __dadd_rn (*al,-mult* *(++aj)); //FAIL in cuda 4.2 compiler
 					}
@@ -111,7 +111,7 @@ __device__ void solver(	//INPUT
    	int j;
 	int ii = length; 
 	int ip;    
-	double temp;
+	float temp;
 	int i;
      
 	for (i=0; i<length; i++){
@@ -122,8 +122,8 @@ __device__ void solver(	//INPUT
       		if (temp != 0.0) { ii = i; break; }
    	}
 	
-  	double* bi; 
-	double* ai2;
+  	float* bi; 
+	float* ai2;
    	i = ii + 1;
 
   	if (i < length){
@@ -131,10 +131,10 @@ __device__ void solver(	//INPUT
 		ai2 = C + ii + i * length;
       		for (;;){
          		int ip = indx[i]; 
-			double sum = el[ip]; 
+			float sum = el[ip]; 
 			el[ip] = el[i];
-         		double* aij = ai2; 
-			double* bj = bi; 
+         		float* aij = ai2; 
+			float* bj = bi; 
 			j = i - ii;
          		while (j--){ 
 				sum -=  *aij++* *bj++; 
@@ -148,11 +148,11 @@ __device__ void solver(	//INPUT
    	ai2 = C + length*length;
 
    	for (i = length - 1; i >= 0; i--){
-      		double* bj = el+i; 
+      		float* bj = el+i; 
 		ai2 -= length; 
-		double* ajx = ai2+i;
-      		double sum = *bj; 
-		double diag = *ajx;
+		float* ajx = ai2+i;
+      		float sum = *bj; 
+		float diag = *ajx;
       		j = length - i; 
 		while(--j){ 
 			sum -= *(++ajx)* *(++bj);  
