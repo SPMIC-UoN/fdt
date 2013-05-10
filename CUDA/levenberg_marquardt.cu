@@ -22,18 +22,18 @@ __device__ inline bool zero_cf_diff_conv(double* cfo,double* cfn,double* cftol){
 }
 
 __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
-							const double*		mydata, 
-							const double*		bvecs, 
-							const double*		bvals, 
+							const float*		mydata, 
+							const float*		bvecs, 
+							const float*		bvals, 
 							const int		ndirections,
 							const int		nfib,
 							const int 		nparams,
 							const bool 		m_include_f0,
 							const int		idSubVOX,
-							double* 		step,		//shared memory
-							double*			grad,           //shared memory     	          
-						   	double* 		hess,		//shared memory
-							double* 		inverse,	//shared memory
+							float* 			step,		//shared memory
+							float*			grad,           //shared memory     	          
+						   	float* 			hess,		//shared memory
+							float* 			inverse,	//shared memory
 							double* 		pcf,		//shared memory
 							double* 		ncf,		//shared memory
 							double* 		lambda,		//shared memory
@@ -42,16 +42,17 @@ __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
 							double* 		olambda,	//shared memory
 							int* 			success,    	//shared memory
 							int* 			end,    	//shared memory
-							double*			reduction,	//shared memory
-							double* 		fs,		//shared memory
-						  	double*			x,		//shared memory
-							double* 		_d,		//shared memory
-						  	double* 		sumf,		//shared memory
-							double*			C,		//shared memory
-							double*			el,		//shared memory
+							float*			J,		//shared memory
+							float*			reduction,	//shared memory
+							float* 			fs,		//shared memory
+						  	float*			x,		//shared memory
+							float* 			_d,		//shared memory
+						  	float* 			sumf,		//shared memory
+							float*			C,		//shared memory
+							float*			el,		//shared memory
 							int*			indx,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)	//shared memory
+							float*			myparams)	//shared memory
 {
 	int niter=0; 
 	int maxiter=200;
@@ -72,9 +73,9 @@ __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
    	while (!(*success&&niter++>=maxiter)){ 	//if success we don't increase niter (first condition is true)
 						//function cost has been decreased, we have advanced.
    		if(*success){
-    			grad_PVM_single(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_d,sumf,grad); 
+    			grad_PVM_single(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_d,sumf,grad); 
 			__syncthreads(); 
-    			hess_PVM_single(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_d,sumf,hess);  
+    			hess_PVM_single(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_d,sumf,hess);  
     		}
 
 		if(idSubVOX==0){
@@ -122,18 +123,18 @@ __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
 }
 
 __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
-							const double*		mydata, 
-							const double*		bvecs, 
-							const double*		bvals,
+							const float*		mydata, 
+							const float*		bvecs, 
+							const float*		bvals,
 							const int		ndirections, 
 							const int		nfib,
 							const int 		nparams,
 							const bool 		m_include_f0,
 							const int		idSubVOX,
-							double* 		step,		//shared memory
-							double*			grad,           //shared memory     	          
-						   	double* 		hess,		//shared memory
-							double* 		inverse,	//shared memory
+							float* 			step,		//shared memory
+							float*			grad,           //shared memory     	          
+						   	float* 			hess,		//shared memory
+							float* 			inverse,	//shared memory
 							double* 		pcf,		//shared memory
 							double* 		ncf,		//shared memory
 							double* 		lambda,		//shared memory
@@ -142,17 +143,18 @@ __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
 							double* 		olambda,	//shared memory
 							int* 			success,    	//shared memory
 							int* 			end,    	//shared memory
-							double*			reduction,	//shared memory
-							double* 		fs,		//shared memory
-							double*			f_deriv,	//shared memory
-						  	double*			x,		//shared memory
-							double* 		_d,		//shared memory
-						  	double* 		sumf,		//shared memory
-							double*			C,		//shared memory
-							double*			el,		//shared memory
+							float*			J,		//shared memory
+							float*			reduction,	//shared memory
+							float* 			fs,		//shared memory
+							float*			f_deriv,	//shared memory
+						  	float*			x,		//shared memory
+							float* 			_d,		//shared memory
+						  	float* 			sumf,		//shared memory
+							float*			C,		//shared memory
+							float*			el,		//shared memory
 							int*			indx,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)	//shared memory
+							float*			myparams)	//shared memory
 {
 	int niter=0; 
 	int maxiter=200;
@@ -173,9 +175,9 @@ __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
    	while (!(*success&&niter++ >= maxiter)){ 	//if success we don't increase niter (first condition is true)
 							//function cost has been decreased, we have advanced.
    		if(*success){
-			grad_PVM_single_c(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,f_deriv,x,_d,sumf,grad);  
+			grad_PVM_single_c(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,f_deriv,x,_d,sumf,grad);  
 			__syncthreads();
-    			hess_PVM_single_c(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,f_deriv,x,_d,sumf,hess);  
+    			hess_PVM_single_c(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,f_deriv,x,_d,sumf,hess);  
     		}
 
 		if(idSubVOX==0){
@@ -224,18 +226,18 @@ __device__ void levenberg_marquardt_PVM_single_c_gpu(	//INPUT
 
 
 __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
-							const double*		mydata, 
-							const double*		bvecs, 
-							const double*		bvals, 
+							const float*		mydata, 
+							const float*		bvecs, 
+							const float*		bvals, 
 							const int		ndirections,
 							const int		nfib,
 							const int 		nparams,
 							const bool 		m_include_f0,
 							const int		idSubVOX,
-							double* 		step,		//shared memory
-							double*			grad,           //shared memory     	          
-						   	double* 		hess,		//shared memory
-							double* 		inverse,	//shared memory
+							float* 			step,		//shared memory
+							float*			grad,           //shared memory     	          
+						   	float* 			hess,		//shared memory
+							float* 			inverse,	//shared memory
 							double* 		pcf,		//shared memory
 							double* 		ncf,		//shared memory
 							double* 		lambda,		//shared memory
@@ -244,17 +246,18 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
 							double* 		olambda,	//shared memory
 							int* 			success,    	//shared memory
 							int* 			end,    	//shared memory
-							double*			reduction,	//shared memory
-							double* 		fs,		//shared memory
-						  	double*			x,		//shared memory
-							double* 		_a,		//shared memory
-							double* 		_b,		//shared memory
-						  	double* 		sumf,		//shared memory
-							double*			C,		//shared memory
-							double*			el,		//shared memory
+							float*			J,		//shared memory
+							float*			reduction,	//shared memory
+							float* 			fs,		//shared memory
+						  	float*			x,		//shared memory
+							float* 			_a,		//shared memory
+							float* 			_b,		//shared memory
+						  	float* 			sumf,		//shared memory
+							float*			C,		//shared memory
+							float*			el,		//shared memory
 							int*			indx,		//shared memory
 							//INPUT-OUTPUT
-							double*			myparams)	//shared memory
+							float*			myparams)	//shared memory
 {
 	int niter=0; 
 	int maxiter=200;
@@ -275,9 +278,9 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
    	while (!(*success&&niter++ >= maxiter)){ 	//if success we don't increase niter (first condition is true)
 							//function cost has been decreased, we have advanced.
    		if(*success){
-			grad_PVM_multi(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_a,_b,sumf,grad);  
+			grad_PVM_multi(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_a,_b,sumf,grad);  
 			__syncthreads(); 
-    			hess_PVM_multi(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_a,_b,sumf,hess);  
+    			hess_PVM_multi(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_a,_b,sumf,hess);  
     		}
 
 		if(idSubVOX==0){
