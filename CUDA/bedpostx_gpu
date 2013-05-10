@@ -216,7 +216,7 @@ do
 	else
 	    gopts=$opts
 	fi    
-	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
+	echo "${FSLDEVDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
     
     	part=$(($part + 1))
 done
@@ -225,7 +225,7 @@ bedpostid=`${FSLDIR}/bin/fsl_sub -q $queue -l ${subjdir}.bedpostX/logs -M $mailt
 
 echo Queuing post processing stage
 nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V   | cut -d ' ' -f1 `
-mergeid=`${FSLDIR}/bin/fsl_sub -q $queue -j $bedpostid -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
+mergeid=`${FSLDIR}/bin/fsl_sub -q $queue -j $bedpostid -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDEVDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
 
 [ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 if [ "x$SGE_ROOT" != "x" ]; then

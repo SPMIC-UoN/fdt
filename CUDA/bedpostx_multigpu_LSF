@@ -156,7 +156,7 @@ while [ $part -lt $njobs ];do
 	    	gopts=$opts
 	fi    
 
-	string=$(bsub -o ${subjdir}.bedpostX/logs/log$partzp -e ${subjdir}.bedpostX/logs/error$partzp -W 2:00 -n 1 ${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs)
+	string=$(bsub -o ${subjdir}.bedpostX/logs/log$partzp -e ${subjdir}.bedpostX/logs/error$partzp -W 2:00 -n 1 ${FSLDEVDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs)
     	array=(`echo $string | tr "<" ' '`)
     	aux=${array[1]}
     	array=(`echo $aux | tr ">" ' '`)
@@ -174,7 +174,7 @@ while [ $part -lt $njobs ];do
 done
 
 nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V   | cut -d ' ' -f1 `
-post_string=$post_string" ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}"
+post_string=$post_string" ${FSLDEVDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}"
 
 $post_string
 

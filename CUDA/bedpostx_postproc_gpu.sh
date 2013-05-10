@@ -13,7 +13,7 @@ do
 	fi
 done
 
-${FSLDIR}/bin/merge_parts_gpu $@
+${FSLDEVDIR}/bin/merge_parts_gpu $@
 
 fib=1
 while [ $fib -le $numfib ]
