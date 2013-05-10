@@ -15,7 +15,7 @@
 #include <sys/time.h>
 #include "CUDA/init_gpu.h"
 
-#define SIZE_SUB_PART 9000 
+#define SIZE_SUB_PART 12800 //16 SM * 800 
 
 using namespace Xfibres;
 
