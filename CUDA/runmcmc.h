@@ -11,10 +11,10 @@
 ////////////////////////////////////////////////////// 
 
 void init_Fibres_Multifibres(	//INPUT
-				thrust::device_vector<double> 			datam_gpu,
-				thrust::device_vector<double> 			params_gpu,
+				thrust::device_vector<float> 			datam_gpu,
+				thrust::device_vector<float> 			params_gpu,
 				thrust::device_vector<float> 			tau_gpu,
-				thrust::device_vector<double> 			bvals_gpu,
+				thrust::device_vector<float> 			bvals_gpu,
 				thrust::device_vector<double> 			alpha_gpu,
 				thrust::device_vector<double> 			beta_gpu,
 				const int 					ndirections,
@@ -26,8 +26,8 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<double>&			isosignals_gpu);
 
 void runmcmc_burnin(	//INPUT
-			thrust::device_vector<double> 			datam_gpu,
-			thrust::device_vector<double> 			bvals_gpu,
+			thrust::device_vector<float> 			datam_gpu,
+			thrust::device_vector<float> 			bvals_gpu,
 			thrust::device_vector<double> 			alpha_gpu,
 			thrust::device_vector<double> 			beta_gpu,
 			const int 					ndirections,
@@ -41,8 +41,8 @@ void runmcmc_burnin(	//INPUT
 
 
 void runmcmc_record(	//INPUT
-			thrust::device_vector<double> 			datam_gpu,
-			thrust::device_vector<double> 			bvals_gpu,
+			thrust::device_vector<float> 			datam_gpu,
+			thrust::device_vector<float> 			bvals_gpu,
 			thrust::device_vector<double> 			alpha_gpu,
 			thrust::device_vector<double> 			beta_gpu,
 			thrust::device_vector<FibreGPU> 		fibres_gpu,
