@@ -297,7 +297,6 @@ __device__ void grad_PVM_single_c(	//INPUT
   	for(int dir=0;dir<max_dir;dir++){
 		for (int p=0; p<nparams; p++) myJ[p]=0;
 		if(dir<ndir){
-    			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
     			for(int k=0;k<nfib;k++){
 				int kk = 2+3*(k) +1;
       				xx.x=x[k*3];
@@ -306,6 +305,7 @@ __device__ void grad_PVM_single_c(	//INPUT
       				//Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
 				myJ[kk] = anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
     			}
+			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
     			sig = 0;
     			for(int k=0;k<nfib;k++){
      				int kk = 2+3*(k);
@@ -438,8 +438,7 @@ __device__ void hess_PVM_single_c(	//INPUT
 
   	for(int dir=0;dir<max_dir;dir++){
 		for (int p=0; p<nparams; p++) myJ[p]=0;
-		if(dir<ndir){
-    			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
+		if(dir<ndir){	
     			for(int k=0;k<nfib;k++){
 				int kk = 2+3*(k) +1;
       				xx.x=x[k*3];
@@ -448,6 +447,7 @@ __device__ void hess_PVM_single_c(	//INPUT
       				//Aniso_terms[k]=anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
 				myJ[kk] = anisoterm_PVM_single_c(dir_iter,_d,xx,bvecs,bvals,ndirections);
     			}
+			Iso_term=isoterm_PVM_single_c(dir_iter,_d,bvals);  //Precompute some terms for this datapoint
     			sig = 0;
     			for(int k=0;k<nfib;k++){
       				int kk = 2+3*(k);
@@ -526,7 +526,7 @@ extern "C" __global__ void fit_PVM_single_c_kernel(	//INPUT
 							const bool	 	m_return_fanning,
 							const bool		gradnonlin,
 							//INPUT - OUTPUT
-							float* 		params)
+							float* 			params)
 {
 	int idSubVOX = threadIdx.x;
 	int idVOX = blockIdx.x;
