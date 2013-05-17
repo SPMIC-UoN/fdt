@@ -16,7 +16,7 @@ Usage() {
     echo "expects to find grad_dev in subject directory, if -g is set"
     echo ""
     echo "<options>:"
-    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 1)"
+    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 40)"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
