@@ -36,7 +36,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/mean_f1samples` -eq 1 ];then
     fib=1
     while [ $fib -le $numfib ]
     do
-	fslmaths ${subjdir}.bedpostX/mean_fsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsamples
+	 ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_fsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsamples
 	fib=$(($fib + 1))
     done	
 fi
@@ -45,11 +45,11 @@ fi
 
 echo Removing intermediate files
 
-if [ `imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
-  if [ `imtest ${subjdir}.bedpostX/merged_ph1samples` -eq 1 ];then
-    if [ `imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
+if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
+  if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_ph1samples` -eq 1 ];then
+    if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
       rm -rf ${subjdir}.bedpostX/diff_parts
-      if [ `imtest ${subjdir}.bedpostX/grad_dev_slice_0000` -eq 1 ];then
+      if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/grad_dev_slice_0000` -eq 1 ];then
 	  rm -f ${subjdir}.bedpostX/grad_dev_slice_*
       fi	  
     fi
