@@ -30,6 +30,8 @@ int main(int argc, char *argv[]){
 	double time;
     	gettimeofday(&t1,NULL); 
 
+	init_gpu();
+
 	// Setup logging:
     	Log& logger = LogSingleton::getInstance();
     	xfibresOptions& opts = xfibresOptions::getInstance();
