@@ -1,9 +1,10 @@
 #!/bin/sh
 
-out_dir=$1
-dataLR=$2
-maskLR=$3
-dataHR=$4
+subjdir=$1
+filterflag=$2
+
+out_dir=${subjdir}.rubiX
+maskLR=nodif_brain_maskLR
 
 
 numfib=`${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_0000/f*samples* | wc -w | awk '{print $1}'`
@@ -84,9 +85,15 @@ if [ `imtest ${out_dir}/merged_th1samples` -eq 1 ];then
   if [ `imtest ${out_dir}/merged_ph1samples` -eq 1 ];then
     if [ `imtest ${out_dir}/merged_f1samples` -eq 1 ];then
       rm -rf ${out_dir}/diff_slices
-      rm -f ${out_dir}/${dataLR}_slice_*
-      rm -f ${out_dir}/${dataHR}_newslice_* 
-      rm -f ${out_dir}/${maskLR}_slice_*
+      rm -f ${out_dir}/dataLR_slice_*
+      rm -f ${out_dir}/dataHR_newslice_* 
+      rm -f ${out_dir}/maskLR_slice_*
+      if [ `imtest ${out_dir}/grad_devLR_slice_0000` -eq 1 ];then
+	  rm -f ${out_dir}/grad_devLR_slice_*
+      fi	  
+      if [ `imtest ${out_dir}/grad_devHR_newslice_0000` -eq 1 ];then
+	  rm -f ${out_dir}/grad_devHR_newslice_*
+      fi	  
     fi
   fi
 fi
