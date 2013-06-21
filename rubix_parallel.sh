@@ -4,6 +4,11 @@
 #
 #   Stamatios Sotiropoulos
 
+
+devel_dir=/home/stam/fsldev/fdt  # Where the binary is 
+script_dir=/home/stam/Rubix_src # Where the scripts are
+
+
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
 	. /usr/local/share/sge/default/common/settings.sh
@@ -14,97 +19,192 @@ fi
 
 Usage() {
     echo ""
-    echo "Usage: rubix_parallel dataLR maskLR bvecsLR bvalsLR dataHR bvecsHR bvalsHR out_dir nfib nModes modelnum other_rubix_params"
-    echo "       Call rubix help menu, for other_rubix_params (usually need --fsumPrior --dPrior)"
+    echo "Usage: rubix_parallel <subject_directory> [options]"
     echo ""
+    echo "ORIGINAL MODE"
+    echo "expects to find bvalsLR, bvecsLR, bvalsHR, bvecsHR in subject directory"
+    echo "expects to find dataLR, dataHR and nodif_brain_maskLR in subject directory"
+    echo "expects to find grad_devLR and grad_devHR in subject directory, if -g is set"
+    echo ""
+    echo "FILTERING MODE (use -f)"
+    echo "expects to find bvals, bvecs in subject directory"
+    echo "expects to find data and nodif_brain_mask in subject directory"
+    echo "expects to find grad_dev in subject directory, if -g is set"
+    echo ""
+    echo "options"
+    echo "-f (runs rubix on a bedpostx directory as an anisotropic filter, default off)"
+    echo "-n (number of fibres per HR voxel, default 2)"
+    echo "-p (number of orientation prior modes per LR voxel, default 4)"
+    echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
+    echo "-b (burnin period, default 5000)"
+    echo "-j (number of jumps, default 1250)"
+    echo "-s (sample every, default 25)"
+    echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
+    echo "-g (consider gradient nonlinearities, default off)"
+    echo ""
+    echo ""
+    echo "ADDITIONALLY: you can pass on rubix options onto directly rubix_parallel"
+    echo " For example:  eubix_parallel <subject directory> --fsumPrior --dPrior"
+    echo " Type 'rubix --help' for a list of available options "
     exit 1
+}
+
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
 }
 
 [ "$1" = "" ] && Usage
 
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
+echo subjectdir is $subjdir
 
-devel_dir=/home/stam/fsldev/fdt  # Where the binary is 
-script_dir=/home/stam/Rubix_src # Where the scripts are
-
-#option arguments
+#parse option arguments
+nfibres=2
+nmodes=4
+fudge=1
 burnin=5000
+njumps=1250
+sampleevery=25
+model=1
+gflag=0
+filterflag=0
 
-dataLR=`${FSLDIR}/bin/imglob $1`; shift;  #Remove ending if exists
-maskLR=`${FSLDIR}/bin/imglob $1`; shift;
-bvecsLR=$1; shift;
-bvalsLR=$1; shift;
-dataHR=`${FSLDIR}/bin/imglob $1`; shift;
-bvecsHR=$1; shift;
-bvalsHR=$1; shift;
-out_dir=$1; shift;
-nfibres=$1; shift;
-nModes=$1; shift;
-modelnum=$1; shift;
-opts="$*";
+shift
+while [ ! -z "$1" ]
+do
+  case "$1" in
+      -f) filterflag=1;;
+      -n) nfibres=$2;shift;;
+      -p) nmodes=$2;shift;;
+      -w) fudge=$2;shift;;
+      -b) burnin=$2;shift;;
+      -j) njumps=$2;shift;;
+      -s) sampleevery=$2;shift;;
+      -model) model=$2;shift;;
+      -g) gflag=1;;
+      *) break;;
+  esac
+  shift
+done
+
+opts="--nf=$nfibres --nM=$nmodes --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
+defopts="--fsumPrior --dPrior"
+opts="$opts $defopts $*"
 
 #check that all required files exist
-
-if [ ! -e $bvecsLR ]; then
-	echo "bvecsLR not found"
+if [ ! -d ${subjdir} ]; then
+	echo "subject directory $1 not found"
 	exit 1
 fi
 
-if [ ! -e $bvalsLR ]; then
-	echo "$bvalsLR not found"
+if [ ${filterflag} -eq 1 ]; then
+    echo "Running RubiX in Filter Mode"
+  
+    if [ ! -e ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
 	exit 1
-fi
+    fi
 
-
-if [ ! -e $bvecsHR ]; then
-	echo "bvecsHR not found"
+    if [ ! -e ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
 	exit 1
-fi
+    fi
 
-if [ ! -e $bvalsHR ]; then
-	echo "$bvalsHR not found"
+    if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
 	exit 1
-fi
+    fi
 
 
-if [ `${FSLDIR}/bin/imtest $dataLR` -eq 0 ]; then
-	echo "dataLR not found"
+    if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
 	exit 1
-fi
+    fi
 
-if [ `${FSLDIR}/bin/imtest $dataHR` -eq 0 ]; then
-	echo "dataHR not found"
+    if [ ${gflag} -eq 1 ]; then
+	if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_dev` -eq 0 ]; then
+	    echo "${subjdir}/grad_dev not found"
+	    exit 1
+	fi
+    fi
+else
+    if [ ! -e ${subjdir}/bvecsLR ]; then
+	echo "${subjdir}/bvecsLR not found"
 	exit 1
-fi
-
-if [ `${FSLDIR}/bin/imtest $maskLR` -eq 0 ]; then
-	echo "brain maskLR not found"
+    fi
+    if [ ! -e ${subjdir}/bvalsLR ]; then
+	echo "${subjdir}/bvalsLR not found"
 	exit 1
+    fi
+    if [ ! -e ${subjdir}/bvecsHR ]; then
+	echo "${subjdir}/bvecsHR not found"
+	exit 1
+    fi
+    if [ ! -e ${subjdir}/bvalsHR ]; then
+	echo "${subjdir}/bvalsHR not found"
+	exit 1
+    fi
+    if [ `${FSLDIR}/bin/imtest ${subjdir}/dataLR` -eq 0 ]; then
+	echo "${subjdir}/dataLR not found"
+	exit 1
+    fi
+    if [ `${FSLDIR}/bin/imtest ${subjdir}/dataHR` -eq 0 ]; then
+	echo "${subjdir}/dataHR not found"
+	exit 1
+    fi
+    if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_maskLR` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_maskLR not found"
+	exit 1
+    fi
+    if [ ${gflag} -eq 1 ]; then
+	if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_devLR` -eq 0 ]; then
+	    echo "${subjdir}/grad_devLR not found"
+	    exit 1
+	fi
+	if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_devHR` -eq 0 ]; then
+	    echo "${subjdir}/grad_devHR not found"
+	    exit 1
+	fi
+    fi
 fi
+exit 1
+echo Making rubix directory structure
 
-
-mkdir -p $out_dir 
-mkdir -p $out_dir/diff_slices
-mkdir -p $out_dir/logs
-
+mkdir -p ${subjdir}.rubiX 
+mkdir -p ${subjdir}.rubiX/diff_slices
+mkdir -p ${subjdir}.rubiX/logs
 
 nslices=`$FSLDIR/bin/fslval $dataLR dim3`
 
 
 echo Queuing preprocessing stage
-preprocid=`$FSLDIR/bin/fsl_sub -T 60 -R 8000 -N rubix_pre -l $out_dir/logs  $script_dir/rubix_preproc.sh $dataLR $maskLR $dataHR $out_dir`
-
+preprocid=`$FSLDIR/bin/fsl_sub -T 60 -R 8000 -N rubix_pre -l ${subjdir}.rubiX/logs  $script_dir/rubix_preproc.sh ${subjdir} ${filterflag} ${gflag}`
 echo Queuing parallel processing stage
-[ -f $out_dir/commands.txt ] && rm $out_dir/commands.txt
+[ -f ${subjdir}.rubiX/commands.txt ] && rm ${subjdir}.rubiX/commands.txt
  slice=0
  while [ $slice -lt $nslices ]
  do
     slicezp=`$FSLDIR/bin/zeropad $slice 4`
-    echo "$devel_dir/rubix --dLR=${out_dir}/${dataLR}_slice_${slicezp} --mLR=${out_dir}/${maskLR}_slice_${slicezp} --rLR=$bvecsLR --bLR=$bvalsLR --dHR=${out_dir}/${dataHR}_newslice_${slicezp} --rHR=$bvecsHR --bHR=$bvalsHR --forcedir --nf=$nfibres --nM=$nModes --bi=$burnin --model=$modelnum --logdir=$out_dir/diff_slices/data_slice_$slicezp ${opts}" >> $out_dir/commands.txt
+    if [ ${gflag} -eq 1 ]; then
+	opts="$opts --gLR=${subjdir}.rubiX/grad_devLR_slice_${slicezp} --gHR=${subjdir}.rubiX/grad_devHR_newslice_${slicezp}"
+    fi    
+    echo "$devel_dir/rubix --dLR=${subjdir}.rubiX/dataLR_slice_${slicezp} --mLR=${subjdir}.rubiX/nodif_brain_maskLR_slice_${slicezp} --rLR=${subjdir}.rubiX/bvecsLR --bLR=${subjdir}.rubiX/bvalsLR --dHR=${subjdir}.rubiX/dataHR_newslice_${slicezp} --rHR=${subjdir}.rubiX/bvecsHR --bHR=${subjdir}.rubiX/bvalsHR --forcedir --nf=$nfibres --nM=$nModes --bi=$burnin --model=$modelnum --logdir=${subjdir}.rubiX/diff_slices/data_slice_$slicezp ${opts}" >> ${subjdir}.rubiX/commands.txt
     slice=$(($slice + 1))
  done
     
- RubiXid=`${FSLDIR}/bin/fsl_sub -T 1400 -j $preprocid -l $out_dir/logs -N rubix -t $out_dir/commands.txt`
+ RubiXid=`${FSLDIR}/bin/fsl_sub -T 1400 -j $preprocid -l ${subjdir}.rubiX/logs -N rubix -t ${subjdir}.rubiX/commands.txt`
     
  echo Queuing post processing stage
- mergeid=`${FSLDIR}/bin/fsl_sub -T 60 -R 8000 -j $RubiXid -N rubix_post -l $out_dir/logs $script_dir/rubix_postproc.sh $out_dir $dataLR $maskLR $dataHR`
+ mergeid=`${FSLDIR}/bin/fsl_sub -T 60 -R 8000 -j $RubiXid -N rubix_post -l ${subjdir}.rubiX/logs $script_dir/rubix_postproc.sh ${subjdir} ${filterflag}`
