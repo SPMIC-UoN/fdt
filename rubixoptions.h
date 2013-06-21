@@ -54,6 +54,9 @@ namespace RUBIX{
     Option<bool> fsumPrior;
     Option<bool> dPrior;
     Option<bool> rician;
+    FmribOption<string> LRgrad_file;
+    FmribOption<string> HRgrad_file;
+
     void parse_command_line(int argc, char** argv,  Log& logger);
   
   private:
@@ -145,6 +148,12 @@ namespace RUBIX{
     	   false,no_argument),
    rician(string("--rician"),false,string("Use Rician Noise model (default is Gaussian)"),
     	   false,no_argument),
+   LRgrad_file(string("--gLR, --gradnonlinLR"), string("grad_devLR"),
+	     string("LR Gradient Nonlinearity Tensor"),
+	     false, requires_argument),  
+   HRgrad_file(string("--gHR, --gradnonlinHR"), string("grad_devHR"),
+	     string("HR Gradient Nonlinearity Tensor"),
+	     false, requires_argument),  
    options("RubiX v1.0", "rubix --help (for list of options)\n")
      {
        try {
@@ -175,6 +184,8 @@ namespace RUBIX{
        options.add(fsumPrior);
        options.add(dPrior);
        options.add(rician);
+       options.add(LRgrad_file);
+       options.add(HRgrad_file);
      }
      catch(X_OptionError& e) {
        options.usage();

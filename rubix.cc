@@ -394,32 +394,22 @@ void LRVoxelManager::initialise(){
   for (int n=0; n<m_HRvoxnumber.Nrows(); n++){
     if (opts.modelnum.value()==1){ //Model 1
 
-      PVM_single_c pvm(m_dataHR[n],m_bvecsHR,m_bvalsHR,opts.nfibres.value());
+      PVM_single_c pvm(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n],opts.nfibres.value());
       pvm.fit(); // this will give th,ph,f in the correct order
       
       pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph();
       pvmS0 = fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
       if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
-
-       // DTI dti1(m_dataHR[n],m_bvecsHR,m_bvalsHR);
-      //dti1.linfit();
-      //pvmS0=fabs(dti1.get_s0());
-
       m_LRv.set_HRparams(n,pvmd,pvmS0,pvmth,pvmph,pvmf);
     }
     else{  //Model 2
-      PVM_multi pvm(m_dataHR[n],m_bvecsHR,m_bvalsHR,opts.nfibres.value());
+      PVM_multi pvm(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n],opts.nfibres.value());
       pvm.fit();
       
       pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
       pvmS0 =fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
       if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
       if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
-
-      //   DTI dti1(m_dataHR[n],m_bvecsHR,m_bvalsHR);
-      //dti1.linfit();
-      //pvmS0=fabs(dti1.get_s0());
-
       m_LRv.set_HRparams(n,pvmd,pvmd_std,pvmS0,pvmth,pvmph,pvmf); 
     } 
    
@@ -558,6 +548,30 @@ volume<float> createHR_mask(const volume<float>& maskLR, const volume4D<float>& 
 }
 
 
+//Correct bvals/bvecs accounting for Gradient Nonlinearities
+//ColumnVector grad_nonlin has 9 entries, corresponding to the 3 components of each of the x,y and z gradient deviation
+void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVector& grad_nonlin, Matrix& bvals_c, Matrix& bvecs_c){
+  bvals_c=bvals; bvecs_c=bvecs;
+  Matrix L(3,3);  //gradient coil tensor
+  float mag;
+  L(1,1)=grad_nonlin(1);  L(1,2)=grad_nonlin(4);  L(1,3)=grad_nonlin(7);
+  L(2,1)=grad_nonlin(2);  L(2,2)=grad_nonlin(5);  L(2,3)=grad_nonlin(8);
+  L(3,1)=grad_nonlin(3);  L(3,2)=grad_nonlin(6);  L(3,3)=grad_nonlin(9);
+
+  IdentityMatrix Id(3); 
+  
+  //Correct each gradient
+  for (int l=1; l<=bvals.Ncols(); l++){
+    if (bvals(1,l)>0){ //do not correct b0s
+      bvecs_c.Column(l)=(Id+L)*bvecs.Column(l);
+      mag=sqrt(bvecs_c(1,l)*bvecs_c(1,l)+bvecs_c(2,l)*bvecs_c(2,l)+bvecs_c(3,l)*bvecs_c(3,l));
+      if (mag!=0)
+	bvecs_c.Column(l)=bvecs_c.Column(l)/mag;
+      bvals_c(1,l)=mag*mag*bvals(1,l); //mag^2 as b propto |G|^2
+    }
+  }
+}
+
 
 ////////////////////////////////////////////
 //       MAIN
@@ -624,32 +638,65 @@ int main(int argc, char *argv[])
     HRSamples HRsampl(datamHR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nfibres.value(), opts.rician.value(), opts.modelnum.value());
     LRSamples LRsampl(datamLR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nmodes.value(), opts.rician.value(),opts.fsumPrior.value(),opts.dPrior.value());
 
+    //Read Gradient Non_linearity Maps if provided
+    volume4D<float> LRgrad, HRgrad; Matrix LRgradm, HRgradm;
+    if (opts.LRgrad_file.set()){
+      read_volume4D(LRgrad,opts.LRgrad_file.value());
+      LRgradm=LRgrad.matrix(maskLR);
+      if (opts.HRgrad_file.set()){
+	read_volume4D(HRgrad,opts.HRgrad_file.value());
+	HRgradm=HRgrad.matrix(maskHR);
+      }
+      else{
+	cerr<<"HR grad_dev file should be provided as well!"<<endl;
+	return 1;
+      }
+    }
+    else{
+      if (opts.HRgrad_file.set()){
+	cerr<<"LR grad_dev file should be provided as well!"<<endl;
+	return 1;
+      }
+    }
+
     //dHR.push_back(datamHR.Column(1)); dHR.push_back(datamHR.Column(2));
     //dHR.push_back(datamHR.Column(3)); dHR.push_back(datamHR.Column(4));
     //HRvoxnum<<1<<2<<3<<4; HRweights<<0.25<<0.25<<0.25<<0.25;
     
     for(int vox=1;vox<=datamLR.Ncols();vox++){  //For each LR voxel
-      //  if (vox==19){  //vox==6
       ColumnVector dLR; Matrix HRindices;
-      dLR=datamLR.Column(vox);                  //Find the corresponding HR ones
-      HRindices=get_HRindices((int)matrix2volkeyLR(vox,1),(int)matrix2volkeyLR(vox,2),(int)matrix2volkeyLR(vox,3),(int)xratio,(int)yratio,(int)zratio);
-      //cout<<endl<<"S0LR: "<<dLR(1)<<endl<<endl; //Debugging code
-     
-      ColumnVector HRvoxnum(HRindices.Nrows()), HRweights(HRindices.Nrows()); 
-      vector<ColumnVector> dHR;
+      dLR=datamLR.Column(vox);                  
+      if (opts.LRgrad_file.set()){ //Correct the respective bvals/bvecs
+	  Matrix bvals_c, bvecs_c;
+	  correct_bvals_bvecs(bvalsLR,bvecsLR, LRgradm.Column(vox),bvals_c,bvecs_c); //correct for gradient nonlinearities
+	  bvalsLR=bvals_c; bvecsLR=bvecs_c;
+      }
       
-     for (int n=1; n<=HRindices.Nrows(); n++){
+      //Find the corresponding HR ones
+      HRindices=get_HRindices((int)matrix2volkeyLR(vox,1),(int)matrix2volkeyLR(vox,2),(int)matrix2volkeyLR(vox,3),(int)xratio,(int)yratio,(int)zratio);
+      ColumnVector HRvoxnum(HRindices.Nrows()), HRweights(HRindices.Nrows()); 
+      vector<ColumnVector> dHR; vector<Matrix> vbvalsHR; vector<Matrix> vbvecsHR;
+      
+      for (int n=1; n<=HRindices.Nrows(); n++){ //For each HR voxel
 	HRweights(n)=1.0/HRindices.Nrows();
 	HRvoxnum(n)=vol2matrixkeyHR((int)HRindices(n,1),(int)HRindices(n,2),(int)HRindices(n,3));
 	ColumnVector tmp_vec=datamHR.Column((int)HRvoxnum(n));
- 	//cout<<(int)HRindices(n,1)<<" "<<(int)HRindices(n,2)<<" "<<(int)HRindices(n,3)<<"  S0HR:"<<tmp_vec(1)<<endl;
-	dHR.push_back(datamHR.Column((int)HRvoxnum(n)));
-      }
+ 	dHR.push_back(datamHR.Column((int)HRvoxnum(n)));
+	if (!opts.HRgrad_file.set()){
+	  vbvalsHR.push_back(bvalsHR);
+	  vbvecsHR.push_back(bvecsHR);
+	}
+	else{ //Correct for each voxel the respective bvals/bvecs
+	  Matrix bvals_c, bvecs_c;
+	  correct_bvals_bvecs(bvalsHR,bvecsHR, HRgradm.Column((int)HRvoxnum(n)),bvals_c,bvecs_c); //correct for gradient nonlinearities
+	  vbvalsHR.push_back(bvals_c);
+	  vbvecsHR.push_back(bvecs_c);
+	}
+     }
       cout <<vox<<"/"<<datamLR.Ncols()<<endl;
-      LRVoxelManager  vm(HRsampl,LRsampl,vox,HRvoxnum, dLR,dHR, bvecsLR, bvalsLR, bvecsHR, bvalsHR, HRweights);
+      LRVoxelManager  vm(HRsampl,LRsampl,vox,HRvoxnum, dLR,dHR, bvecsLR, bvalsLR, vbvecsHR, vbvalsHR, HRweights);
       vm.initialise();
       vm.runmcmc();
-      //      } 
     }
     HRsampl.save(maskHR);
     LRsampl.save(maskLR);

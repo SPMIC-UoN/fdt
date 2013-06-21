@@ -545,9 +545,9 @@ namespace RUBIX{
     vector<ColumnVector> m_logdataHR; //Log of High-Res Data for all contained HR voxels (use it in Rician Energy)
 
     const ColumnVector& m_dataLR;   //Low-Res Data for the specific LR voxel 
-    const vector<ColumnVector>& m_dataHR; //High-Res Data for all contained HR voxels
-    const Matrix& m_bvecsHR;        //bvecs at High-Res   (3 x HR_NumPoints)
-    const Matrix& m_bvalsHR;        //bvalues at High-Res (1 x HR_NumPoints)
+    const vector<ColumnVector>& m_dataHR; //High-Res Data for all HRvoxels within a LRvoxel
+    const vector<Matrix>& m_bvecsHR; //bvecs at High-Res   (HRvoxels within a LRvoxel x 3 x HR_NumPoints)
+    const vector<Matrix>& m_bvalsHR; //bvalues at High-Res (HRvoxels within a LRvoxel x 3 x HR_NumPoints)
     const Matrix& m_bvecsLR;        //bvecs at Low-Res    (3 x LR_NumPoints)
     const Matrix& m_bvalsLR;        //bvalues at Low-Res  (1 x HR_NumPoints)
     const int m_modelnum;           //1 for single-shell, 2 for multi-shell model
@@ -564,7 +564,7 @@ namespace RUBIX{
  
   public:
     //Constructor
-    LRvoxel(const Matrix& bvecsHR, const Matrix& bHR, 
+    LRvoxel(const vector<Matrix>& bvecsHR, const vector<Matrix>& bHR, 
 	    const Matrix& bvecsLR, const Matrix& bLR, 
 	    const ColumnVector& dataLR, const vector<ColumnVector>& dataHR, const int N, const int Nmodes, const ColumnVector& HRweights, const int modelnum=1, const float ardfudge=1, const bool allard=false, const bool Noard=false, const bool kappa_ard=false, const bool fsumPrior_ON=false, const bool dPrior_ON=false, const bool rician=false):
       m_dataLR(dataLR), m_dataHR(dataHR),m_bvecsHR(bvecsHR), m_bvalsHR(bHR), m_bvecsLR(bvecsLR), m_bvalsLR(bLR),
@@ -589,8 +589,8 @@ namespace RUBIX{
       }
       m_Orient_hyp_prior.ReSize(m_Nmodes,5);
 
-      for (unsigned int m=1; m<=m_dataHR.size(); m++){ //Add HRvoxel Objects
-      	HRvoxel HRv(m_bvecsHR, m_bvalsHR, m_bvecsLR, m_bvalsLR, m_Orient_hyp_prior, m_mean_d, m_stdev_d, m_mean_fsum, m_stdev_fsum, m_numfibres, m_modelnum, m_ardfudge, m_fsumPrior_ON, m_dPrior_ON, m_rician);
+      for (unsigned int n=0; n<m_dataHR.size(); n++){ //Add HRvoxel Objects
+      	HRvoxel HRv(m_bvecsHR[n], m_bvalsHR[n], m_bvecsLR, m_bvalsLR, m_Orient_hyp_prior, m_mean_d, m_stdev_d, m_mean_fsum, m_stdev_fsum, m_numfibres, m_modelnum, m_ardfudge, m_fsumPrior_ON, m_dPrior_ON, m_rician);
       	
 	m_HRvoxels.push_back(HRv);
       }

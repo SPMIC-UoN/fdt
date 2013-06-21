@@ -1030,7 +1030,7 @@ void LRvoxel::compute_prior(){
 void LRvoxel::compute_likelihood(){
   ColumnVector SLRpred, SHRpred, Diff;
   SLRpred.ReSize(m_bvecsLR.Ncols()); 
-  SHRpred.ReSize(m_bvecsHR.Ncols()); SHRpred=0;
+  SHRpred.ReSize(m_bvecsHR[0].Ncols()); SHRpred=0;
   float likLR, likHR;
 
   m_old_likelihood_en=m_likelihood_en;
@@ -1051,7 +1051,7 @@ void LRvoxel::compute_likelihood(){
       SHRpred=m_dataHR[m]-SHRpred;
       likHR+=log(0.5*SHRpred.SumSquare());
     }
-    likHR*=0.5*m_bvecsHR.Ncols();      
+    likHR*=0.5*m_bvecsHR[0].Ncols();      
 
     m_likelihood_en=likLR+likHR;
   }
@@ -1070,8 +1070,8 @@ void LRvoxel::compute_likelihood(){
     for (unsigned int m=0; m<m_dataHR.size(); m++){    
       float m_tauHR=m_HRvoxels[m].get_tau();
       SHRpred=m_HRvoxels[m].getSignalHR();
-      likHR+=m_bvecsHR.Ncols()*log(m_tauHR);
-      for (int k=1; k<=m_bvecsHR.Ncols(); k++)
+      likHR+=m_bvecsHR[0].Ncols()*log(m_tauHR);
+      for (int k=1; k<=m_bvecsHR[0].Ncols(); k++)
 	likHR+=m_logdataHR[m](k)-0.5*m_tauHR*(m_dataHR[m](k)*m_dataHR[m](k)+SHRpred(k)*SHRpred(k))+logIo(m_tauHR*m_dataHR[m](k)*SHRpred(k));
     }
     m_likelihood_en=likLR-likHR;
