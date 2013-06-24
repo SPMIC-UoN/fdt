@@ -16,11 +16,11 @@ if [ ${filterflag} -eq 1 ]; then
     HighRes=`fslval ${subjdir}/data pixdim1`
     LowRes=`echo "${HighRes} * 2" | bc -l`
     echo "Create Downsampled version of data at ${LowRes} mm isotropic"
-    flirt -in ${subjdir}/nodif_brain_mask -ref ${subjdir}/nodif_brain_mask -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/nodif_brain_maskLR
-    flirt -in ${subjdir}/data -ref ${subjdir}/data -applyisoxfm ${LowRes} -interp sinc -out ${out_dir}/dataLR
+    ${FSLDIR}/bin/flirt -in ${subjdir}/nodif_brain_mask -ref ${subjdir}/nodif_brain_mask -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/nodif_brain_maskLR
+    ${FSLDIR}/bin/flirt -in ${subjdir}/data -ref ${subjdir}/data -applyisoxfm ${LowRes} -interp sinc -out ${out_dir}/dataLR
     if [ ${gflag} -eq 1 ]; then
 	echo "Create Downsampled version of grad_dev at ${LowRes} mm isotropic"
-	flirt -in ${subjdir}/grad_dev -ref ${subjdir}/grad_dev -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/grad_devLR
+	${FSLDIR}/bin/flirt -in ${subjdir}/grad_dev -ref ${subjdir}/grad_dev -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/grad_devLR
 	${FSLDIR}/bin/fslslice $subjdir/grad_dev $out_dir/grad_devHR
 	${FSLDIR}/bin/fslslice ${out_dir}/grad_devLR $out_dir/grad_devLR
     fi
@@ -63,9 +63,9 @@ do
 	count=$(($count - 1))
 	arr_cnt=$(($arr_cnt + 1))
     done
-    fslmerge -z ${out_dir}/dataHR_newslice_${slicezp} `echo ${filenames[*]}` 
+    ${FSLDIR}/bin/fslmerge -z ${out_dir}/dataHR_newslice_${slicezp} `echo ${filenames[*]}` 
     if [ ${gflag} -eq 1 ]; then
-	fslmerge -z ${out_dir}/grad_devHR_newslice_${slicezp} `echo ${gfilenames[*]}` 
+	${FSLDIR}/bin/fslmerge -z ${out_dir}/grad_devHR_newslice_${slicezp} `echo ${gfilenames[*]}` 
     fi
     slice=$(($slice + 1))
 done
