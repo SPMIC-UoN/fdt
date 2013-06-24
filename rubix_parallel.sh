@@ -179,7 +179,7 @@ else
 	fi
     fi
 fi
-exit 1
+
 echo Making rubix directory structure
 
 mkdir -p ${subjdir}.rubiX 
@@ -200,7 +200,7 @@ echo Queuing parallel processing stage
     if [ ${gflag} -eq 1 ]; then
 	opts="$opts --gLR=${subjdir}.rubiX/grad_devLR_slice_${slicezp} --gHR=${subjdir}.rubiX/grad_devHR_newslice_${slicezp}"
     fi    
-    echo "$devel_dir/rubix --dLR=${subjdir}.rubiX/dataLR_slice_${slicezp} --mLR=${subjdir}.rubiX/nodif_brain_maskLR_slice_${slicezp} --rLR=${subjdir}.rubiX/bvecsLR --bLR=${subjdir}.rubiX/bvalsLR --dHR=${subjdir}.rubiX/dataHR_newslice_${slicezp} --rHR=${subjdir}.rubiX/bvecsHR --bHR=${subjdir}.rubiX/bvalsHR --forcedir --nf=$nfibres --nM=$nModes --bi=$burnin --model=$modelnum --logdir=${subjdir}.rubiX/diff_slices/data_slice_$slicezp ${opts}" >> ${subjdir}.rubiX/commands.txt
+    echo "$devel_dir/rubix --dLR=${subjdir}.rubiX/dataLR_slice_${slicezp} --mLR=${subjdir}.rubiX/nodif_brain_maskLR_slice_${slicezp} --rLR=${subjdir}.rubiX/bvecsLR --bLR=${subjdir}.rubiX/bvalsLR --dHR=${subjdir}.rubiX/dataHR_newslice_${slicezp} --rHR=${subjdir}.rubiX/bvecsHR --bHR=${subjdir}.rubiX/bvalsHR --forcedir --nf=$nfibres --nM=$nmodes --bi=$burnin --model=$model --logdir=${subjdir}.rubiX/diff_slices/data_slice_$slicezp ${opts}" >> ${subjdir}.rubiX/commands.txt
     slice=$(($slice + 1))
  done
     
