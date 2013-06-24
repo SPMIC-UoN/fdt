@@ -18,6 +18,8 @@ if [ ${filterflag} -eq 1 ]; then
     echo "Create Downsampled version of data at ${LowRes} mm isotropic"
     ${FSLDIR}/bin/flirt -in ${subjdir}/nodif_brain_mask -ref ${subjdir}/nodif_brain_mask -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/nodif_brain_maskLR
     ${FSLDIR}/bin/flirt -in ${subjdir}/data -ref ${subjdir}/data -applyisoxfm ${LowRes} -interp sinc -out ${out_dir}/dataLR
+    ${FSLDIR}/bin/fslslice ${out_dir}/dataLR ${out_dir}/dataLR
+    ${FSLDIR}/bin/fslslice ${out_dir}/$maskLR ${out_dir}/$maskLR
     if [ ${gflag} -eq 1 ]; then
 	echo "Create Downsampled version of grad_dev at ${LowRes} mm isotropic"
 	${FSLDIR}/bin/flirt -in ${subjdir}/grad_dev -ref ${subjdir}/grad_dev -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/grad_devLR
