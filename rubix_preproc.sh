@@ -12,7 +12,7 @@ if [ ${filterflag} -eq 1 ]; then
     cp ${subjdir}/bvecs $out_dir/bvecsLR
     cp ${subjdir}/bvecs $out_dir/bvecsHR
     cp ${subjdir}/bvals $out_dir/bvalsHR
-    ${FSLDIR}/bin/fslslice $subjdir/data $out_dir/$dataHR
+    ${FSLDIR}/bin/fslslice $subjdir/data $out_dir/dataHR
     HighRes=`fslval ${subjdir}/data pixdim1`
     LowRes=`echo "${HighRes} * 2" | bc -l`
     echo "Create Downsampled version of data at ${LowRes} mm isotropic"
