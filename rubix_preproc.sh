@@ -13,7 +13,7 @@ if [ ${filterflag} -eq 1 ]; then
     cp ${subjdir}/bvecs $out_dir/bvecsHR
     cp ${subjdir}/bvals $out_dir/bvalsHR
     ${FSLDIR}/bin/fslslice $subjdir/data $out_dir/dataHR
-    HighRes=`fslval ${subjdir}/data pixdim1`
+    HighRes=`${FSLDIR}/bin/fslval ${subjdir}/data pixdim1`
     LowRes=`echo "${HighRes} * 2" | bc -l`
     echo "Create Downsampled version of data at ${LowRes} mm isotropic"
     ${FSLDIR}/bin/flirt -in ${subjdir}/nodif_brain_mask -ref ${subjdir}/nodif_brain_mask -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/nodif_brain_maskLR
