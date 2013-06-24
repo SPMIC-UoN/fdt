@@ -186,8 +186,13 @@ mkdir -p ${subjdir}.rubiX
 mkdir -p ${subjdir}.rubiX/diff_slices
 mkdir -p ${subjdir}.rubiX/logs
 
-nslices=`$FSLDIR/bin/fslval $dataLR dim3`
-
+nslices=0
+if [ ${filterflag} -eq 1 ]; then
+    nslicesHR=`$FSLDIR/bin/fslval ${subjdir}/data dim3`
+    nslices=$((${nslicesHR}/2))
+else
+    nslices=`$FSLDIR/bin/fslval ${subjdir}/dataLR dim3`
+fi
 
 echo Queuing preprocessing stage
 preprocid=`$FSLDIR/bin/fsl_sub -T 60 -R 8000 -N rubix_pre -l ${subjdir}.rubiX/logs  $script_dir/rubix_preproc.sh ${subjdir} ${filterflag} ${gflag}`
