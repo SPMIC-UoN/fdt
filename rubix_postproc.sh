@@ -17,9 +17,21 @@ do
     ${FSLDIR}/bin/fslmerge -z ${out_dir}/merged_f${fib}samples  `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/f${fib}samples*`
     ${FSLDIR}/bin/fslmaths ${out_dir}/merged_f${fib}samples -Tmean ${out_dir}/mean_f${fib}samples
     ${FSLDIR}/bin/make_dyadic_vectors ${out_dir}/merged_th${fib}samples ${out_dir}/merged_ph${fib}samples ${out_dir}/mean_f${fib}samples ${out_dir}/dyads${fib} 95
+    if [ $fib -ge 2 ];then
+	${FSLDIR}/bin/maskdyads ${out_dir}/dyads${fib} ${out_dir}/mean_f${fib}samples
+    fi
     fib=$(($fib + 1))
 done
 
+if [ `${FSLDIR}/bin/imtest ${out_dir}/mean_f1samples` -eq 1 ];then
+    ${FSLDIR}/bin/fslmaths ${out_dir}/mean_f1samples -mul 0 ${out_dir}/mean_fsumsamples
+    fib=1
+    while [ $fib -le $numfib ]
+    do
+	${FSLDIR}/bin/fslmaths ${out_dir}/mean_fsumsamples -add ${out_dir}/mean_f${fib}samples ${out_dir}/mean_fsumsamples
+	fib=$(($fib + 1))
+    done	
+fi
 
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_dsamples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_dsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_dsamples*`
@@ -81,17 +93,17 @@ done
 
 echo Removing intermediate files
 
-if [ `imtest ${out_dir}/merged_th1samples` -eq 1 ];then
-  if [ `imtest ${out_dir}/merged_ph1samples` -eq 1 ];then
-    if [ `imtest ${out_dir}/merged_f1samples` -eq 1 ];then
+if [ `${FSLDIR}/bin/imtest ${out_dir}/merged_th1samples` -eq 1 ];then
+  if [ `${FSLDIR}/bin/imtest ${out_dir}/merged_ph1samples` -eq 1 ];then
+    if [ `${FSLDIR}/bin/imtest ${out_dir}/merged_f1samples` -eq 1 ];then
       rm -rf ${out_dir}/diff_slices
       rm -f ${out_dir}/dataLR_slice_*
       rm -f ${out_dir}/dataHR_newslice_* 
-      rm -f ${out_dir}/maskLR_slice_*
-      if [ `imtest ${out_dir}/grad_devLR_slice_0000` -eq 1 ];then
+       rm -f ${out_dir}/nodif_brain_maskLR_slice_*
+      if [ `${FSLDIR}/bin/imtest ${out_dir}/grad_devLR_slice_0000` -eq 1 ];then
 	  rm -f ${out_dir}/grad_devLR_slice_*
       fi	  
-      if [ `imtest ${out_dir}/grad_devHR_newslice_0000` -eq 1 ];then
+      if [ `${FSLDIR}/bin/imtest ${out_dir}/grad_devHR_newslice_0000` -eq 1 ];then
 	  rm -f ${out_dir}/grad_devHR_newslice_*
       fi	  
     fi
