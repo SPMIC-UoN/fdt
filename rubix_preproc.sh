@@ -33,9 +33,9 @@ else
     cp ${subjdir}/bvecsLR $out_dir/bvecsLR
     cp ${subjdir}/bvecsHR $out_dir/bvecsHR
     cp ${subjdir}/bvalsHR $out_dir/bvalsHR
-    ${FSLDIR}/bin/fslslice $subjdir/dataLR $out_dir/$dataLR
+    ${FSLDIR}/bin/fslslice $subjdir/dataLR $out_dir/dataLR
     ${FSLDIR}/bin/fslslice $subjdir/$maskLR $out_dir/$maskLR
-    ${FSLDIR}/bin/fslslice $subjdir/dataHR $out_dir/$dataHR
+    ${FSLDIR}/bin/fslslice $subjdir/dataHR $out_dir/dataHR
     if [ ${gflag} -eq 1 ]; then
 	${FSLDIR}/bin/fslslice $subjdir/grad_devLR $out_dir/grad_devLR
 	${FSLDIR}/bin/fslslice $subjdir/grad_devHR $out_dir/grad_devHR
