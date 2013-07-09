@@ -1,16 +1,8 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
+#   Copyright (C) 2004,2013 University of Oxford
 #
 #   SHCOPYRIGHT
-
-if [ "x$SGE_ROOT" = "x" ] ; then
-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-	. /usr/local/share/sge/default/common/settings.sh
-    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
-	. /usr/local/sge/default/common/settings.sh
-    fi
-fi
 
 Usage() {
     echo ""
@@ -27,6 +19,7 @@ Usage() {
     echo "-s (sample every, default 25)"
     echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
 #   echo "-g (consider gradient nonlinearities, default off)"
+	echo "-c do not use CUDA capable hardware/queue (if found)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -53,6 +46,7 @@ make_absolute(){
 
 [ "$1" = "" ] && Usage
 
+myopts="$@"
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
@@ -66,6 +60,7 @@ njumps=1250
 sampleevery=25
 model=1
 gflag=0
+nocuda=0
 
 shift
 while [ ! -z "$1" ]
@@ -77,7 +72,8 @@ do
       -j) njumps=$2;shift;;
       -s) sampleevery=$2;shift;;
       -model) model=$2;shift;;
-      -g) gflag=1;; 
+      -g) gflag=1;;
+      -c) nocuda=1;;
       *) break;;
   esac
   shift
@@ -85,6 +81,17 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $*"
+if [ -n "$SGE_ROOT" ]; then
+	# Look for an SGE queue
+	if [ -n $FSLGECUDAQ -a $nocuda -eq 0 ]; then
+		# Test that the queue exists
+		qconf -sq $FSLGECUDAQ 2>&1 >/dev/null
+		if [ $? -eq 0 ]; then
+			# CUDA queue exists
+			exec $0_gpu $myopts
+		fi
+	fi
+fi
 
 
 #check that all required files exist

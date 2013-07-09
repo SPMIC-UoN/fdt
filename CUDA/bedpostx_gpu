@@ -13,6 +13,7 @@ if [ "x$SGE_ROOT" = "x" ] ; then
 	. /usr/local/sge/default/common/settings.sh
     fi
 fi
+>>>>>>> 1.10
 
 Usage() {
     echo ""
@@ -64,7 +65,7 @@ subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 echo subjectdir is $subjdir
 
 #parse option arguments
-queue="-q cuda.q"
+queue="-q $FSLGECUDAQ"
 njobs=1
 nfibres=2
 fudge=1
