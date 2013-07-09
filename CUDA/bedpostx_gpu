@@ -6,15 +6,6 @@
 
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib
 
-if [ "x$SGE_ROOT" = "x" ] ; then
-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-	. /usr/local/share/sge/default/common/settings.sh
-    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
-	. /usr/local/sge/default/common/settings.sh
-    fi
-fi
->>>>>>> 1.10
-
 Usage() {
     echo ""
     echo "Usage: bedpostx <subject directory> [options]"
