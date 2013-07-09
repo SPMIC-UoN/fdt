@@ -4,7 +4,7 @@
 #
 #   SHCOPYRIGHT
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDEVDIR}/lib
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib
 
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
@@ -230,7 +230,7 @@ do
 	else
 	    gopts=$opts
 	fi    
-	echo "${FSLDEVDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
+	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs > $subjdir.bedpostX/logs/log$partzp  && echo Done" >> ${subjdir}.bedpostX/commands.txt
     
     	part=$(($part + 1))
 done
@@ -238,7 +238,7 @@ done
 bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx_gpu -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-mergeid=`${FSLDIR}/bin/fsl_sub $queue -j $bedpostid -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDEVDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
+mergeid=`${FSLDIR}/bin/fsl_sub $queue -j $bedpostid -m ase -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
 
 [ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 if [ "x$SGE_ROOT" != "x" ]; then
@@ -248,25 +248,56 @@ if [ "x$SGE_ROOT" != "x" ]; then
 #!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
-while [ \$finished -eq 0 ] ; do
-    nfin=0
-    part=0
-    while [ "\$part" -le $njobs ];do
-        partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
-        if [ -f ${subjdir}.bedpostX/diff_parts/data_part_\$partzp/mean_S0samplesJ ];then
-          nfin=\$((\$nfin + 1))
-        fi
-        part=\$((\$part + 1))
-    done
-    echo "\$nfin parts processed of "$njobs
+if [ $njobs -eq 1 ]; then
+	nsubparts=\$(($nvox/12800))
+	if [ \$nsubparts%12800 != 0 ];then 
+		nsubparts=\$((\$nsubparts + 1)) 
+	fi
+	last_part=\$(($nvox-(((\$nsubparts-1))*12800)))
+	if [ \$last_part -lt 6400 ];then 
+		nsubparts=\$((\$nsubparts - 1)) 
+	fi
+	while [ \$finished -eq 0 ] ; do
+           nfin=0
+           subpart=0
+           while [ "\$subpart" -le \$nsubparts ];do
+              partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
+              if [ -f ${subjdir}.bedpostX/diff_parts/data_part_0000/mean_S0samples_\$subpart ];then
+                 nfin=\$((\$nfin + 1))
+              fi
+              subpart=\$((\$subpart + 1))
+           done
+           echo "\$nfin parts processed of "\$nsubparts
 
-    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
-        finished=1
-        echo "All parts processed"
-    fi
+           if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+              finished=1
+	      echo "All parts processed"
+           fi
 
-    sleep 60;
-done
+	   sleep 60;
+         done
+else
+	while [ \$finished -eq 0 ] ; do
+	    nfin=0
+	    part=0
+	    while [ "\$part" -le $njobs ];do
+		partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
+		if [ -f ${subjdir}.bedpostX/diff_parts/data_part_\$partzp/mean_S0samplesJ ];then
+		  nfin=\$((\$nfin + 1))
+		fi
+		part=\$((\$part + 1))
+	    done
+	    echo "\$nfin parts processed of "$njobs
+
+	    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+		finished=1
+		echo "All parts processed"
+	    fi
+
+	    sleep 60;
+	done
+fi
+
 EOM
     chmod +x ${subjdir}.bedpostX/monitor
 
