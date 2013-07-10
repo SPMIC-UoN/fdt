@@ -88,7 +88,9 @@ if [ -n "$SGE_ROOT" ]; then
 		qconf -sq $FSLGECUDAQ 2>&1 >/dev/null
 		if [ $? -eq 0 ]; then
 			# CUDA queue exists
-			exec $0_gpu $myopts
+			if [ -x $0_gpu ]; then
+				exec $0_gpu $myopts
+			fi
 		fi
 	fi
 fi
