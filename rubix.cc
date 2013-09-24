@@ -532,9 +532,9 @@ volume<float> createHR_mask(const volume<float>& maskLR, const volume4D<float>& 
 
   Matrix temp_indices;
   maskHR=0;
-  float xratio=maskLR.xdim()/dataHR.xdim();
-  float yratio=maskLR.ydim()/dataHR.ydim();
-  float zratio=maskLR.zdim()/dataHR.zdim();
+  float xratio=round(maskLR.xdim()/dataHR.xdim());
+  float yratio=round(maskLR.ydim()/dataHR.ydim());
+  float zratio=round(maskLR.zdim()/dataHR.zdim());
 
   for (int i=0; i<maskLR.zsize(); i++)
     for (int j=0; j<maskLR.ysize(); j++)
@@ -631,9 +631,9 @@ int main(int argc, char *argv[])
     matrix2volkeyHR=dataHR.matrix2volkey(maskHR);
     vol2matrixkeyHR=dataHR.vol2matrixkey(maskHR);
  
-    float xratio=maskLR.xdim()/maskHR.xdim();
-    float yratio=maskLR.ydim()/maskHR.ydim();
-    float zratio=maskLR.zdim()/maskHR.zdim();
+    float xratio=round(maskLR.xdim()/maskHR.xdim());
+    float yratio=round(maskLR.ydim()/maskHR.ydim());
+    float zratio=round(maskLR.zdim()/maskHR.zdim());
 
     HRSamples HRsampl(datamHR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nfibres.value(), opts.rician.value(), opts.modelnum.value());
     LRSamples LRsampl(datamLR.Ncols(), opts.njumps.value(), opts.sampleevery.value(), opts.nmodes.value(), opts.rician.value(),opts.fsumPrior.value(),opts.dPrior.value());
