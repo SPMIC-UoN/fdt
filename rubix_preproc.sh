@@ -1,5 +1,12 @@
 #!/bin/sh
 
+round()
+#first parameter: float to round
+#second parameter: number of decimals
+{
+echo $(printf %.$2f $(echo "scale=$2;(((10^$2)*$1)+0.5)/(10^$2)" | bc))
+};
+
 subjdir=$1
 filterflag=$2
 gflag=$3
@@ -14,6 +21,7 @@ if [ ${filterflag} -eq 1 ]; then
     cp ${subjdir}/bvals $out_dir/bvalsHR
     ${FSLDIR}/bin/fslslice $subjdir/data $out_dir/dataHR
     HighRes=`${FSLDIR}/bin/fslval ${subjdir}/data pixdim1`
+    HighRes=`echo $(round $HighRes 2)`
     LowRes=`echo "${HighRes} * 2" | bc -l`
     echo "Create Downsampled version of data at ${LowRes} mm isotropic"
     ${FSLDIR}/bin/flirt -in ${subjdir}/nodif_brain_mask -ref ${subjdir}/nodif_brain_mask -applyisoxfm ${LowRes} -interp nearestneighbour -out ${out_dir}/nodif_brain_maskLR
@@ -45,7 +53,9 @@ else
 fi
 
 pixdim3LR=`$FSLDIR/bin/fslval ${dataLRname} pixdim3`
+pixdim3LR=`echo $(round $pixdim3LR 2)`
 pixdim3HR=`$FSLDIR/bin/fslval ${dataHRname} pixdim3`
+pixdim3HR=`echo $(round $pixdim3HR 2)`
 nslicesLR=`$FSLDIR/bin/fslval ${dataLRname} dim3`
 nslicesHR=`$FSLDIR/bin/fslval ${dataHRname} dim3`
 zratio=`echo "scale=0; $pixdim3LR / $pixdim3HR" | bc -l`
