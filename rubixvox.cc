@@ -533,12 +533,14 @@ void HRvoxel::restore_prior(){
 void HRvoxel::update_proposals(){
   m_d_prop*=sqrt(float(m_d_acc+1)/float(m_d_rej+1));
   m_d_prop=min(m_d_prop,maxfloat);
-  m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
-  m_S0_prop=min(m_S0_prop,maxfloat);
   m_d_acc=0; 
   m_d_rej=0;
-  m_S0_acc=0; 
-  m_S0_rej=0;
+  if (!m_noS0jump){
+    m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
+    m_S0_prop=min(m_S0_prop,maxfloat);
+    m_S0_acc=0; 
+    m_S0_rej=0;
+  }
   if (m_rician){
     m_tau_prop*=sqrt(float(m_tau_acc+1)/float(m_tau_rej+1));
     m_tau_prop=min(m_tau_prop,maxfloat);
@@ -1111,10 +1113,11 @@ void LRvoxel::update_proposals(){
   for(unsigned int n=0; n<m_dataHR.size(); n++)
     m_HRvoxels[n].update_proposals();
 
-  m_S0LR_prop*=sqrt(float(m_S0LR_acc+1)/float(m_S0LR_rej+1));
-  m_S0LR_prop=min(m_S0LR_prop,maxfloat);
-  m_S0LR_acc=0; m_S0LR_rej=0;
-
+  if (!m_noS0jump){
+    m_S0LR_prop*=sqrt(float(m_S0LR_acc+1)/float(m_S0LR_rej+1));
+    m_S0LR_prop=min(m_S0LR_prop,maxfloat);
+    m_S0LR_acc=0; m_S0LR_rej=0;
+  }
   if (m_dPrior_ON){
     m_mean_d_prop*=sqrt(float(m_mean_d_acc+1)/float(m_mean_d_rej+1));
     m_mean_d_prop=min(m_mean_d_prop,maxfloat);
@@ -1148,21 +1151,23 @@ void LRvoxel::jump(){
 
   //Jump LRvoxel parameters first
  
-  if(!propose_S0LR()){    //Try S0LR 
-    compute_prior();
-    compute_likelihood();
-    compute_posterior();
-    if(test_energy()){
-      accept_S0LR();
+  if (!m_noS0jump){
+    if(!propose_S0LR()){    //Try S0LR 
+      compute_prior();
+      compute_likelihood();
+      compute_posterior();
+      if(test_energy()){
+	accept_S0LR();
+      }
+      else{
+	restore_energies();
+	reject_S0LR();
+      }
     }
-    else{
-      restore_energies();
+    else 
       reject_S0LR();
-    }
   }
-  else 
-    reject_S0LR();
-  
+
   if (m_dPrior_ON){
     if(!propose_meand()){    //Try mean_d 
       for (unsigned int n=0; n<m_dataHR.size(); n++) //update nuisance_prior for each HR voxel
@@ -1378,23 +1383,25 @@ void LRvoxel::jump(){
 	m_HRvoxels[n].reject_d_std();
     }
 
-     if(!m_HRvoxels[n].propose_S0()){    //Try S0
-      m_HRvoxels[n].compute_prior();
-      m_HRvoxels[n].compute_signal();
-      compute_prior();
-      compute_likelihood();
-      compute_posterior();
-      if(test_energy())
-	m_HRvoxels[n].accept_S0();
-      else{
-	restore_energies();
-	m_HRvoxels[n].restore_prior_totsignal();
-	m_HRvoxels[n].reject_S0();
+    if (!m_noS0jump){
+      if(!m_HRvoxels[n].propose_S0()){    //Try S0
+	m_HRvoxels[n].compute_prior();
+	m_HRvoxels[n].compute_signal();
+	compute_prior();
+	compute_likelihood();
+	compute_posterior();
+	if(test_energy())
+	  m_HRvoxels[n].accept_S0();
+	else{
+	  restore_energies();
+	  m_HRvoxels[n].restore_prior_totsignal();
+	  m_HRvoxels[n].reject_S0();
+	}
       }
+      else
+	m_HRvoxels[n].reject_S0();
     }
-    else
-      m_HRvoxels[n].reject_S0();
-      
+
     if (m_rician){
       if(!m_HRvoxels[n].propose_tau()){    //Try tau_HR
 	m_HRvoxels[n].compute_prior();

@@ -54,8 +54,9 @@ namespace RUBIX{
     Option<bool> fsumPrior;
     Option<bool> dPrior;
     Option<bool> rician;
-    FmribOption<string> LRgrad_file;
-    FmribOption<string> HRgrad_file;
+    Option<bool> noS0jump;
+    Option<string> LRgrad_file;
+    Option<string> HRgrad_file;
 
     void parse_command_line(int argc, char** argv,  Log& logger);
   
@@ -148,6 +149,8 @@ namespace RUBIX{
     	   false,no_argument),
    rician(string("--rician"),false,string("Use Rician Noise model (default is Gaussian)"),
     	   false,no_argument),
+   noS0jump(string("--noS0jump"),false,string("Do not jump S0 parameters and keep them to their ML estimates (default: off)"),
+    	   false,no_argument),
    LRgrad_file(string("--gLR, --gradnonlinLR"), string("grad_devLR"),
 	     string("LR Gradient Nonlinearity Tensor"),
 	     false, requires_argument),  
@@ -184,6 +187,7 @@ namespace RUBIX{
        options.add(fsumPrior);
        options.add(dPrior);
        options.add(rician);
+       options.add(noS0jump);
        options.add(LRgrad_file);
        options.add(HRgrad_file);
      }
