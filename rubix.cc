@@ -400,6 +400,10 @@ void LRVoxelManager::initialise(){
       pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph();
       pvmS0 = fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
       if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
+      if (opts.noS0jump.value()){
+	DTI dti2(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n]); dti2.linfit();
+	pvmS0 =fabs(dti2.get_s0());
+      }  
       m_LRv.set_HRparams(n,pvmd,pvmS0,pvmth,pvmph,pvmf);
     }
     else{  //Model 2
@@ -410,9 +414,14 @@ void LRVoxelManager::initialise(){
       pvmS0 =fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
       if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
       if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
+      
+      if (opts.noS0jump.value()){
+	DTI dti2(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n]); dti2.linfit();
+	pvmS0 =fabs(dti2.get_s0());
+      }  
       m_LRv.set_HRparams(n,pvmd,pvmd_std,pvmS0,pvmth,pvmph,pvmf); 
     } 
-   
+    
     if (opts.rician.value()){  //If using Rician Energy, initialize tau, using the variance of the initial fit residuals
       ColumnVector residuals;
       residuals=m_dataHR[n]-predicted_signal;
@@ -448,11 +457,15 @@ void LRVoxelManager::initialise(){
   }
 
   //Initialise the rest LR params
-  //DTI dti2(m_dataLR,m_bvecsLR,m_bvalsLR);
-  //dti2.linfit();
   PVM_single_c pvm3(m_dataLR,m_bvecsLR,m_bvalsLR,1);
   pvm3.fit();  
   m_LRv.set_S0LR(fabs(pvm3.get_s0()));
+    
+  if (opts.noS0jump.value()){
+    DTI dti3(m_dataLR,m_bvecsLR,m_bvalsLR); dti3.linfit();
+    pvmS0 =fabs(dti3.get_s0());
+    m_LRv.set_S0LR(fabs(dti3.get_s0()));
+  }    
     
   if (opts.rician.value()){  //If using Rician Energy, initialize tau, using the variance of the initial fit residuals
     ColumnVector residuals;
