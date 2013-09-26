@@ -2,7 +2,7 @@ include $(FSLCONFDIR)/default.mk
 
 ifeq ($(COMPILE_GPU), 1)
 	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu
-	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_multigpu_LSF CUDA/bedpostx_postproc_gpu.sh
+	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
 endif
 
 PROJNAME = fdt
