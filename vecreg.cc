@@ -497,7 +497,6 @@ int do_vecreg(){
   volume4D<float> ovol;
   ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),ivol.tsize());
   copybasicproperties(refvol,ovol);
-  ovol=0;
 
   // set interpolation method
   if(interpmethod.value()=="nearestneighbour")
