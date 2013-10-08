@@ -154,6 +154,7 @@ if [ "x$SGE_ROOT" = "x" ]; then
 #!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
+trap 'exit 0' USR1
 
 check() {
     if [ \$finished -eq 1 ];then
