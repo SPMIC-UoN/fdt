@@ -298,7 +298,7 @@ namespace FIBRE{
       //note(gamma(lam+1)/(gamma(1)*gamma(lam)) = lam
       // the following is a beta distribution with alpha=0
       m_f_old_prior=m_f_prior;
-      if ((m_f<=0) | (m_f>=1))
+      if (m_f<=0 | m_f>=1 )
 	return true;
       else{
 	//m_f_prior=-(log(m_lam) + (m_lam-1)*log(1-m_f));
@@ -325,7 +325,7 @@ namespace FIBRE{
      
     inline bool compute_lam_prior(){
       m_lam_old_prior=m_lam_prior;
-      if((m_lam <0) | (m_lam > 1e16))
+      if(m_lam <0 | m_lam > 1e16 )
 	return true;
       else{
 	m_lam_prior=0;
