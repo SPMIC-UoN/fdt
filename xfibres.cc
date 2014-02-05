@@ -508,11 +508,13 @@ public:
       if(opts.nonlin.value() || opts.cnonlin.value())
 	initialise_nonlin();
       else{
-	if(!opts.localinit.value())
+	if(!opts.localinit.value()) {
 	  if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
 	    initialise_tensor(Amat);
-	else
+	}
+	else {
 	  initialise_tensor(Amat);
+	}
       }
     }
     m_multifibre.initialise_energies();
