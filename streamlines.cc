@@ -244,23 +244,23 @@ namespace TRACT{
       
     float pathlength=0;
     for( int it = 1 ; it <= opts.nsteps.value()/2; it++){
-      if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) > 0) ){
+      if( (m_mask( MISCMATHS::round(m_part.x()), MISCMATHS::round(m_part.y()), MISCMATHS::round(m_part.z())) > 0) ){
 
 	///////////////////////////////////
 	//loopchecking
 	///////////////////////////////////
 	if(opts.loopcheck.value()){
-	  float oldrx=m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),0);
-	  float oldry=m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),1);
-	  float oldrz=m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),2);
+	  float oldrx=m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),0);
+	  float oldry=m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),1);
+	  float oldrz=m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),2);
 	  if(m_part.rx()*oldrx+m_part.ry()*oldry+m_part.rz()*oldrz<0)
 	    {
 	      break;
 	    }
 	    
-	  m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),0)=m_part.rx();
-	  m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),1)=m_part.ry();
-	  m_loopcheck((int)round(m_part.x()/m_lcrat),(int)round(m_part.y()/m_lcrat),(int)round(m_part.z()/m_lcrat),2)=m_part.rz();  
+	  m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),0)=m_part.rx();
+	  m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),1)=m_part.ry();
+	  m_loopcheck((int)MISCMATHS::round(m_part.x()/m_lcrat),(int)MISCMATHS::round(m_part.y()/m_lcrat),(int)MISCMATHS::round(m_part.z()/m_lcrat),2)=m_part.rz();  
 	    
 	}
 	
@@ -279,9 +279,9 @@ namespace TRACT{
 	}
 
 	
-	int x_s =(int)round((float)xyz_seeds(1));
-	int y_s =(int)round((float)xyz_seeds(2));
-	int z_s =(int)round((float)xyz_seeds(3));
+	int x_s =(int)MISCMATHS::round((float)xyz_seeds(1));
+	int y_s =(int)MISCMATHS::round((float)xyz_seeds(2));
+	int z_s =(int)MISCMATHS::round((float)xyz_seeds(3));
 	
 	float pref_x=0,pref_y=0,pref_z=0;
 	if(opts.prefdirfile.value()!=""){
@@ -345,7 +345,7 @@ namespace TRACT{
 	  }
 	    
 	  if((th_ph_f(1)!=0&&th_ph_f(2)!=0)){
-	    if( (m_mask( round(m_part.x()), round(m_part.y()), round(m_part.z())) != 0) ){
+	    if( (m_mask( MISCMATHS::round(m_part.x()), MISCMATHS::round(m_part.y()), MISCMATHS::round(m_part.z())) != 0) ){
 	      if(!opts.modeuler.value())
 		m_part.jump(th_ph_f(1),th_ph_f(2));
 	      else
@@ -664,9 +664,9 @@ namespace TRACT{
 
     if(!opts.pathdist.value()){
       for(unsigned int i=0;i<m_path.size();i++){
-	int x_s=int(round(float(m_path[i](1))));
-	int y_s=int(round(float(m_path[i](2))));
-	int z_s=int(round(float(m_path[i](3))));
+	int x_s=int(MISCMATHS::round(float(m_path[i](1))));
+	int y_s=int(MISCMATHS::round(float(m_path[i](2))));
+	int z_s=int(MISCMATHS::round(float(m_path[i](3))));
 	if(m_beenhere(x_s,y_s,z_s)==0){
 	  m_prob(x_s,y_s,z_s)+=1; 
 	  m_beenhere(x_s,y_s,z_s)=1;
@@ -676,9 +676,9 @@ namespace TRACT{
     else{
       int d=1;
       for(unsigned int i=0;i<m_path.size();i++){
-	int x_s=int(round(float(m_path[i](1))));
-	int y_s=int(round(float(m_path[i](2))));
-	int z_s=int(round(float(m_path[i](3))));
+	int x_s=int(MISCMATHS::round(float(m_path[i](1))));
+	int y_s=int(MISCMATHS::round(float(m_path[i](2))));
+	int z_s=int(MISCMATHS::round(float(m_path[i](3))));
 	if(m_beenhere(x_s,y_s,z_s)==0){
 	  m_prob(x_s,y_s,z_s)+=d;d++;
 	  m_beenhere(x_s,y_s,z_s)=1;
@@ -691,7 +691,7 @@ namespace TRACT{
 
   void Counter::reset_beenhere(){
     for(unsigned int i=0;i<m_path.size();i++){
-      int x_s=int(round(float(m_path[i](1)))),y_s=int(round(float(m_path[i](2)))),z_s=int(round(float(m_path[i](3))));
+      int x_s=int(MISCMATHS::round(float(m_path[i](1)))),y_s=int(MISCMATHS::round(float(m_path[i](2)))),z_s=int(MISCMATHS::round(float(m_path[i](3))));
       m_beenhere(x_s,y_s,z_s)=0;
     }
   }
@@ -700,15 +700,15 @@ namespace TRACT{
   void Counter::update_seedcounts(){
 
     //const vector<ColumnVector>& path=m_stline.get_path_ref();
-    int xseedvox=int(round(m_stline.get_x_seed()));
-    int yseedvox=int(round(m_stline.get_y_seed()));
-    int zseedvox=int(round(m_stline.get_z_seed()));
+    int xseedvox=int(MISCMATHS::round(m_stline.get_x_seed()));
+    int yseedvox=int(MISCMATHS::round(m_stline.get_y_seed()));
+    int zseedvox=int(MISCMATHS::round(m_stline.get_z_seed()));
 
     float pathlength;
     if(!opts.pathdist.value()){
       pathlength=0;
       for(unsigned int i=0;i<m_path.size();i++){
-	int x_s=int(round(float(m_path[i](1)))),y_s=int(round(float(m_path[i](2)))),z_s=int(round(float(m_path[i](3))));
+	int x_s=int(MISCMATHS::round(float(m_path[i](1)))),y_s=int(MISCMATHS::round(float(m_path[i](2)))),z_s=int(MISCMATHS::round(float(m_path[i](3))));
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
 	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
 	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
@@ -727,7 +727,7 @@ namespace TRACT{
       int x_s,y_s,z_s;
       pathlength=0;
       for(unsigned int i=0;i<m_path.size();i++){
-	x_s=int(round(float(m_path[i](1))));y_s=int(round(float(m_path[i](2))));z_s=int(round(float(m_path[i](3))));
+	x_s=int(MISCMATHS::round(float(m_path[i](1))));y_s=int(MISCMATHS::round(float(m_path[i](2))));z_s=int(MISCMATHS::round(float(m_path[i](3))));
 	for(unsigned int m=0;m<m_targetmasknames.size();m++){
 	  if(m_targets_vol2mat(x_s,y_s,z_s)!=0 && m_targflags[m]==0)
 	    if(m_targetmasks(m_targets_vol2mat(x_s,y_s,z_s),m+1)!=0){
@@ -779,7 +779,7 @@ namespace TRACT{
 	//do something here
 	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
 	
-	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
+	int x_lr=int(MISCMATHS::round(float(xyz_lr(1)))),y_lr=int(MISCMATHS::round(float(xyz_lr(2)))),z_lr=int(MISCMATHS::round(float(xyz_lr(3))));
 	int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
 	if(Concol2!=0){
 	  if(m_beenhere2(x_lr,y_lr,z_lr)==0){
@@ -795,7 +795,7 @@ namespace TRACT{
       for(unsigned int i=0;i<m_path.size();i++){
 	ColumnVector xyz_seeds=m_path[i];
 	ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
-	int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
+	int x_lr=int(MISCMATHS::round(float(xyz_lr(1)))),y_lr=int(MISCMATHS::round(float(xyz_lr(2)))),z_lr=int(MISCMATHS::round(float(xyz_lr(3))));
 	int Concol2=m_lookup2(x_lr,y_lr,z_lr,0);
 	if(Concol2!=0){
 	  if(m_beenhere2(x_lr,y_lr,z_lr)==0){
@@ -818,8 +818,8 @@ namespace TRACT{
       length=0;
       for(unsigned int j=i+1;j<inmask3.size();j++){
 	length += 1;//opts.steplength.value();
-	int row1 = m_Lookup3((int)round(float(inmask3[i](1))),(int)round(float(inmask3[i](2))),(int)round(float(inmask3[i](3))));
-	int row2 = m_Lookup3((int)round(float(inmask3[j](1))),(int)round(float(inmask3[j](2))),(int)round(float(inmask3[j](3))));
+	int row1 = m_Lookup3((int)MISCMATHS::round(float(inmask3[i](1))),(int)MISCMATHS::round(float(inmask3[i](2))),(int)MISCMATHS::round(float(inmask3[i](3))));
+	int row2 = m_Lookup3((int)MISCMATHS::round(float(inmask3[j](1))),(int)MISCMATHS::round(float(inmask3[j](2))),(int)MISCMATHS::round(float(inmask3[j](3))));
 	//m_ConMat3(row1,row2,0) += 1;
 	//m_ConMat3(row2,row1,0) += 1;
 
@@ -843,7 +843,7 @@ namespace TRACT{
       
       ColumnVector xyz_lr=vox_to_vox(xyz_seeds,m_seedsdim,m_lrdim,m_I);
       
-      int x_lr=int(round(float(xyz_lr(1)))),y_lr=int(round(float(xyz_lr(2)))),z_lr=int(round(float(xyz_lr(3))));
+      int x_lr=int(MISCMATHS::round(float(xyz_lr(1)))),y_lr=int(MISCMATHS::round(float(xyz_lr(2)))),z_lr=int(MISCMATHS::round(float(xyz_lr(3))));
       m_beenhere2(x_lr,y_lr,z_lr)=0;
     }    
   }
@@ -1040,7 +1040,7 @@ void Counter::save_matrix3(){
     }
     else{
       if(fibst == -1){
-	fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+	fibst=0;//m_seeds(int(MISCMATHS::round(x)),int(MISCMATHS::round(y)),int(MISCMATHS::round(z)))-1;//fibre to start with is taken from seed volume..
       }
       //TB moved randfib option inside tractvols.h 28/10/2009
       // This means that we have access to fsamples when figuring out fibst
@@ -1060,7 +1060,7 @@ void Counter::save_matrix3(){
 	// randfib==1 - random sampling of fibres bigger than fthresh
 	// randfib==2 random sampling of fibres bigger than fthresh in proporthion to their f-values. 
 	float tmp=rand()/float(RAND_MAX) * float(m_stline.nfibres()-1);
-	fibst = (int)round(tmp);
+	fibst = (int)MISCMATHS::round(tmp);
       }
       
       // random sampling within a seed voxel

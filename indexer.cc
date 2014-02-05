@@ -78,7 +78,7 @@ int main ( int argc, char **argv ){
   float yvox=(y_mm+y_orig_mm)/cortex_masks[0].ydim()-y_roi_start_vox;
   float zvox=(z_mm+z_orig_mm)/cortex_masks[0].zdim()-z_roi_start_vox;
   
-  if(inside_mask((int)round(xvox),(int)round(yvox),(int)round(zvox))==0){
+  if(inside_mask((int)MISCMATHS::round(xvox),(int)MISCMATHS::round(yvox),(int)MISCMATHS::round(zvox))==0){
     cout<<"Sorry - Your input is not in our defined thalamus"<<endl;
     for(unsigned int i=0;i<masknames.size();i++){
       cout<<0<<endl;

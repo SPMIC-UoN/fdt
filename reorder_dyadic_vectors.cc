@@ -7,7 +7,16 @@
 /*  CCOPYRIGHT */
 
 #include "utils/options.h"
-#include <heap.h>
+#define QUEUEHDR <queue>
+#if __GNUC__
+  #define GCC_VERSION (__GNUC__ * 100000 \
+                       + __GNUC_MINOR__ * 100 \
+		       + __GNUC_PATCHLEVEL__)
+  #if GCC_VERSION < 40300
+    #define QUEUEHDR <heap.h>
+  #endif
+#endif
+#include QUEUEHDR
 #include "newimage/newimageall.h"
 #include "miscmaths/miscprob.h"
 #include "stdlib.h"
