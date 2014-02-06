@@ -84,7 +84,7 @@ void meshmask()
       Pt newPt(x,y,z);
       (*i)->_update_coord = newPt;
 
-      seeds(int(round(x)),int(round(y)),int(round(z))) = 1;
+      seeds(int(MISCMATHS::round(x)),int(MISCMATHS::round(y)),int(MISCMATHS::round(z))) = 1;
       numseeds++;
     }
   }
@@ -111,7 +111,7 @@ void meshmask()
       Pt newPt(x,y,z);
       (*i)->_update_coord = newPt;
 
-		//      seeds(round(x),round(y),round(z)) = 1;
+		//      seeds(MISCMATHS::round(x),MISCMATHS::round(y),MISCMATHS::round(z)) = 1;
     
       cout <<"run"<<endl;
       dir << (*i)->local_normal().X << (*i)->local_normal().Y << (*i)->local_normal().Z;

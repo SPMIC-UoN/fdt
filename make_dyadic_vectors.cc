@@ -126,7 +126,7 @@ int main ( int argc, char **argv ){
 	    angles(s+1) = acos( abs(dot(dir,meanDyad)) ) * 180.0/M_PI;
 	  }
 	  SortAscending(angles);
-	  cones(i,j,k) = angles( round(angles.Nrows()*acone) );
+	  cones(i,j,k) = angles( MISCMATHS::round(angles.Nrows()*acone) );
 
 	}
   

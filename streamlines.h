@@ -126,9 +126,9 @@ namespace TRACT{
     // matrix3 methods
     void clear_beenhere3(){
       for(unsigned int i=0;i<m_inmask3.size();i++){
-	m_beenhere3((int)round(float(m_inmask3[i](1))),
-		    (int)round(float(m_inmask3[i](2))),
-		    (int)round(float(m_inmask3[i](3))))=0;
+	m_beenhere3((int)MISCMATHS::round(float(m_inmask3[i](1))),
+		    (int)MISCMATHS::round(float(m_inmask3[i](2))),
+		    (int)MISCMATHS::round(float(m_inmask3[i](3))))=0;
       }
     }
     void                  clear_inmask3(){m_inmask3.clear();}
@@ -186,7 +186,7 @@ namespace TRACT{
     Streamliner& m_nonconst_stline;
     
     Matrix m_pathlengths;
-    int m_nsamp;
+    //int m_nsamp;
 
   public:
     Counter(const volume<float>& seeds,Streamliner& stline,int numseeds):opts(probtrackxOptions::getInstance()),

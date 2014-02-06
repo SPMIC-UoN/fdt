@@ -148,7 +148,7 @@ namespace TRACTVOLSX{
  
 	ColumnVector th_ph_f(3);	
 	float samp=(float)rand()/float(RAND_MAX);
-	samp=round(samp*((*thsamples[0]).tsize()-1));
+	samp=MISCMATHS::round(samp*((*thsamples[0]).tsize()-1));
 	float theta=0,phi=0;
 	float dotmax=0,dottmp=0;
 	int fibind=0;
@@ -168,7 +168,7 @@ namespace TRACTVOLSX{
 	      }
 	      else{
 		float rtmp=(float)rand()/float(RAND_MAX) * float(fibvec.size()-1);
-		fibst = fibvec[ (int)round(rtmp) ];	      
+		fibst = fibvec[ (int)MISCMATHS::round(rtmp) ];	      
 	      }
 	      
 	    }

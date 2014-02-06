@@ -43,9 +43,9 @@ namespace TRACTVOLS{
       
 
       ColumnVector sample(const float& x,const float& y,const float&z){
-	// 	int r_x=(int) round(x);
-	// 	int r_y=(int) round(y);
-	// 	int r_z=(int) round(z);
+	// 	int r_x=(int) MISCMATHS::round(x);
+	// 	int r_y=(int) MISCMATHS::round(y);
+	// 	int r_z=(int) MISCMATHS::round(z);
 	
 	////////Probabilistic interpolation
 	int cx =(int) ceil(x),fx=(int) floor(x);
@@ -93,7 +93,7 @@ namespace TRACTVOLS{
 	
 	
 	float samp=rand(); samp/=RAND_MAX;
-	samp=round(samp*(thsamples.tsize()-1));
+	samp=MISCMATHS::round(samp*(thsamples.tsize()-1));
 	//float phi = phsamples(r_x,r_y,r_z,samp);
 	//float theta = thsamples(r_x,r_y,r_z,samp);
 		

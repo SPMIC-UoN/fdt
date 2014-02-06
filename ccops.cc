@@ -115,7 +115,7 @@ void do_kmeans(const Matrix& data,ColumnVector& y,const int k){
 // initialise with far-away trick
 // start with a random class centre. then each new class centre is
   // as far as possible from the cog of the previous classes
-  means.Column(1) = data.Row(round(rand()/float(RAND_MAX)*float(n-1))+1).t();
+  means.Column(1) = data.Row(MISCMATHS::round(rand()/float(RAND_MAX)*float(n-1))+1).t();
   ColumnVector cog(d);
   for(int cl=2;cl<=k;cl++){
     cog = sum(means.SubMatrix(1,d,1,cl-1),2);
@@ -207,7 +207,7 @@ void do_fuzzy(const Matrix& data,Matrix& u,const int k){
   // initialise with far-away trick
   // start with a random class centre. then each new class centre is
   // as far as possible from the cog of the previous classes
-  means.Column(1) = data.Row(round(rand()/float(RAND_MAX)*float(n-1))+1).t();
+  means.Column(1) = data.Row(MISCMATHS::round(rand()/float(RAND_MAX)*float(n-1))+1).t();
   ColumnVector cog(d);
   for(int cl=2;cl<=k;cl++){
     cog = sum(means.SubMatrix(1,d,1,cl-1),2);    
