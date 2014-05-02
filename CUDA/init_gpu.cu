@@ -18,7 +18,7 @@ void init_gpu(){
 
 	int device;
   	cudaGetDevice(&device);
-  	printf ("\n...................In the GPU launcher on the device %d...................\n", device); 
+  	printf ("\n...................Allocated GPU %d...................\n", device); 
 	cudaDeviceSetCacheConfig(cudaFuncCachePreferShared);
 	
 	sync_check("init_gpu");
