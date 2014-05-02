@@ -122,17 +122,42 @@ int main(int argc, char *argv[]){
 	Matrix mygradm_part;	
 	
 	for(int i=0;i<nsubparts-1;i++){
-		
-		cout << "SubPart " << i+1 << " of  " << nsubparts << ": processing " << size_sub_part << " voxels" <<  endl;
+		cout << "SubPart " << i+1 << " of " << nsubparts << ": processing " << size_sub_part << " voxels" <<  endl;
 		mydatam_part = mydatam.SubMatrix(1,ndirections,i*size_sub_part+1,(i+1)*size_sub_part);
 		if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,i*size_sub_part+1,(i+1)*size_sub_part);
 		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,i,subjdir);
+		//for the monitor
+		if(nParts==1){
+			std::string file_name;
+			file_name.assign(subjdir);
+			file_name += ".bedpostX/logs/monitor/";
+			char n[4];
+			sprintf(n,"%d",i);
+			file_name += n;
+			ofstream out;
+			out.open(file_name.data(), ios::out | ios::binary);
+			out.write("done",4*sizeof(char));
+			out.close();
+		}	
 	}
 
-	cout << "SubPart " << nsubparts << " of  " << nsubparts << ": processing " << last_sub_part << " voxels" <<  endl;
+	cout << "SubPart " << nsubparts << " of " << nsubparts << ": processing " << last_sub_part << " voxels" <<  endl;
 	mydatam_part = mydatam.SubMatrix(1,ndirections,(nsubparts-1)*size_sub_part+1,size_part);
 	if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,(nsubparts-1)*size_sub_part+1,size_part);
 	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,nsubparts-1,subjdir);
+	//for the monitor
+	if(nParts==1){
+		std::string file_name;
+		file_name.assign(subjdir);
+		file_name += ".bedpostX/logs/monitor/";
+		char n[4];
+		sprintf(n,"%d",(nsubparts-1));
+		file_name += n;
+		ofstream out;
+		out.open(file_name.data(), ios::out | ios::binary);
+		out.write("done",4*sizeof(char));
+		out.close();
+	}	
 
 	//////////////////////////////////////////////////////////////
 	////////// JOIN Results of the Subparts //////////////////////
@@ -168,6 +193,20 @@ int main(int argc, char *argv[]){
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1); 
 	cout << endl << "Part processed in: " << time << " seconds" << endl;
+	
+	//for the monitor	
+	if(nParts>1){
+		std::string file_name;
+		file_name.assign(subjdir);
+		file_name += ".bedpostX/logs/monitor/";
+		char n[4];
+		sprintf(n,"%d",idPart);
+		file_name += n;	
+		ofstream out;
+		out.open(file_name.data(), ios::out | ios::binary);
+		out.write("done",4*sizeof(char));
+		out.close();
+	}	
 
   	return 0;
 }
