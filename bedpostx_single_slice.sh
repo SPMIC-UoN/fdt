@@ -16,5 +16,5 @@ ${FSLDIR}/bin/xfibres\
  --mask=$subjdir/nodif_brain_mask_slice_$slicezp\
  -b $subjdir/bvals -r $subjdir/bvecs\
  --forcedir --logdir=$subjdir.bedpostX/diff_slices/data_slice_$slicezp \
- $opts  > $subjdir.bedpostX/logs/log$slicezp  && echo Done
+ $opts  > $subjdir.bedpostX/logs/log$slicezp  && echo Done && touch $subjdir.bedpostX/logs/monitor/$slice
 
