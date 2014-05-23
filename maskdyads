@@ -21,8 +21,8 @@ if [ "$3" != "" ] ; then
     t=$3
 fi
 
+tmpfile=`$FSLDIR/bin/tmpnam`
+$FSLDIR/bin/fslmaths $f -thr $t -bin $tmpfile
+$FSLDIR/bin/fslmaths $d -mul $tmpfile ${d}_thr$t
 
-$FSLDIR/bin/fslmaths $f -thr $t -bin /tmp/grot
-$FSLDIR/bin/fslmaths $d -mul /tmp/grot ${d}_thr$t
-$FSLDIR/bin/imrm /tmp/grot
 
