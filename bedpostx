@@ -68,11 +68,11 @@ while [ \$finished -eq 0 ] ; do
         echo "All slices processed"
 	exit 
     fi
-    if [ ! \$havedad -gt 1 ]; then
-       kill -9 \$\$
+    if [ ! \$havedad -gt 0 ]; then
+       exit 0
     fi
     if [ "x$SGE_ROOT" == "x" ]; then
-        havedad=\`ps aux | grep $$ | wc -l\`
+        havedad=\`ps -e -o pid | grep "$$\\b" | wc -l\`        
     fi
     sleep 180;
 done
