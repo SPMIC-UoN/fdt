@@ -6,12 +6,18 @@
 
 Usage() {
     echo ""
-    echo "Usage: eddy_correct <4dinput> <4doutput> <reference_no>"
+    echo "Usage: eddy_correct <4dinput> <4doutput> <reference_no> [<interp>]"
+    echo "       Choose interp from {trilinear,spline} def - trilinear "
     echo ""
     exit
 }
 
 [ "$3" = "" ] && Usage
+
+interpm="trilinear"
+if [ $# -eq 4 ]; then
+    interpm=${4}
+fi
 
 input=`${FSLDIR}/bin/remove_ext ${1}`
 output=`${FSLDIR}/bin/remove_ext ${2}`
@@ -30,7 +36,7 @@ full_list=`${FSLDIR}/bin/imglob ${output}_tmp????.*`
 for i in $full_list ; do
     echo processing $i
     echo processing $i >> ${output}.ecclog
-    ${FSLDIR}/bin/flirt -in $i -ref ${output}_ref -nosearch -o $i -paddingsize 1 >> ${output}.ecclog
+    ${FSLDIR}/bin/flirt -in $i -ref ${output}_ref -nosearch -interp ${interpm} -o $i -paddingsize 1 >> ${output}.ecclog
 done
 
 fslmerge -t $output $full_list
