@@ -153,13 +153,21 @@ if [ ! -d $subjdir ]; then
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
+    if [ -e ${subjdir}/bvecs.txt ]; then
+	mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
+    else
 	echo "${subjdir}/bvecs not found"
 	exit 1
+    fi
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
+    if [ -e ${subjdir}/bvals.txt ]; then
+	mv ${subjdir}/bvals.txt ${subjdir}/bvals
+    else
 	echo "${subjdir}/bvals not found"
 	exit 1
+    fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
