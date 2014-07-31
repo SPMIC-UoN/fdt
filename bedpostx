@@ -237,6 +237,8 @@ bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $m
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
+echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
+
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.

@@ -248,6 +248,8 @@ bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -M $mailto -
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub $queue -j $bedpostid -m ase -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
 
+echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
+
 
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
