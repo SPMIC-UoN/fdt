@@ -28,7 +28,7 @@ for i in $b;do
     cnt=$(($cnt + 1))
 done
 
-echo ~saad/bin/fslselectvols -i $d -o $o --vols=$list $5
-~saad/bin/fslselectvols -i $d -o $o --vols=$list $5
+echo $FSLDIR/bin/fslselectvols -i $d -o $o --vols=$list $5
+$FSLDIR/bin/fslselectvols -i $d -o $o --vols=$list $5
 
 
