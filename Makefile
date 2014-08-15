@@ -66,7 +66,7 @@ XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_appro
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
-SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
+SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs select_dwi_vols ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
 FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen eddy_combine ${COMPILE_WITH_GPU}
