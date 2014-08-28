@@ -30,6 +30,7 @@ KURTOSIS=kurtosis
 SWAPDYADS=swap_dyadic_vectors
 PVMFIT=pvmfit
 DTIGEN=dtigen
+BASGEN=basgen
 RARNG=rearrange
 XPRED=xfibres_pred
 RUBIX=rubix
@@ -56,6 +57,7 @@ KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
 PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o Bingham_Watson_approx.o
 DTIGENOBJS=dtigen.o
+BASGENOBJS=basgen.o diffmodels.o Bingham_Watson_approx.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
 RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
@@ -69,7 +71,7 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs select_dwi_vols ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen eddy_combine ${COMPILE_WITH_GPU}
+XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen basgen eddy_combine ${COMPILE_WITH_GPU}
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred 
 
@@ -141,6 +143,9 @@ ${PVMFIT}:    	${PVMFITOBJS}
 
 ${DTIGEN}:    	${DTIGENOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
+
+${BASGEN}:    	${BASGENOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${BASGENOBJS} ${DLIBS}
 
 ${RARNG}: 	${RARNGOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RARNGOBJS} ${DLIBS}
