@@ -410,6 +410,7 @@ public:
       cout << "f0    :" << x2f(p(nparams)) << endl;
   }
 
+  // getters
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
@@ -420,6 +421,16 @@ public:
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
   ReturnMatrix get_prediction()const;
+
+  // setters
+  void set_s0(const float& s0){m_s0=s0;}
+  void set_f0(const float& f0){m_f0=f0;}
+  void set_d(const float& d){m_d=d;}
+  void set_f(const ColumnVector& f){m_f=f;}
+  void set_th_ph(const Matrix& dyads){
+    MISCMATHS::cart2sph(dyads,m_th,m_ph);
+  }
+
 
   // useful functions for calculating signal and its derivatives
   // functions
@@ -525,6 +536,16 @@ public:
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
+
+  // setters
+  void set_s0(const float& s0){m_s0=s0;}
+  void set_f0(const float& f0){m_f0=f0;}
+  void set_d(const float& d){m_d=d;}
+  void set_d_std(const float& d_std){m_d_std=d_std;}
+  void set_f(const ColumnVector& f){m_f=f;}
+  void set_th_ph(const Matrix& dyads){
+    MISCMATHS::cart2sph(dyads,m_th,m_ph);
+  }
 
   ReturnMatrix get_prediction()const;
 
