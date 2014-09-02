@@ -8,7 +8,7 @@
 #include "miscmaths/miscmaths.h"
 #include "newmat.h"
 #include "newimage/newimageall.h"
-#include "fdt/diffmodels.h"
+#include "diffmodels.h"
 
 using namespace std;
 using namespace NEWMAT;
