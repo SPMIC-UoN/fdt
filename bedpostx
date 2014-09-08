@@ -72,7 +72,7 @@ while [ \$finished -eq 0 ] ; do
        exit 0
     fi
     if [ "x$SGE_ROOT" == "x" ]; then
-        havedad=\`ps -e -o pid | grep "$$\\b" | wc -l\`        
+        havedad=\`ps -e -o pid 2>&1 | grep "$$\\b" | wc -l\`        
     fi
     sleep 180;
 done
