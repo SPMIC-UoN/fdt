@@ -131,7 +131,7 @@ defopts="--cnonlinear"
 opts="$opts $defopts $other"
 if [ -n "$SGE_ROOT" ]; then
 	# Look for an SGE queue
-	if [ -n $FSLGECUDAQ -a $nocuda -eq 0 ]; then
+	if [ -n "$FSLGECUDAQ" -a "$nocuda" -eq 0 ]; then
 		# Test that the queue exists
 		qconf -sq $FSLGECUDAQ 2>&1 >/dev/null
 		if [ $? -eq 0 ]; then
