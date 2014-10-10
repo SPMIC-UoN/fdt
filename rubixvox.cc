@@ -147,18 +147,24 @@ void RFibre::compute_signal(){
     }
   }
   else if(m_modelnum==2){
-    float dbeta=m_d/(m_d_std*m_d_std);
-    float dalpha=m_d*dbeta;                            
+    //float dbeta=m_d/(m_d_std*m_d_std);
+    //float dalpha=m_d*dbeta;     
+    float sig2=m_d_std*m_d_std;
+    float dalpha=m_d*m_d/sig2;                        
+               
     for (int i=1; i<=m_bvecsHR.Ncols(); i++){
       float angtmp=m_vec(1)*m_bvecsHR(1,i)+m_vec(2)*m_bvecsHR(2,i)+m_vec(3)*m_bvecsHR(3,i);
       angtmp=angtmp*angtmp;	  
-      m_SignalHR(i)=exp(log(dbeta/(dbeta + m_bvalsHR(1,i)*angtmp))*dalpha);
+      //m_SignalHR(i)=exp(log(dbeta/(dbeta + m_bvalsHR(1,i)*angtmp))*dalpha);
+      m_SignalHR(i)=exp(log(m_d/(m_d + m_bvalsHR(1,i)*angtmp*sig2))*dalpha); // more stable
+
     }
 
     for (int i=1; i<=m_bvecsLR.Ncols(); i++){
       float angtmp=m_vec(1)*m_bvecsLR(1,i)+m_vec(2)*m_bvecsLR(2,i)+m_vec(3)*m_bvecsLR(3,i);
       angtmp=angtmp*angtmp;	  
-      m_SignalLR(i)=exp(log(dbeta/(dbeta + m_bvalsLR(1,i)*angtmp))*dalpha);
+      //m_SignalLR(i)=exp(log(dbeta/(dbeta + m_bvalsLR(1,i)*angtmp))*dalpha);
+      m_SignalLR(i)=exp(log(m_d/(m_d + m_bvalsLR(1,i)*angtmp*sig2))*dalpha); // more stable
     }
   }
 }
@@ -409,13 +415,17 @@ void HRvoxel::compute_iso_signal(){
       m_iso_SignalLR(i)=exp(-m_d*m_bvalsLR(1,i));
   }
   else if (m_modelnum==2){
-    float dbeta=m_d/(m_d_std*m_d_std);
-    float dalpha=m_d*dbeta;	  
-        
+    //float dbeta=m_d/(m_d_std*m_d_std);
+    //float dalpha=m_d*dbeta;	  
+    float sig2=m_d_std*m_d_std;
+    float dalpha=m_d*m_d/sig2;                        
+    
     for(int i=1; i<=m_bvecsHR.Ncols(); i++)
-      m_iso_SignalHR(i)=exp(log(dbeta/(dbeta+m_bvalsHR(1,i)))*dalpha);
+      //m_iso_SignalHR(i)=exp(log(dbeta/(dbeta+m_bvalsHR(1,i)))*dalpha);
+      m_iso_SignalHR(i)=exp(log(m_d/(m_d+m_bvalsHR(1,i)*sig2))*dalpha); //more stable
     for(int i=1; i<=m_bvecsLR.Ncols(); i++)
-      m_iso_SignalLR(i)=exp(log(dbeta/(dbeta+m_bvalsLR(1,i)))*dalpha);
+      //m_iso_SignalLR(i)=exp(log(dbeta/(dbeta+m_bvalsLR(1,i)))*dalpha); 
+      m_iso_SignalLR(i)=exp(log(m_d/(m_d+m_bvalsLR(1,i)*sig2))*dalpha); //more stable
   }
 }
 
