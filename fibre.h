@@ -357,14 +357,17 @@ namespace FIBRE{
 	 }
        }
        else if(m_modelnum==2){
-	 float dbeta=m_d/(m_d_std*m_d_std);
-	 float dalpha=m_d*dbeta;                            
+	 //float dbeta=m_d/(m_d_std*m_d_std);
+	 //float dalpha=m_d*dbeta;     
+         float sig2=m_d_std*m_d_std;
+	 float dalpha=m_d*m_d/sig2;                        
 	 for (int i = 1; i <= m_alpha.Nrows(); i++){
 	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   
            float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
      	   float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
  	   angtmp=angtmp*angtmp;
-           m_Signal(i)=exp(log(dbeta/(dbeta + m_bvals(1,i)*angtmp))*dalpha); //gamma distribution of diffusivities - params alpha (m_d) and beta (m_d_beta): Expected signal is (beta./(beta+b*g(th,ph))).^alpha;
+           //m_Signal(i)=exp(log(dbeta/(dbeta + m_bvals(1,i)*angtmp))*dalpha); //gamma distribution of diffusivities - params alpha (m_d) and beta (m_d_beta): Expected signal is (beta./(beta+b*g(th,ph))).^alpha;
+	   m_Signal(i)=std::exp(std::log(m_d/(m_d + m_bvals(1,i)*angtmp*sig2))*dalpha); // more stable
  	 }
        }
     }
@@ -843,10 +846,13 @@ namespace FIBRE{
 	   m_iso_Signal(i)=exp(-m_d*m_bvals(1,i));
       }
       else if(m_modelnum==2){
+	float sig2=m_d_std*m_d_std;
+	float dalpha=m_d*m_d/sig2;	  
 	for(int i=1;i<=m_alpha.Nrows();i++){
-	  float dbeta=m_d/(m_d_std*m_d_std);
-	  float dalpha=m_d*dbeta;	  
-	  m_iso_Signal(i)=exp(log(dbeta/(dbeta+m_bvals(1,i)))*dalpha);
+	  m_iso_Signal(i)=exp(log(m_d/(m_d+m_bvals(1,i)*sig2))*dalpha); // more numerically stable
+	  //float dbeta=m_d/(m_d_std*m_d_std);
+	  //float dalpha=m_d*dbeta;	  
+	  //m_iso_Signal(i)=exp(log(dbeta/(dbeta+m_bvals(1,i)))*dalpha);
 	}
       }
     }	
