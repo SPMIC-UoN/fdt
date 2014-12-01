@@ -45,7 +45,7 @@ class dtifitOptions {
   Option<int> y_max;
   Option<int> x_min;
   Option<int> x_max;
-  Option<string> grad_file;
+  FmribOption<string> grad_file;
   FmribOption<bool> save_bvals;
   bool parse_command_line(int argc, char** argv);
   

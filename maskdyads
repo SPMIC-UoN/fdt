@@ -21,8 +21,6 @@ if [ "$3" != "" ] ; then
     t=$3
 fi
 
+${FSLDIR}/bin/fslmaths $f -thr $t -bin -mul $d ${d}_thr$t
 
-$FSLDIR/bin/fslmaths $f -thr $t -bin /tmp/grot
-$FSLDIR/bin/fslmaths $d -mul /tmp/grot ${d}_thr$t
-$FSLDIR/bin/imrm /tmp/grot
 

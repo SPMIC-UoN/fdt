@@ -35,6 +35,71 @@ Usage() {
     exit 1
 }
 
+monitor(){
+    cat <<EOM > ${subjdir}.bedpostX/monitor
+#!/bin/sh
+nparts=0
+if [ $njobs -eq 1 ]; then
+#1 part (GPU) and several subparts
+#voxels processed in each subpart are 12800 or more if the last one is less than 6400 (1 part less)
+	nparts=\$(($nvox/12800))
+	if [ \$nparts%12800 != 0 ];then 
+		nparts=\$((\$nparts + 1)) 
+	fi
+	last_part=\$(($nvox-(((\$nparts-1))*12800)))
+	if [ \$last_part -lt 6400 ];then 
+		nparts=\$((\$nparts - 1)) 
+	fi
+else
+	nparts=$njobs
+fi
+
+echo
+echo "----- Bedpostx Monitor -----"
+finished=0
+lastprinted=0
+havedad=2
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    part=0
+    errorFiles=\`ls ${subjdir}.bedpostX/logs/*.e* 2> /dev/null \`
+    for errorFile in \$errorFiles
+    do
+        if [ -s \$errorFile ]; then
+            echo An error ocurred. Please check file \$errorFile
+            kill -9 $$
+            exit 1
+        fi
+    done
+    while [ \$part -le \$nparts ];do
+        if [ -e ${subjdir}.bedpostX/logs/monitor/\$part ]; then
+            nfin=\$((\$nfin + 1))
+        fi
+        part=\$((\$part + 1))
+    done
+    newmessages=\$((\$nfin - \$lastprinted))
+    while [ "\$newmessages" -gt 0 ];do
+        lastprinted=\$((\$lastprinted + 1))
+        echo \$lastprinted parts processed out of \$nparts
+        newmessages=\$((\$newmessages - 1))
+    done
+    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+        finished=1
+        echo "All parts processed"
+	exit 
+    fi
+    if [ ! \$havedad -gt 0 ]; then
+       exit 0
+    fi
+    if [ "x$SGE_ROOT" == "x" ]; then
+        havedad=\`ps -e -o pid | grep "$$\\b" | wc -l\`
+    fi
+    sleep 50;
+done
+EOM
+    chmod +x ${subjdir}.bedpostX/monitor
+}
+
 make_absolute(){
     dir=$1;
     if [ -d ${dir} ]; then
@@ -53,6 +118,9 @@ make_absolute(){
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
+echo "---------------------------------------------"
+echo "------------ BedpostX GPU Version -----------"
+echo "---------------------------------------------"
 echo subjectdir is $subjdir
 
 #parse option arguments
@@ -65,6 +133,7 @@ njumps=1250
 sampleevery=25
 model=1
 gflag=0
+other=""
 if [ "x$SGE_ROOT" = "x" ]; then
 	queue=''
 fi
@@ -82,13 +151,13 @@ do
       -s) sampleevery=$2;shift;;
       -model) model=$2;shift;;
       -g) gflag=1;; 
-      *) break;;
+      *) other=$other" "$1;;
   esac
   shift
 done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
-opts="$opts $defopts $*"  
+opts="$opts $defopts $other"  
 
 #check that all required files exist
 
@@ -124,13 +193,20 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	exit 1
 fi
 
+if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
+	echo "${subjdir} has already been processed: ${subjdir}.bedpostX." 
+	echo "Delete or rename ${subjdir}.bedpostX before repeating the process."
+	exit 1
+fi
+
 echo Making bedpostx directory structure
 
 mkdir -p ${subjdir}.bedpostX/
 mkdir -p ${subjdir}.bedpostX/diff_parts
 mkdir -p ${subjdir}.bedpostX/logs
 mkdir -p ${subjdir}.bedpostX/logs/logs_gpu
-mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
+mkdir -p ${subjdir}.bedpostX/logs/monitor
+rm -f ${subjdir}.bedpostX/logs/monitor/*
 mkdir -p ${subjdir}.bedpostX/xfms
 
 mailto=`whoami`@fmrib.ox.ac.uk
@@ -146,72 +222,12 @@ nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V  | cut -d ' '
 
 echo Queuing parallel processing stage
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+
+monitor
 if [ "x$SGE_ROOT" = "x" ]; then
-
-# 
-# Need to set off a backgrounded monitoring task
-# 
-    cat <<EOM > ${subjdir}.bedpostX/monitor
-#!/bin/sh
-finished=0
-logdir=${subjdir}.bedpostX/logs
-#voxels processed in each subpart are 12800 or more if the last one is less than 6400 (1 part less)
-nsubparts=\$(($nvox/12800))
-if [ \$nsubparts%12800 != 0 ];then 
-	nsubparts=\$((\$nsubparts + 1)) 
-fi
-last_part=\$(($nvox-(((\$nsubparts-1))*12800)))
-if [ \$last_part -lt 6400 ];then 
-	nsubparts=\$((\$nsubparts - 1)) 
-fi
-
-check() {
-    if [ \$finished -eq 1 ];then
-        echo "\$nfin parts processed of "$nsubparts
-    else
-        nfin=0
-        subpart=0
-         while [ "\$subpart" -le \$nsubparts ];do
-            partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
-            if [ -f ${subjdir}.bedpostX/diff_parts/data_part_0000/mean_S0samples_\$subpart ];then
-                nfin=\$((\$nfin + 1))
-            fi
-                subpart=\$((\$subpart + 1))
-        done
-        if [ \$nfin -eq \$nsubparts ] ; then
-            finished=1
-        fi
-        echo "\$nfin parts processed of "\$nsubparts
-    fi
-}
-exit_test() {
-    isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/dyads1\`
-    if [ \$isimg -eq 0 ] ; then
-	echo For some reason the bedpostX process DOES NOT appear
-	echo to have successfully completed. Please examine your
-	echo results carefully.
-    else
-	echo All parts processed
-    fi
-}
-
-check
-n=0
-while [ \$finished -eq 0 ] ; do
-    sleep 10
-    if [ \$n -eq 6 ] ; then
-        check
-        n=0
-    else
-        n=\$((\$n + 1))
-    fi
-done
-exit_test
-EOM
-    chmod +x ${subjdir}.bedpostX/monitor
     ${subjdir}.bedpostX/monitor&
-    monitorpid=$!
 fi
+
 part=0
 while [ $part -lt $njobs ]
 do
@@ -232,67 +248,10 @@ bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -M $mailto -
 echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub $queue -j $bedpostid -m ase -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir}`
 
-[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
+
 if [ "x$SGE_ROOT" != "x" ]; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
-    cat <<EOM > ${subjdir}.bedpostX/monitor
-#!/bin/sh
-finished=0
-logdir=${subjdir}.bedpostX/logs
-if [ $njobs -eq 1 ]; then
-	nsubparts=\$(($nvox/12800))
-	if [ \$nsubparts%12800 != 0 ];then 
-		nsubparts=\$((\$nsubparts + 1)) 
-	fi
-	last_part=\$(($nvox-(((\$nsubparts-1))*12800)))
-	if [ \$last_part -lt 6400 ];then 
-		nsubparts=\$((\$nsubparts - 1)) 
-	fi
-	while [ \$finished -eq 0 ] ; do
-           nfin=0
-           subpart=0
-           while [ "\$subpart" -le \$nsubparts ];do
-              partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
-              if [ -f ${subjdir}.bedpostX/diff_parts/data_part_0000/mean_S0samples_\$subpart ];then
-                 nfin=\$((\$nfin + 1))
-              fi
-              subpart=\$((\$subpart + 1))
-           done
-           echo "\$nfin parts processed of "\$nsubparts
-
-           if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
-              finished=1
-	      echo "All parts processed"
-           fi
-
-	   sleep 60;
-         done
-else
-	while [ \$finished -eq 0 ] ; do
-	    nfin=0
-	    part=0
-	    while [ "\$part" -le $njobs ];do
-		partzp=\`\$FSLDIR/bin/zeropad \$part 4\`
-		if [ -f ${subjdir}.bedpostX/diff_parts/data_part_\$partzp/mean_S0samplesJ ];then
-		  nfin=\$((\$nfin + 1))
-		fi
-		part=\$((\$part + 1))
-	    done
-	    echo "\$nfin parts processed of "$njobs
-
-	    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
-		finished=1
-		echo "All parts processed"
-	    fi
-
-	    sleep 60;
-	done
-fi
-
-EOM
-    chmod +x ${subjdir}.bedpostX/monitor
-
     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
     cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
@@ -303,4 +262,6 @@ EOC
     echo
     echo You will get an email at the end of the post-processing stage.
     echo
+else
+    sleep 60
 fi
