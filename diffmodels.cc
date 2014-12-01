@@ -1053,8 +1053,8 @@ void PVM_single::fit(){
 
   ColumnVector start(nparams);
   start(1) = dti.get_s0();
-  //start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
-  start(2) = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
+  start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
+  //start(2) = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
   start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
   start(4) = _th;
   start(5) = _ph;
@@ -1367,7 +1367,7 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
 void PVM_multi::fit(){
 
   // initialise with simple pvm
-  PVM_single_c pvm1(Y,bvecs,bvals,nfib,false,m_include_f0);
+  PVM_single pvm1(Y,bvecs,bvals,nfib,m_include_f0);
   pvm1.fit();
   //cout<<"Init with single"<<endl;
   //pvm1.print();
@@ -1484,7 +1484,7 @@ NEWMAT::ReturnMatrix PVM_multi::forwardModel(const NEWMAT::ColumnVector& p)const
   for(int i=1;i<=Y.Nrows();i++){
     val = 0.0;
     for(int k=1;k<=nfib;k++){
-      val += fs(k)*anisoterm(i,_a,_b,x.Row(k).t());
+      val += fs(k)*anisoterm(i,_a,_b,x.Row(k).t(),m_Gamma_for_ball_only);
     }
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
@@ -1521,7 +1521,7 @@ double PVM_multi::cf(const NEWMAT::ColumnVector& p)const{
   for(int i=1;i<=Y.Nrows();i++){
     err = 0.0;
     for(int k=1;k<=nfib;k++){
-      err += fs(k)*anisoterm(i,_a,_b,x.Row(k).t());
+      err += fs(k)*anisoterm(i,_a,_b,x.Row(k).t(),m_Gamma_for_ball_only);
     } 
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
@@ -1566,18 +1566,18 @@ NEWMAT::ReturnMatrix PVM_multi::grad(const NEWMAT::ColumnVector& p)const{
     for(int k=1;k<=nfib;k++){
       int kk = 4+3*(k-1);
       xx = x.Row(k).t();
-      sig += fs(k)*anisoterm(i,_a,_b,xx);
+      sig += fs(k)*anisoterm(i,_a,_b,xx,m_Gamma_for_ball_only);
       // other stuff for derivatives
       // alpha
-      J(i,2) += (p(2)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_a(i,_a,_b,xx);
+      J(i,2) += (p(2)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_a(i,_a,_b,xx,m_Gamma_for_ball_only);
       // beta
-      J(i,3) += (p(3)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_b(i,_a,_b,xx);
+      J(i,3) += (p(3)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_b(i,_a,_b,xx,m_Gamma_for_ball_only);
       // f
-      J(i,kk) = std::abs(p(1))*(anisoterm(i,_a,_b,xx)-isoterm(i,_a,_b)) * two_pi*sign(p(kk))*1/(1+p(kk)*p(kk));
+      J(i,kk) = std::abs(p(1))*(anisoterm(i,_a,_b,xx,m_Gamma_for_ball_only)-isoterm(i,_a,_b)) * two_pi*sign(p(kk))*1/(1+p(kk)*p(kk));
       // th
-      J(i,kk+1) = std::abs(p(1))*fs(k)*anisoterm_th(i,_a,_b,xx,p(kk+1),p(kk+2));
+      J(i,kk+1) = std::abs(p(1))*fs(k)*anisoterm_th(i,_a,_b,xx,p(kk+1),p(kk+2),m_Gamma_for_ball_only);
       // ph
-      J(i,kk+2) = std::abs(p(1))*fs(k)*anisoterm_ph(i,_a,_b,xx,p(kk+1),p(kk+2));
+      J(i,kk+2) = std::abs(p(1))*fs(k)*anisoterm_ph(i,_a,_b,xx,p(kk+1),p(kk+2),m_Gamma_for_ball_only);
     }
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
@@ -1636,20 +1636,20 @@ boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost:
     for(int k=1;k<=nfib;k++){
       int kk = 4+3*(k-1);
       xx = x.Row(k).t();
-      sig += fs(k)*anisoterm(i,_a,_b,xx);
+      sig += fs(k)*anisoterm(i,_a,_b,xx,m_Gamma_for_ball_only);
       // other stuff for derivatives
       // change of variable
       float cov = two_pi*sign(p(kk))*1/(1+p(kk)*p(kk));
       // alpha
-      J(i,2) += (p(2)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_a(i,_a,_b,xx);
+      J(i,2) += (p(2)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_a(i,_a,_b,xx,m_Gamma_for_ball_only);
       // beta
-      J(i,3) += (p(3)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_b(i,_a,_b,xx);
+      J(i,3) += (p(3)>0?1.0:-1.0)*std::abs(p(1))*fs(k)*anisoterm_b(i,_a,_b,xx,m_Gamma_for_ball_only);
       // f
-      J(i,kk) = std::abs(p(1))*(anisoterm(i,_a,_b,xx)-isoterm(i,_a,_b)) * cov;
+      J(i,kk) = std::abs(p(1))*(anisoterm(i,_a,_b,xx,m_Gamma_for_ball_only)-isoterm(i,_a,_b)) * cov;
       // th
-      J(i,kk+1) = std::abs(p(1))*fs(k)*anisoterm_th(i,_a,_b,xx,p(kk+1),p(kk+2));
+      J(i,kk+1) = std::abs(p(1))*fs(k)*anisoterm_th(i,_a,_b,xx,p(kk+1),p(kk+2),m_Gamma_for_ball_only);
       // ph
-      J(i,kk+2) = std::abs(p(1))*fs(k)*anisoterm_ph(i,_a,_b,xx,p(kk+1),p(kk+2));
+      J(i,kk+2) = std::abs(p(1))*fs(k)*anisoterm_ph(i,_a,_b,xx,p(kk+1),p(kk+2),m_Gamma_for_ball_only);
     }
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
@@ -3132,10 +3132,18 @@ float PVM_single::anisoterm_thph(const int& pt,const float& _d,const ColumnVecto
 float PVM_multi::isoterm(const int& pt,const float& _a,const float& _b)const{
   return(std::exp(-_a*std::log(1+bvals(1,pt)*_b)));
 }
-float PVM_multi::anisoterm(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const{
+float PVM_multi::anisoterm(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int Gamma_for_ball_only)const{
   float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
-  return(std::exp(-_a*std::log(1+bvals(1,pt)*_b*(dp*dp))));
+  switch (Gamma_for_ball_only){
+  case 1:
+    return(std::exp(-bvals(1,pt)*_a*_b*dp*dp));
+  case 2:
+    return(std::exp(-bvals(1,pt)*3*_a*_b*m_invR*((1-m_R)*dp*dp+m_R)));
+  default:
+    return(std::exp(-_a*std::log(1+bvals(1,pt)*_b*(dp*dp))));
+  }
 }
+
 // 1st order derivatives
 float PVM_multi::isoterm_a(const int& pt,const float& _a,const float& _b)const{
     return(-std::log(1+bvals(1,pt)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*_b)));
@@ -3143,21 +3151,56 @@ float PVM_multi::isoterm_a(const int& pt,const float& _a,const float& _b)const{
 float PVM_multi::isoterm_b(const int& pt,const float& _a,const float& _b)const{
       return(-_a*bvals(1,pt)/(1+bvals(1,pt)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*_b)));
 }
-float PVM_multi::anisoterm_a(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const{
-  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
-  return(-std::log(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b)));
+
+float PVM_multi::anisoterm_a(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int Gamma_for_ball_only)const{
+  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3); float dp2;
+  switch (Gamma_for_ball_only){
+  case 1:
+    return(-bvals(1,pt)*_b*dp*dp*std::exp(-bvals(1,pt)*_a*_b*dp*dp));
+  case 2:
+    dp2=bvals(1,pt)*3*_b*m_invR*((1-m_R)*dp*dp+m_R);
+    return(-dp2*std::exp(-dp2*_a));
+  default:
+    return(-std::log(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b)));
+  }
 }
-float PVM_multi::anisoterm_b(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const{
-  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
-  return(-_a*bvals(1,pt)*(dp*dp)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b)));
+
+float PVM_multi::anisoterm_b(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int Gamma_for_ball_only)const{
+  float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3); float dp2;
+  switch (Gamma_for_ball_only){
+  case 1:
+    return(-bvals(1,pt)*_a*dp*dp*std::exp(-bvals(1,pt)*_a*_b*dp*dp));
+  case 2:
+    dp2=bvals(1,pt)*3*_a*m_invR*((1-m_R)*dp*dp+m_R);
+    return(-dp2*std::exp(-dp2*_b));
+  default:
+    return(-_a*bvals(1,pt)*(dp*dp)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b)));
+  }
 }
-float PVM_multi::anisoterm_th(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph)const{
+float PVM_multi::anisoterm_th(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int Gamma_for_ball_only)const{
   float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
-  float dp1 = cos(_th)*(bvecs(1,pt)*cos(_ph) + bvecs(2,pt)*sin(_ph)) - bvecs(3,pt)*sin(_th);
-  return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
+  float dp1 = cos(_th)*(bvecs(1,pt)*cos(_ph) + bvecs(2,pt)*sin(_ph)) - bvecs(3,pt)*sin(_th); float dp2;
+  switch (Gamma_for_ball_only){
+  case 1:
+    return(-2*bvals(1,pt)*_a*_b*dp*dp1*std::exp(-bvals(1,pt)*_a*_b*dp*dp));
+  case 2:
+    dp2=2*bvals(1,pt)*3*_a*_b*m_invR*(1-m_R)*dp1;
+    return(-dp2*std::exp(-bvals(1,pt)*3*_a*_b*m_invR*((1-m_R)*dp*dp+m_R)));
+  default:
+    return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
+  }
 }
-float PVM_multi::anisoterm_ph(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph)const{
+float PVM_multi::anisoterm_ph(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int Gamma_for_ball_only)const{
   float dp = bvecs(1,pt)*x(1)+bvecs(2,pt)*x(2)+bvecs(3,pt)*x(3);
-  float dp1 = sin(_th)*(-bvecs(1,pt)*sin(_ph) + bvecs(2,pt)*cos(_ph));
-  return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
+  float dp1 = sin(_th)*(-bvecs(1,pt)*sin(_ph) + bvecs(2,pt)*cos(_ph)); float dp2;
+  switch (Gamma_for_ball_only){
+  case 1:
+    return(-2*bvals(1,pt)*_a*_b*dp*dp1*std::exp(-bvals(1,pt)*_a*_b*dp*dp));
+  case 2:
+    dp2=2*bvals(1,pt)*3*_a*_b*m_invR*(1-m_R)*dp1;
+    return(-dp2*std::exp(-bvals(1,pt)*3*_a*_b*m_invR*((1-m_R)*dp*dp+m_R)));
+  default:
+    return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
+  }
 }
+

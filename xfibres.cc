@@ -78,6 +78,7 @@ class Samples{
   xfibresOptions& opts;
   Matrix m_dsamples;
   Matrix m_d_stdsamples;
+  Matrix m_Rsamples;
   Matrix m_S0samples;
   Matrix m_f0samples;
   Matrix m_lik_energy;
@@ -95,6 +96,7 @@ class Samples{
   //for storing means
   RowVector m_mean_dsamples;
   RowVector m_mean_d_stdsamples;
+  RowVector m_mean_Rsamples;
   RowVector m_mean_S0samples;
   RowVector m_mean_f0samples;
   RowVector m_mean_tausamples;
@@ -104,6 +106,7 @@ class Samples{
 
   float m_sum_d;
   float m_sum_d_std;
+  float m_sum_R;
   float m_sum_S0;
   float m_sum_f0;
   float m_sum_tau;
@@ -157,12 +160,19 @@ public:
     m_sum_d=0;
     m_sum_S0=0;
 
-    if(opts.modelnum.value()==2){
+    if(opts.modelnum.value()>=2){
       m_d_stdsamples.ReSize(nsamples,nvoxels);
       m_d_stdsamples=0;
       m_mean_d_stdsamples.ReSize(nvoxels);
       m_mean_d_stdsamples=0;
       m_sum_d_std=0;
+      if (opts.modelnum.value()==3){
+	m_Rsamples.ReSize(nsamples,nvoxels);
+	m_Rsamples=0;
+	m_mean_Rsamples.ReSize(nvoxels);
+	m_mean_Rsamples=0;
+	m_sum_R=0;
+      }
     }
 
     if (opts.f0.value()){
@@ -206,9 +216,13 @@ public:
   void record(Multifibre& mfib, int vox, int samp){
     m_dsamples(samp,vox)=mfib.get_d();
     m_sum_d+=mfib.get_d();
-    if(opts.modelnum.value()==2){
+    if(opts.modelnum.value()>=2){
       m_d_stdsamples(samp,vox)=mfib.get_d_std();
       m_sum_d_std+=mfib.get_d_std();
+      if (opts.modelnum.value()==3){
+	m_Rsamples(samp,vox)=mfib.get_R();
+	m_sum_R+=mfib.get_R();
+      }
     }
     if (opts.f0.value()){
       m_f0samples(samp,vox)=mfib.get_f0();
@@ -237,8 +251,11 @@ public:
   
   void finish_voxel(int vox){
     m_mean_dsamples(vox)=m_sum_d/m_nsamps;
-    if(opts.modelnum.value()==2)
+    if(opts.modelnum.value()>=2){
       m_mean_d_stdsamples(vox)=m_sum_d_std/m_nsamps;
+      if (opts.modelnum.value()==3)
+	m_mean_Rsamples(vox)=m_sum_R/m_nsamps;
+    }
     if(opts.f0.value())
       m_mean_f0samples(vox)=m_sum_f0/m_nsamps;
     if(opts.rician.value())
@@ -248,8 +265,8 @@ public:
     m_sum_d=0;
     m_sum_S0=0;
     m_sum_tau=0;
-    if(opts.modelnum.value()==2)
-      m_sum_d_std=0;
+    if(opts.modelnum.value()>=2){
+      m_sum_d_std=0; m_sum_R=0; }
     if (opts.f0.value())
       m_sum_f0=0;
 
@@ -355,25 +372,28 @@ public:
       mean_fsamples_out.push_back(m_mean_fsamples[f]);
 
     Log& logger = LogSingleton::getInstance();
-    if(opts.modelnum.value()==1){
-      tmp.setmatrix(m_mean_dsamples,mask);
-      tmp.setDisplayMaximumMinimum(tmp.max(),0);
-      save_volume4D(tmp,logger.appendDir("mean_dsamples"));
-    }
-    else if(opts.modelnum.value()==2){
-      tmp.setmatrix(m_mean_dsamples,mask);
-      tmp.setDisplayMaximumMinimum(tmp.max(),0);
-      save_volume4D(tmp,logger.appendDir("mean_dsamples"));
+    tmp.setmatrix(m_mean_dsamples,mask);
+    tmp.setDisplayMaximumMinimum(tmp.max(),0);
+    save_volume4D(tmp,logger.appendDir("mean_dsamples"));
+    tmp.setmatrix(m_dsamples,mask);
+    tmp.setDisplayMaximumMinimum(tmp.max(),0);
+    save_volume4D(tmp,logger.appendDir("dsamples"));
+    if(opts.modelnum.value()>=2){
       tmp.setmatrix(m_mean_d_stdsamples,mask);
       tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_d_stdsamples"));
-      
-      tmp.setmatrix(m_dsamples,mask);
-      tmp.setDisplayMaximumMinimum(tmp.max(),0);
-      save_volume4D(tmp,logger.appendDir("dsamples"));
       tmp.setmatrix(m_d_stdsamples,mask);
       tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("d_stdsamples"));
+
+      if (opts.modelnum.value()==3){
+	tmp.setmatrix(m_mean_Rsamples,mask);
+	tmp.setDisplayMaximumMinimum(1,0);
+	save_volume4D(tmp,logger.appendDir("mean_Rsamples"));
+	tmp.setmatrix(m_Rsamples,mask);
+	tmp.setDisplayMaximumMinimum(1,0);
+	save_volume4D(tmp,logger.appendDir("Rsamples"));
+      }
     }
     if (opts.f0.value()){
       tmp.setmatrix(m_mean_f0samples,mask);
@@ -492,7 +512,7 @@ public:
     opts(xfibresOptions::getInstance()), 
     m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
     m_alpha(alpha), m_beta(beta), m_bvecs(r), m_bvals(b), 
-    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value(),opts.rician.value(),opts.f0.value(),opts.ardf0.value()){ }
+    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value(),opts.rician.value(),opts.f0.value(),opts.ardf0.value(), opts.R_prior_mean.value(), opts.R_prior_std.value()){ }
   
    
   void initialise(const Matrix& Amat){
@@ -508,13 +528,12 @@ public:
       if(opts.nonlin.value() || opts.cnonlin.value())
 	initialise_nonlin();
       else{
-	if(!opts.localinit.value()) {
+	if(!opts.localinit.value()){
 	  if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
 	    initialise_tensor(Amat);
 	}
-	else {
+	else
 	  initialise_tensor(Amat);
-	}
       }
     }
     m_multifibre.initialise_energies();
@@ -622,7 +641,7 @@ public:
 	}
       }
 
-      if(pvmd<0 || pvmd>0.008)
+      if(pvmd<0 || pvmd>UPPERDIFF)
 	pvmd=2e-3;
    
       m_multifibre.set_S0(pvmS0);
@@ -644,14 +663,18 @@ public:
     }
     else{ 
       //////////////////////////////////////////////////////
-      // model 2 : non-mono-exponential
+      // model 2 or 3 : non-mono-exponential
       float pvmS0, pvmd, pvmd_std, pvmf0=0.001;
       ColumnVector pvmf,pvmth,pvmph;
-      
-      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
+      int Gamma_ball_only=0;
+
+      if (opts.modelnum.value()==3) Gamma_ball_only=2;
+
+      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),Gamma_ball_only,opts.R_prior_mean.value(),opts.f0.value());
       pvm.fit();
 
-      pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
+      pvmf  = pvm.get_f();
+      pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
       pvmS0 = pvm.get_s0(); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
       
       if (opts.f0.value()){
@@ -659,7 +682,7 @@ public:
 	  //If the full model gives values that are implausible, or we are in a CSF voxel (f1<0.05)
 	  //then fit a model without the f0 and drive f0_init to almost zero 
 	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
-	    PVM_multi pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    PVM_multi pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),Gamma_ball_only,opts.R_prior_mean.value(),false);
 	    pvm2.fit();
 	    pvmf0=0.001; pvmS0=pvm2.get_s0(); pvmd=pvm2.get_d(); pvmd_std=pvm2.get_d_std();
 	    pvmf  = pvm2.get_f();  pvmth = pvm2.get_th(); pvmph = pvm2.get_ph();
@@ -668,8 +691,13 @@ public:
 	  m_multifibre.set_f0(pvmf0);
       }
 
-      if(pvmd<0 || pvmd>0.008) pvmd=2e-3;
-      if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
+      if(pvmd<0 || pvmd>UPPERDIFF) pvmd=2e-3;
+
+      float upper_d_std=0.01;
+      if (opts.modelnum.value()==3) upper_d_std=0.004;
+      if(pvmd_std<0 || pvmd_std>0.004) pvmd_std=pvmd/10;
+      
+      if (opts.modelnum.value()==3) m_multifibre.set_R(opts.R_prior_mean.value());
 
       m_multifibre.set_S0(pvmS0);
       m_multifibre.set_d(pvmd);

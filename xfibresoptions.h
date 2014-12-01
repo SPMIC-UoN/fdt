@@ -52,7 +52,10 @@ class xfibresOptions {
   Option<bool> rician;
   Option<bool> f0;
   Option<bool> ardf0;
+  FmribOption<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
+  FmribOption<float> R_prior_std;
   FmribOption<string> grad_file;
+
 
   void parse_command_line(int argc, char** argv,  Log& logger);
   
@@ -101,7 +104,7 @@ class xfibresOptions {
 	   string("Maximum number of fibres to fit in each voxel (default 1)"),
 	   false,requires_argument),
    modelnum(string("--model"),1,
-	    string("Which model to use. 1=mono-exponential (default and required for single shell). 2=continous exponential (for multi-shell experiments)"),
+	    string("Which model to use. 1=deconv. with sticks (default). 2=deconv. with sticks and a range of diffusivities. 3=deconv. with zeppelins"),
 	    false,requires_argument),
    fudge(string("--fudge"),1,
 	 string("ARD fudge factor"),
@@ -136,6 +139,8 @@ class xfibresOptions {
    rician(string("--rician"),false,string("Use Rician noise modelling"),false,no_argument),
    f0(string("--f0"),false,string("Add to the model an unattenuated signal compartment"),false,no_argument),
    ardf0(string("--ardf0"),false,string("Use ard on f0"),false,no_argument),
+   R_prior_mean(string("--Rmean"),0.13,string("Set the prior mean for R of model 3 (default:0.13)"),false, requires_argument),
+   R_prior_std(string("--Rstd"),0.03,string("Set the prior standard deviation for R of model 3 (default:0.03)"),false, requires_argument),
    grad_file(string("--gradnonlin"), string("gradnonlin"),
 	     string("Gradient Nonlinearity Tensor file"),
 	     false, requires_argument),  
@@ -167,6 +172,8 @@ class xfibresOptions {
        options.add(rician);
        options.add(f0);
        options.add(ardf0);
+       options.add(R_prior_mean);
+       options.add(R_prior_std);
        options.add(grad_file);
      }
      catch(X_OptionError& e) {

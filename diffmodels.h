@@ -59,6 +59,7 @@ using namespace MISCMATHS;
 #define SQRTtiny (sqrt(tiny))
 
 
+
 ////////////////////////////////////////////////
 //       DIFFUSION TENSOR MODEL
 ////////////////////////////////////////////////
@@ -410,7 +411,6 @@ public:
       cout << "f0    :" << x2f(p(nparams)) << endl;
   }
 
-  // getters
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
@@ -421,16 +421,6 @@ public:
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
   ReturnMatrix get_prediction()const;
-
-  // setters
-  void set_s0(const float& s0){m_s0=s0;}
-  void set_f0(const float& f0){m_f0=f0;}
-  void set_d(const float& d){m_d=d;}
-  void set_f(const ColumnVector& f){m_f=f;}
-  void set_th_ph(const Matrix& dyads){
-    MISCMATHS::cart2sph(dyads,m_th,m_ph);
-  }
-
 
   // useful functions for calculating signal and its derivatives
   // functions
@@ -474,13 +464,14 @@ class PVM_multi : public PVM, public NonlinCF {
 public:
   PVM_multi(const ColumnVector& iY,
 	    const Matrix& ibvecs, const Matrix& ibvals,
-	    const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0){
+	    const int& nfibres, int Gamma_for_ball_only=0, float R=0.13, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_Gamma_for_ball_only(Gamma_for_ball_only),m_R(R),m_include_f0(incl_f0){
 
     if (m_include_f0)
       nparams = nfib*3 + 4; 
     else    
       nparams = nfib*3 + 3;
 
+    m_invR=1.0/(2.0*m_R+1);
     m_f.ReSize(nfib);
     m_th.ReSize(nfib);
     m_ph.ReSize(nfib);
@@ -537,29 +528,19 @@ public:
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
 
-  // setters
-  void set_s0(const float& s0){m_s0=s0;}
-  void set_f0(const float& f0){m_f0=f0;}
-  void set_d(const float& d){m_d=d;}
-  void set_d_std(const float& d_std){m_d_std=d_std;}
-  void set_f(const ColumnVector& f){m_f=f;}
-  void set_th_ph(const Matrix& dyads){
-    MISCMATHS::cart2sph(dyads,m_th,m_ph);
-  }
-
   ReturnMatrix get_prediction()const;
 
   // useful functions for calculating signal and its derivatives
   // functions
   float isoterm(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const;
+  float anisoterm(const int& pt,const float& _a,const float& _b,const ColumnVector& x, const int)const;
   // 1st order derivatives
   float isoterm_a(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm_a(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const;
+  float anisoterm_a(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int)const;
   float isoterm_b(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm_b(const int& pt,const float& _a,const float& _b,const ColumnVector& x)const;
-  float anisoterm_th(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_ph(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_b(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int)const;
+  float anisoterm_th(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int)const;
+  float anisoterm_ph(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int)const;
   
 private:
   int   nparams;
@@ -570,7 +551,10 @@ private:
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
-  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
+  const int m_Gamma_for_ball_only; //Model2 Twists: 0 (default), 1 sets off the Gamma distr of diff. for the fibres, 2 as in (1) but also use fixed tensor kernels for fibres
+  const float m_R;                 //If m_Gamma_for_ball_only=2, then m_R defines the anisotropy of the tensor kernels. This is kept constant, used to initialise xfibres model=3.
+  float m_invR;                    //If m_Gamma_for_ball_only=2, 1/(2*m_R+1) is precomputed as used a lot in calculations
+  const bool m_include_f0;         //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
 
 

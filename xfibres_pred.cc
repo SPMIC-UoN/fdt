@@ -27,7 +27,7 @@ int main ( int argc, char *argv[]){
   
   Matrix bvecs,bvals;   //Read Input 
   volume<float> mask;
-  volume<float> d,d_std,S0,f0, temp;
+  volume<float> d,d_std,S0,f0,R, temp;
   volume4D<float> temp4D;
   vector< volume<float> > f;  
   vector< volume4D<float> > dyads;  
@@ -114,6 +114,12 @@ int main ( int argc, char *argv[]){
     modelnum=2;
     read_volume(d_std,temp_name);
   }
+  temp_name=dir_name+"/mean_Rsamples";    
+  if (fsl_imageexists(temp_name)){   //Read R if model3
+    modelnum=3;
+    read_volume(R,temp_name);
+  }
+
 
   int f0_incl=0;
   temp_name=dir_name+"/mean_f0samples";    
@@ -156,7 +162,7 @@ int main ( int argc, char *argv[]){
 	      else  
 		output(x,y,z,l)+=(1-sumf)*std::exp(-bvals(1,l+1)*d(x,y,z));
 	    }
-	    else{ //model2
+	    else if (modelnum>=2) { //model2 or model3
 	      float invdstd2=1.0/(d_std(x,y,z)*d_std(x,y,z));
 	      float a=d(x,y,z)*d(x,y,z)*invdstd2; 
 	      float b=d(x,y,z)*invdstd2;
@@ -164,9 +170,11 @@ int main ( int argc, char *argv[]){
 	      for (int n=0; n<num_fibres; n++){
 		sumf+=f[n](x,y,z);
 		float angp=dyads[n](x,y,z,0)*bvecs(1,l+1)+dyads[n](x,y,z,1)*bvecs(2,l+1)+dyads[n](x,y,z,2)*bvecs(3,l+1);
-		output(x,y,z,l)+=f[n](x,y,z)*std::exp(a*std::log(b/(b+bvals(1,l+1)*angp*angp)));
+		if (modelnum==2)
+		  output(x,y,z,l)+=f[n](x,y,z)*std::exp(a*std::log(b/(b+bvals(1,l+1)*angp*angp)));
+		if (modelnum==3)
+		  output(x,y,z,l)+=f[n](x,y,z)*std::exp(-bvals(1,l+1)*3*d(x,y,z)/(2*R(x,y,z)+1.0)*(1-R(x,y,z))*angp*angp+R(x,y,z));
 	      }
-
 	      if (f0_incl==1)
 		output(x,y,z,l)+=f0(x,y,z)+(1-sumf-f0(x,y,z))*std::exp(a*std::log(b/(b+bvals(1,l+1))));
 	      else  
