@@ -666,9 +666,9 @@ public:
       // model 2 or 3 : non-mono-exponential
       float pvmS0, pvmd, pvmd_std, pvmf0=0.001;
       ColumnVector pvmf,pvmth,pvmph;
-      int Gamma_ball_only=0;
 
-      if (opts.modelnum.value()==3) Gamma_ball_only=2;
+      int Gamma_ball_only=0;  //That flag for diffmodels means default model2
+      if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)
 
       PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),Gamma_ball_only,opts.R_prior_mean.value(),opts.f0.value());
       pvm.fit();
@@ -695,7 +695,7 @@ public:
 
       float upper_d_std=0.01;
       if (opts.modelnum.value()==3) upper_d_std=0.004;
-      if(pvmd_std<0 || pvmd_std>0.004) pvmd_std=pvmd/10;
+      if(pvmd_std<0 || pvmd_std>upper_d_std) pvmd_std=pvmd/10;
       
       if (opts.modelnum.value()==3) m_multifibre.set_R(opts.R_prior_mean.value());
 
