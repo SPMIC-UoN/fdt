@@ -813,7 +813,10 @@ namespace FIBRE{
 
     inline bool compute_R_prior(){
       m_R_old_prior=m_R_prior;
-      if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>0.25)  //Truncate prior to avoid too spherical (high m_R) or too anisitropic (small m_R) profiles 
+      float upper_R=2*m_R_priormean;
+      if (m_R_priormean>0.5)
+	upper_R=1;
+      if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisitropic (small m_R) profiles 
 	return true;
       else{
 	float Rstd2=m_R_priorstd*m_R_priorstd; 
