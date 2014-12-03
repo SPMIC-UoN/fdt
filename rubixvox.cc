@@ -133,7 +133,7 @@ void RFibre::compute_signal(){
   m_SignalHR_old=m_SignalHR;
   m_SignalLR_old=m_SignalLR;
        
-  if(m_modelnum==1 || m_d_std<1e-5){
+  if(m_modelnum==1 || (m_d_std<1e-5 && m_modelnum==2)){
     for (int i=1; i<=m_bvecsHR.Ncols(); i++){
       float angtmp=m_vec(1)*m_bvecsHR(1,i)+m_vec(2)*m_bvecsHR(2,i)+m_vec(3)*m_bvecsHR(3,i);
       angtmp=angtmp*angtmp;	  
@@ -151,20 +151,30 @@ void RFibre::compute_signal(){
     //float dalpha=m_d*dbeta;     
     float sig2=m_d_std*m_d_std;
     float dalpha=m_d*m_d/sig2;                        
-               
     for (int i=1; i<=m_bvecsHR.Ncols(); i++){
       float angtmp=m_vec(1)*m_bvecsHR(1,i)+m_vec(2)*m_bvecsHR(2,i)+m_vec(3)*m_bvecsHR(3,i);
       angtmp=angtmp*angtmp;	  
       //m_SignalHR(i)=exp(log(dbeta/(dbeta + m_bvalsHR(1,i)*angtmp))*dalpha);
       m_SignalHR(i)=exp(log(m_d/(m_d + m_bvalsHR(1,i)*angtmp*sig2))*dalpha); // more stable
-
     }
-
     for (int i=1; i<=m_bvecsLR.Ncols(); i++){
       float angtmp=m_vec(1)*m_bvecsLR(1,i)+m_vec(2)*m_bvecsLR(2,i)+m_vec(3)*m_bvecsLR(3,i);
       angtmp=angtmp*angtmp;	  
       //m_SignalLR(i)=exp(log(dbeta/(dbeta + m_bvalsLR(1,i)*angtmp))*dalpha);
       m_SignalLR(i)=exp(log(m_d/(m_d + m_bvalsLR(1,i)*angtmp*sig2))*dalpha); // more stable
+    }
+  }
+  else if(m_modelnum==3){
+    float invR=1.0/(2*m_R+1.0);
+    for (int i = 1; i <= m_bvecsHR.Ncols(); i++){
+      float angtmp=m_vec(1)*m_bvecsHR(1,i)+m_vec(2)*m_bvecsHR(2,i)+m_vec(3)*m_bvecsHR(3,i);
+      angtmp=angtmp*angtmp;
+      m_SignalHR(i)=exp(-m_bvalsHR(1,i)*3*m_d*invR*((1-m_R)*angtmp+m_R));
+    }
+    for (int i = 1; i <= m_bvecsLR.Ncols(); i++){
+      float angtmp=m_vec(1)*m_bvecsLR(1,i)+m_vec(2)*m_bvecsLR(2,i)+m_vec(3)*m_bvecsLR(3,i);
+      angtmp=angtmp*angtmp;
+      m_SignalLR(i)=exp(-m_bvalsLR(1,i)*3*m_d*invR*((1-m_R)*angtmp+m_R));
     }
   }
 }
@@ -259,9 +269,13 @@ void HRvoxel::initialise_energies_props(){
     compute_tau_prior();
     m_tau_prop=m_tau/2.0;
   }
-  if (m_modelnum==2){
+  if (m_modelnum>=2){
     compute_d_std_prior();
     m_d_std_prop=m_d_std/10.0;
+    if (m_modelnum==3){
+      compute_R_prior();
+      m_R_prop=m_R/10.0;
+    }
   }
   compute_S0_prior();
   compute_d_prior();
@@ -275,7 +289,7 @@ void HRvoxel::initialise_energies_props(){
  
 bool HRvoxel::compute_d_prior(){
   m_d_old_prior=m_d_prior;
-  if(m_d<=0)
+  if(m_d<=0 || m_d>UPPERDIFF)
     return true;
   else{
     //m_d_prior=0;
@@ -283,7 +297,7 @@ bool HRvoxel::compute_d_prior(){
     if (m_dPrior_ON)
       m_d_prior=0.5*(m_d-m_mean_d)*(m_d-m_mean_d)/(m_stdev_d*m_stdev_d)+log(m_stdev_d); //Use a Gaussian centered around the neighbourhood meand
     else{  //Use a Gamma Prior centered around 1e-3
-      float alpha=3.0; float beta=2000;
+      float alpha=3.0; float beta=4000;
       m_d_prior=(1.0-alpha)*log(m_d)+beta*m_d; //Gamma_prior: pow(m_d,alpha-1.0)*exp(-beta*m_d)
     }
     return false;
@@ -293,11 +307,28 @@ bool HRvoxel::compute_d_prior(){
 
 bool HRvoxel::compute_d_std_prior(){
   m_d_std_old_prior=m_d_std_prior;
-  if(m_d_std<=0 || m_d_std>0.01)
+  float upper_d_std=0.01;
+  if (m_modelnum==3) upper_d_std=0.004;
+  if(m_d_std<=0 || m_d_std>upper_d_std)
     return true;
   else{
     //m_d_std_prior=0;
     m_d_std_prior=std::log(m_d_std); //Use ARD
+    return false;
+  }
+}
+
+
+bool HRvoxel::compute_R_prior(){
+  m_R_old_prior=m_R_prior;
+  float upper_R=2*m_R_priormean;
+  if (m_R_priormean>0.5)
+    upper_R=1;
+  if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
+    return true;
+  else{
+    float Rstd2=m_R_priorstd*m_R_priorstd; 
+    m_R_prior=(m_R-m_R_priormean)*(m_R-m_R_priormean)/Rstd2;  //Gaussian prior
     return false;
   }
 }
@@ -341,8 +372,10 @@ void HRvoxel::compute_prior(){
     m_prior_en=m_prior_en+m_fsum_prior;
   if(m_rician)
     m_prior_en=m_prior_en+m_tau_prior;
-  if(m_modelnum==2)
+  if(m_modelnum>=2){
     m_prior_en=m_prior_en+m_d_std_prior;
+    if (m_modelnum==3) m_prior_en=m_prior_en+m_R_prior;
+  }
   for(int f=0; f<m_numfibres; f++){
     m_prior_en=m_prior_en+m_fibres[f].get_prior();
   } 
@@ -414,7 +447,7 @@ void HRvoxel::compute_iso_signal(){
     for(int i=1; i<=m_bvecsLR.Ncols(); i++)
       m_iso_SignalLR(i)=exp(-m_d*m_bvalsLR(1,i));
   }
-  else if (m_modelnum==2){
+  else if (m_modelnum>=2){
     //float dbeta=m_d/(m_d_std*m_d_std);
     //float dalpha=m_d*dbeta;	  
     float sig2=m_d_std*m_d_std;
@@ -496,6 +529,25 @@ void HRvoxel::reject_d_std(){
   m_d_std_rej++;
 }
 
+bool HRvoxel::propose_R(){
+  bool rejflag;
+  m_R_old=m_R;
+  m_R+=normrnd().AsScalar()*m_R_prop;
+  rejflag=compute_R_prior();
+  for(int f=0; f<m_numfibres; f++)
+    m_fibres[f].compute_signal();
+  return rejflag;
+}
+
+
+void HRvoxel::reject_R(){
+  m_R=m_R_old; 
+  m_R_prior=m_R_old_prior;
+  for(int f=0; f<m_numfibres; f++)
+    m_fibres[f].restoreSignals();
+  m_R_rej++;
+}
+
 
 bool HRvoxel::propose_S0(){
   m_S0_old=m_S0;
@@ -556,10 +608,15 @@ void HRvoxel::update_proposals(){
     m_tau_prop=min(m_tau_prop,maxfloat);
     m_tau_acc=0;  m_tau_rej=0;
   }
-  if(m_modelnum==2){
+  if(m_modelnum>=2){
     m_d_std_prop*=sqrt(float(m_d_std_acc+1)/float(m_d_std_rej+1));
     m_d_std_prop=min(m_d_std_prop,maxfloat);
     m_d_std_acc=0;  m_d_std_rej=0;
+    if (m_modelnum==3){
+      m_R_prop*=sqrt(float(m_R_acc+1)/float(m_R_rej+1));
+      m_R_prop=min(m_R_prop,maxfloat);
+      m_R_acc=0;  m_R_rej=0;
+    }
   }
   for(unsigned int f=0; f<m_fibres.size();f++)
     m_fibres[f].update_proposals();
@@ -572,6 +629,8 @@ void HRvoxel::report() const{
   OUT(m_d_prior);     OUT(m_d_old_prior);     OUT(m_d_acc);          OUT(m_d_rej);
   OUT(m_d_std);       OUT(m_d_std_old);       OUT(m_d_std_prop);
   OUT(m_d_std_prior); OUT(m_d_std_old_prior); OUT(m_d_std_acc);      OUT(m_d_std_rej);
+  OUT(m_R);           OUT(m_R_old);           OUT(m_R_prop);
+  OUT(m_R_prior);     OUT(m_R_old_prior);     OUT(m_R_acc);      OUT(m_R_rej);
   OUT(m_S0);          OUT(m_S0_old);          OUT(m_S0_prop);        
   OUT(m_S0_prior);    OUT(m_S0_old_prior);    OUT(m_S0_acc);         OUT(m_S0_rej);
   OUT(m_prior_en);    OUT(m_old_prior_en);    OUT(m_SignalHR.t());   OUT(m_SignalLR.t());
@@ -848,6 +907,23 @@ void LRvoxel::set_HRparams(const int n, const float d, const float d_std,const f
   }
 }
 
+//Set params for a single HRvoxel with index 0 <= n < N (model 3)
+void LRvoxel::set_HRparams(const int n, const float d, const float d_std,const float S0, const float R, const ColumnVector& th, const ColumnVector& ph, const ColumnVector& f){
+  m_HRvoxels[n].set_d(d);
+  m_HRvoxels[n].set_d_std(d_std);
+  m_HRvoxels[n].set_S0(S0);
+  m_HRvoxels[n].set_R(R);
+  if (m_allard && !m_Noard)
+    m_HRvoxels[n].addfibre(th(1),ph(1),f(1),true);  //ARD on for the first fibre
+  else
+    m_HRvoxels[n].addfibre(th(1),ph(1),f(1),false); //ARD off for the first fibre
+  for (int m=2; m<=m_numfibres; m++){
+    if (m_Noard)
+      m_HRvoxels[n].addfibre(th(m),ph(m),f(m),false); //ARD off for the other fibres
+    else
+      m_HRvoxels[n].addfibre(th(m),ph(m),f(m),true);  //ARD on for the other fibres
+  }
+}
 
 
 //Set params for all modes of orientation priors
@@ -1070,8 +1146,20 @@ void LRvoxel::compute_likelihood(){
   else{  //Rician Likelihood Energy Calculation
     //likelihood of Low-Res data 
     SLRpred=0;
-    for (unsigned int m=0; m<m_dataHR.size(); m++) //add attenuations
-      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR()/m_HRvoxels[m].get_S0();
+
+    //////  Original partial volume model ////// 
+    //for (unsigned int m=0; m<m_dataHR.size(); m++) //add attenuations
+        //SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR()/m_HRvoxels[m].get_S0();
+    
+    //////  New partial volume model     ////// 
+    float sum2=0;
+    for (unsigned int m=0; m<m_dataHR.size(); m++){ //add attenuations
+      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR();
+      sum2+=m_HRweights(m+1)*m_HRvoxels[m].get_S0();
+    } 
+    SLRpred=SLRpred/sum2;
+    ///////////////////////////////////////////
+
     SLRpred=m_S0LR*SLRpred;
     likLR=-m_bvecsLR.Ncols()*log(m_tauLR);  
     for (int k=1; k<=m_bvecsLR.Ncols(); k++)
@@ -1373,7 +1461,7 @@ void LRvoxel::jump(){
       m_HRvoxels[n].reject_d();
       
 
-    if (m_modelnum==2){
+    if (m_modelnum>=2){
       if(!m_HRvoxels[n].propose_d_std()){    //Try d_std
 	m_HRvoxels[n].compute_prior();
 	m_HRvoxels[n].compute_signal();
@@ -1391,6 +1479,26 @@ void LRvoxel::jump(){
       }
       else 
 	m_HRvoxels[n].reject_d_std();
+      
+      if (m_modelnum==3){
+	if(!m_HRvoxels[n].propose_R()){    //Try R
+	m_HRvoxels[n].compute_prior();
+	m_HRvoxels[n].compute_signal();
+	compute_prior();
+	compute_likelihood();
+	compute_posterior();
+	if(test_energy()){
+	  m_HRvoxels[n].accept_R();
+	}
+	else{
+	  restore_energies();
+	  m_HRvoxels[n].restore_prior_totsignal();
+	  m_HRvoxels[n].reject_R();
+	}
+      }
+      else 
+	m_HRvoxels[n].reject_R();
+      }
     }
 
     if (!m_noS0jump){
