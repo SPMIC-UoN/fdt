@@ -25,6 +25,8 @@ using namespace std;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 
+#define UPPERDIFF 0.005
+
 namespace RUBIX{
   const float maxfloat=1e10;
   const float minfloat=1e-10;
@@ -69,19 +71,20 @@ namespace RUBIX{
     const float m_ardfudge;
     const float& m_d;
     const float& m_d_std;
+    const float& m_R;               //R=Perpendicular/Axial diffusivity in model3 
     const Matrix& m_bvecsHR;        //bvecs at High-Res   (3 x HR_NumPoints)
     const Matrix& m_bvalsHR;        //bvalues at High-Res (1 x HR_NumPoints)
     const Matrix& m_bvecsLR;        //bvecs at Low-Res    (3 x LR_NumPoints)
     const Matrix& m_bvalsLR;        //bvalues at Low-Res  (1 x HR_NumPoints)
-    const int m_modelnum;           //1 for single-shell, 2 for multi-shell model 
+    const int m_modelnum;           //1 for deconvolution with sticks, 2 for deconvolution with sticks and a Gamma distribution of diffusivities, 3 for deconvolution with zeppelins
 
  public:
  //constructor
  RFibre(const float th, const float ph,const float f, const Matrix& bvecsHR, const Matrix& bvalsHR, 
-	    const Matrix& bvecsLR, const Matrix& bvalsLR, const Matrix& Orient_hyp_prior,
-	const float& d, const float& d_std, const bool ard=true, const int modelnum=1,const float ardfudge=1):
+	const Matrix& bvecsLR, const Matrix& bvalsLR, const Matrix& Orient_hyp_prior,
+	const float& d, const float& d_std, const float& R, const bool ard=true, const int modelnum=1, const float ardfudge=1):
     m_th(th), m_ph(ph), m_f(f), f_ard(ard), m_Orient_hyp_prior(Orient_hyp_prior),  m_ardfudge(ardfudge), m_d(d),
-      m_d_std(d_std),m_bvecsHR(bvecsHR), m_bvalsHR(bvalsHR), m_bvecsLR(bvecsLR), m_bvalsLR(bvalsLR), m_modelnum(modelnum){
+      m_d_std(d_std), m_R(R), m_bvecsHR(bvecsHR), m_bvalsHR(bvalsHR), m_bvecsLR(bvecsLR), m_bvalsLR(bvalsLR), m_modelnum(modelnum){
       m_th_old=m_th; m_ph_old=m_ph;
       m_vec.ReSize(3);
       m_vec<<sin(m_th)*cos(m_ph) <<sin(m_th)*sin(m_ph) <<cos(m_th);
@@ -179,6 +182,14 @@ namespace RUBIX{
     float m_d_std_acc;
     float m_d_std_rej;
 
+    float m_R;   //anisotropy parameter in model3 - R=l2/l1 for the zeppelin compartment 
+    float m_R_old;
+    float m_R_prop;
+    float m_R_prior; 
+    float m_R_old_prior;
+    float m_R_acc;
+    float m_R_rej;
+
     float m_S0;
     float m_S0_old;
     float m_S0_prop;
@@ -199,6 +210,9 @@ namespace RUBIX{
     const float& m_stdev_d;
     const float& m_mean_fsum;     //hyperparameters for fsum prior
     const float& m_stdev_fsum;
+    const float& m_R_priormean;   //Parameters to use for the Gaussian prior on R. Mean
+    const float& m_R_priorstd;    //and variance
+
     float m_fsum_prior;
     float m_fsum_old_prior;
 
@@ -234,9 +248,9 @@ namespace RUBIX{
     HRvoxel(const Matrix& bvecsHR, const Matrix& bHR, 
 	    const Matrix& bvecsLR, const Matrix& bLR, 
 	    const Matrix& Orient_hyp_prior,
-	    const float& mean_d, const float& stdev_d, const float& mean_fsum, const float& stdev_fsum,
+	    const float& mean_d, const float& stdev_d, const float& mean_fsum, const float& stdev_fsum, const float& Rmean, const float& Rstd,
 	    const int N, const int modelnum=1,const float ardfudge=1, const bool fsumPrior_ON=false, const bool dPrior_ON=false, const bool rician=false, const bool noS0jump=false):
-    m_mean_d(mean_d), m_stdev_d(stdev_d), m_mean_fsum(mean_fsum), m_stdev_fsum(stdev_fsum),
+    m_mean_d(mean_d), m_stdev_d(stdev_d), m_mean_fsum(mean_fsum), m_stdev_fsum(stdev_fsum), m_R_priormean(Rmean), m_R_priorstd(Rstd),
     m_Orient_hyp_prior(Orient_hyp_prior), 
       m_bvecsHR(bvecsHR), m_bvalsHR(bHR), m_bvecsLR(bvecsLR), m_bvalsLR(bLR), m_modelnum(modelnum), m_numfibres(N),  m_ardfudge(ardfudge), m_fsumPrior_ON(fsumPrior_ON), m_dPrior_ON(dPrior_ON), m_rician(rician), m_noS0jump(noS0jump) {
       
@@ -247,9 +261,10 @@ namespace RUBIX{
       m_SignalLR.ReSize(m_bvecsLR.Ncols()); m_SignalLR=0; m_SignalLR_old=m_SignalLR; 
      
       m_d_acc=0; m_d_rej=0; m_d_prior=0; m_d_old_prior=0;              
-      m_d_std_acc=0; m_d_std_rej=0; m_d_std_prior=0; m_d_std_old_prior=0;              
+      m_d_std_acc=0; m_d_std_rej=0; m_d_std_prior=0; m_d_std_old_prior=0;  
+      m_R_acc=0; m_R_rej=0; m_R_prior=0; m_R_old_prior=0;              
       m_S0_acc=0; m_S0_rej=0; m_S0_prior=0; m_S0_old_prior=0;
-      m_d=0; m_d_old=0;  m_d_std=0; m_d_std_old=0; m_S0=0; m_S0_old=0; 
+      m_d=0; m_d_old=0;  m_d_std=0; m_d_std_old=0; m_R=0; m_R_old=0; m_S0=0; m_S0_old=0; 
       m_tau_acc=0; m_tau_rej=0; m_tau_prior=0; m_tau_old_prior=0; m_tau=0; m_tau_old=0; 
       m_prior_en=0; m_old_prior_en=0;
       m_fsum_prior=0; m_fsum_old_prior=0;
@@ -261,7 +276,7 @@ namespace RUBIX{
 
     const vector<RFibre>& fibres() const{ return m_fibres; }
     void addfibre(const float th, const float ph, const float f,const bool use_ard=true) {
-      RFibre fib(th,ph,f,m_bvecsHR,m_bvalsHR,m_bvecsLR,m_bvalsLR,m_Orient_hyp_prior,m_d,m_d_std,use_ard,m_modelnum,m_ardfudge);
+      RFibre fib(th,ph,f,m_bvecsHR,m_bvalsHR,m_bvecsLR,m_bvalsLR,m_Orient_hyp_prior,m_d,m_d_std,m_R,use_ard,m_modelnum,m_ardfudge);
       m_fibres.push_back(fib);
     }
 	
@@ -270,6 +285,8 @@ namespace RUBIX{
     inline void set_d(const float d){ m_d=d; }
     inline float get_d_std() const{ return m_d_std; }
     inline void set_d_std(const float d_std){ m_d_std=d_std; }
+    inline float get_R() const{ return m_R; }
+    inline void set_R(const float R){ m_R=R; }
     inline float get_S0() const{ return m_S0; }
     inline void set_S0(const float S0){ m_S0=S0; }
     inline float get_tau() const{ return m_tau; }
@@ -281,6 +298,7 @@ namespace RUBIX{
 
     bool compute_d_prior();
     bool compute_d_std_prior(); 
+    bool compute_R_prior(); 
     bool compute_S0_prior(); 
     bool compute_tau_prior(); 
     bool reject_f_sum();       //Check if sum of volume fractions is >1
@@ -303,6 +321,10 @@ namespace RUBIX{
     bool propose_d_std();
     void accept_d_std(){ m_d_std_acc++; }
     void reject_d_std();
+
+    bool propose_R();
+    void accept_R(){ m_R_acc++; }
+    void reject_R();
 
     bool propose_S0();
     void accept_S0(){ m_S0_acc++; }
@@ -339,6 +361,9 @@ namespace RUBIX{
       m_d_std=rhs.m_d_std;   m_d_std_old=rhs.m_d_std_old;   m_d_std_prop=rhs.m_d_std_prop;
       m_d_std_prior=rhs.m_d_std_prior;   m_d_std_old_prior=rhs.m_d_std_old_prior; 
       m_d_std_acc=rhs.m_d_std_acc;       m_d_std_rej=rhs.m_d_std_rej;
+      m_R=rhs.m_R;   m_R_old=rhs.m_R_old;   m_R_prop=rhs.m_R_prop;
+      m_R_prior=rhs.m_R_prior;   m_R_old_prior=rhs.m_R_old_prior; 
+      m_R_acc=rhs.m_R_acc;       m_R_rej=rhs.m_R_rej;
 
       m_fsum_prior=rhs.m_fsum_prior;     m_fsum_old_prior=rhs.m_fsum_old_prior;
       m_S0=rhs.m_S0;   m_S0_old=rhs.m_S0_old;   m_S0_prop=rhs.m_S0_prop;
@@ -354,7 +379,6 @@ namespace RUBIX{
       m_SignalLR=rhs.m_SignalLR;       m_SignalLR_old=rhs.m_SignalLR_old;
       return *this;
     }
-
   };
 
 
@@ -550,6 +574,7 @@ namespace RUBIX{
     const vector<Matrix>& m_bvalsHR; //bvalues at High-Res (HRvoxels within a LRvoxel x 3 x HR_NumPoints)
     const Matrix& m_bvecsLR;        //bvecs at Low-Res    (3 x LR_NumPoints)
     const Matrix& m_bvalsLR;        //bvalues at Low-Res  (1 x HR_NumPoints)
+    /////////////////// User-defined parameters follow  ///////////////////////
     const int m_modelnum;           //1 for single-shell, 2 for multi-shell model
     const int m_numfibres;          //Number of fibres in each HR voxel
     const int m_Nmodes;             //Number of modes for the Orientation Prior
@@ -561,15 +586,17 @@ namespace RUBIX{
     const bool m_dPrior_ON;         //Flag for setting on a prior on the diffusivity across intersected HR voxels
     const bool m_rician;            //Flag for using a Rician noise model 
     const bool m_noS0jump;          //Indicates whether S0 parameters will be kept constant during MCMC 
+    const float m_R_priormean;      //Parameters to use for the Gaussian prior on R. Mean
+    const float m_R_priorstd;       //and variance
     const ColumnVector& m_HRweights;//Holds the volume fraction each HR voxel occupies out of the LR one
  
   public:
     //Constructor
     LRvoxel(const vector<Matrix>& bvecsHR, const vector<Matrix>& bHR, 
 	    const Matrix& bvecsLR, const Matrix& bLR, 
-	    const ColumnVector& dataLR, const vector<ColumnVector>& dataHR, const int N, const int Nmodes, const ColumnVector& HRweights, const int modelnum=1, const float ardfudge=1, const bool allard=false, const bool Noard=false, const bool kappa_ard=false, const bool fsumPrior_ON=false, const bool dPrior_ON=false, const bool rician=false, const bool noS0jump=false):
+	    const ColumnVector& dataLR, const vector<ColumnVector>& dataHR, const int N, const int Nmodes, const ColumnVector& HRweights, const int modelnum=1, const float ardfudge=1, const bool allard=false, const bool Noard=false, const bool kappa_ard=false, const bool fsumPrior_ON=false, const bool dPrior_ON=false, const bool rician=false, const bool noS0jump=false, const float Rmean=0.13, const float Rstd=0.03):
       m_dataLR(dataLR), m_dataHR(dataHR), m_bvecsHR(bvecsHR), m_bvalsHR(bHR), m_bvecsLR(bvecsLR), m_bvalsLR(bLR),
-	m_modelnum(modelnum), m_numfibres(N), m_Nmodes(Nmodes),m_ardfudge(ardfudge), m_allard(allard), m_Noard(Noard), m_kappa_ard(kappa_ard), m_fsumPrior_ON(fsumPrior_ON), m_dPrior_ON(dPrior_ON), m_rician(rician), m_noS0jump(noS0jump), m_HRweights(HRweights) {
+	m_modelnum(modelnum), m_numfibres(N), m_Nmodes(Nmodes),m_ardfudge(ardfudge), m_allard(allard), m_Noard(Noard), m_kappa_ard(kappa_ard), m_fsumPrior_ON(fsumPrior_ON), m_dPrior_ON(dPrior_ON), m_rician(rician), m_noS0jump(noS0jump),  m_R_priormean(Rmean), m_R_priorstd(Rstd), m_HRweights(HRweights) {
     
       m_S0LR=0; m_S0LR_old=0; m_S0LR_prior=0; m_S0LR_old_prior=0; m_S0LR_acc=0; m_S0LR_rej=0; m_S0LR_prop=0.2;
       m_tauLR=0; m_tauLR_old=0; m_tauLR_prior=0; m_tauLR_old_prior=0; m_tauLR_acc=0; m_tauLR_rej=0; m_tauLR_prop=0.2;
@@ -591,7 +618,7 @@ namespace RUBIX{
       m_Orient_hyp_prior.ReSize(m_Nmodes,5);
 
       for (unsigned int n=0; n<m_dataHR.size(); n++){ //Add HRvoxel Objects
-      	HRvoxel HRv(m_bvecsHR[n], m_bvalsHR[n], m_bvecsLR, m_bvalsLR, m_Orient_hyp_prior, m_mean_d, m_stdev_d, m_mean_fsum, m_stdev_fsum, m_numfibres, m_modelnum, m_ardfudge, m_fsumPrior_ON, m_dPrior_ON, m_rician, m_noS0jump);
+      	HRvoxel HRv(m_bvecsHR[n], m_bvalsHR[n], m_bvecsLR, m_bvalsLR, m_Orient_hyp_prior, m_mean_d, m_stdev_d, m_mean_fsum, m_stdev_fsum, m_R_priormean, m_R_priorstd, m_numfibres, m_modelnum, m_ardfudge, m_fsumPrior_ON, m_dPrior_ON, m_rician, m_noS0jump);
       	
 	m_HRvoxels.push_back(HRv);
       }
@@ -627,7 +654,8 @@ namespace RUBIX{
     void update_Orient_hyp_prior();       //Update the matrix that keeps information on the orientation prior parameters
     void update_Orient_hyp_prior(int M);  //Update the entry only for a specific Mode 0<=M<N_modes
     void set_HRparams(const int n, const float d, const float S0, const ColumnVector& th, const ColumnVector& ph, const ColumnVector& f);  //Set params for a single HR voxel
-    void set_HRparams(const int n, const float d, const float d_std,const float S0, const ColumnVector& th, const ColumnVector& ph, const ColumnVector& f);  //Set params for a single HR voxel
+    void set_HRparams(const int n, const float d, const float d_std, const float S0, const ColumnVector& th, const ColumnVector& ph, const ColumnVector& f);  
+    void set_HRparams(const int n, const float d, const float d_std, const float S0, const float R, const ColumnVector& th, const ColumnVector& ph, const ColumnVector& f); 
     void set_Priorparams(const ColumnVector& th, const ColumnVector& ph, const ColumnVector& invkappa);  //Set params for all modes of orientation priors
     float get_S0LR() const { return m_S0LR; }
     void set_S0LR(const float S0)  { m_S0LR=S0; }

@@ -5,9 +5,6 @@
 #   Stamatios Sotiropoulos
 
 
-devel_dir=/home/stam/fsldev/fdt  # Where the binary is 
-script_dir=/home/stam/Rubix_src # Where the scripts are
-
 
 if [ "x$SGE_ROOT" = "x" ] ; then
     if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
@@ -39,12 +36,12 @@ Usage() {
     echo "-b (burnin period, default 5000)"
     echo "-j (number of jumps, default 1250)"
     echo "-s (sample every, default 25)"
-    echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
+    echo "-model (1 for  sticks, 2 for sticks and range of diffusivities, 3 for zeppelins, default 1)"
     echo "-g (consider gradient nonlinearities, default off)"
     echo ""
     echo ""
     echo "ADDITIONALLY: you can pass on rubix options onto directly rubix_parallel"
-    echo " For example:  eubix_parallel <subject directory> --fsumPrior --dPrior"
+    echo " For example:  rubix_parallel <subject directory> --fsumPrior --dPrior"
     echo " Type 'rubix --help' for a list of available options "
     exit 1
 }
@@ -195,7 +192,7 @@ else
 fi
 
 echo Queuing preprocessing stage
-preprocid=`$FSLDIR/bin/fsl_sub -T 60 -R 8000 -N rubix_pre -l ${subjdir}.rubiX/logs  $script_dir/rubix_preproc.sh ${subjdir} ${filterflag} ${gflag}`
+preprocid=`$FSLDIR/bin/fsl_sub -T 60 -N rubix_pre -l ${subjdir}.rubiX/logs  $FSLDIR/bin/rubix_preproc.sh ${subjdir} ${filterflag} ${gflag}`
 echo Queuing parallel processing stage
 [ -f ${subjdir}.rubiX/commands.txt ] && rm ${subjdir}.rubiX/commands.txt
  slice=0
@@ -205,11 +202,11 @@ echo Queuing parallel processing stage
     if [ ${gflag} -eq 1 ]; then
 	opts="$opts --gLR=${subjdir}.rubiX/grad_devLR_slice_${slicezp} --gHR=${subjdir}.rubiX/grad_devHR_newslice_${slicezp}"
     fi    
-    echo "$devel_dir/rubix --dLR=${subjdir}.rubiX/dataLR_slice_${slicezp} --mLR=${subjdir}.rubiX/nodif_brain_maskLR_slice_${slicezp} --rLR=${subjdir}.rubiX/bvecsLR --bLR=${subjdir}.rubiX/bvalsLR --dHR=${subjdir}.rubiX/dataHR_newslice_${slicezp} --rHR=${subjdir}.rubiX/bvecsHR --bHR=${subjdir}.rubiX/bvalsHR --forcedir --nf=$nfibres --nM=$nmodes --bi=$burnin --model=$model --logdir=${subjdir}.rubiX/diff_slices/data_slice_$slicezp ${opts}" >> ${subjdir}.rubiX/commands.txt
+    echo "$FSLDIR/bin/rubix --dLR=${subjdir}.rubiX/dataLR_slice_${slicezp} --mLR=${subjdir}.rubiX/nodif_brain_maskLR_slice_${slicezp} --rLR=${subjdir}.rubiX/bvecsLR --bLR=${subjdir}.rubiX/bvalsLR --dHR=${subjdir}.rubiX/dataHR_newslice_${slicezp} --rHR=${subjdir}.rubiX/bvecsHR --bHR=${subjdir}.rubiX/bvalsHR --forcedir --nf=$nfibres --nM=$nmodes --bi=$burnin --model=$model --logdir=${subjdir}.rubiX/diff_slices/data_slice_$slicezp ${opts}" >> ${subjdir}.rubiX/commands.txt
     slice=$(($slice + 1))
  done
     
  RubiXid=`${FSLDIR}/bin/fsl_sub -T 1400 -j $preprocid -l ${subjdir}.rubiX/logs -N rubix -t ${subjdir}.rubiX/commands.txt`
     
  echo Queuing post processing stage
- mergeid=`${FSLDIR}/bin/fsl_sub -T 60 -R 8000 -j $RubiXid -N rubix_post -l ${subjdir}.rubiX/logs $script_dir/rubix_postproc.sh ${subjdir} ${filterflag}`
+ mergeid=`${FSLDIR}/bin/fsl_sub -T 60 -j $RubiXid -N rubix_post -l ${subjdir}.rubiX/logs $FSLDIR/bin/rubix_postproc.sh ${subjdir} ${filterflag}`

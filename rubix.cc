@@ -42,9 +42,11 @@ void HRSamples::record(const HRvoxel& HRv, int vox, int samp){
   m_S0samples(samp,vox)=HRv.get_S0();
   if (m_rician)
     m_tausamples(samp,vox)=HRv.get_tau();
-  if (m_modelnum==2)
+  if (m_modelnum>=2){
     m_d_stdsamples(samp,vox)=HRv.get_d_std();
-
+    if (m_modelnum==3)
+      m_Rsamples(samp,vox)=HRv.get_R();
+  }
   for(int f=0; f<m_numfibres; f++){
     m_thsamples[f](samp,vox)=HRv.fibres()[f].get_th();
     m_phsamples[f](samp,vox)=HRv.fibres()[f].get_ph();
@@ -61,9 +63,11 @@ void HRSamples::finish_voxel(int vox){
 
   if (m_rician)
     m_mean_tausamples(vox)=m_tausamples.Column(vox).Sum()/m_nsamps;
-  if (m_modelnum==2)
+  if (m_modelnum>=2){
     m_mean_d_stdsamples(vox)=m_d_stdsamples.Column(vox).Sum()/m_nsamps;
-  
+    if (m_modelnum==3)
+      m_mean_Rsamples(vox)=m_Rsamples.Column(vox).Sum()/m_nsamps;
+  }
   for(int f=0; f<m_numfibres; f++){  //for each fibre of the voxel
     m_mean_fsamples[f](vox)=m_fsamples[f].Column(vox).Sum()/m_nsamps;
 
@@ -128,10 +132,15 @@ void HRSamples::save(const volume<float>& mask){
     save_volume(tmp[0],logger.appendDir("mean_tausamples"));
   }
 
-  if (m_modelnum==2){
+  if (m_modelnum>=2){
     tmp.setmatrix(m_mean_d_stdsamples,mask);
     tmp.setDisplayMaximumMinimum(tmp.max(),0);
     save_volume(tmp[0],logger.appendDir("mean_dstd_samples"));
+    if (m_modelnum==3){
+      tmp.setmatrix(m_mean_Rsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
+      save_volume(tmp[0],logger.appendDir("mean_Rsamples"));
+    }
   }
 
   //Sort the output based on mean_fsamples
@@ -152,7 +161,7 @@ void HRSamples::save(const volume<float>& mask){
     sort(sfs.begin(),sfs.end());
       
     for(int samp=1;samp<=m_dsamples.Nrows();samp++){
-      for(int f=0; f<m_numfibres; f++){;
+      for(int f=0; f<m_numfibres; f++){
 	thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	phsamples_out[f](samp,vox)=m_phsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 	fsamples_out[f](samp,vox)=m_fsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
@@ -349,27 +358,28 @@ void LRSamples::save(const volume<float>& mask){
     }
   }
   
+  string oname;
   // save the sorted fibres
   for(int f=0; f<m_Nmodes; f++){
-    tmp.setmatrix(thsamples_out[f],mask);
-    tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
-    string oname="Pth"+num2str(f+1)+"samples";
-    save_volume4D(tmp,logger.appendDir(oname));
+    //tmp.setmatrix(thsamples_out[f],mask);
+    //tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
+    //oname="Pth"+num2str(f+1)+"samples";
+    //save_volume4D(tmp,logger.appendDir(oname));
       
-    tmp.setmatrix(phsamples_out[f],mask);
-    tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
-    oname="Pph"+num2str(f+1)+"samples";
-    save_volume4D(tmp,logger.appendDir(oname));
+    //tmp.setmatrix(phsamples_out[f],mask);
+    //tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
+    //oname="Pph"+num2str(f+1)+"samples";
+    //save_volume4D(tmp,logger.appendDir(oname));
    
-    tmp.setmatrix(ksamples_out[f],mask);
-    tmp.setDisplayMaximumMinimum(1,0);
-    oname="Pk"+num2str(f+1)+"samples";
-    save_volume4D(tmp,logger.appendDir(oname));
+    //tmp.setmatrix(ksamples_out[f],mask);
+    //tmp.setDisplayMaximumMinimum(1,0);
+    //oname="Pk"+num2str(f+1)+"samples";
+    //save_volume4D(tmp,logger.appendDir(oname));
 
-    tmp.setmatrix(mean_ksamples_out[f],mask);
-    tmp.setDisplayMaximumMinimum(1,0);
-    oname="mean_Pk"+num2str(f+1)+"samples";
-    save_volume(tmp[0],logger.appendDir(oname));
+    //tmp.setmatrix(mean_ksamples_out[f],mask);
+    //tmp.setDisplayMaximumMinimum(1,0);
+    //oname="mean_Pk"+num2str(f+1)+"samples";
+    //save_volume(tmp[0],logger.appendDir(oname));
       
     tmp.setmatrix(dyadic_vectors_out[f],mask);
     tmp.setDisplayMaximumMinimum(1,-1);
@@ -406,20 +416,27 @@ void LRVoxelManager::initialise(){
       }  
       m_LRv.set_HRparams(n,pvmd,pvmS0,pvmth,pvmph,pvmf);
     }
-    else{  //Model 2
-      PVM_multi pvm(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n],opts.nfibres.value());
+    else{  //Model 2 or Model 3
+      int Gamma_ball_only=0;  //That flag for diffmodels means default model2
+      if (opts.modelnum.value()==3) Gamma_ball_only=2;   //That flag for diffmodels means default model3 (with constant R)
+
+      PVM_multi pvm(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n],opts.nfibres.value(),Gamma_ball_only,opts.R_prior_mean.value());
       pvm.fit();
       
       pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
       pvmS0 =fabs(pvm.get_s0()); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
-      if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
-      if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
+      
+      if(pvmd<0 || pvmd>UPPERDIFF) pvmd=2e-3;
+
+      float upper_d_std=0.01;
+      if (opts.modelnum.value()==3) upper_d_std=0.004;
+      if (pvmd_std<0 || pvmd_std>upper_d_std) pvmd_std=pvmd/10;
       
       if (opts.noS0jump.value()){
 	DTI dti2(m_dataHR[n],m_bvecsHR[n],m_bvalsHR[n]); dti2.linfit();
 	pvmS0 =fabs(dti2.get_s0());
       }  
-      m_LRv.set_HRparams(n,pvmd,pvmd_std,pvmS0,pvmth,pvmph,pvmf); 
+      m_LRv.set_HRparams(n,pvmd,pvmd_std,pvmS0,opts.R_prior_mean.value(),pvmth,pvmph,pvmf); 
     } 
     
     if (opts.rician.value()){  //If using Rician Energy, initialize tau, using the variance of the initial fit residuals

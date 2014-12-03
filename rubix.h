@@ -31,6 +31,7 @@ namespace RUBIX{
   class HRSamples{
     Matrix m_dsamples;              //Variables for storing MCMC samples of all voxels in the HRgrid
     Matrix m_d_stdsamples;
+    Matrix m_Rsamples;
     Matrix m_S0samples;
     Matrix m_tausamples;
     vector<Matrix> m_thsamples;
@@ -40,6 +41,7 @@ namespace RUBIX{
     //for storing means
     RowVector m_mean_dsamples;    //Storing mean_samples for all voxels in the HRgrid
     RowVector m_mean_d_stdsamples;
+    RowVector m_mean_Rsamples;
     RowVector m_mean_S0samples;
     RowVector m_mean_tausamples;
     vector<Matrix> m_dyadic_vectors;
@@ -77,9 +79,13 @@ namespace RUBIX{
 	m_tausamples.ReSize(nsamples,nvoxels);  m_tausamples=0;
 	m_mean_tausamples.ReSize(nvoxels);      m_mean_tausamples=0;
       }
-      if (m_modelnum==2){
+      if (m_modelnum>=2){
 	m_d_stdsamples.ReSize(nsamples,nvoxels);  m_d_stdsamples=0;
 	m_mean_d_stdsamples.ReSize(nvoxels);      m_mean_d_stdsamples=0;
+	if (m_modelnum==3){
+	  m_Rsamples.ReSize(nsamples,nvoxels);  m_Rsamples=0;
+	  m_mean_Rsamples.ReSize(nvoxels);      m_mean_Rsamples=0;
+	}
       }
       Matrix tmpvecs(3,nvoxels);  tmpvecs=0;  
       for(int f=0; f<m_numfibres; f++){
@@ -209,7 +215,7 @@ namespace RUBIX{
 		   const ColumnVector& dataLR,const vector<ColumnVector>& dataHR, 
 		 const Matrix& bvecsLR, const Matrix& bvalsLR, const vector<Matrix>& bvecsHR, const vector<Matrix>& bvalsHR, const ColumnVector& HRweights):
     opts(rubixOptions::getInstance()), m_HRsamples(Hsamples), m_LRsamples(Lsamples), m_LRvoxnumber(LRvoxnum),m_HRvoxnumber(HRvoxnum), 
-      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts.dPrior.value(), opts.rician.value(), opts.noS0jump.value()),
+      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts.dPrior.value(), opts.rician.value(), opts.noS0jump.value(),opts.R_prior_mean.value(),opts.R_prior_std.value()),
       m_dataLR(dataLR), m_dataHR(dataHR),m_bvecsLR(bvecsLR), m_bvalsLR(bvalsLR), m_bvecsHR(bvecsHR), m_bvalsHR(bvalsHR), m_HRweights(HRweights) { } 
     
     ~LRVoxelManager() { }

@@ -57,6 +57,8 @@ namespace RUBIX{
     Option<bool> noS0jump;
     Option<string> LRgrad_file;
     Option<string> HRgrad_file;
+    Option<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
+    Option<float> R_prior_std;
 
     void parse_command_line(int argc, char** argv,  Log& logger);
   
@@ -118,7 +120,7 @@ namespace RUBIX{
 	   string("Number of modes for the orientation prior (default 2)"),
 	   false,requires_argument),
    modelnum(string("--model"),1,
-	    string("\tWhich model to use. 1=mono-exponential (default). 2=continous exponential"),
+	    string("\tWhich deconvolution model to use. 1:With sticks (default), 2:With sticks and a range of diffusivities, 3:With zeppelins"),
 	    false,requires_argument),
    fudge(string("--fudge"),1,
 	 string("\tARD fudge factor"),
@@ -151,12 +153,14 @@ namespace RUBIX{
     	   false,no_argument),
    noS0jump(string("--noS0jump"),false,string("Do not jump S0 parameters and keep them to their ML estimates (default: off)"),
     	   false,no_argument),
-   LRgrad_file(string("--gLR, --gradnonlinLR"), string("grad_devLR"),
-	     string("LR Gradient Nonlinearity Tensor"),
+   LRgrad_file(string("--gLR"), string("grad_devLR"),
+	     string("\tLR Gradient Nonlinearity Tensor"),
 	     false, requires_argument),  
-   HRgrad_file(string("--gHR, --gradnonlinHR"), string("grad_devHR"),
-	     string("HR Gradient Nonlinearity Tensor"),
+   HRgrad_file(string("--gHR"), string("grad_devHR"),
+	     string("\tHR Gradient Nonlinearity Tensor"),
 	     false, requires_argument),  
+   R_prior_mean(string("--Rmean"),0.13,string("\tSet the prior mean for R of model3 (default:0.13)"),false, requires_argument),
+   R_prior_std(string("--Rstd"),0.03,string("\tSet the prior standard deviation for R of model3 (default:0.03)"),false, requires_argument),
    options("RubiX v1.0", "rubix --help (for list of options)\n")
      {
        try {
@@ -169,7 +173,7 @@ namespace RUBIX{
        options.add(LRbvecsfile);
        options.add(LRbvalsfile);
        options.add(HRdatafile);
-       //   options.add(HRmaskfile);
+       //options.add(HRmaskfile);
        options.add(HRbvecsfile);
        options.add(HRbvalsfile);
        options.add(nfibres);
@@ -190,6 +194,8 @@ namespace RUBIX{
        options.add(noS0jump);
        options.add(LRgrad_file);
        options.add(HRgrad_file);
+       options.add(R_prior_mean);
+       options.add(R_prior_std);
      }
      catch(X_OptionError& e) {
        options.usage();
@@ -198,13 +204,7 @@ namespace RUBIX{
      catch(std::exception &e) {
        cerr << e.what() << endl;
      }    
-     
    }
 }
 
 #endif
-
-
-
-
-

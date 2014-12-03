@@ -53,20 +53,24 @@ if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_S0_LRsamp
     ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_S0_LRsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_S0_LRsamples*`
 fi
 
-if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/En_Lik_LRsamples` -eq 1 ];then
-    ${FSLDIR}/bin/fslmerge -z ${out_dir}/En_Lik_LRsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/En_Lik_LRsamples*`
-fi
+#if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/En_Lik_LRsamples` -eq 1 ];then
+#    ${FSLDIR}/bin/fslmerge -z ${out_dir}/En_Lik_LRsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/En_Lik_LRsamples*`
+#fi
 
-if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/En_Prior_LRsamples` -eq 1 ];then
-    ${FSLDIR}/bin/fslmerge -z ${out_dir}/En_Prior_LRsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/En_Prior_LRsamples*`
-fi
+#if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/En_Prior_LRsamples` -eq 1 ];then
+#    ${FSLDIR}/bin/fslmerge -z ${out_dir}/En_Prior_LRsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/En_Prior_LRsamples*`
+#fi
 
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_dstd_samples` -eq 1 ];then
     ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_dstd_samples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_dstd_samples*`
 fi
 
+if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_Rsamples` -eq 1 ];then
+    ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_Rsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_Rsamples*`
+fi
+
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/HRbrain_mask` -eq 1 ];then
-    ${FSLDIR}/bin/fslmerge -z ${out_dir}/HRbrain_mask `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/HRbrain_mask*`
+    ${FSLDIR}/bin/fslmerge -z ${out_dir}/nodif_brain_mask `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/HRbrain_mask*`
 fi
 
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_fsumPriorMode_LRsamples` -eq 1 ];then
