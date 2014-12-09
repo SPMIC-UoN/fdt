@@ -1012,8 +1012,10 @@ namespace FIBRE{
       m_d_std_old=m_d_std;
       m_d_std+=normrnd().AsScalar()*m_d_std_prop;
       bool rejflag=compute_d_std_prior();//inside this it stores the old prior
-      for(unsigned int f=0;f<m_fibres.size();f++)
-	m_fibres[f].compute_signal();
+      if (m_modelnum==2){
+	for(unsigned int f=0;f<m_fibres.size();f++)
+	  m_fibres[f].compute_signal();
+      }
       compute_iso_signal();   
       return rejflag;
     };
@@ -1028,8 +1030,10 @@ namespace FIBRE{
       m_d_std=m_d_std_old;
       m_d_std_prior=m_d_std_old_prior;
       m_prior_en=m_old_prior_en;
-      for(unsigned int f=0;f<m_fibres.size();f++)
-	m_fibres[f].restoreSignal();
+      if (m_modelnum==2){
+	for(unsigned int f=0;f<m_fibres.size();f++)
+	  m_fibres[f].restoreSignal();
+      }
       m_iso_Signal=m_iso_Signal_old;   
       m_d_std_rej++;
     }
