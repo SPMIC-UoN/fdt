@@ -532,8 +532,9 @@ public:
 	  if(!m_samples.neighbour_initialise(m_voxelnumber,m_multifibre))
 	    initialise_tensor(Amat);
 	}
-	else
+	else{
 	  initialise_tensor(Amat);
+	}
       }
     }
     m_multifibre.initialise_energies();
