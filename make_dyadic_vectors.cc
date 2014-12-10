@@ -49,7 +49,7 @@ int main ( int argc, char **argv ){
   volume4D<float> dyadic_vecs(ths.xsize(),ths.ysize(),ths.zsize(),3);
   volume<float> disp(ths.xsize(),ths.ysize(),ths.zsize());
   dyadic_vecs=0;
-  copybasicproperties(ths[0],dyadic_vecs[0]);
+  copybasicproperties(ths[0],dyadic_vecs);
   copybasicproperties(ths[0],disp);
   SymmetricMatrix dyad(3);dyad=0;
   ColumnVector dir(3);

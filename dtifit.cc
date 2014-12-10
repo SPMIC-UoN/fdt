@@ -347,12 +347,12 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],FA);
   copybasicproperties(data[0],S0);
   copybasicproperties(data[0],MODE);
-  copybasicproperties(data[0],V1[0]);
-  copybasicproperties(data[0],V2[0]);
-  copybasicproperties(data[0],V3[0]);
-  copybasicproperties(data[0],Delements[0]);
+  copybasicproperties(data[0],V1);
+  copybasicproperties(data[0],V2);
+  copybasicproperties(data[0],V3);
+  copybasicproperties(data[0],Delements);
   if (opts.save_bvals.value()){
-    copybasicproperties(data[0],bvalmap[0]);
+    copybasicproperties(data[0],bvalmap);
     bvalmap=0;
   }
 
@@ -369,7 +369,7 @@ int main(int argc, char** argv)
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
-    copybasicproperties(data[0],cni_cope[0]);
+    copybasicproperties(data[0],cni_cope);
     cni_cope=0;
   }
   else{

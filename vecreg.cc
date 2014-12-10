@@ -146,7 +146,7 @@ ReturnMatrix ppd(const Matrix& F,ColumnVector& e1){
 void sjgradient(const volume<float>& im,volume4D<float>& grad){
   
   grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
-  copybasicproperties(im,grad[0]);
+  copybasicproperties(im,grad);
 
   int fx,fy,fz,bx,by,bz;
   float dx,dy,dz; 
