@@ -139,7 +139,7 @@ class xfibresOptions {
    rician(string("--rician"),false,string("Use Rician noise modelling"),false,no_argument),
    f0(string("--f0"),false,string("Add to the model an unattenuated signal compartment"),false,no_argument),
    ardf0(string("--ardf0"),false,string("Use ard on f0"),false,no_argument),
-   R_prior_mean(string("--Rmean"),0.13,string("Set the prior mean for R of model 3 (default:0.13)"),false, requires_argument),
+   R_prior_mean(string("--Rmean"),0.13,string("Set the prior mean for R of model 3 (default:0.13- Must be<0.5)"),false, requires_argument),
    R_prior_std(string("--Rstd"),0.03,string("Set the prior standard deviation for R of model 3 (default:0.03)"),false, requires_argument),
    grad_file(string("--gradnonlin"), string("gradnonlin"),
 	     string("Gradient Nonlinearity Tensor file"),
