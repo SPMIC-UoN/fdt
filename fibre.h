@@ -643,12 +643,14 @@ namespace FIBRE{
     const bool m_ardf0;           //If true, use ard on the f0 compartment 
     const float m_R_priormean;    //Parameters to use for the Gaussian prior on R. Mean
     const float m_R_priorstd;     //and variance
+    const float m_R_priorfudge;   //and fudge. Default is zero. If set >0, then an ARD prior is used for R at the high diffusivity regions with the requested fugde  
+
 
   public:
     //Constructor
     Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
-	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1, int modelnum=1, bool rician=false, bool inclf0=false, bool ardf0=false, float Rmean=0.13, float Rstd=0.03):
-    m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b), m_modelnum(modelnum), m_rician(rician), m_includef0(inclf0), m_ardf0(ardf0), m_R_priormean(Rmean), m_R_priorstd(Rstd){
+	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1, int modelnum=1, bool rician=false, bool inclf0=false, bool ardf0=false, float Rmean=0.13, float Rstd=0.03, float Rfudge=0):
+    m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b), m_modelnum(modelnum), m_rician(rician), m_includef0(inclf0), m_ardf0(ardf0), m_R_priormean(Rmean), m_R_priorstd(Rstd), m_R_priorfudge(Rfudge){
       m_iso_Signal.ReSize(alpha.Nrows());
       m_iso_Signal=0;
       m_iso_Signal_old=m_iso_Signal;            //Initialize vectors that keep the signal from the isotropic compartment
@@ -813,10 +815,20 @@ namespace FIBRE{
 
     inline bool compute_R_prior(){
       m_R_old_prior=m_R_prior;
+      
       float upper_R=2*m_R_priormean;
       if (m_R_priormean>0.5)
 	upper_R=1;
-      if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisitropic (small m_R) profiles 
+      
+      if (m_R_priorfudge>0 && m_d>UPPERDIFF/2.0){ //then use an ARD prior to avoid competition with the isotropic compartments
+	if (m_R<1E-8 || m_R>upper_R)
+	  return true;
+	else{
+	  m_R_prior=m_R_priorfudge*std::log(m_R);
+	  return false;
+	}
+      }
+      if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
 	return true;
       else{
 	float Rstd2=m_R_priorstd*m_R_priorstd; 
@@ -824,6 +836,7 @@ namespace FIBRE{
 	return false;
       }
     }
+ 
 
     
     inline bool compute_S0_prior(){
@@ -1255,8 +1268,8 @@ namespace FIBRE{
 	  }
 	else 
 	  reject_R();
-	}
-      }
+	  }
+	} 
 
 
       if(!propose_S0()){    //Try S0
@@ -1273,8 +1286,7 @@ namespace FIBRE{
       else
 	reject_S0();
       
-      
-
+ 
 
 
       for(unsigned int f=0;f<m_fibres.size();f++){  //For each fibre

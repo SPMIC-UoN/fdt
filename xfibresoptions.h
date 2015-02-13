@@ -54,6 +54,7 @@ class xfibresOptions {
   Option<bool> ardf0;
   FmribOption<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
   FmribOption<float> R_prior_std;
+  FmribOption<float> R_prior_fudge; //if used (set to a positive number), an ARD for R is used for the high diffusivity regions with the requested fudge factor
   FmribOption<string> grad_file;
 
 
@@ -141,6 +142,7 @@ class xfibresOptions {
    ardf0(string("--ardf0"),false,string("Use ard on f0"),false,no_argument),
    R_prior_mean(string("--Rmean"),0.13,string("Set the prior mean for R of model 3 (default:0.13- Must be<0.5)"),false, requires_argument),
    R_prior_std(string("--Rstd"),0.03,string("Set the prior standard deviation for R of model 3 (default:0.03)"),false, requires_argument),
+   R_prior_fudge(string("--Rfudge"),0,string("If set(>0), an ARD prior is used for R with the requested fudge factor"),false, requires_argument),
    grad_file(string("--gradnonlin"), string("gradnonlin"),
 	     string("Gradient Nonlinearity Tensor file"),
 	     false, requires_argument),  
@@ -174,6 +176,7 @@ class xfibresOptions {
        options.add(ardf0);
        options.add(R_prior_mean);
        options.add(R_prior_std);
+       options.add(R_prior_fudge);
        options.add(grad_file);
      }
      catch(X_OptionError& e) {
