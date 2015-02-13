@@ -512,7 +512,7 @@ public:
     opts(xfibresOptions::getInstance()), 
     m_samples(samples),m_voxelnumber(voxelnumber),m_data(data), 
     m_alpha(alpha), m_beta(beta), m_bvecs(r), m_bvals(b), 
-    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value(),opts.rician.value(),opts.f0.value(),opts.ardf0.value(), opts.R_prior_mean.value(), opts.R_prior_std.value()){ }
+    m_multifibre(m_data,m_alpha,m_beta,m_bvals,opts.nfibres.value(),opts.fudge.value(),opts.modelnum.value(),opts.rician.value(),opts.f0.value(),opts.ardf0.value(), opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value()){ }
   
    
   void initialise(const Matrix& Amat){
