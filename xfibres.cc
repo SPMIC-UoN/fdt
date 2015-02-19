@@ -829,7 +829,7 @@ void remove_zero_entries(ColumnVector& Voxdata){
       MinS=Voxdata.Minimum1(pos);
     }
     MinS=Voxdata.Minimum(); //Now find the Minimum on non-zero entries
-    for (unsigned int i=0; i<=minpositions.size(); i++)
+    for (unsigned int i=0; i<minpositions.size(); i++)
       Voxdata(minpositions[i])=MinS; //Replace non-zero entries with that minimum
   }
 }
