@@ -692,7 +692,7 @@ public:
 	  m_multifibre.set_f0(pvmf0);
       }
 
-      if(pvmd<0 || pvmd>UPPERDIFF) pvmd=2e-3;
+      if(pvmd<0 || pvmd>UPPERDIFF) pvmd=2e-3; 
 
       float upper_d_std=0.01;
       if (opts.modelnum.value()==3) upper_d_std=0.004;
@@ -817,6 +817,23 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
 }
 
 
+void remove_zero_entries(ColumnVector& Voxdata){
+  int pos; 
+  float MinS=Voxdata.Minimum1(pos); 
+  float MaxS=Voxdata.Maximum(); 
+  if (MinS==0 && MaxS!=0){  //when there are some zero entries, but not all are zero
+    vector<int> minpositions;
+    while (MinS==0){
+      minpositions.push_back(pos);
+      Voxdata(pos)=MaxS;    //temporarilly make the zero-values Max
+      MinS=Voxdata.Minimum1(pos);
+    }
+    MinS=Voxdata.Minimum(); //Now find the Minimum on non-zero entries
+    for (unsigned int i=0; i<=minpositions.size(); i++)
+      Voxdata(minpositions[i])=MinS; //Replace non-zero entries with that minimum
+  }
+}
+
 
 ////////////////////////////////////////////
 //       MAIN
@@ -871,8 +888,11 @@ int main(int argc, char *argv[])
 
     for(int vox=1;vox<=datam.Ncols();vox++){
       cout <<vox<<"/"<<datam.Ncols()<<endl;
+      ColumnVector voxdata;
+      voxdata=datam.Column(vox);
+      if(opts.rician.value()) remove_zero_entries(voxdata); //So that log(data) does not give infinity in the likelihood
       if (!opts.grad_file.set()){
-	xfibresVoxelManager  vm(datam.Column(vox),alpha,beta,bvecs,bvals,samples,vox);
+	xfibresVoxelManager  vm(voxdata,alpha,beta,bvecs,bvals,samples,vox);
 	vm.initialise(Amat);
 	vm.runmcmc();
       }
@@ -883,7 +903,7 @@ int main(int argc, char *argv[])
 	correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox),bvals_c,bvecs_c); //correct for gradient nonlinearities
 	Amat_c=form_Amat(bvecs_c,bvals_c);
 	cart2sph(bvecs_c,alpha_c,beta_c);
-	xfibresVoxelManager  vm(datam.Column(vox),alpha_c,beta_c,bvecs_c,bvals_c,samples,vox);
+	xfibresVoxelManager  vm(voxdata,alpha_c,beta_c,bvecs_c,bvals_c,samples,vox);
 	vm.initialise(Amat_c);
 	vm.runmcmc();
       }
