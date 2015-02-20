@@ -607,7 +607,7 @@ void remove_NonPositive_entries(ColumnVector& Voxdata){  //Zero, Negative Entrie
   int pos; 
   float MinS=Voxdata.Minimum1(pos); 
   float MaxS=Voxdata.Maximum(); 
-  if (MinS<=0 && MaxS>=0){  //when there are some non-positive entries, but not all are zero
+  if (MinS<=0 && MaxS>0){  //when there are some non-positive entries, but not all are zero
     vector<int> minpositions;
     while (MinS<=0){
       minpositions.push_back(pos);
