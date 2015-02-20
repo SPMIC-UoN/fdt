@@ -603,6 +603,24 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
 }
 
 
+void remove_NonPositive_entries(ColumnVector& Voxdata){  //Zero, Negative Entries can be obtained from spline interpolation 
+  int pos; 
+  float MinS=Voxdata.Minimum1(pos); 
+  float MaxS=Voxdata.Maximum(); 
+  if (MinS<=0 && MaxS>=0){  //when there are some non-positive entries, but not all are zero
+    vector<int> minpositions;
+    while (MinS<=0){
+      minpositions.push_back(pos);
+      Voxdata(pos)=MaxS;    //temporarilly make the non-positive values Max
+      MinS=Voxdata.Minimum1(pos);
+    }
+    MinS=Voxdata.Minimum(); //Now find the Minimum of positive entries
+    for (unsigned int i=0; i<minpositions.size(); i++)
+      Voxdata(minpositions[i])=MinS; //Replace non-positive entries with that minimum
+  }
+}
+
+
 ////////////////////////////////////////////
 //       MAIN
 ////////////////////////////////////////////
@@ -695,7 +713,9 @@ int main(int argc, char *argv[])
     
     for(int vox=1;vox<=datamLR.Ncols();vox++){  //For each LR voxel
       ColumnVector dLR; Matrix HRindices;
-      dLR=datamLR.Column(vox);                  
+      dLR=datamLR.Column(vox);       
+      if(opts.rician.value()) remove_NonPositive_entries(dLR); //So that log(data) does not give infinity in the likelihood
+           
       if (opts.LRgrad_file.set()){ //Correct the respective bvals/bvecs
 	  Matrix bvals_c, bvecs_c;
 	  correct_bvals_bvecs(bvalsLR,bvecsLR, LRgradm.Column(vox),bvals_c,bvecs_c); //correct for gradient nonlinearities
@@ -711,7 +731,8 @@ int main(int argc, char *argv[])
 	HRweights(n)=1.0/HRindices.Nrows();
 	HRvoxnum(n)=vol2matrixkeyHR((int)HRindices(n,1),(int)HRindices(n,2),(int)HRindices(n,3));
 	ColumnVector tmp_vec=datamHR.Column((int)HRvoxnum(n));
- 	dHR.push_back(datamHR.Column((int)HRvoxnum(n)));
+	if(opts.rician.value()) remove_NonPositive_entries(tmp_vec); //So that log(data) does not give infinity in the likelihood
+ 	dHR.push_back(tmp_vec);
 	if (!opts.HRgrad_file.set()){
 	  vbvalsHR.push_back(bvalsHR);
 	  vbvecsHR.push_back(bvecsHR);

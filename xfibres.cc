@@ -817,20 +817,20 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
 }
 
 
-void remove_zero_entries(ColumnVector& Voxdata){
+void remove_NonPositive_entries(ColumnVector& Voxdata){  //Zero, Negative Entries can be obtained from spline interpolation 
   int pos; 
   float MinS=Voxdata.Minimum1(pos); 
   float MaxS=Voxdata.Maximum(); 
-  if (MinS==0 && MaxS!=0){  //when there are some zero entries, but not all are zero
+  if (MinS<=0 && MaxS>=0){  //when there are some non-positive entries, but not all are zero
     vector<int> minpositions;
-    while (MinS==0){
+    while (MinS<=0){
       minpositions.push_back(pos);
-      Voxdata(pos)=MaxS;    //temporarilly make the zero-values Max
+      Voxdata(pos)=MaxS;    //temporarilly make the non-positive values Max
       MinS=Voxdata.Minimum1(pos);
     }
-    MinS=Voxdata.Minimum(); //Now find the Minimum on non-zero entries
+    MinS=Voxdata.Minimum(); //Now find the Minimum of positive entries
     for (unsigned int i=0; i<minpositions.size(); i++)
-      Voxdata(minpositions[i])=MinS; //Replace non-zero entries with that minimum
+      Voxdata(minpositions[i])=MinS; //Replace non-positive entries with that minimum
   }
 }
 
@@ -890,7 +890,7 @@ int main(int argc, char *argv[])
       cout <<vox<<"/"<<datam.Ncols()<<endl;
       ColumnVector voxdata;
       voxdata=datam.Column(vox);
-      if(opts.rician.value()) remove_zero_entries(voxdata); //So that log(data) does not give infinity in the likelihood
+      if(opts.rician.value()) remove_NonPositive_entries(voxdata); //So that log(data) does not give infinity in the likelihood
       if (!opts.grad_file.set()){
 	xfibresVoxelManager  vm(voxdata,alpha,beta,bvecs,bvals,samples,vox);
 	vm.initialise(Amat);
