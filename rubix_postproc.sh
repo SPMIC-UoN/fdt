@@ -19,6 +19,9 @@ do
     ${FSLDIR}/bin/make_dyadic_vectors ${out_dir}/merged_th${fib}samples ${out_dir}/merged_ph${fib}samples ${out_dir}/mean_f${fib}samples ${out_dir}/dyads${fib} 95
     if [ $fib -ge 2 ];then
 	${FSLDIR}/bin/maskdyads ${out_dir}/dyads${fib} ${out_dir}/mean_f${fib}samples
+	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_f${fib}samples -div ${subjdir}.bedpostX/mean_f1samples ${subjdir}.bedpostX/mean_f${fib}_f1samples
+	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/dyads${fib}_thr0.05 -mul ${subjdir}.bedpostX/mean_f${fib}_f1samples ${subjdir}.bedpostX/dyads${fib}_thr0.05_modf${fib}
+	${FSLDIR}/bin/imrm ${subjdir}.bedpostX/mean_f${fib}_f1samples
     fi
     fib=$(($fib + 1))
 done
