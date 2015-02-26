@@ -215,7 +215,7 @@ namespace RUBIX{
 		   const ColumnVector& dataLR,const vector<ColumnVector>& dataHR, 
 		 const Matrix& bvecsLR, const Matrix& bvalsLR, const vector<Matrix>& bvecsHR, const vector<Matrix>& bvalsHR, const ColumnVector& HRweights):
     opts(rubixOptions::getInstance()), m_HRsamples(Hsamples), m_LRsamples(Lsamples), m_LRvoxnumber(LRvoxnum),m_HRvoxnumber(HRvoxnum), 
-      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts.dPrior.value(), opts.rician.value(), opts.noS0jump.value(),opts.R_prior_mean.value(),opts.R_prior_std.value()),
+      m_LRv(bvecsHR, bvalsHR, bvecsLR, bvalsLR, dataLR, dataHR, opts.nfibres.value(), opts.nmodes.value(), HRweights, opts.modelnum.value(), opts.PVmodelnum.value(), opts.fudge.value(),opts.all_ard.value(), opts.no_ard.value(),opts.kappa_ard.value(), opts.fsumPrior.value(), opts.dPrior.value(), opts.rician.value(), opts.noS0jump.value(),opts.R_prior_mean.value(),opts.R_prior_std.value()),
       m_dataLR(dataLR), m_dataHR(dataHR),m_bvecsLR(bvecsLR), m_bvalsLR(bvalsLR), m_bvecsHR(bvecsHR), m_bvalsHR(bvalsHR), m_HRweights(HRweights) { } 
     
     ~LRVoxelManager() { }

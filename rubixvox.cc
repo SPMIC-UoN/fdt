@@ -321,25 +321,10 @@ bool HRvoxel::compute_d_std_prior(){
 
 bool HRvoxel::compute_R_prior(){
   m_R_old_prior=m_R_prior;
-      
   float upper_R=2*m_R_priormean;
-  float lower_R=m_R_priormean-2.0*m_R_priorstd; 
-
   if (m_R_priormean>0.5)
     upper_R=1;
-  
-  if (lower_R<0)
-    lower_R=1E-8;
-      
-  if (m_R_priorfudge>0 && m_d>UPPERDIFF/2.0){ //then use an ARD prior to avoid competition with the isotropic compartments
-    if (m_R<1E-8 || m_R>upper_R)
-      return true;
-    else{
-      m_R_prior=m_R_priorfudge*std::log(m_R);
-      return false;
-    }
-  }
-  if(m_R<=lower_R || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
+  if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
     return true;
   else{
     float Rstd2=m_R_priorstd*m_R_priorstd; 
@@ -347,7 +332,6 @@ bool HRvoxel::compute_R_prior(){
     return false;
   }
 }
-
 
 
 bool HRvoxel::compute_S0_prior(){
@@ -1138,13 +1122,28 @@ void LRvoxel::compute_likelihood(){
   float likLR, likHR;
 
   m_old_likelihood_en=m_likelihood_en;
+  
+  //Compute Model-Predicted LR signal
+  SLRpred=0;
+  if (m_PVmodelnum==1){
+    //////  Original partial volume model ////// 
+    for (unsigned int m=0; m<m_dataHR.size(); m++) //add attenuations
+      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR()/m_HRvoxels[m].get_S0();
+  }
+  else{
+    //////  New partial volume model     ////// 
+    float sum2=0;
+    for (unsigned int m=0; m<m_dataHR.size(); m++){ //add DW signals
+      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR();
+      sum2+=m_HRweights(m+1)*m_HRvoxels[m].get_S0(); //add S0s
+    } 
+    SLRpred=SLRpred/sum2;  //get the attenuation of the sums
+  }
+  SLRpred=m_S0LR*SLRpred;
+    
 
   if (!m_rician){ //Gaussian Likelihood Energy Calculation
     //likelihood of Low-Res data 
-    SLRpred=0;
-    for (unsigned int m=0; m<m_dataHR.size(); m++) //add attenuations
-      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR()/m_HRvoxels[m].get_S0();
-    SLRpred=m_S0LR*SLRpred;
     SLRpred=m_dataLR-SLRpred;
     likLR=0.5*m_bvecsLR.Ncols()*log(0.5*SLRpred.SumSquare()); 
 
@@ -1161,22 +1160,6 @@ void LRvoxel::compute_likelihood(){
   }
   else{  //Rician Likelihood Energy Calculation
     //likelihood of Low-Res data 
-    SLRpred=0;
-
-    //////  Original partial volume model ////// 
-    //for (unsigned int m=0; m<m_dataHR.size(); m++) //add attenuations
-        //SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR()/m_HRvoxels[m].get_S0();
-    
-    //////  New partial volume model     ////// 
-    float sum2=0;
-    for (unsigned int m=0; m<m_dataHR.size(); m++){ //add attenuations
-      SLRpred+=m_HRweights(m+1)*m_HRvoxels[m].getSignalLR();
-      sum2+=m_HRweights(m+1)*m_HRvoxels[m].get_S0();
-    } 
-    SLRpred=SLRpred/sum2;
-    ///////////////////////////////////////////
-
-    SLRpred=m_S0LR*SLRpred;
     likLR=-m_bvecsLR.Ncols()*log(m_tauLR);  
     for (int k=1; k<=m_bvecsLR.Ncols(); k++)
       likLR-=m_logdataLR(k)-0.5*m_tauLR*(m_dataLR(k)*m_dataLR(k)+SLRpred(k)*SLRpred(k))+logIo(m_tauLR*m_dataLR(k)*SLRpred(k));
