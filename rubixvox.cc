@@ -321,10 +321,25 @@ bool HRvoxel::compute_d_std_prior(){
 
 bool HRvoxel::compute_R_prior(){
   m_R_old_prior=m_R_prior;
+      
   float upper_R=2*m_R_priormean;
+  float lower_R=m_R_priormean-2.0*m_R_priorstd; 
+
   if (m_R_priormean>0.5)
     upper_R=1;
-  if(m_R<=(m_R_priormean-1.4*m_R_priorstd) || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
+  
+  if (lower_R<0)
+    lower_R=1E-8;
+      
+  if (m_R_priorfudge>0 && m_d>UPPERDIFF/2.0){ //then use an ARD prior to avoid competition with the isotropic compartments
+    if (m_R<1E-8 || m_R>upper_R)
+      return true;
+    else{
+      m_R_prior=m_R_priorfudge*std::log(m_R);
+      return false;
+    }
+  }
+  if(m_R<=lower_R || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
     return true;
   else{
     float Rstd2=m_R_priorstd*m_R_priorstd; 

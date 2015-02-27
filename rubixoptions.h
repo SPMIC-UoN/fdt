@@ -60,6 +60,7 @@ namespace RUBIX{
     Option<string> HRgrad_file;
     Option<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
     Option<float> R_prior_std;
+    Option<float> R_prior_fudge; //if used (set to a positive number), an ARD for R is used for the high diffusivity regions with the requested fudge factor
 
     void parse_command_line(int argc, char** argv,  Log& logger);
   
@@ -163,8 +164,9 @@ namespace RUBIX{
    HRgrad_file(string("--gHR"), string("grad_devHR"),
 	     string("\tHR Gradient Nonlinearity Tensor"),
 	     false, requires_argument),  
-   R_prior_mean(string("--Rmean"),0.13,string("\tSet the prior mean for R of model3 (default:0.13)"),false, requires_argument),
+   R_prior_mean(string("--Rmean"),0.13,string("\tSet the prior mean for R of model3 (default:0.13- Must be<0.5))"),false, requires_argument),
    R_prior_std(string("--Rstd"),0.03,string("\tSet the prior standard deviation for R of model3 (default:0.03)"),false, requires_argument),
+   R_prior_fudge(string("--Rfudge"),0,string("If set(>0), an ARD prior is used for R with the requested fudge factor"),false, requires_argument),
    options("RubiX v1.0", "rubix --help (for list of options)\n")
      {
        try {
@@ -201,6 +203,7 @@ namespace RUBIX{
        options.add(HRgrad_file);
        options.add(R_prior_mean);
        options.add(R_prior_std);
+       options.add(R_prior_fudge);
      }
      catch(X_OptionError& e) {
        options.usage();
