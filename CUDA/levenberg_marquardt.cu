@@ -229,11 +229,14 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
 							const float*		mydata, 
 							const float*		bvecs, 
 							const float*		bvals, 
+							const float		R,
+							const float		invR,
 							const int		ndirections,
 							const int		nfib,
 							const int 		nparams,
 							const bool 		m_include_f0,
 							const int		idSubVOX,
+							const int		Gamma_for_ball_only,
 							float* 			step,		//shared memory
 							float*			grad,           //shared memory     	          
 						   	float* 			hess,		//shared memory
@@ -272,15 +275,17 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
    		*ncf=0;  
 	}
 
-	cf_PVM_multi(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_a,_b,sumf,pcf);  
+	cf_PVM_multi(myparams,mydata,bvecs,bvals,R,invR,ndirections,nfib,nparams,m_include_f0,idSubVOX,Gamma_for_ball_only,reduction,fs,x,_a,_b,sumf,pcf);  
 	__syncthreads();
 	
    	while (!(*success&&niter++ >= maxiter)){ 	//if success we don't increase niter (first condition is true)
 							//function cost has been decreased, we have advanced.
    		if(*success){
-			grad_PVM_multi(myparams,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_a,_b,sumf,grad);  
+			grad_PVM_multi(myparams,mydata,bvecs,bvals,R,invR,ndirections,nfib,nparams,m_include_f0,
+			idSubVOX,Gamma_for_ball_only,J,reduction,fs,x,_a,_b,sumf,grad);  
+
 			__syncthreads(); 
-    			hess_PVM_multi(myparams,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,J,reduction,fs,x,_a,_b,sumf,hess);  
+    			hess_PVM_multi(myparams,bvecs,bvals,R,invR,ndirections,nfib,nparams,m_include_f0,idSubVOX,Gamma_for_ball_only,J,reduction,fs,x,_a,_b,sumf,hess);  
     		}
 
 		if(idSubVOX==0){
@@ -300,7 +305,7 @@ __device__ void levenberg_marquardt_PVM_multi_gpu(	//INPUT
 		}
 
 		__syncthreads();
-   		cf_PVM_multi(step,mydata,bvecs,bvals,ndirections,nfib,nparams,m_include_f0,idSubVOX,reduction,fs,x,_a,_b,sumf,ncf); 
+   		cf_PVM_multi(step,mydata,bvecs,bvals,R,invR,ndirections,nfib,nparams,m_include_f0,idSubVOX,Gamma_for_ball_only,reduction,fs,x,_a,_b,sumf,ncf); 
 
 		if(idSubVOX==0){
    			if (*success = (*ncf < *pcf)) {

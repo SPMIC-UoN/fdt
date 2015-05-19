@@ -16,10 +16,10 @@
 #define FSMALL_gpu 0.001
 
 //defined in diffmodels.h
-#define f2beta_gpu(f) (asin(double(sqrt(double(f)))))
+#define f2beta_gpu(f) (asin(double(sqrt(f))))
 
 //defined in diffmodels.h
-#define d2lambda_gpu(d) (sqrt(double(d))) 
+#define d2lambda_gpu(d) (sqrt(d)) 
 
 //defined in diffmodels.h
 //#define beta2f_gpu(beta) (pow(sin(double(beta)),2.0))

@@ -71,6 +71,12 @@ public:
     	int m_dstd_acc;
     	int m_dstd_rej;
 
+	float m_R;
+    	float m_R_prop;
+    	float m_R_prior;	 
+    	int m_R_acc;
+    	int m_R_rej;
+
     	float m_prior_en;		
     	float m_likelihood_en;
     	float m_energy;

@@ -52,7 +52,7 @@ void init_Fibres_Multifibres(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib= opts.nfibres.value();
 	int nparams_fit = 2+3*opts.nfibres.value();
-	if(opts.modelnum.value()==2) nparams_fit++;
+	if(opts.modelnum.value()>=2) nparams_fit++;
 	if(opts.f0.value()) nparams_fit++;
 
 	thrust::device_vector<double> angtmp_gpu;
@@ -77,11 +77,11 @@ void init_Fibres_Multifibres(	//INPUT
 	double *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
 	double *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (3*nfib + 8)*sizeof(float) + sizeof(int);
+	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (3*nfib + 9)*sizeof(float) + sizeof(int);
 
 	myfile << "Shared Memory Used in init_Fibres_Multifibres: " << amount_shared << "\n";
 
-	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), gradnonlin, angtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
+	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), gradnonlin, angtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
 	sync_check("init_Fibres_Multifibres_kernel");
 
 	gettimeofday(&t2,NULL);
@@ -129,7 +129,8 @@ void runmcmc_burnin(	//INPUT
 
 	if(opts.f0.value()) nparams=3+nfib*3;
 	else nparams=2+nfib*3;	
-	if(opts.modelnum.value()==2) nparams++;
+	if(opts.modelnum.value()>=2) nparams++;
+	if(opts.modelnum.value()==3) nparams++;	
 	if(opts.rician.value()) nparams++;
 
 	thrust::device_vector<float> recors_null_gpu;
@@ -223,7 +224,7 @@ void runmcmc_burnin(	//INPUT
 
 	float *records_null = thrust::raw_pointer_cast(recors_null_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 24)*sizeof(float) + (7*nfib + 19)*sizeof(int);
+	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 27)*sizeof(float) + (7*nfib + 21)*sizeof(int);
 
 	myfile << "Shared Memory Used in runmcmc_burnin: " << amount_shared << "\n";
 	
@@ -249,7 +250,7 @@ void runmcmc_burnin(	//INPUT
 
 	   	gettimeofday(&t1,NULL);
 
-	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null);   
+	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null);   
 	   	sync_check("runmcmc_burnin_kernel");
 
  	   	gettimeofday(&t2,NULL);
@@ -279,7 +280,7 @@ void runmcmc_burnin(	//INPUT
    	gettimeofday(&t1,NULL);
 
    	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
    		sync_check("runmcmc_burnin_kernel");
    	}
 
@@ -319,6 +320,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>&			rs0_gpu,
 			thrust::device_vector<float>&			rd_gpu,
 			thrust::device_vector<float>&			rdstd_gpu,
+			thrust::device_vector<float>&			rR_gpu,
 			thrust::device_vector<float>&			rth_gpu,
 			thrust::device_vector<float>&			rph_gpu,
 			thrust::device_vector<float>&			rf_gpu)
@@ -349,7 +351,8 @@ void runmcmc_record(	//INPUT
 
 	if(opts.f0.value()) nparams=3+nfib*3;
 	else nparams=2+nfib*3;	
-	if(opts.modelnum.value()==2) nparams++;
+	if(opts.modelnum.value()>=2) nparams++;
+	if(opts.modelnum.value()==3) nparams++;	
 	if(opts.rician.value()) nparams++;
 
 	thrust::device_vector<double> angtmp_gpu;
@@ -443,11 +446,12 @@ void runmcmc_record(	//INPUT
 	float *rs0_ptr = thrust::raw_pointer_cast(rs0_gpu.data());
 	float *rd_ptr = thrust::raw_pointer_cast(rd_gpu.data());
 	float *rdstd_ptr = thrust::raw_pointer_cast(rdstd_gpu.data());
+	float *rR_ptr = thrust::raw_pointer_cast(rR_gpu.data());	
 	float *rth_ptr = thrust::raw_pointer_cast(rth_gpu.data());
 	float *rph_ptr = thrust::raw_pointer_cast(rph_gpu.data());
 	float *rf_ptr = thrust::raw_pointer_cast(rf_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 24)*sizeof(float) + (7*nfib + 19)*sizeof(int);
+	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 27)*sizeof(float) + (7*nfib + 21)*sizeof(int);
 
 	myfile << "Shared Memory Used in runmcmc_record: " << amount_shared << "\n";
 
@@ -473,7 +477,7 @@ void runmcmc_record(	//INPUT
 
 	   	gettimeofday(&t1,NULL);
 
-	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);
+	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);
 	   	sync_check("runmcmc_record_kernel");
 
  	   	gettimeofday(&t2,NULL);
@@ -503,7 +507,7 @@ void runmcmc_record(	//INPUT
    	gettimeofday(&t1,NULL);
 
    	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr,randomsN_ptr, randomsU_ptr, ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rth_ptr, rph_ptr, rf_ptr);   
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr,randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);   
    		sync_check("runmcmc_record_kernel");
    	}
 

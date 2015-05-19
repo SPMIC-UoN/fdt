@@ -21,6 +21,7 @@ class Samples{
   	xfibresOptions& opts;
   	Matrix m_dsamples;
   	Matrix m_d_stdsamples;
+	Matrix m_Rsamples;
   	Matrix m_S0samples;
   	Matrix m_f0samples;
 
@@ -37,6 +38,7 @@ class Samples{
   	//for storing means
   	RowVector m_mean_dsamples;
   	RowVector m_mean_d_stdsamples;
+	RowVector m_mean_Rsamples;
   	RowVector m_mean_S0samples;
   	RowVector m_mean_f0samples;
   	RowVector m_mean_tausamples;
@@ -58,6 +60,7 @@ class Samples{
   	float *m_sum_d;
   	float *m_sum_S0;
   	float *m_sum_d_std;
+	float *m_sum_R;
   	float *m_sum_f0;
   	float *m_sum_tau;
 
@@ -73,7 +76,7 @@ class Samples{
 
   	Samples(int nvoxels,int nmeasures);
     
-	void record(float rd,float rf0,float rtau,float rdstd,float rs0,float *rth,float *rph, float *rf, int vox, int samp);
+	void record(float rd,float rf0,float rtau,float rdstd,float rR,float rs0,float *rth,float *rph, float *rf, int vox, int samp);
   
   	void finish_voxel(int vox);
   

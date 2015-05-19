@@ -58,6 +58,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>&			rs0_gpu,
 			thrust::device_vector<float>&			rd_gpu,
 			thrust::device_vector<float>&			rdstd_gpu,
+			thrust::device_vector<float>&			rR_gpu,
 			thrust::device_vector<float>&			rth_gpu,
 			thrust::device_vector<float>&			rph_gpu,
 			thrust::device_vector<float>&			rf_gpu);

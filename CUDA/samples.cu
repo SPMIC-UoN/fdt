@@ -47,7 +47,7 @@ opts(xfibresOptions::getInstance()){
     	//m_sum_d=0;  changed GPU version
     	//m_sum_S0=0;  changed GPU version
 
-    	if(opts.modelnum.value()==2){
+    	if(opts.modelnum.value()>=2){
       		m_d_stdsamples.ReSize(nsamples,nvoxels);
       		m_d_stdsamples=0;
       		m_mean_d_stdsamples.ReSize(nvoxels);
@@ -60,6 +60,16 @@ opts(xfibresOptions::getInstance()){
       			m_sum_d_std[i]=0;
       		}
       		////////////////////////////////////////////////
+		if(opts.modelnum.value()==3){
+			m_Rsamples.ReSize(nsamples,nvoxels);
+			m_Rsamples=0;
+			m_mean_Rsamples.ReSize(nvoxels);
+			m_mean_Rsamples=0;
+			m_sum_R=new float[nvoxels];
+			for(int i=0;i<nvoxels;i++){
+      				m_sum_R[i]=0;
+      			}
+		}
     	}
 
     	if (opts.f0.value()){
@@ -121,14 +131,18 @@ opts(xfibresOptions::getInstance()){
 }
 
 	//new version for GPU
-void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float *rth,float *rph, float *rf, int vox, int samp){
+void Samples::record(float rd,float rf0,float rtau,float rdstd,float rR,float rs0,float *rth,float *rph, float *rf, int vox, int samp){
     	m_dsamples(samp,vox)=rd;
     	m_sum_d[vox-1]+=rd;
 
-    	if(opts.modelnum.value()==2){
+    	if(opts.modelnum.value()>=2){
 		m_d_stdsamples(samp,vox)=rdstd;
       		m_sum_d_std[vox-1]+=rdstd;
     	}
+	if(opts.modelnum.value()==3){
+		m_Rsamples(samp,vox)=rR;
+		m_sum_R[vox-1]+=rR;
+    	}	
     	if (opts.f0.value()){
      		m_f0samples(samp,vox)=rf0;
       		m_sum_f0[vox-1]+=rf0;
@@ -159,8 +173,10 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float *
  void Samples::finish_voxel(int vox){
     	m_mean_dsamples(vox)=m_sum_d[vox-1]/m_nsamps;
 
-    	if(opts.modelnum.value()==2)
+    	if(opts.modelnum.value()>=2)
       		m_mean_d_stdsamples(vox)=m_sum_d_std[vox-1]/m_nsamps;
+	if(opts.modelnum.value()==3)
+      		m_mean_Rsamples(vox)=m_sum_R[vox-1]/m_nsamps;
     	if(opts.f0.value())
       		m_mean_f0samples(vox)=m_sum_f0[vox-1]/m_nsamps;
     	if(opts.rician.value())
@@ -174,8 +190,10 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rs0,float *
     	if(opts.rician.value())
     		m_sum_tau[vox-1]=0;
 
-    	if(opts.modelnum.value()==2)
+    	if(opts.modelnum.value()>=2)
       		m_sum_d_std[vox-1]=0;
+	if(opts.modelnum.value()==3)
+		m_sum_R[vox-1]=0;
     	if (opts.f0.value())
       		m_sum_f0[vox-1]=0;
 
@@ -257,11 +275,14 @@ void Samples::save(int idpart){
     	if(opts.modelnum.value()==1){
 		save_part(m_mean_dsamples,"mean_dsamples",idpart);
     	}
-    	else if(opts.modelnum.value()==2){
+    	else if(opts.modelnum.value()>=2){
 		save_part(m_mean_dsamples,"mean_dsamples",idpart);
 		save_part(m_mean_d_stdsamples,"mean_d_stdsamples",idpart);
 		//save_part(m_dsamples,"m_d_stdsamples",idpart);
 		//save_part(m_d_stdsamples,"d_stdsamples",idpart);
+		if(opts.modelnum.value()==3){
+			save_part(m_mean_Rsamples,"mean_Rsamples",idpart);
+		}
     	}
     	if (opts.f0.value()){
 		save_part(m_mean_f0samples,"mean_f0samples",idpart);

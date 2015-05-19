@@ -91,7 +91,10 @@ void xfibres_gpu(	//INPUT
 		fit(datam_vec,bvecs_vec,bvals_vec,datam_host,bvecs_host,bvals_host,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,gpu_log,params_gpu,vox_repeat,nrepeat);
 
 		if(opts.rician.value()){
-			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,ndirections,nfib,opts.modelnum.value(),opts.f0.value(),opts.nonlin.value(),gradnonlin,gpu_log,tau_host);
+			float R = opts.R_prior_mean.value();
+			int Gamma_ball_only=0;  //That flag for diffmodels means default model2
+      			if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)	
+			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,ndirections,nfib,opts.modelnum.value(),opts.f0.value(),opts.nonlin.value(),gradnonlin,R,Gamma_ball_only,gpu_log,tau_host);
 		}
 
 		bvecs_gpu.clear();		//free bvecs_gpu
@@ -118,14 +121,14 @@ void xfibres_gpu(	//INPUT
 
 		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, rand(), gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
 
-		thrust::device_vector<float> rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rth_gpu,rph_gpu,rf_gpu;
+		thrust::device_vector<float> rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu;
 
-		prepare_data_gpu_MCMC_record(nvox,rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rth_gpu,rph_gpu,rf_gpu);
+		prepare_data_gpu_MCMC_record(nvox,rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu);
 
-		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, rand(), gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rth_gpu, rph_gpu, rf_gpu);
+		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, rand(), gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rR_gpu, rth_gpu, rph_gpu, rf_gpu);
 
 		/////// FINISH ALL VOXELS  ///////
-		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,idSubpart);
+		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,idSubpart);
 	}else{
 		/////// FINISH EMPTY SLICE  ///////	
 		Samples samples(nvox,ndirections);
@@ -187,7 +190,7 @@ void fit(	//INPUT
 	int nvox = datam_vec.size();
 	int nfib= opts.nfibres.value();
 	int nparams_fit = 2+3*opts.nfibres.value();
-	if(opts.modelnum.value()==2) nparams_fit++;
+	if(opts.modelnum.value()>=2) nparams_fit++;
 	if(opts.f0.value()) nparams_fit++;
 	bool gradnonlin=opts.grad_file.set();
 
@@ -275,10 +278,14 @@ void fit(	//INPUT
 	  		}
 		}
 	}else{
-      		//model 2 : non-mono-exponential
-		fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
+      		//model 2 or 3
+		fit_PVM_single(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 	
-		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);	
+		float R = opts.R_prior_mean.value();
+		int Gamma_ball_only=0;  //That flag for diffmodels means default model2
+      		if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)
+
+		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),gradnonlin,R,Gamma_ball_only,output_file,params_gpu);	
 
 		if (opts.f0.value()){
 				float md,mf,f0;	
@@ -313,7 +320,7 @@ void fit(	//INPUT
 				
 		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 
-					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);	
+					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,gradnonlin,R,Gamma_ball_only,output_file,params_repeat_gpu);	
 					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
 		
 					//mix all the parameteres: repeated and not repeated
@@ -327,6 +334,25 @@ void fit(	//INPUT
    	myfile << "TIME TOTAL: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n\n" ; 
 	myfile.close();
+}
+
+void remove_NonPositive_entries(ColumnVector& Voxdata){  
+//Zero, Negative Entries can be obtained from spline interpolation 
+  	int pos; 
+  	float MinS=Voxdata.Minimum1(pos); 
+  	float MaxS=Voxdata.Maximum();
+	if (MinS<=0 && MaxS>0){  
+	//when there are some non-positive entries, but not all are zero
+    		vector<int> minpositions;
+	    	while (MinS<=0){
+	      		minpositions.push_back(pos);
+	      		Voxdata(pos)=MaxS;    //temporarilly make the non-positive values Max
+	      		MinS=Voxdata.Minimum1(pos);
+	    	}
+	    	MinS=Voxdata.Minimum(); //Now find the Minimum of positive entries
+	    	for (unsigned int i=0; i<minpositions.size(); i++)
+	      		Voxdata(minpositions[i])=MinS; //Replace non-positive entries with that minimum
+  	}
 }
 
 //prepare the structures for copy all neccesary data to FIT in GPU
@@ -354,9 +380,12 @@ void prepare_data_gpu_FIT(	//INPUT
 	datam_vec.resize(nvox);
 	datam_host.resize(nvox*ndirections); 
 	for(int vox=0;vox<nvox;vox++){
-		datam_vec[vox]=datam.Column(vox+1);
+		ColumnVector voxdata;
+		voxdata=datam.Column(vox+1);
+     		if(opts.rician.value()) remove_NonPositive_entries(voxdata); //So that log(data) does not give infinity in the likelihood
+		datam_vec[vox]=voxdata;
 		for(int j=0;j<ndirections;j++){
-			datam_host[vox*ndirections+j]=datam(j+1,vox+1);
+			datam_host[vox*ndirections+j]=voxdata(j+1);
 		}
 	}
 
@@ -414,7 +443,7 @@ void prepare_data_gpu_FIT(	//INPUT
 
 	if(opts.f0.value()) nparams=3+nfib*3;
 	else nparams=2+nfib*3;	
-	if(opts.modelnum.value()==2) nparams++;
+	if(opts.modelnum.value()>=2) nparams++;
 
 	params_host.resize(nvox*nparams);
 	tau_host.resize(nvox);
@@ -503,7 +532,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 	int nparams;
 
 	nparams=2+nfib*3;	
-	if(opts.modelnum.value()==2) nparams++;
+	if(opts.modelnum.value()>=2) nparams++;
 
 	params_repeat_host.resize(nrepeat*nparams);
 }
@@ -520,7 +549,7 @@ void mix_params(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib= opts.nfibres.value();
 	int nparams = 2+3*opts.nfibres.value();
-	if(opts.modelnum.value()==2) nparams++;
+	if(opts.modelnum.value()>=2) nparams++;
 
 	thrust::host_vector<float> params_host;
 	params_host.resize(nvox*(nparams+1));
@@ -559,6 +588,7 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 					thrust::device_vector<float>&			rs0_gpu,
 					thrust::device_vector<float>&			rd_gpu,
 					thrust::device_vector<float>&			rdstd_gpu,
+					thrust::device_vector<float>&			rR_gpu,
 					thrust::device_vector<float>&			rth_gpu,
 					thrust::device_vector<float>&			rph_gpu,
 					thrust::device_vector<float>&			rf_gpu)
@@ -572,7 +602,8 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 	if(opts.rician.value()) rtau_gpu.resize(nvox*nsamples);  
 	rs0_gpu.resize(nvox*nsamples);  
 	rd_gpu.resize(nvox*nsamples);
-	if(opts.modelnum.value()==2) rdstd_gpu.resize(nvox*nsamples);  
+	if(opts.modelnum.value()>=2) rdstd_gpu.resize(nvox*nsamples);  
+	if(opts.modelnum.value()==3) rR_gpu.resize(nvox*nsamples); 
 	rth_gpu.resize(nvox*nsamples*nfib);  
 	rph_gpu.resize(nvox*nsamples*nfib);  
 	rf_gpu.resize(nvox*nsamples*nfib);  
@@ -584,6 +615,7 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rs0_gpu,
 				thrust::device_vector<float>&			rd_gpu,
 				thrust::device_vector<float>&			rdstd_gpu,
+				thrust::device_vector<float>&			rR_gpu,
 				thrust::device_vector<float>&			rth_gpu,
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,
@@ -595,13 +627,14 @@ void record_finish_voxels(	//INPUT
 	int nfib = opts.nfibres.value();	
 	int nsamples = (opts.njumps.value()/opts.sampleevery.value());   
 
-	thrust::host_vector<float> rf0_host,rtau_host,rs0_host,rd_host,rdstd_host,rth_host,rph_host,rf_host;
+	thrust::host_vector<float> rf0_host,rtau_host,rs0_host,rd_host,rdstd_host,rR_host,rth_host,rph_host,rf_host;
 
 	rf0_host.resize(nvox*nsamples);
 	rtau_host.resize(nvox*nsamples);
 	rs0_host.resize(nvox*nsamples);
 	rd_host.resize(nvox*nsamples);
-	rdstd_host.resize(nvox*nsamples);
+	if(opts.modelnum.value()>=2) rdstd_host.resize(nvox*nsamples);
+	if(opts.modelnum.value()==3) rR_host.resize(nvox*nsamples);
 	rth_host.resize(nvox*nfib*nsamples);
 	rph_host.resize(nvox*nfib*nsamples);
 	rf_host.resize(nvox*nfib*nsamples);
@@ -610,14 +643,15 @@ void record_finish_voxels(	//INPUT
 	if(opts.rician.value()) thrust::copy(rtau_gpu.begin(), rtau_gpu.end(), rtau_host.begin());
 	thrust::copy(rs0_gpu.begin(), rs0_gpu.end(), rs0_host.begin());
 	thrust::copy(rd_gpu.begin(), rd_gpu.end(), rd_host.begin());
-	if(opts.modelnum.value()==2) thrust::copy(rdstd_gpu.begin(), rdstd_gpu.end(), rdstd_host.begin());
+	if(opts.modelnum.value()>=2) thrust::copy(rdstd_gpu.begin(), rdstd_gpu.end(), rdstd_host.begin());
+	if(opts.modelnum.value()==3) thrust::copy(rR_gpu.begin(), rR_gpu.end(), rR_host.begin());
 	thrust::copy(rth_gpu.begin(), rth_gpu.end(), rth_host.begin());
 	thrust::copy(rph_gpu.begin(), rph_gpu.end(), rph_host.begin());
 	thrust::copy(rf_gpu.begin(), rf_gpu.end(), rf_host.begin());	
 
 	Samples samples(nvox,nsamples);
 
-	float ard,arf0,artau,ardstd,ars0;	
+	float ard,arf0,artau,ardstd,arR,ars0;	
 	float *arth = new float[nfib];
     	float *arph = new float[nfib]; 
     	float *arf = new float[nfib];
@@ -633,8 +667,11 @@ void record_finish_voxels(	//INPUT
 				artau=rtau_host[(vox*nsamples)+rec];
 			}
 
-			if(opts.modelnum.value()==2){	
+			if(opts.modelnum.value()>=2){	
 				ardstd=rdstd_host[(vox*nsamples)+rec];
+			}
+			if(opts.modelnum.value()==3){	
+				arR=rR_host[(vox*nsamples)+rec];
 			}
 		
 			ars0=rs0_host[(vox*nsamples)+rec];
@@ -645,7 +682,7 @@ void record_finish_voxels(	//INPUT
 				arf[j]=rf_host[(vox*nfib*nsamples)+(j*nsamples)+rec];
 
 			}
-			samples.record(ard,arf0,artau,ardstd,ars0,arth,arph,arf,vox+1,rec+1);
+			samples.record(ard,arf0,artau,ardstd,arR,ars0,arth,arph,arf,vox+1,rec+1);
 		}	
 		samples.finish_voxel(vox+1);
    	}

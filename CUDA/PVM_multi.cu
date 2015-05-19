@@ -28,37 +28,72 @@ __device__ inline float isoterm_b_PVM_multi(const int pt,const float* _a,const f
       	return -*_a*bvals[pt]/(1+bvals[pt]**_b)*exp(-*_a*log(1+bvals[pt]**_b));
 }
 
-__device__ inline float anisoterm_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const int ndirections){
+__device__ inline float anisoterm_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
-  	return exp(-*_a*log(1+bvals[pt]**_b*(dp*dp)));
+	if(Gamma_for_ball_only==1){
+		return exp(-bvals[pt]**_a**_b*dp*dp);
+	}else if(Gamma_for_ball_only==2){
+		return exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R));		
+	}else{
+  		return exp(-*_a*log(1+bvals[pt]**_b*(dp*dp)));
+	}
 }
  
-__device__ inline float anisoterm_a_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const int ndirections){
+__device__ inline float anisoterm_a_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
-  	return -log(1+bvals[pt]*(dp*dp)**_b)* exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b));
+	if(Gamma_for_ball_only==1){
+		return (-bvals[pt]**_b*dp*dp* exp(-bvals[pt]**_a**_b*dp*dp));
+  	}else if(Gamma_for_ball_only==2){
+		float dp2=bvals[pt]*3**_b*invR*((1-R)*dp*dp+R);
+		return(-dp2*exp(-dp2**_a));
+	}else{
+		return -log(1+bvals[pt]*(dp*dp)**_b)* exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b));
+  	}
+  	
 }
 
-__device__ inline float anisoterm_b_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const int ndirections){
+__device__ inline float anisoterm_b_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
-  	return (-*_a*bvals[pt]*(dp*dp)/ (1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b)));
+	if(Gamma_for_ball_only==1){
+		return(-bvals[pt]**_a*dp*dp*exp(-bvals[pt]**_a**_b*dp*dp));
+  	}else if(Gamma_for_ball_only==2){
+		float dp2=bvals[pt]*3**_a*invR*((1-R)*dp*dp+R);
+		return(-dp2*exp(-dp2**_b));
+  	}else{
+		return (-*_a*bvals[pt]*(dp*dp)/ (1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b)));
+  	}
 }
 
-__device__ inline float anisoterm_th_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const int ndirections){
+__device__ inline float anisoterm_th_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float sinth,costh,sinph,cosph;
 	sincos(_th,&sinth,&costh);
 	sincos(_ph,&sinph,&cosph);
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
   	float dp1 = costh* (bvecs[pt]*cosph + bvecs[ndirections+pt]*sinph) - bvecs[(2*ndirections)+pt]*sinth;
-	return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);	
+	if(Gamma_for_ball_only==1){
+  		return(-2*bvals[pt]**_a**_b*dp*dp1*exp(-bvals[pt]**_a**_b*dp*dp));
+  	}else if(Gamma_for_ball_only==2){
+		float dp2=2*bvals[pt]*3**_a**_b*invR*(1-R)*dp1;
+		return(-dp2*exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R)));
+  	}else{
+		return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);	
+	}
 }
 
-__device__ inline float anisoterm_ph_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const int ndirections){
+__device__ inline float anisoterm_ph_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float sinth,sinph,cosph;
 	sinth=sin(_th);
 	sincos(_ph,&sinph,&cosph);
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
   	float dp1 = sinth* (-bvecs[pt]*sinph + bvecs[ndirections+pt]*cosph);
-  	return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);
+	if(Gamma_for_ball_only==1){
+  		return(-2*bvals[pt]**_a**_b*dp*dp1*exp(-bvals[pt]**_a**_b*dp*dp));
+  	}else if(Gamma_for_ball_only==2){
+		float dp2=2*bvals[pt]*3**_a**_b*invR*(1-R)*dp1;
+		return(-dp2*exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R)));
+ 	}else{
+		return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);
+  	}
 }
 
 //in diffmodel.cc
@@ -112,11 +147,14 @@ __device__ void cf_PVM_multi(		//INPUT
 					const float*		mdata,
 					const float*		bvecs, 
 					const float*		bvals,
+					const float		R,
+					const float		invR,
 					const int		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
 					const int		idSubVOX,
+					const int		Gamma_for_ball_only,
 					float*			reduction,	//shared memory
 					float* 			fs,		//shared memory
 					float*			x,		//shared memory	
@@ -160,7 +198,7 @@ __device__ void cf_PVM_multi(		//INPUT
 			x2.x=x[k*3];
 			x2.y=x[k*3+1];
 			x2.z=x[k*3+2];	 
-			err += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,x2,bvecs,bvals,ndirections); 
+			err += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,x2,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only); 
     		}
 		if(m_include_f0){
 			float temp_f0=x2f_gpu(params[nparams-1]);
@@ -187,11 +225,14 @@ __device__ void grad_PVM_multi(		//INPUT
 					const float*		mdata,
 					const float*		bvecs, 
 					const float*		bvals,
+					const float		R,
+					const float		invR,
 					const int		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
 					const int		idSubVOX,
+					const int		Gamma_for_ball_only,
 					float*			J,		//shared memory
 					float*			reduction,	//shared memory
 					float* 			fs,		//shared memory
@@ -242,16 +283,28 @@ __device__ void grad_PVM_multi(		//INPUT
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
       				xx.z=x[k*3+2];		
-      				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections);
-      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections); 
-				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections);
-				myJ[kk] = abs(params[0])*(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections)-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[kk])*1/(1+params[kk]*params[kk]); 
-      				myJ[kk+1] = abs(params[0])*fs[k]*anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);  
-      				myJ[kk+2] = abs(params[0])*fs[k]*anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+      				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
+      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*
+				anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only); 
+
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*
+				anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
+				myJ[kk] = abs(params[0])*(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only)
+				-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[kk])*1/(1+params[kk]*params[kk]); 
+
+      				myJ[kk+1] = abs(params[0])*fs[k]*
+				anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);  
+
+      				myJ[kk+2] = abs(params[0])*fs[k]*
+				anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
     			}
     			if(m_include_f0){
 				float temp_f0=x2f_gpu(params[nparams-1]);
-				myJ[nparams-1]= abs(params[0])*(1-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[nparams-1])*1/(1+params[nparams-1]*params[nparams-1]);
+				myJ[nparams-1]= abs(params[0])*(1-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*
+				two_pi_gpu*sign_gpu(params[nparams-1])*1/(1+params[nparams-1]*params[nparams-1]);
+
 				sig=abs(params[0])*((temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals))+sig);
     				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
 				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);
@@ -285,11 +338,14 @@ __device__ void hess_PVM_multi(		//INPUT
 					const float*		params,
 					const float*		bvecs, 
 					const float*		bvals,
+					const float		R,
+					const float		invR,
 					const int 		ndirections,
 					const int		nfib,
 					const int 		nparams,
 					const bool 		m_include_f0,
 					const int		idSubVOX,
+					const int		Gamma_for_ball_only,
 					float*			J,		//shared memory
 					float*			reduction,	//shared memory
 					float* 			fs,		//shared memory
@@ -343,13 +399,24 @@ __device__ void hess_PVM_multi(		//INPUT
       				xx.x=x[k*3];
       				xx.y=x[k*3+1];
       				xx.z=x[k*3+2];		
-      				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections);
+      				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
       				float cov = two_pi_gpu*sign_gpu(params[kk])*1/(1+params[kk]*params[kk]);	
-      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections);
-				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections);
-				myJ[kk] = abs(params[0])*(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,ndirections)-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*cov;
-      				myJ[kk+1] = abs(params[0])*fs[k]*anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
-      				myJ[kk+2] = abs(params[0])*fs[k]*anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,ndirections);
+      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*
+				anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*
+				anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
+				myJ[kk] = abs(params[0])*
+				(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only)-
+				isoterm_PVM_multi(dir_iter,_a,_b,bvals))*cov;
+
+      				myJ[kk+1] = abs(params[0])*fs[k]*
+				anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
+
+      				myJ[kk+2] = abs(params[0])*fs[k]*
+				anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
     			}
     			if(m_include_f0){
 				float temp_f0=x2f_gpu(params[nparams-1]);
@@ -397,10 +464,13 @@ extern "C" __global__ void fit_PVM_multi_kernel(	//INPUT
 							const float* 		params_PVM_single_c,
 							const float* 		bvecs, 
 							const float* 		bvals, 
+							const float		R,
+							const float		invR,
 							const int 		nvox, 
 							const int		ndirections,
 							const int 		nfib, 	
-							const int		nparams,			
+							const int		nparams,
+							const int		Gamma_for_ball_only,			
 							const bool 		m_include_f0,
 							const bool		gradnonlin,
 							//OUTPUT
@@ -468,7 +538,10 @@ extern "C" __global__ void fit_PVM_multi_kernel(	//INPUT
 		pos_bvecs=0;
 	}
   	//do the fit
-	levenberg_marquardt_PVM_multi_gpu(&data[idVOX*ndirections],&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections,nfib,nparams,m_include_f0,idSubVOX,step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,J,reduction,fs,x,_a,_b,sumf,C,el,indx,myparams);
+	levenberg_marquardt_PVM_multi_gpu(&data[idVOX*ndirections],&bvecs[pos_bvecs],&bvals[pos_bvals],R,invR, 
+	ndirections,nfib,nparams,m_include_f0,idSubVOX,Gamma_for_ball_only,
+	step,grad,hess,inverse, pcf,ncf,lambda,cftol,ltol,olambda,success,end,J,
+	reduction,fs,x,_a,_b,sumf,C,el,indx,myparams);
 
 	__syncthreads();
 
@@ -502,10 +575,13 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 								const float* 		params,
 								const float* 		bvecs, 
 								const float* 		bvals, 
+								const float		R,
+								const float		invR,
 								const int 		nvox, 
 								const int		ndirections,
 								const int 		nfib, 
 								const int		nparams,
+								const int		Gamma_for_ball_only,
 								const bool 		m_include_f0,
 								const bool		gradnonlin,
 								const bool* 		includes_f0,								
@@ -598,7 +674,7 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 			x2.x=x[k*3];
 			x2.y=x[k*3+1];
 			x2.z=x[k*3+2];	 
-      			val += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,x2,&bvecs[pos_bvecs],&bvals[pos_bvals],ndirections);
+      			val += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,x2,&bvecs[pos_bvecs],&bvals[pos_bvals],R,invR,ndirections,Gamma_for_ball_only);
     		}	
     		if (*my_include_f0){
       			float temp_f0=x2f_gpu(myparams[nparams-1]);

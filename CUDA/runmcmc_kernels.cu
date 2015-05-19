@@ -20,6 +20,7 @@
 #include <options.h>
 
 #define maxfloat 1e10
+#define UPPERDIFF 0.005
 
 __device__ inline void propose(float* param, float* old, float prop, float random){
 	*old=*param;
@@ -55,24 +56,33 @@ __device__ inline bool compute_test_energy(float *m_energy, float* m_old_energy,
 	double tmp=exp(double(*m_old_energy-*m_energy));
 	return (tmp>random);
 }
-__device__ inline void compute_signal(double *signals,double *oldsignals,float mbvals,float* m_d, float* m_dstd,float angtmp, int model){
+__device__ inline void compute_signal(double *signals,double *oldsignals,float mbvals,float* m_d, float* m_dstd, float* m_R, float angtmp, int model){
 	*oldsignals=*signals;
-	if(model==1 || *m_dstd<1e-5){	
+	if(model==1 || (*m_dstd<1e-5 && model==2)){	
 		*signals=exp(double(-*m_d*mbvals*angtmp));
-	}else{
-		double dbeta= *m_d/(*m_dstd**m_dstd);
-	 	double dalpha= *m_d*dbeta;         
-           	*signals=exp(double(log(double(dbeta/(dbeta+mbvals*angtmp)))*dalpha)); 
-	}
+	}else if(model==2){
+		//double dbeta= *m_d/(*m_dstd**m_dstd);
+	 	//double dalpha= *m_d*dbeta;   
+		//*signals=exp(double(log(double(dbeta/(dbeta+mbvals*angtmp)))*dalpha));   
+		float sig2=*m_dstd**m_dstd;
+	 	float dalpha=*m_d**m_d/sig2;      
+		*signals=exp(log(double(*m_d/(*m_d + mbvals*angtmp*sig2)))*dalpha); // more stable
+	}else if(model==3){
+		float invR=1.0f/(2.0f**m_R+1.0f);
+	   	*signals=exp(-mbvals*3**m_d*invR*((1-*m_R)*angtmp+*m_R));
+       	}
 }
 __device__ inline void compute_iso_signal(double *isosignals,double *oldisosignals, float mbvals,float* m_d, float* m_dstd, int model){
 	*oldisosignals=*isosignals;
 	if(model==1 || *m_dstd<1e-5){
 	 	*isosignals=exp(double(-m_d[0]*mbvals));	
-	}else{
-		double dbeta= *m_d/(*m_dstd**m_dstd);
-	  	double dalpha= *m_d*dbeta;
-		*isosignals=exp(double(log(double(dbeta/(dbeta+mbvals)))*dalpha));
+	}else if(model>=2){
+		//double dbeta= *m_d/(*m_dstd**m_dstd);
+	  	//double dalpha= *m_d*dbeta;
+		//*isosignals=exp(double(log(double(dbeta/(dbeta+mbvals)))*dalpha));
+		float sig2=*m_dstd**m_dstd;
+		float dalpha=*m_d**m_d/sig2;	
+		*isosignals=exp(log(double(*m_d/(*m_d+mbvals*sig2)))*dalpha); // more numerically stable
 	}
 }
 __device__ inline void restore_signals(double* signals, double* oldsignals, int idVOX, int idSubVOX, int mydirs, int nfib, int ndirections, int threadsBlock){
@@ -97,9 +107,9 @@ __device__ inline void restore_angtmp_signals(double* signals, double* oldsignal
 		signals[pos] = oldsignals[pos];	
 	}
 }
-__device__  inline void compute_prior(float *m_prior_en, float *m_prior_en_old,float* m_d_prior,float* m_S0_prior,float *m_prior_enf, float* m_f0_prior, float* m_tau_prior, float* m_dstd_prior, int nfib){			
+__device__  inline void compute_prior(float *m_prior_en, float *m_prior_en_old,float* m_d_prior,float* m_S0_prior,float *m_prior_enf, float* m_f0_prior, float* m_tau_prior, float* m_dstd_prior, float* m_R_prior, int nfib){			
         *m_prior_en_old=*m_prior_en;
-	*m_prior_en=*m_d_prior+*m_S0_prior+*m_dstd_prior+*m_tau_prior+*m_f0_prior;
+	*m_prior_en=*m_d_prior+*m_S0_prior+*m_dstd_prior+*m_R_prior+*m_tau_prior+*m_f0_prior;
 	for(int f=0;f<nfib;f++){
 		*m_prior_en=*m_prior_en+m_prior_enf[f];
 	}	
@@ -178,6 +188,9 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 								const float*			bvals,
 								const double*			alpha,
 								const double*			beta,
+								const float			R_priormean,
+								const float			R_priorstd,
+								const float			R_priorfudge,		
 								const int			ndirections,
 								const int 			nfib,
 								const int 			nparams_fit,
@@ -209,7 +222,8 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	float* m_S0 = (float*) &reduction[threadsBlock];		//1
 	float* m_d = (float*) &m_S0[1];					//1
 	float* m_dstd =(float*) &m_d[1];				//1
-	float* m_f0 = (float*) &m_dstd[1];				//1
+	float* m_R =(float*) &m_dstd[1];				//1	
+	float* m_f0 = (float*) &m_R[1];					//1
 	float* m_tau = (float*) &m_f0[1];				//1
 	float* m_th = (float*) &m_tau[1];				//nfib
 	float* m_ph = (float*) &m_th[nfib];				//nfib
@@ -222,7 +236,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	int* posBV = (int*) &m_prior_en[1];				//1
 	////////// DYNAMIC SHARED MEMORY ///////////
 	
-	// m_s0-params[0] 	m_d-params[1] 	m_f-m_th-m_ph-params[2,3,4,5, etc..]   	m_f0-params[nparams-1]
+	// m_s0-params[0]	m_d-params[1]	m_f-m_th-m_ph-params[add+2,3,4,5, etc..]	m_f0-params[nparams-1]
 	if(leader){
 		if(gradnonlin) *posBV = (idVOX*ndirections);
 		else *posBV = 0;
@@ -234,21 +248,33 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		multifibres[idVOX].m_S0_rej = 0;
 	
 		*m_d=params[idVOX*nparams_fit+1];
-		if(*m_d<0 || *m_d>0.008) *m_d=2e-3;			//this is in xfibres...after fit
+		if(*m_d<0 || *m_d> UPPERDIFF) *m_d=2e-3;			//this is in xfibres...after fit
 		multifibres[idVOX].m_d = *m_d;
 		multifibres[idVOX].m_d_prior = 0;
 		multifibres[idVOX].m_d_acc = 0;
 		multifibres[idVOX].m_d_rej = 0;
 
-		if(model==2){ 
+		if(model>=2){ 
 			*m_dstd=params[idVOX*nparams_fit+2];
-			if(*m_dstd<0 || *m_dstd>0.01) *m_dstd=*m_d/10;	//this is in xfibres...after fit
+			float upper_d_std=0.01;
+			if (model==3) upper_d_std=0.004;
+      			if(*m_dstd<0 || *m_dstd>upper_d_std) *m_dstd=*m_d/10; 	//this is in xfibres...after fit
+			if (model==3){ 
+				*m_R=R_priormean;	
+			}else{ 
+				*m_R=0;
+			}
 		}
 		else *m_dstd = 0;
 		multifibres[idVOX].m_dstd = *m_dstd;
 		multifibres[idVOX].m_dstd_prior = 0;
 		multifibres[idVOX].m_dstd_acc = 0;
 		multifibres[idVOX].m_dstd_rej = 0;
+
+		multifibres[idVOX].m_R = *m_R;
+		multifibres[idVOX].m_R_prior = 0;
+		multifibres[idVOX].m_R_acc = 0;
+		multifibres[idVOX].m_R_rej = 0;
 
 		if (m_includef0) *m_f0=params[idVOX*nparams_fit+nparams_fit-1];
 		else *m_f0=0;
@@ -269,9 +295,10 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	int mod = ndirections%threadsBlock;
 	if(mod&&(idSubVOX<mod)) mydirs++;
 
+	//------ Fibre constructor ------
 	if(idSubVOX<nfib){
 		int add=0;
-		if(model==2) add=1;		// if model 2 we have d_std and then 1 more parameter in position 2
+		if(model>=2) add=1;		// if model 2 we have d_std and then 1 more parameter in position 2
 		int pos = (idVOX*nfib)+idSubVOX;
 
 		m_th[idSubVOX]=params[idVOX*nparams_fit+2+3*idSubVOX+1+add];
@@ -345,26 +372,54 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		 	angtmp[pos]= aux;
 		}
 	}
-
+	//------ Fibre constructor ------
 	//compute_signal()
 	double old;
 	for(int f=0;f<nfib;f++){
 		for(int i=0; i<mydirs; i++){
 			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-			compute_signal(&signals[pos],&old,bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,angtmp[pos],model);
+			compute_signal(&signals[pos],&old,bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
 		}
 	}
 
+	//------ initialise_energies ------
 	if(leader){
 		getfsum(fsum,m_f,*m_f0,nfib);
 		
-		//initialise_energies();
-	      	//compute_d_prior(); m_d_prior=0; so i don't do nothing, it is already 0
-	      	if(model==2){
+	      	//compute_d_prior(); 
+		if(*m_d>=0 && *m_d<=UPPERDIFF){
+			if (model==3){
+ 	          		//float alpha=3.0; float beta=4000;  //Gamma_prior around 0.5-1E-3
+ 	          		multifibres[idVOX].m_d_prior =(1.0f-3.0f)*log(*m_d)+4000.0f**m_d;
+ 	        	}
+       		}
+
+	      	if(model>=2){
 			//compute_d_std_prior();
-			if(*m_dstd<=0 || *m_dstd>0.01){
-	      		}else{
-				multifibres[idVOX].m_dstd_prior=log(double(*m_dstd));
+			float upper_d_std=0.01;
+			if (model==3) upper_d_std=0.004;
+			if(*m_dstd>0 && *m_dstd<=upper_d_std){
+				multifibres[idVOX].m_dstd_prior=log(*m_dstd);
+			}
+			if (model==3){
+	  			//compute_R_prior();
+				float upper_R=2.0f*R_priormean;
+				float lower_R=R_priormean-2.0f*R_priorstd;
+				if (R_priormean>0.5f)
+					upper_R=1.0f;
+				if (lower_R<0.0f)
+					lower_R=1E-8f;
+				if (R_priorfudge>0.0f && *m_d>UPPERDIFF/2.0f){
+					//then use an ARD prior to avoid competition with the isotropic compartments
+ 	        			if (*m_R>=1E-8f && *m_R<=upper_R){
+ 	          				multifibres[idVOX].m_R_prior=R_priorfudge*log(*m_R);
+ 	        			}
+ 	      			}else{	
+      					if(*m_R>lower_R && *m_R<=upper_R){
+						float Rstd2=R_priorstd*R_priorstd; 
+						multifibres[idVOX].m_R_prior=(*m_R-R_priormean)*(*m_R-R_priormean)/Rstd2;  //Gaussian prior
+      					}
+				}
 			}
 		}
 	      	//compute_tau_prior(); m_tau_prior=0; so it doesn't do nothing, it is already 0
@@ -378,11 +433,13 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	      		}
 		}
 	      	//compute_S0_prior(); m_S0_prior=0; so i don't do nothing, it is already 0
-		*m_prior_en = 0;
+		//*m_prior_en = 0;
 	      	//compute_prior();
-	      	//m_prior_en=m_d_prior+m_S0_prior; is 0
-	      	if(model==2)
+	      	*m_prior_en=multifibres[idVOX].m_d_prior+multifibres[idVOX].m_S0_prior;
+	      	if(model>=2)
 			*m_prior_en= *m_prior_en+multifibres[idVOX].m_dstd_prior;
+		if(model==3)
+			*m_prior_en= *m_prior_en+multifibres[idVOX].m_R_prior;
 	      	//if(m_rician) m_prior_en=m_prior_en+m_tau_prior; is 0
 	      	if (m_includef0)
 			*m_prior_en=*m_prior_en+multifibres[idVOX].m_f0_prior;
@@ -391,7 +448,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	      	} 
 		multifibres[idVOX].m_prior_en = *m_prior_en;
 	}
-
+	//------ initialise_energies ------
 	//compute_iso_signal()
 	for(int i=0; i<mydirs; i++){
 		int pos = idVOX*ndirections + idSubVOX + i*threadsBlock;	
@@ -400,6 +457,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
  
 	__syncthreads();
 
+	//------ initialise_energies ------
 	//compute_likelihood()
 	compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[idVOX*nfib*ndirections],&isosignals[idVOX*ndirections],&datam[idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
 
@@ -407,7 +465,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 
 	if(leader){
 		multifibres[idVOX].m_likelihood_en = *m_likelihood_en;
-	      	
+	      	//------ initialise_energies ------
 		//compute_energy();	
 		multifibres[idVOX].m_energy = *m_prior_en+*m_likelihood_en;
 
@@ -417,6 +475,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	      	multifibres[idVOX].m_dstd_prop=*m_dstd/10.0;
 	      	multifibres[idVOX].m_tau_prop=*m_tau/2.0;
 	      	multifibres[idVOX].m_f0_prop=0.2;
+		multifibres[idVOX].m_R_prop=*m_R/10.0;
 	}
 }
 
@@ -427,6 +486,9 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						const double*			beta,
 						float*				randomsN,
 						float*				randomsU,
+						const float			R_priormean,
+						const float			R_priorstd,	
+						const float			R_priorfudge,			
 						const int			ndirections,
 						const int			nfib,
 						const int			nparams,
@@ -459,6 +521,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						float*				rs0,
 						float*				rd,
 						float*				rdstd,
+						float*				rR,
 						float*				rth,
 						float*				rph, 
 						float*				rf)
@@ -474,7 +537,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	float* m_S0 = (float*) &reduction[threadsBlock];		//1
 	float* m_d = (float*) &m_S0[1];					//1
 	float* m_dstd =(float*) &m_d[1];				//1
-	float* m_f0 = (float*) &m_dstd[1];				//1
+	float* m_R =(float*) &m_dstd[1];				//1	
+	float* m_f0 = (float*) &m_R[1];					//1
 	float* m_tau = (float*) &m_f0[1];				//1
 	float* m_th = (float*) &m_tau[1];				//nfib
 	float* m_ph = (float*) &m_th[nfib];				//nfib
@@ -483,7 +547,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	float* m_S0_prior = (float*) &m_f[nfib];			//1
 	float* m_d_prior = (float*) &m_S0_prior[1];			//1
 	float* m_dstd_prior = (float*) &m_d_prior[1];			//1
-	float* m_f0_prior = (float*) &m_dstd_prior[1];			//1
+	float* m_R_prior = (float*) &m_dstd_prior[1];			//1	
+	float* m_f0_prior = (float*) &m_R_prior[1];			//1
 	float* m_tau_prior = (float*) &m_f0_prior[1];			//1
 	float* m_th_prior = (float*) &m_tau_prior[1];			//nfib
 	float* m_ph_prior = (float*) &m_th_prior[nfib];			//nfib
@@ -492,7 +557,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	float* m_S0_prop = (float*) &m_f_prior[nfib];			//1
 	float* m_d_prop = (float*) &m_S0_prop[1];			//1
 	float* m_dstd_prop = (float*) &m_d_prop[1];			//1
-	float* m_f0_prop = (float*) &m_dstd_prop[1];			//1
+	float* m_R_prop = (float*) &m_dstd_prop[1];			//1
+	float* m_f0_prop = (float*) &m_R_prop[1];			//1
 	float* m_tau_prop = (float*) &m_f0_prop[1];			//1
 	float* m_th_prop = (float*) &m_tau_prop[1];			//nfib
 	float* m_ph_prop = (float*) &m_th_prop[nfib];			//nfib
@@ -514,7 +580,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	int* m_S0_acc = (int*) &prerandU[nparams];			//1
 	int* m_d_acc = (int*) &m_S0_acc[1];				//1
 	int* m_dstd_acc = (int*) &m_d_acc[1];				//1
-	int* m_f0_acc = (int*) &m_dstd_acc[1];				//1
+	int* m_R_acc = (int*) &m_dstd_acc[1];				//1
+	int* m_f0_acc = (int*) &m_R_acc[1];				//1
 	int* m_tau_acc = (int*) &m_f0_acc[1];				//1
 	int* m_th_acc = (int*) &m_tau_acc[1];				//nfib
 	int* m_ph_acc = (int*) &m_th_acc[nfib];				//nfib
@@ -523,7 +590,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	int* m_S0_rej = (int*) &m_f_acc[nfib];				//1
 	int* m_d_rej = (int*) &m_S0_rej[1];				//1
 	int* m_dstd_rej = (int*) &m_d_rej[1];				//1	
-	int* m_f0_rej = (int*) &m_dstd_rej[1];				//1
+	int* m_R_rej = (int*) &m_dstd_rej[1];				//1	
+	int* m_f0_rej = (int*) &m_R_rej[1];				//1
 	int* m_tau_rej = (int*) &m_f0_rej[1];				//1	
 	int* m_th_rej = (int*) &m_tau_rej[1];				//nfib
 	int* m_ph_rej = (int*) &m_th_rej[nfib];				//nfib
@@ -550,7 +618,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 
 		*m_prior_en=multifibres[*idVOX].m_prior_en;
 
-		if(model==2){
+		if(model>=2){
 			*m_dstd_acc=multifibres[*idVOX].m_dstd_acc;
 			*m_dstd_rej=multifibres[*idVOX].m_dstd_rej;
 			*m_dstd_prior=multifibres[*idVOX].m_dstd_prior;
@@ -562,6 +630,19 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			*m_dstd_prior=0;
 			*m_dstd_prop=0;
 			*m_dstd=0;
+		}
+		if(model==3){
+			*m_R_acc=multifibres[*idVOX].m_R_acc;
+			*m_R_rej=multifibres[*idVOX].m_R_rej;
+			*m_R_prior=multifibres[*idVOX].m_R_prior;
+			*m_R_prop=multifibres[*idVOX].m_R_prop;
+			*m_R=multifibres[*idVOX].m_R;
+		}else{
+			*m_R_acc=0;
+			*m_R_rej=0;
+			*m_R_prior=0;
+			*m_R_prop=0;
+			*m_R=0;
 		}
 	
 		*m_d=multifibres[*idVOX].m_d;
@@ -651,6 +732,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}
 	}
 
+	if (leader) getfsum(fsum,m_f,*m_f0,nfib);
 	for (int niter=0; niter<iterations; niter++){
 		//code jump()
 
@@ -672,18 +754,26 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				idrand++;
 				*localrand=*localrand+1;
 			}
+			//d
 			prerandN[*localrand]=randomsN[idrand];
 			prerandU[*localrand]=randomsU[idrand];
 			idrand++;
 			*localrand=*localrand+1;
-
-			if(model==2){
+			//d_std
+			if(model>=2){
 				prerandN[*localrand]=randomsN[idrand];
 				prerandU[*localrand]=randomsU[idrand];
 				idrand++;
 				*localrand=*localrand+1;
 			}
-
+			//R
+			if(model==3){
+				prerandN[*localrand]=randomsN[idrand];
+				prerandU[*localrand]=randomsU[idrand];
+				idrand++;
+				*localrand=*localrand+1;
+			}
+			//S0
 			prerandN[*localrand]=randomsN[idrand];
 			prerandU[*localrand]=randomsU[idrand];
 			idrand++;
@@ -725,7 +815,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				}
 				getfsum(fsum,m_f,*m_f0,nfib);
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 				//reject_f_sum()
 				rejflag[1]=(*fsum>1);
 			}
@@ -743,12 +833,15 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		  					*m_f0_acc=*m_f0_acc+1;   
 						}else{
 							reject(m_f0,m_f0_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_f0_rej);
+							getfsum(fsum,m_f,*m_f0,nfib);
 						}
 					}else{
 						reject(m_f0,m_f0_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_f0_rej);
+						getfsum(fsum,m_f,*m_f0,nfib);
 					}
 				}else{ 
 					reject(m_f0,m_f0_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_f0_rej);
+					getfsum(fsum,m_f,*m_f0,nfib);
 				}
 			}
 		}
@@ -764,9 +857,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					rejflag[0]=false;
 					*m_tau_prior=0;
 				}
-				getfsum(fsum,m_f,*m_f0,nfib);
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 			}
 			__syncthreads();
 			//compute_likelihood()
@@ -790,21 +882,26 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 ////////////////////////////////////////////////////////////////// D
 		if (leader){
 			propose(m_d,old,*m_d_prop,prerandN[*localrand]);
-			//compute_d_prior_f0()      
+			//compute_d_prior()      
 			old[1]=*m_d_prior;	
-      			if(*m_d<0 || *m_d > 0.008){
+			if(*m_d<0 || *m_d>UPPERDIFF){
 				rejflag[0]=true;
-			}else{ 
-				*m_d_prior=0;
+			}else{
+				if (model==3){
+					//float alpha=3.0; float beta=4000;  //Gamma_prior around 0.5-1E-3
+					*m_d_prior=(1.0f-3.0f)*log(*m_d)+4000.0f**m_d;
+				}else{
+					*m_d_prior=0;
+				}
 				rejflag[0]=false;
-      			}
+			}
 		}
 		__syncthreads();	
 		//compute_signal()
 		for(int f=0;f<nfib;f++){
 			for(int i=0; i<mydirs; i++){
 				int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,angtmp[pos],model);
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 		}
 		//compute_iso_signal()
@@ -814,9 +911,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}				
 
 		if (leader){
-			getfsum(fsum,m_f,*m_f0,nfib);
 			//compute_prior()
-			compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+			compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 		}
 		__syncthreads();	
 		//compute_likelihood()
@@ -847,24 +943,28 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
         	}
 ////////////////////////////////////////////////////////////////// D_STD
-		if(model==2){
+		if(model>=2){
 			if (leader){	
 				propose(m_dstd,old,*m_dstd_prop,prerandN[*localrand]);
 				//compute_d_std_prior()     
 				old[1]=*m_dstd_prior;
-	      			if(*m_dstd<=0 || *m_dstd > 0.01){ 
+				float upper_d_std=0.01;
+				if (model==3) upper_d_std=0.004;
+				if(*m_dstd<=0 || *m_dstd>upper_d_std){
 					rejflag[0]=true;
-				}else{ 	
-					rejflag[0]=false;
-					*m_dstd_prior=log(double(*m_dstd));
+				}else{
+					*m_dstd_prior=log(*m_dstd);
+					rejflag[0]=false;	
 				}
 			}
 			__syncthreads();
 			//compute_signal()
-			for(int f=0;f<nfib;f++){
-				for(int i=0; i<mydirs; i++){				
-					int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-					compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,angtmp[pos],model);
+			if(model==2){
+				for(int f=0;f<nfib;f++){
+					for(int i=0; i<mydirs; i++){				
+						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
+						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+					}
 				}
 			}
 			//compute_iso_signal()
@@ -873,9 +973,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				compute_iso_signal(&isosignals[pos],&oldisosignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,model);
 			}
 			if (leader){
-				getfsum(fsum,m_f,*m_f0,nfib);	
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 			}
 			__syncthreads();
 			//compute_likelihood()
@@ -895,15 +994,90 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					if (leader){
 						reject(m_dstd,m_dstd_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_dstd_rej);
 					}
-					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+					if(model==2){
+						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+					}
 					restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
 				}
 			}else{ 
 				if (leader){
 					reject(m_dstd,m_dstd_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_dstd_rej);
 				}
-				restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+				if(model==2){
+					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+				}
 				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
+			}
+////////////////////////////////////////////////////////////////// R
+			if(model==3){
+				if (leader){	
+					propose(m_R,old,*m_R_prop,prerandN[*localrand]);
+					//compute_R_prior()     
+					old[1]=*m_R_prior;
+					float upper_R=2.0f*R_priormean;
+					float lower_R=R_priormean-2.0f*R_priorstd;
+      					if (R_priormean>0.5f){
+						upper_R=1.0f;
+					}
+					if (lower_R<0.0f)
+						lower_R=1e-8f;
+					if (R_priorfudge>0.0f && *m_d>UPPERDIFF/2.0f){
+					//then use an ARD prior to avoid competition with the isotropic compartments
+ 	        				if (*m_R<1E-8f || *m_R>upper_R)
+ 	          					rejflag[0]=true;
+ 	        				else{
+ 	          					*m_R_prior=R_priorfudge*log(*m_R);
+ 	          					rejflag[0]=false;
+ 	        				}
+ 	      				}else{
+	      					if(*m_R<=lower_R || *m_R>upper_R){  
+							//Truncate prior to avoid too spherical (high m_R) or too anisitropic (small m_R) profiles 
+							rejflag[0]=true;
+						}else{
+							float Rstd2=R_priorstd*R_priorstd; 
+							*m_R_prior=(*m_R-R_priormean)*(*m_R-R_priormean)/Rstd2;  //Gaussian prior
+							rejflag[0]=false;
+	      					}
+					}
+				}
+				__syncthreads();
+				//compute_signal()
+				for(int f=0;f<nfib;f++){
+					for(int i=0; i<mydirs; i++){				
+						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
+						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+					}
+				}
+				if (leader){
+					//compute_prior()
+					compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
+				}
+				__syncthreads();
+				//compute_likelihood()
+				compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+				__syncthreads();
+
+				if (leader){
+					rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
+					*localrand=*localrand+1;					
+				}
+				__syncthreads();
+				
+				if(!rejflag[0]){
+					if(rejflag[1]){
+		  				if (leader) *m_R_acc=*m_R_acc+1;   
+					}else{ 
+						if (leader){
+							reject(m_R,m_R_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_R_rej);
+						}
+						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+					}
+				}else{ 
+					if (leader){
+						reject(m_R,m_R_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_R_rej);
+					}
+					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+				}
 			}
 		}
 ////////////////////////////////////////////////////////////////// S0
@@ -916,9 +1090,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				*m_S0_prior=0;
 	  			rejflag[0]=false;
         		}
-			getfsum(fsum,m_f,*m_f0,nfib);
 			//compute_prior()
-			compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+			compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 		}
 		__syncthreads();
 		//compute_likelihood()
@@ -969,12 +1142,11 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		     		aux =  aux*aux;
 		 		angtmp[pos]= aux;
 
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,angtmp[pos],model);
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 			if (leader){
-				getfsum(fsum,m_f,*m_f0,nfib);	
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);	
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);	
 			}
 			__syncthreads();
 			//compute_likelihood()
@@ -1022,13 +1194,12 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		     		aux =  aux*aux;
 		 		angtmp[pos]= aux;
 				
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,angtmp[pos],model);
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 
 			if (leader){
-				getfsum(fsum,m_f,*m_f0,nfib);
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);
 			}
 			__syncthreads();
 			//compute_likelihood()
@@ -1081,7 +1252,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				//reject_f_sum()
 				rejflag[1]=(*fsum>1);
 				//compute_prior()
-				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,nfib);	
+				compute_prior(m_prior_en,m_old_prior_en,m_d_prior,m_S0_prior,fm_prior_en,m_f0_prior,m_tau_prior,m_dstd_prior,m_R_prior,nfib);	
 			}
 
 			__syncthreads();
@@ -1099,12 +1270,15 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			  				m_f_acc[fibre]++;   
 						}else{
 							rejectF(&m_f[fibre],&m_f_prior[fibre],old,m_prior_en,m_old_prior_en,&fm_prior_en[fibre],fm_old_prior_en,m_energy,m_old_energy,&m_f_rej[fibre]);
+							getfsum(fsum,m_f,*m_f0,nfib);
 						}
 					}else{ 
 						rejectF(&m_f[fibre],&m_f_prior[fibre],old,m_prior_en,m_old_prior_en,&fm_prior_en[fibre],fm_old_prior_en,m_energy,m_old_energy,&m_f_rej[fibre]);
+						getfsum(fsum,m_f,*m_f0,nfib);
 					}
 				}else{
 					rejectF(&m_f[fibre],&m_f_prior[fibre],old,m_prior_en,m_old_prior_en,&fm_prior_en[fibre],fm_old_prior_en,m_energy,m_old_energy,&m_f_rej[fibre]);
+					getfsum(fsum,m_f,*m_f0,nfib);
 				}
 			}
 			__syncthreads();	
@@ -1115,7 +1289,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			rd[(*idVOX*totalrecords)+*sample-1]= *m_d;
 			if(m_include_f0) rf0[(*idVOX*totalrecords)+*sample-1]= *m_f0;
 			if(rician) rtau[(*idVOX*totalrecords)+*sample-1]= *m_tau;
-			if(model==2) rdstd[(*idVOX*totalrecords)+*sample-1]= *m_dstd;
+			if(model>=2) rdstd[(*idVOX*totalrecords)+*sample-1]= *m_dstd;
+			if(model==3) rR[(*idVOX*totalrecords)+*sample-1]= *m_R;	
 			rs0[(*idVOX*totalrecords)+*sample-1]= *m_S0;
 			for(int j=0;j<nfib;j++){
 				rth[(*idVOX*totalrecords*nfib)+(j*totalrecords)+*sample-1]=m_th[j];
@@ -1144,11 +1319,17 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				*m_f0_rej=0;	
 			}	
 
-			if(model==2){
+			if(model>=2){
 				*m_dstd_prop*=sqrt(float(*m_dstd_acc+1)/float(*m_dstd_rej+1));
 				*m_dstd_prop=min(*m_dstd_prop,maxfloat);
 				*m_dstd_acc=0; 
 				*m_dstd_rej=0;	
+				if(model==3){
+					*m_R_prop*=sqrt(float(*m_R_acc+1)/float(*m_R_rej+1));
+					*m_R_prop=min(*m_R_prop,maxfloat);
+					*m_R_acc=0; 
+					*m_R_rej=0;
+				}
 			}
 
 			*m_S0_prop*=sqrt(float(*m_S0_acc+1)/float(*m_S0_rej+1));
@@ -1210,12 +1391,19 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			multifibres[*idVOX].m_tau_rej=*m_tau_rej;
 			multifibres[*idVOX].m_tau_prop=*m_tau_prop;
 		}
-		if(model==2){
+		if(model>=2){
 			multifibres[*idVOX].m_dstd_prior=*m_dstd_prior;
 			multifibres[*idVOX].m_dstd=*m_dstd;
 			multifibres[*idVOX].m_dstd_acc=*m_dstd_acc;
 			multifibres[*idVOX].m_dstd_rej=*m_dstd_rej;
 			multifibres[*idVOX].m_dstd_prop=*m_dstd_prop;
+			if(model==3){
+				multifibres[*idVOX].m_R_prior=*m_R_prior;
+				multifibres[*idVOX].m_R=*m_R;
+				multifibres[*idVOX].m_R_acc=*m_R_acc;
+				multifibres[*idVOX].m_R_rej=*m_R_rej;
+				multifibres[*idVOX].m_R_prop=*m_R_prop;
+			}
 		}
 	}
 	

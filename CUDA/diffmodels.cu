@@ -8,7 +8,6 @@
 
 #include "newmat.h"
 #include "newimage/newimageall.h"
-#include "xfibresoptions.h"
 #include "diffmodels.h"
 
 #include "PVM_single.cu"
@@ -20,7 +19,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include "init_gpu.h"
-
 
 ////////////////////////////////////////////////////// 
 //   FIT IN GPU
@@ -66,8 +64,8 @@ void fit_PVM_single(	//INPUT
   		cart2sph(dti.get_v1(),_th,_ph);
 
   		params_host[vox*nparams] = dti.get_s0();
-  		//start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
-  		params_host[vox*nparams+1] = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
+		params_host[vox*nparams+1] = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
+  		//params_host[vox*nparams+1] = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
 	  	params_host[vox*nparams+2] = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
 	  	params_host[vox*nparams+3] = _th;
 	  	params_host[vox*nparams+4] = _ph;
@@ -192,6 +190,8 @@ void fit_PVM_multi(	//INPUT
 			int				nfib,		
 			bool 				m_include_f0,
 			bool				gradnonlin,
+			float				R_prior_mean,
+			int				Gamma_ball_only,
 			string 				output_file,
 			//OUTPUT
 			thrust::device_vector<float>&	params_gpu)
@@ -218,7 +218,9 @@ void fit_PVM_multi(	//INPUT
 
 	myfile << "Shared Memory Used in fit_PVM_multi: " << amount_shared << "\n"; 
 
-	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
+	float invR =  1.0/(2.0*R_prior_mean+1);
+
+	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), R_prior_mean, invR, nvox, ndirections, nfib, nparams, Gamma_ball_only, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_multi_kernel");
 
 	myfile.close();
@@ -237,6 +239,8 @@ void calculate_tau(	//INPUT
 			bool 				m_include_f0,
 			bool 				nonlin,
 			bool				gradnonlin,
+			float				R_prior_mean,
+			int				Gamma_ball_only,
 			string 				output_file,	
 			//OUTPUT
 			thrust::host_vector<float>&	tau)
@@ -256,7 +260,7 @@ void calculate_tau(	//INPUT
       		nparams = nfib*3 + 3; 
     	else
       		nparams = nfib*3 + 2;
-	if(model==2) nparams++;
+	if(model>=2) nparams++;
 	
 	thrust::device_vector<bool> includes_f0_gpu;
 	includes_f0_gpu.resize(nvox);
@@ -287,8 +291,9 @@ void calculate_tau(	//INPUT
 			sync_check("get_residuals_PVM_single_c_kernel");
 		}
 	}else{
-      		//model 2 : non-mono-exponential
-		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
+		float invR =  1.0/(2.0*R_prior_mean+1);
+      		//model 2 or 3 
+		get_residuals_PVM_multi_kernel<<<Dim_Grid, Dim_Block,amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), R_prior_mean, invR,nvox, ndirections, nfib, nparams, Gamma_ball_only, m_include_f0, gradnonlin,thrust::raw_pointer_cast(includes_f0_gpu.data()), thrust::raw_pointer_cast(residuals_gpu.data()));
 		sync_check("get_residuals_PVM_multi_kernel");
 	}
 

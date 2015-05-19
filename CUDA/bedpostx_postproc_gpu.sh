@@ -4,16 +4,20 @@
 #
 #   SHCOPYRIGHT
 
-subjdir=${@:${#@}}
-
-for arg in $@;
+# last 2 parameters are subjdir and bindir
+parameters=""
+while [ ! -z "$2" ]
 do
-	if [[ $arg =~ "--nf=" ]]; then
-    		numfib=`echo $arg | cut -d '=' -f2`
+	if [[ $1 =~ "--nf=" ]]; then
+    		numfib=`echo $1 | cut -d '=' -f2`
 	fi
+ 	all=$all" "$1
+	subjdir=$1
+	shift
 done
+bindir=$1
 
-${FSLDIR}/bin/merge_parts_gpu $@
+$bindir/bin/merge_parts_gpu $all
 
 fib=1
 while [ $fib -le $numfib ]
@@ -25,6 +29,9 @@ do
     ${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpostX/merged_th${fib}samples ${subjdir}.bedpostX/merged_ph${fib}samples ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/dyads${fib}
     if [ $fib -ge 2 ];then
 	${FSLDIR}/bin/maskdyads ${subjdir}.bedpostX/dyads${fib} ${subjdir}.bedpostX/mean_f${fib}samples
+	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_f${fib}samples -div ${subjdir}.bedpostX/mean_f1samples ${subjdir}.bedpostX/mean_f${fib}_f1samples
+	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/dyads${fib}_thr0.05 -mul ${subjdir}.bedpostX/mean_f${fib}_f1samples ${subjdir}.bedpostX/dyads${fib}_thr0.05_modf${fib}
+	${FSLDIR}/bin/imrm ${subjdir}.bedpostX/mean_f${fib}_f1samples
     fi
 
     fib=$(($fib + 1))
@@ -36,7 +43,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/mean_f1samples` -eq 1 ];then
     fib=1
     while [ $fib -le $numfib ]
     do
-	 ${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_fsumsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsumsamples
+	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_fsumsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsumsamples
 	fib=$(($fib + 1))
     done	
 fi
@@ -49,9 +56,8 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
   if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_ph1samples` -eq 1 ];then
     if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
       rm -rf ${subjdir}.bedpostX/diff_parts
-      if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/grad_dev_slice_0000` -eq 1 ];then
-	  rm -f ${subjdir}.bedpostX/grad_dev_slice_*
-      fi	  
+      rm -rf ${subjdir}.bedpostX/data*
+      rm -rf ${subjdir}.bedpostX/grad_dev*	  
     fi
   fi
 fi

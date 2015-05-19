@@ -22,7 +22,7 @@ Usage() {
     echo "-b (burnin period, default 1000)"
     echo "-j (number of jumps, default 1250)"
     echo "-s (sample every, default 25)"
-    echo "-model (1 for monoexponential, 2 for multiexponential, default 1)"
+    echo "-model (Deconvolution model. 1: with sticks (default), 2: with sticks with a range of diffusivities, 3: with zeppelins)"
     echo "-g (consider gradient nonlinearities, default off)"
     echo ""
     echo ""
