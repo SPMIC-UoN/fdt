@@ -22,7 +22,7 @@ using namespace Xfibres;
 //////////////////////////////////////////////////////////
 //       XFIBRES CPU PART. IT CALLS TO GPU PART
 //////////////////////////////////////////////////////////
-// last 3 parameters are subjdir, idPart and nParts
+// last 4 parameters are subjdir, idPart, nParts, num_total_voxels
 
 int main(int argc, char *argv[]){
 
@@ -35,13 +35,9 @@ int main(int argc, char *argv[]){
 	// Setup logging:
     	Log& logger = LogSingleton::getInstance();
     	xfibresOptions& opts = xfibresOptions::getInstance();
-	opts.parse_command_line(argc-3,argv,logger);
+	opts.parse_command_line(argc-4,argv,logger);
 
-	string subjdir=argv[argc-3];
-
-	Matrix datam, bvals,bvecs;
-    	NEWIMAGE::volume<float> mask;
-    	NEWIMAGE::volume<int> vol2matrixkey;
+	Matrix bvals,bvecs;
     	bvals=read_ascii_matrix(opts.bvalsfile.value());
     	bvecs=read_ascii_matrix(opts.bvecsfile.value());
     	if(bvecs.Nrows()>3) bvecs=bvecs.t();
@@ -55,44 +51,37 @@ int main(int argc, char *argv[]){
       		}  
     	}
 
-    	NEWIMAGE::volume4D<float> data;
-    	read_volume4D(data,opts.datafile.value());
-    	read_volume(mask,opts.maskfile.value());
-    	datam=data.matrix(mask); 
-	
 	///////////////////////////////////////////
 	////////// Read my part of data ///////////
 	///////////////////////////////////////////
-	int idPart = atoi(argv[argc-2]);
-	int nParts = atoi(argv[argc-1]);
+	string subjdir=argv[argc-4];
+	int idPart = atoi(argv[argc-3]);
+	int nParts = atoi(argv[argc-2]);
+	int totalNvox = atoi(argv[argc-1]);
 	int ndirections = bvals.Ncols();
-	int dirs_grad = 0;
-	int totalNvox = datam.Ncols();
+	int dirs_grad = 9;  // always ???
+	
 
 	int size_part = totalNvox / nParts;
-	Matrix mydatam;
-	Matrix mygradm;
-	if(idPart!=(nParts-1)){
-		mydatam = datam.SubMatrix(1,ndirections,idPart*size_part+1,(idPart+1)*size_part);
-	}else{
-		mydatam = datam.SubMatrix(1,ndirections,idPart*size_part+1,totalNvox);
-	}
-	
-	//Read Gradient Non_linearity Maps if provided
-    	NEWIMAGE::volume4D<float> grad; Matrix gradm;
-    	if (opts.grad_file.set()){
-      		read_volume4D(grad,opts.grad_file.value());
-      		gradm=grad.matrix(mask);
-		dirs_grad = gradm.Nrows();
-		if(idPart!=(nParts-1)){
-			mygradm = gradm.SubMatrix(1,dirs_grad,idPart*size_part+1,(idPart+1)*size_part);
-		}else{
-			mygradm = gradm.SubMatrix(1,dirs_grad,idPart*size_part+1,totalNvox);
-		}
-    	}
+	// if last part
+	if(idPart==(nParts-1)) size_part = totalNvox-(size_part*(nParts-1));
 
-	if(idPart==(nParts-1)) size_part = totalNvox - ((nParts-1)*size_part);
-	 
+	Matrix mydatam;
+	mydatam.ReSize(ndirections,size_part);
+	ifstream in;
+	in.open(opts.datafile.value().data(), ios::in | ios::binary);
+	in.read((char*)&mydatam(1,1), size_part*ndirections*sizeof(Real));
+	in.close();
+
+	Matrix mygradm;
+	mygradm.ReSize(dirs_grad,size_part);
+	if (opts.grad_file.set()){
+		ifstream in;
+		in.open(opts.grad_file.value().data(), ios::in | ios::binary);
+		in.read((char*)&mygradm(1,1), size_part*dirs_grad*sizeof(Real));
+		in.close();
+	}
+
 	cout << "Number of Voxels to compute in this part: " << size_part << endl;  
 	cout << "Number of Directions: " << ndirections << endl;  
 
@@ -165,11 +154,14 @@ int main(int argc, char *argv[]){
 
 	if(opts.modelnum.value()==1){
 		join_subParts("mean_dsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
-	}else if(opts.modelnum.value()==2){
+	}else if(opts.modelnum.value()>=2){
 		join_subParts("mean_dsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
 		join_subParts("mean_d_stdsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
 		//join_subParts("dsamples",size_part,nsubparts,size_sub_part,last_sub_part,false);
 		//join_subParts("d_stdsamples",size_part,nsubparts,size_sub_part,last_sub_part,false);
+		if(opts.modelnum.value()==3){
+			join_subParts("mean_Rsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
+		}
 	}	
 	if (opts.f0.value()){
       		join_subParts("mean_f0samples",size_part,nsubparts,size_sub_part,last_sub_part,true);
@@ -232,7 +224,7 @@ void join_subParts(string name, int size_part, int nsubparts, int size_sub_part,
 		in.read((char*)&part(1,1), size_sub_part*nsamples*sizeof(Real));
 		in.close();
 		remove (file_name.data());
-		tmp = tmp | part;
+		tmp |=  part;
 	}
 	part.ReSize(nsamples,last_sub_part);
 	file_name = logger.appendDir(name+"_"+num2str(nsubparts-1));
@@ -240,7 +232,7 @@ void join_subParts(string name, int size_part, int nsubparts, int size_sub_part,
 	in.read((char*)&part(1,1), last_sub_part*nsamples*sizeof(Real));
 	in.close();
 	remove (file_name.data());
-	tmp = tmp | part;
+	tmp |= part;
 
 	file_name = logger.appendDir(name+"J");
 	out.open(file_name.data(), ios::out | ios::binary);
