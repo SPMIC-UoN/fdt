@@ -1,7 +1,7 @@
 include $(FSLCONFDIR)/default.mk
 
 ifeq ($(COMPILE_GPU), 1)
-	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu
+	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
 endif
 
@@ -37,6 +37,7 @@ RUBIX=rubix
 EDDYCOMBINE=eddy_combine
 LIBBEDPOSTX_CUDA=libbedpostx_cuda.so
 MERGE_PARTS_GPU=merge_parts_gpu
+SPLIT_PARTS_GPU=CUDA/split_parts_gpu
 XFIBRES_GPU=xfibres_gpu
 
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
@@ -63,6 +64,7 @@ XPREDOBJS=xfibres_pred.o
 RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
 EDDYCOMBINEOBJS=eddy_combine.o
 MERGE_PARTS_GPUOBJS=merge_parts_gpu.o xfibresoptions.o
+SPLIT_PARTS_GPUOBJS=CUDA/split_parts_gpu.o
 XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
 
 SGEBEDPOST = bedpost 
@@ -166,6 +168,9 @@ ${LIBBEDPOSTX_CUDA}:
 
 ${MERGE_PARTS_GPU}: ${MERGE_PARTS_GPUOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MERGE_PARTS_GPUOBJS} ${DLIBS}
+
+${SPLIT_PARTS_GPU}: ${SPLIT_PARTS_GPUOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLIT_PARTS_GPUOBJS} ${DLIBS}
 
 ${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${CUDA}/lib64 -L${CUDA}/lib
