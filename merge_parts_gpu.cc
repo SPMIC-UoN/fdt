@@ -46,7 +46,7 @@ void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, s
 			in.read((char*)&part(1,1), size_parts*nsamples*sizeof(Real));
 			in.close();
 
-			result = result | part;
+			result |= part;
 		}
 		part.ReSize(nsamples,last_part);
 		std::ostringstream num;
@@ -70,7 +70,7 @@ void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, s
 		in.open (file_name.data(), ios::in | ios::binary);
 		in.read((char*)&part(1,1), last_part*nsamples*sizeof(Real));
 		in.close();
-		result = result | part;
+		result |= part;
 
 		NEWIMAGE::volume4D<float> tmp;
       		tmp.setmatrix(result,mask);
@@ -112,11 +112,14 @@ int main(int argc, char *argv[])
 
 	if(opts.modelnum.value()==1){
 		join_Parts(mask,"mean_dsamples","mean_dsamples",subjdir, nvox, 1, nParts, -10, 0);
-	}else if(opts.modelnum.value()==2){
+	}else if(opts.modelnum.value()>=2){
 		join_Parts(mask,"mean_dsamples","mean_dsamples",subjdir, nvox, 1, nParts, -10, 0);
 		join_Parts(mask,"mean_d_stdsamples","mean_d_stdsamples",subjdir, nvox, 1, nParts, -10, 0);
 		//join_Parts(mask,"dsamples","dsamples",subjdir, nvox, nsamples, nParts, -10, 0);
 		//join_Parts(mask,"d_stdsamples","d_stdsamples",subjdir, nvox, nsamples, nParts, -10, 0);
+		if(opts.modelnum.value()==3){
+			join_Parts(mask,"mean_Rsamples","mean_Rsamples",subjdir, nvox, 1, nParts, 1, 0);
+		}	
 	}	
 	if (opts.f0.value()){
       		join_Parts(mask,"mean_f0samples","mean_f0samples",subjdir, nvox, 1, nParts, 1, 0);
