@@ -4,8 +4,7 @@
 #
 #   SHCOPYRIGHT
 
-bindir=$FSLGPUDIR
-export LD_LIBRARY_PATH=$bindir/lib:${LD_LIBRARY_PATH}:${FSLDIR}/lib:/export/cuda-5.5/lib64
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${FSLDIR}/lib
 
 Usage() {
     echo ""
@@ -16,8 +15,8 @@ Usage() {
     echo "expects to find grad_dev in subject directory, if -g is set"
     echo ""
     echo "<options>:"
-    echo "-QSYS (Queue System, 0 use fsl_sub: FMRIB (default), 1 TORQUE: WashU)"	
-    echo "-Q (name of the GPU(s) queue, default cuda.q for QSYS=0 and dque_gpu for QSYS=1)"	
+    echo "-QSYS (Queue System, 0 use fsl_sub-SGE (default), 1 TORQUE)"	
+    echo "-Q (name of the GPU(s) queue, default cuda.q"	
     echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 8)"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
@@ -35,6 +34,71 @@ Usage() {
     echo ""
     echo "Note: Use EITHER old OR new syntax."
     exit 1
+}
+
+monitor(){
+    cat <<EOM > ${subjdir}.bedpostX/monitor
+#!/bin/sh
+nparts=0
+if [ $njobs -eq 1 ]; then
+#1 part (GPU) and several subparts
+#voxels processed in each subpart are 12800 or more if the last one is less than 6400 (1 part less)
+	nparts=\$(($nvox/12800))
+	if [ \$nparts%12800 != 0 ];then 
+		nparts=\$((\$nparts + 1)) 
+	fi
+	last_part=\$(($nvox-(((\$nparts-1))*12800)))
+	if [ \$last_part -lt 6400 ];then 
+		nparts=\$((\$nparts - 1)) 
+	fi
+else
+	nparts=$njobs
+fi
+
+echo
+echo "----- Bedpostx Monitor -----"
+finished=0
+lastprinted=0
+havedad=2
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    part=0
+    errorFiles=\`ls ${subjdir}.bedpostX/logs/*.e* 2> /dev/null \`
+    for errorFile in \$errorFiles
+    do
+        if [ -s \$errorFile ]; then
+            echo An error ocurred. Please check file \$errorFile
+            kill -9 $$
+            exit 1
+        fi
+    done
+    while [ \$part -le \$nparts ];do
+        if [ -e ${subjdir}.bedpostX/logs/monitor/\$part ]; then
+            nfin=\$((\$nfin + 1))
+        fi
+        part=\$((\$part + 1))
+    done
+    newmessages=\$((\$nfin - \$lastprinted))
+    while [ "\$newmessages" -gt 0 ];do
+        lastprinted=\$((\$lastprinted + 1))
+        echo \$lastprinted parts processed out of \$nparts
+        newmessages=\$((\$newmessages - 1))
+    done
+    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+        finished=1
+        echo "All parts processed"
+	exit 
+    fi
+    if [ ! \$havedad -gt 0 ]; then
+       exit 0
+    fi
+    if [ "x$SGE_ROOT" == "x" ]; then
+        havedad=\`ps -e -o pid 2>&1| grep "$$\\b" | wc -l\`
+    fi
+    sleep 50;
+done
+EOM
+    chmod +x ${subjdir}.bedpostX/monitor
 }
 
 make_absolute(){
@@ -55,9 +119,14 @@ make_absolute(){
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
+echo "---------------------------------------------"
+echo "------------ BedpostX GPU Version -----------"
+echo "---------------------------------------------"
+echo subjectdir is $subjdir
+
 #parse option arguments
 qsys=0
-queue="$FSLGECUDAQ"
+queue="-q $FSLGECUDAQ"
 njobs=8
 nfibres=2
 fudge=1
@@ -67,10 +136,9 @@ sampleevery=25
 model=1
 gflag=0
 other=""
-verbose=0
-#if [ "x$SGE_ROOT" = "x" ]; then
-#	queue=''
-#fi
+if [ "x$SGE_ROOT" = "x" ]; then
+	queue=''
+fi
 
 shift
 while [ ! -z "$1" ]
@@ -86,7 +154,6 @@ do
       -s) sampleevery=$2;shift;;
       -model) model=$2;shift;;
       -g) gflag=1;; 
-      -V) verbose=1;other=$other" "$1;;
       *) other=$other" "$1;;
   esac
   shift
@@ -94,18 +161,6 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other" 
-
-if [ $verbose -eq 1 ]; then
-	echo "---------------------------------------------"
-	echo "------------ BedpostX GPU Version -----------"
-	echo "---------------------------------------------"
-	echo subjectdir is $subjdir
-fi
-
-if [ $qsys -eq 1 ]; then
-	#WashU
-	queue=dque_gpu
-fi 
 
 #check that all required files exist
 
@@ -155,9 +210,8 @@ if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
 	exit 1
 fi
 
-if [ $verbose -eq 1 ]; then
-	echo Making bedpostx directory structure
-fi
+echo Making bedpostx directory structure
+
 mkdir -p ${subjdir}.bedpostX/
 mkdir -p ${subjdir}.bedpostX/diff_parts
 mkdir -p ${subjdir}.bedpostX/logs
@@ -168,9 +222,8 @@ mkdir -p ${subjdir}.bedpostX/xfms
 
 #mailto=`whoami`@fmrib.ox.ac.uk
 
-if [ $verbose -eq 1 ]; then
-	echo Copying files to bedpost directory
-fi
+echo Copying files to bedpost directory
+
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
 ${FSLDIR}/bin/imcp ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` = 1 ] ; then
@@ -179,20 +232,18 @@ fi
 
 
 # Split the dataset in parts 
-if [ $verbose -eq 1 ]; then
-	echo Queuing pre processing stage
-fi
+echo Queuing pre processing stage
 
 if [ ${gflag} -eq 1 ]; then
-	pre_command="$bindir/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}/grad_dev 1 $njobs ${subjdir}.bedpostX"
+	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}/grad_dev 1 $njobs ${subjdir}.bedpostX"
 else
-	pre_command="$bindir/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask NULL 0 $njobs ${subjdir}.bedpostX"
+	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask NULL 0 $njobs ${subjdir}.bedpostX"
 fi
 if [ $qsys -eq 0 ]; then
-	#FMRIB
+	#SGE
 	splitID=`${FSLDIR}/bin/fsl_sub -T 40 -l ${subjdir}.bedpostX/logs -N bedpostx_preproc_gpu $pre_command`
 else
-	#WashU
+	#TORQUE
 	echo $pre_command > ${subjdir}.bedpostX/temp
 	torque_command="qsub -q $queue -V -l nodes=1:ppn=1,walltime=00:40:00 -N bedpostx_preproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs"
 	splitID=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
@@ -203,10 +254,15 @@ fi
 
 nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V  | cut -d ' ' -f1 `
 
-if [ $verbose -eq 1 ]; then	
-	echo Queuing parallel processing stage
-fi
+echo Queuing parallel processing stage
+
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+
+monitor
+if [ "x$SGE_ROOT" = "x" ]; then
+    ${subjdir}.bedpostX/monitor&
+fi
+
 part=0
 while [ $part -lt $njobs ]
 do
@@ -218,44 +274,57 @@ do
 	    gopts=$opts
 	fi    
 
-	echo "$bindir/bin/xfibres_gpu --data=${subjdir}.bedpostX/data_$part --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs $nvox" >> ${subjdir}.bedpostX/commands.txt
+	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}.bedpostX/data_$part --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs $nvox" >> ${subjdir}.bedpostX/commands.txt
     
     	part=$(($part + 1))
 done
 
 if [ $qsys -eq 0 ]; then
-	#FMRIB
-	bedpostid=`${FSLDIR}/bin/fsl_sub -q $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt`
+	#SGE
+	bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt`
 else
-	#WashU
+	#TORQUE
 	taskfile=${subjdir}.bedpostX/commands.txt
 	tasks=`wc -l $taskfile | awk '{print $1}'`
 	sge_tasks="-t 1-$tasks"
 	echo "command=\`cat "$taskfile" | head -\$PBS_ARRAYID | tail -1\` ; exec \$command" > ${subjdir}.bedpostX/temp
-	torque_command="qsub -q $queue -V -l nodes=1:ppn=1:gpus=1,walltime=4:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
+	torque_command="qsub $queue -V -l nodes=1:ppn=1:gpus=1,walltime=4:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
 	bedpostid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
         rm ${subjdir}.bedpostX/temp
 	sleep 10
 fi
 
-if [ $verbose -eq 1 ]; then
-	echo Queuing post processing stage
-fi
-post_command="$bindir/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir} $bindir"
+
+echo Queuing post processing stage
+post_command="${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir} ${FSLDIR}"
 if [ $qsys -eq 0 ]; then
-	#FMRIB
+	#SGE
 	mergeid=`${FSLDIR}/bin/fsl_sub -T 120 -j $bedpostid -N bedpostx_postproc_gpu -l ${subjdir}.bedpostX/logs $post_command`
 else
-	#WashU
+	#TORQUE
 	echo $post_command > ${subjdir}.bedpostX/temp
-	torque_command="qsub -q $queue -V -l nodes=1:ppn=1,walltime=00:40:00 -N bedpostx_postproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterokarray:$bedpostid"
+	torque_command="qsub $queue -V -l nodes=1:ppn=1,walltime=00:40:00 -N bedpostx_postproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterokarray:$bedpostid"
 	mergeid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
         rm ${subjdir}.bedpostX/temp
 	sleep 10
 fi
-if [ $verbose -eq 1 ]; then
-	echo "All jobs submitted"
-fi
+
 echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
-echo $mergeid
+
+if [ "x$SGE_ROOT" != "x" ]; then
+    echo
+    echo Type ${subjdir}.bedpostX/monitor to show progress.
+    echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
+    cat <<EOC > ${subjdir}.bedpostX/cancel
+#!/bin/sh
+qdel $mergeid $bedpostid
+EOC
+    chmod +x ${subjdir}.bedpostX/cancel
+
+    echo
+    echo You will get an email at the end of the post-processing stage.
+    echo
+else
+    sleep 60
+fi
 
