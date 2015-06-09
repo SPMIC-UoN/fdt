@@ -133,12 +133,13 @@ int main ( int argc, char *argv[]){
   }
 
   int modelnum=1; 
-  temp_name=dir_name+"/mean_dstd_samples";    
+
+  temp_name=dir_name+"/mean_d_stdsamples";    
   if (fsl_imageexists(temp_name)){   //Read d_std if model2
     modelnum=2;
     read_volume(d_std,temp_name);
   }
-  temp_name=dir_name+"/mean_d_stdsamples";    
+  temp_name=dir_name+"/mean_dstd_samples";    //some older versions had a different dstd filename
   if (fsl_imageexists(temp_name)){   //Read d_std if model2
     modelnum=2;
     read_volume(d_std,temp_name);
@@ -178,11 +179,8 @@ int main ( int argc, char *argv[]){
     maskLR=1;
   }
 
-  //Matrix HRindices;
-  //HRindices=get_HRindices(42,44,40,2,2,2);
-  //OUT(HRindices);
 
-  volume4D<float> outputHR, outputLR;//, outputHRLR;
+  volume4D<float> outputHR, outputLR;
   copybasicproperties(S0,outputHR);
   outputHR.reinitialize(S0.xsize(),S0.ysize(),S0.zsize(),bvalsHR.Ncols());
   outputHR.setdims(S0.xdim(),S0.ydim(),S0.zdim(),1.0);
@@ -193,11 +191,6 @@ int main ( int argc, char *argv[]){
   outputLR.setdims(S0LR.xdim(),S0LR.ydim(),S0LR.zdim(),1.0);
   outputLR=0;
 
-  //  copybasicproperties(S0,outputHRLR);
-  // outputHRLR.reinitialize(S0.xsize(),S0.ysize(),S0.zsize(),bvalsLR.Ncols());
-  //outputHRLR.setdims(S0.xdim(),S0.ydim(),S0.zdim(),1.0);
-  //outputHRLR=0;
-  
   float xratio=round(S0LR.xdim()/S0.xdim());
   float yratio=round(S0LR.ydim()/S0.ydim());
   float zratio=round(S0LR.zdim()/S0.zdim());
