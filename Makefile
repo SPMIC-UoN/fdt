@@ -34,6 +34,7 @@ BASGEN=basgen
 RARNG=rearrange
 XPRED=xfibres_pred
 RUBIX=rubix
+RBXPRED=rubix_pred
 EDDYCOMBINE=eddy_combine
 LIBBEDPOSTX_CUDA=libbedpostx_cuda.so
 MERGE_PARTS_GPU=merge_parts_gpu
@@ -62,6 +63,7 @@ BASGENOBJS=basgen.o diffmodels.o Bingham_Watson_approx.o
 RARNGOBJS=rearrange.o
 XPREDOBJS=xfibres_pred.o
 RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
+RBXPREDOBJS=rubix_pred.o
 EDDYCOMBINEOBJS=eddy_combine.o
 MERGE_PARTS_GPUOBJS=merge_parts_gpu.o xfibresoptions.o
 SPLIT_PARTS_GPUOBJS=CUDA/split_parts_gpu.o
@@ -75,7 +77,7 @@ FSCRIPTS = correct_and_average ocmr_preproc
 
 XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen basgen eddy_combine ${COMPILE_WITH_GPU}
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred 
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred rubix_pred
 
 
 RUNTCLS = Fdt
@@ -157,6 +159,9 @@ ${XPRED}: 	${XPREDOBJS}
 
 ${RUBIX}: 	${RUBIXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
+
+${RBXPRED}: 	${RBXPREDOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RBXPREDOBJS} ${DLIBS}
 
 ${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
