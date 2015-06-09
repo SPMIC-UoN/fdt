@@ -65,7 +65,7 @@ fi
 #fi
 
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_dstd_samples` -eq 1 ];then
-    ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_dstd_samples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_dstd_samples*`
+    ${FSLDIR}/bin/fslmerge -z ${out_dir}/mean_d_stdsamples `${FSLDIR}/bin/imglob ${out_dir}/diff_slices/data_slice_*/mean_dstd_samples*`
 fi
 
 if [ `${FSLDIR}/bin/imtest ${out_dir}/diff_slices/data_slice_0000/mean_Rsamples` -eq 1 ];then
