@@ -141,8 +141,8 @@ int main ( int argc, char *argv[]){
   }
   
   volume4D<float> output;
-  copybasicproperties(d,output);
   output.reinitialize(d.xsize(),d.ysize(),d.zsize(),bvals.Ncols());
+  copybasicproperties(d,output);
   output.setdims(d.xdim(),d.ydim(),d.zdim(),1.0);
   output=0;
 

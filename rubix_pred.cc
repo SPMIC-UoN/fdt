@@ -181,13 +181,13 @@ int main ( int argc, char *argv[]){
 
 
   volume4D<float> outputHR, outputLR;
-  copybasicproperties(S0,outputHR);
   outputHR.reinitialize(S0.xsize(),S0.ysize(),S0.zsize(),bvalsHR.Ncols());
+  copybasicproperties(S0,outputHR);
   outputHR.setdims(S0.xdim(),S0.ydim(),S0.zdim(),1.0);
   outputHR=0;
   
-  copybasicproperties(S0LR,outputLR);
   outputLR.reinitialize(S0LR.xsize(),S0LR.ysize(),S0LR.zsize(),bvalsLR.Ncols());
+  copybasicproperties(S0LR,outputLR);
   outputLR.setdims(S0LR.xdim(),S0LR.ydim(),S0LR.zdim(),1.0);
   outputLR=0;
 
