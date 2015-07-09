@@ -17,7 +17,7 @@ Usage() {
     echo "<options>:"
     echo "-QSYS (Queue System, 0 use fsl_sub-SGE (default), 1 TORQUE)"	
     echo "-Q (name of the GPU(s) queue, default cuda.q"	
-    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 8)"
+    echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 4)"
     echo "-n (number of fibres per voxel, default 2)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
@@ -127,7 +127,7 @@ echo subjectdir is $subjdir
 #parse option arguments
 qsys=0
 queue="-q $FSLGECUDAQ"
-njobs=8
+njobs=4
 nfibres=2
 fudge=1
 burnin=1000
