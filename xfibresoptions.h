@@ -52,8 +52,8 @@ class xfibresOptions {
   Option<bool> rician;
   Option<bool> f0;
   Option<bool> ardf0;
-  FmribOption<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
-  FmribOption<float> R_prior_std;
+  Option<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
+  Option<float> R_prior_std;
   FmribOption<float> R_prior_fudge; //if used (set to a positive number), an ARD for R is used for the high diffusivity regions with the requested fudge factor
   FmribOption<string> grad_file;
 
