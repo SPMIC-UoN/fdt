@@ -12,14 +12,14 @@ Usage() {
     echo "expects to find data and nodif_brain_mask in subject directory"
     echo "expects to find grad_dev in subject directory, if -g is set"
     echo "options (old syntax)"
-    echo "-n (number of fibres per voxel, default 2)"
+    echo "-n (number of fibres per voxel, default 3)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
     echo "-b (burnin period, default 1000)"
     echo "-j (number of jumps, default 1250)"
     echo "-s (sample every, default 25)"
-    echo "-model (Deconvolution model. 1: with sticks (default), 2: with sticks with a range of diffusivities, 3: with zeppelins)"
+    echo "-model (Deconvolution model. 1: with sticks, 2: with sticks with a range of diffusivities (default), 3: with zeppelins)"
     echo "-g (consider gradient nonlinearities, default off)"
-    echo "-c do not use CUDA capable hardware/queue (if found)"
+    #echo "-c do not use CUDA capable hardware/queue (if found)"
     echo ""
     echo ""
     echo "ALTERNATIVELY: you can pass on xfibres options onto directly bedpostx"
@@ -100,12 +100,12 @@ subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
 #parse option arguments
-nfibres=2
+nfibres=3
 fudge=1
 burnin=1000
 njumps=1250
 sampleevery=25
-model=1
+model=2
 gflag=0
 nocuda=0
 other=""
