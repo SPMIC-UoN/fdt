@@ -75,9 +75,9 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs select_dwi_vols ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen basgen eddy_combine ${COMPILE_WITH_GPU}
+XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen eddy_combine ${COMPILE_WITH_GPU}
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred rubix_pred
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
 
 RUNTCLS = Fdt
