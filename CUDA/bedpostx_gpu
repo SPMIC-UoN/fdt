@@ -17,7 +17,7 @@ Usage() {
     echo "<options>:"
     #echo "-QSYS (Queue System, 0 use fsl_sub: FMRIB, 1 TORQUE (default): WashU)"
     echo "-Q (name of the GPU(s) queue, default cuda.q (defined in environment variable: FSLGECUDAQ)"
-    #echo "-Q (name of the GPU(s) queue, default cuda.q for QSYS=0 and dque_gpu for QSYS=1)"	
+    #echo "-Q (name of the GPU(s) queue, default cuda.q for QSYS=0 and no queue for QSYS=1)"	
     echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 4)"
     echo "-n (number of fibres per voxel, default 3)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
@@ -93,7 +93,7 @@ while [ \$finished -eq 0 ] ; do
     if [ ! \$havedad -gt 0 ]; then
        exit 0
     fi
-    if [ "x$SGE_ROOT" == "x" ]; then
+    if [ "x$SGE_ROOT" = "x" ]; then
         havedad=\`ps -e -o pid 2>&1| grep "$$\\b" | wc -l\`
     fi
     sleep 50;
@@ -127,7 +127,6 @@ echo subjectdir is $subjdir
 
 #parse option arguments
 qsys=0
-queue="$FSLGECUDAQ"
 njobs=4
 nfibres=3
 fudge=1
@@ -137,16 +136,14 @@ sampleevery=25
 model=2
 gflag=0
 other=""
-if [ "x$SGE_ROOT" = "x" ]; then
-	queue=''
-fi
+queue=""
 
 shift
 while [ ! -z "$1" ]
 do
   case "$1" in
       -QSYS) qsys=$2;shift;;
-      -Q) queue=$2;shift;;
+      -Q) queue="-q $2";shift;;
       -NJOBS) njobs=$2;shift;;
       -n) nfibres=$2;shift;;
       -w) fudge=$2;shift;;
@@ -163,10 +160,10 @@ opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery -
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
 
-if [ $qsys -eq 1 ]; then
-	#WashU
-	queue=dque_gpu
-fi 
+if [ $qsys -eq 0 ]; then
+	queue="-q $FSLGECUDAQ"
+fi
+
 
 #check that all required files exist
 
@@ -251,7 +248,7 @@ if [ $qsys -eq 0 ]; then
 else
 	#TORQUE
 	echo $pre_command > ${subjdir}.bedpostX/temp
-	torque_command="qsub -q $queue -V -l nodes=1:ppn=1,walltime=00:40:00 -N bedpostx_preproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs"
+	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=00:40:00 -N bedpostx_preproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs"
 	splitID=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
         rm ${subjdir}.bedpostX/temp
 	sleep 10
@@ -287,16 +284,17 @@ done
 
 if [ $qsys -eq 0 ]; then
 	#SGE
-	bedpostid=`${FSLDIR}/bin/fsl_sub -q $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt`
+	bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt`
 else
 	#TORQUE
 	taskfile=${subjdir}.bedpostX/commands.txt
+	echo "command=\`cat "$taskfile" | head -\$PBS_ARRAYID | tail -1\` ; exec \$command" > ${subjdir}.bedpostX/temp
 	tasks=`wc -l $taskfile | awk '{print $1}'`
 	sge_tasks="-t 1-$tasks"
-	echo "command=\`cat "$taskfile" | head -\$PBS_ARRAYID | tail -1\` ; exec \$command" > ${subjdir}.bedpostX/temp
-	torque_command="qsub -q $queue -V -l nodes=1:ppn=1:gpus=1,walltime=4:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
+	#PBS -t x-y: x and y are the array bounds
+	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=3:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
 	bedpostid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
-        rm ${subjdir}.bedpostX/temp
+        cat ${subjdir}.bedpostX/temp
 	sleep 10
 fi
 
@@ -309,7 +307,7 @@ if [ $qsys -eq 0 ]; then
 else
 	#TORQUE
 	echo $post_command > ${subjdir}.bedpostX/temp
-	torque_command="qsub -q $queue -V -l nodes=1:ppn=1,walltime=00:40:00 -N bedpostx_postproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterokarray:$bedpostid"
+	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=00:40:00 -N bedpostx_postproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterokarray:$bedpostid"
 	mergeid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
         rm ${subjdir}.bedpostX/temp
 	sleep 10
