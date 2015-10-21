@@ -294,7 +294,7 @@ else
 	#PBS -t x-y: x and y are the array bounds
 	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=3:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
 	bedpostid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
-        cat ${subjdir}.bedpostX/temp
+        rm ${subjdir}.bedpostX/temp
 	sleep 10
 fi
 
