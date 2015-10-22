@@ -160,7 +160,7 @@ opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery -
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
 
-if [ $qsys -eq 0 ]; then
+if [ $qsys -eq 0 ] && [ "x$SGE_ROOT" != "x" ]; then
 	queue="-q $FSLGECUDAQ"
 fi
 
