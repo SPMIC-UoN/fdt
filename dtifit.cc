@@ -509,10 +509,13 @@ int main(int argc, char** argv)
     MODE.setDisplayMaximumMinimum(1,-1);
     save_volume(MODE,MOfile);
     V1.setDisplayMaximumMinimum(1,-1);
+    V1.set_intent(NIFTI_INTENT_RGB_VECTOR,0,0,0);
     save_volume4D(V1,v1file);
     V2.setDisplayMaximumMinimum(1,-1);
+    V2.set_intent(NIFTI_INTENT_RGB_VECTOR,0,0,0);
     save_volume4D(V2,v2file);
     V3.setDisplayMaximumMinimum(1,-1);
+    V3.set_intent(NIFTI_INTENT_RGB_VECTOR,0,0,0);
     save_volume4D(V3,v3file);
     l1.setDisplayMaximumMinimum(l1.max(),0);
     save_volume(l1,l1file);
