@@ -169,7 +169,6 @@ __device__ void cf_PVM_multi(		//INPUT
 		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
-		fs[idSubVOX] = x2f_gpu(params[kk]);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
@@ -179,7 +178,10 @@ __device__ void cf_PVM_multi(		//INPUT
 		*_b= abs(params[2]); 
 		*cfv = 0.0;
 		*sumf=0;
-		for(int k=0;k<nfib;k++) *sumf+= fs[k];
+		for(int k=0;k<nfib;k++){
+			fs[k] = x2f_gpu(params[3+3*k]);
+		 	*sumf+= fs[k];
+		}
 	}
 
 	int ndir = ndirections/THREADS_BLOCK_FIT;
@@ -248,7 +250,6 @@ __device__ void grad_PVM_multi(		//INPUT
 		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
-		fs[idSubVOX] = x2f_gpu(params[kk]);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
@@ -257,7 +258,10 @@ __device__ void grad_PVM_multi(		//INPUT
 		*_a= abs(params[1]);
 		*_b= abs(params[2]); 
 		*sumf=0;
-		for(int k=0;k<nfib;k++) *sumf+= fs[k];
+		for(int k=0;k<nfib;k++){
+			fs[k] = x2f_gpu(params[3+3*k]);
+	 		*sumf+= fs[k];
+		}
 		for (int p=0;p<nparams;p++) grad[p]=0;
 	}
 
@@ -361,7 +365,6 @@ __device__ void hess_PVM_multi(		//INPUT
 		float sinth,costh,sinph,cosph;
 		sincos(params[kk+1],&sinth,&costh);
 		sincos(params[kk+2],&sinph,&cosph);
-		fs[idSubVOX] = x2f_gpu(params[kk]);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
@@ -370,7 +373,10 @@ __device__ void hess_PVM_multi(		//INPUT
 		*_a= abs(params[1]);
 		*_b= abs(params[2]); 
 		*sumf=0;
-		for(int k=0;k<nfib;k++) *sumf+= fs[k];
+		for(int k=0;k<nfib;k++){
+			fs[k] = x2f_gpu(params[3+3*k]);
+			*sumf+= fs[k];
+		}
 		for (int p=0;p<nparams;p++){
 			for (int p2=0;p2<nparams;p2++){ 
 				hess[p*nparams+p2] = 0;

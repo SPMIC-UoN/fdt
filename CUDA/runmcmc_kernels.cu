@@ -309,7 +309,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		fibres[pos].m_th_rej = 0;
 		
 		//compute_th_prior();
-	      	if(m_th==0){
+	      	if(m_th[idSubVOX]==0){
 			m_th_prior=0;
 		}else{
 			m_th_prior=-log(double(fabs(sin(double(m_th[idSubVOX]))/2)));
@@ -844,6 +844,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					getfsum(fsum,m_f,*m_f0,nfib);
 				}
 			}
+			__syncthreads(); // old
 		}
 ////////////////////////////////////////////////////////////////// TAU
 		if(rician){
@@ -877,7 +878,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				}else{ 
 					reject(m_tau,m_tau_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_tau_rej);
 				}
-			}	
+			}
+			__syncthreads(); // old
 		}
 ////////////////////////////////////////////////////////////////// D
 		if (leader){
@@ -942,6 +944,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
       			restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
 			restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
         	}
+		__syncthreads(); // old
 ////////////////////////////////////////////////////////////////// D_STD
 		if(model>=2){
 			if (leader){	
@@ -1008,6 +1011,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				}
 				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
 			}
+			__syncthreads(); // old
 ////////////////////////////////////////////////////////////////// R
 			if(model==3){
 				if (leader){	
@@ -1078,6 +1082,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					}
 					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
 				}
+				__syncthreads(); // old
 			}
 		}
 ////////////////////////////////////////////////////////////////// S0
@@ -1112,6 +1117,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				reject(m_S0,m_S0_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_S0_rej);
 			}
         	}
+		__syncthreads(); // old
 ////////////////////////////////////////////////////////////////////////////     TH
      		for(int fibre=0;fibre<nfib;fibre++){  
 			if (leader){ 
