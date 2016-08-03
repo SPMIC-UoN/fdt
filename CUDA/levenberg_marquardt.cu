@@ -18,7 +18,7 @@ __device__ const double EPS_gpu = 2.0e-16;       	//Losely based on NRinC 20.1
 
 //CPU version in nonlin.cpp
 __device__ inline bool zero_cf_diff_conv(double* cfo,double* cfn,double* cftol){
-  	return(2.0*abs(*cfo-*cfn) <= *cftol*(abs(*cfo)+abs(*cfn)+EPS_gpu));
+  	return(2.0*fabs(*cfo-*cfn) <= *cftol*(fabs(*cfo)+fabs(*cfn)+EPS_gpu));
 }
 
 __device__ void levenberg_marquardt_PVM_single_gpu(	//INPUT
