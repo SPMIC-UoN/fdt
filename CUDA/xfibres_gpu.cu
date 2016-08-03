@@ -72,7 +72,7 @@ void xfibres_gpu(	//INPUT
 
 	if(nvox>0){
 		thrust::host_vector<float> datam_host, bvecs_host, bvals_host, params_host;
-		thrust::host_vector<double> alpha_host, beta_host;
+		thrust::host_vector<float> alpha_host, beta_host;
 		thrust::host_vector<float> tau_host;
 		vector<ColumnVector> datam_vec;
 		vector<Matrix> bvecs_vec, bvals_vec;
@@ -101,19 +101,20 @@ void xfibres_gpu(	//INPUT
 		bvecs_gpu.shrink_to_fit();
 	
 		//////   RUN MCMC  //////
-		thrust::host_vector<double> signals_host,isosignals_host;
+		thrust::host_vector<float> signals_host;
+		thrust::host_vector<float> isosignals_host;
 		thrust::host_vector<FibreGPU> fibres_host;
 		thrust::host_vector<MultifibreGPU> multifibres_host;
 	
 		prepare_data_gpu_MCMC(nvox, ndirections, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
 
-		thrust::device_vector<double> signals_gpu=signals_host;
-		thrust::device_vector<double> isosignals_gpu=isosignals_host;
+		thrust::device_vector<float> signals_gpu=signals_host;
+		thrust::device_vector<float> isosignals_gpu=isosignals_host;
 		thrust::device_vector<FibreGPU> fibres_gpu=fibres_host;
 		thrust::device_vector<MultifibreGPU> multifibres_gpu=multifibres_host;
 		thrust::device_vector<float> tau_gpu = tau_host;
-		thrust::device_vector<double> alpha_gpu=alpha_host;
-		thrust::device_vector<double> beta_gpu=beta_host;
+		thrust::device_vector<float> alpha_gpu=alpha_host;
+		thrust::device_vector<float> beta_gpu=beta_host;
 
 		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu);
 
@@ -368,8 +369,8 @@ void prepare_data_gpu_FIT(	//INPUT
 				thrust::host_vector<float>&   		datam_host,	//data prepared for copy to GPU
 				thrust::host_vector<float>&		bvecs_host,				
 				thrust::host_vector<float>&		bvals_host,
-				thrust::host_vector<double>&		alpha_host,
-				thrust::host_vector<double>&		beta_host,
+				thrust::host_vector<float>&		alpha_host,
+				thrust::host_vector<float>&		beta_host,
 				thrust::host_vector<float>&		params_host,
 				thrust::host_vector<float>&		tau_host)
 {
@@ -569,8 +570,8 @@ void prepare_data_gpu_MCMC(	//INPUT
 				int					ndirections,
 				int 					nfib,
 				//OUTPUT
-				thrust::host_vector<double>&		signals_host,
-				thrust::host_vector<double>&		isosignals_host,
+				thrust::host_vector<float>&		signals_host,
+				thrust::host_vector<float>&		isosignals_host,
 				thrust::host_vector<FibreGPU>& 		fibres_host,
 				thrust::host_vector<MultifibreGPU>& 	multifibres_host)
 { 	

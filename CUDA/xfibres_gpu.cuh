@@ -43,8 +43,8 @@ void prepare_data_gpu_FIT(	//INPUT
 				thrust::host_vector<float>&   		datam_host,	
 				thrust::host_vector<float>&		bvecs_host,				
 				thrust::host_vector<float>&		bvals_host,
-				thrust::host_vector<double>&		alpha_host,
-				thrust::host_vector<double>&		beta_host,
+				thrust::host_vector<float>&		alpha_host,
+				thrust::host_vector<float>&		beta_host,
 				thrust::host_vector<float>&		params_host,
 				thrust::host_vector<float>&		tau_host);
 
@@ -82,8 +82,8 @@ void prepare_data_gpu_MCMC(	//INPUT
 				int					ndirections,
 				int 					nfib,
 				//OUTPUT
-				thrust::host_vector<double>&		signals_host,
-				thrust::host_vector<double>&		isosignals_host,
+				thrust::host_vector<float>&		signals_host,
+				thrust::host_vector<float>&		isosignals_host,
 				thrust::host_vector<FibreGPU>& 		fibres_host,
 				thrust::host_vector<MultifibreGPU>& 	multifibres_host);
 
