@@ -10,21 +10,21 @@
 #define __DIFFMODELS_UTILS
 
 //defined in diffmodels.h
-#define two_pi_gpu 0.636619772
+#define two_pi_gpu 0.636619772f
 
 //defined in diffmodels.h
-#define FSMALL_gpu 0.001
+#define FSMALL_gpu 0.001f
 
 //defined in diffmodels.h
-#define f2beta_gpu(f) (asin(double(sqrt(f))))
+#define f2beta_gpu(f) (asin(sqrt(f)))
 
 //defined in diffmodels.h
 #define d2lambda_gpu(d) (sqrt(d)) 
 
 //defined in diffmodels.h
-//#define beta2f_gpu(beta) (pow(sin(double(beta)),2.0))
-__device__ inline  double beta2f_gpu(double beta){ 
-	double sinbeta= sin(beta);
+//#define beta2f_gpu(beta) (pow(sinf(beta),2.0))
+__device__ inline  float beta2f_gpu(float beta){ 
+	float sinbeta= sinf(beta);
 	return sinbeta*sinbeta;
 }
 
@@ -32,13 +32,13 @@ __device__ inline  double beta2f_gpu(double beta){
 #define lambda2d_gpu(lambda) (lambda*lambda) 
 
 //defined in diffmodels.h
-__device__ inline double f2x_gpu(double x){
-	return tan(double((x)/two_pi)); 	
+__device__ inline float f2x_gpu(float x){
+	return tan(x/two_pi); 	
 }
 
 //defined in diffmodels.h
-__device__ inline double x2f_gpu(double x){         
-	return abs(two_pi*atan(x));
+__device__ inline float x2f_gpu(float x){         
+	return fabsf(two_pi*atan(x));
 }
 
 //defined in miscmaths.h 
