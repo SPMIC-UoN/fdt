@@ -47,6 +47,7 @@ class dtifitOptions {
   Option<int> x_max;
   Option<string> grad_file;
   FmribOption<bool> save_bvals;
+  FmribOption<bool> kurt;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -128,6 +129,9 @@ class dtifitOptions {
    save_bvals(string("--savebvals"), false,
 	     string("Save 4D file with bvalues, corrected for gradient nonlinearities"),
 	     false,  no_argument),
+   kurt(string("--kurt"), false,
+	     string("Fit single Kurtosis parameter (for multi-shell data)"),
+	     false,  no_argument),
    options("dtifit", "dtifit -k <filename>\n dtifit --verbose\n")
    {
      
@@ -153,6 +157,7 @@ class dtifitOptions {
        options.add(x_max);
        options.add(grad_file);
        options.add(save_bvals);
+       options.add(kurt);
      }
      catch(X_OptionError& e) {
        options.usage();

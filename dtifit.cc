@@ -91,6 +91,35 @@ Matrix form_Amat(const Matrix& r,const Matrix& b)
 }
 
 
+Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
+{
+  Matrix A(r.Ncols(),8);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  ColumnVector v(r.Ncols());
+  for( int i = 1; i <= r.Ncols(); i++){
+    v(i) = -b(1,i)*b(1,i)/6;
+  }
+  Matrix M(r.Ncols(),7);
+  M = form_Amat(r,b);
+  //v = v-M*pinv(M)*v;
+
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+    A(i,8) = v(i); //-b(1,i)*b(1,i)/6;
+  }
+  return A;
+}
+
+
 Matrix form_Amat(const Matrix& r,const Matrix& b, const Matrix & cni )
 {
   //cni are confound regressors of no interest
@@ -337,7 +366,7 @@ int main(int argc, char** argv)
     bvalmap.reinitialize(maxx-minx,maxy-miny,maxz-minz,data.tsize());
   volume4D<float> cni_cope;
   volume<float> sse;
-
+  volume<float> kurt;
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
@@ -356,6 +385,7 @@ int main(int argc, char** argv)
     bvalmap=0;
   }
 
+
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
   l1=0;l2=0;l3=0;MD=0;MODE=0;FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
@@ -372,6 +402,9 @@ int main(int argc, char** argv)
     copybasicproperties(data[0],cni_cope[0]);
     cni_cope=0;
   }
+  else if(opts.kurt.value()){
+    Amat = form_Amat_kurt(r,b);
+  }
   else{
     Amat = form_Amat(r,b);
   }
@@ -379,6 +412,11 @@ int main(int argc, char** argv)
     sse.reinitialize(maxx-minx,maxy-miny,maxz-minz);
     copybasicproperties(data[0],sse);
     sse=0;
+  }
+  if(opts.kurt.value()){
+    kurt.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    copybasicproperties(data[0],kurt);
+    kurt=0;
   }
 
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
@@ -411,6 +449,8 @@ int main(int argc, char** argv)
 	      }
 	      if(opts.cni.value()!="")
 		Amat=form_Amat(bvecs_c,bvals_c,cni);
+	      else if(opts.kurt.value())
+		Amat=form_Amat_kurt(bvecs_c,bvals_c);
 	      else
 		Amat=form_Amat(bvecs_c,bvals_c);
 	      pinv_Amat=pinv(Amat);
@@ -449,7 +489,9 @@ int main(int argc, char** argv)
 	    if(opts.sse.value()){
 	      sse(i-minx,j-miny,k-minz)=sseval;
 	    }
-
+	    if(opts.kurt.value()){
+	      kurt(i-minx,j-miny,k-minz)=Dvec(8)/MD(i-minx,j-miny,k-minz)/MD(i-minx,j-miny,k-minz);
+	    }
 
 //	    EigenValues(dyad,dyad_D,dyad_V);
 	   
@@ -552,6 +594,14 @@ int main(int argc, char** argv)
       }
       sse.setDisplayMaximumMinimum(sse.max(),0);
       save_volume(sse,ssefile);
+    }
+    if(opts.kurt.value()){
+      string kurtfile=opts.ofile.value()+"_kurt";
+      if(opts.littlebit.value()){
+	kurtfile+="littlebit";
+      }
+      kurt.setDisplayMaximumMinimum(2,0);
+      save_volume(kurt,kurtfile);
     }
   return 0;
 }
