@@ -21,7 +21,7 @@
 #include "init_gpu.h"
 
 ////////////////////////////////////////////////////// 
-//   FIT IN GPU
+//   FIT ON GPU
 ////////////////////////////////////////////////////// 
 void fit_PVM_single(	//INPUT
 			const vector<ColumnVector> 	datam_vec, 
@@ -247,7 +247,7 @@ void calculate_tau(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "--------- CALCULATE TAU/RESIDULAS IN GPU ------------ " << "\n"; 
+   	myfile << "--------- CALCULATE TAU/RESIDULAS ON GPU ------------ " << "\n"; 
 
 	struct timeval t1,t2;
    	double time;
@@ -311,7 +311,7 @@ void calculate_tau(	//INPUT
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+   	myfile << "TIME: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n\n" ; 	
 	myfile.close();			
 }
