@@ -16,15 +16,21 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include <curand.h>
+#include <curand_kernel.h>
 
 #include <options.h>
 
 #define maxfloat 1e10f
 #define UPPERDIFF 0.005f
 
-__device__ inline void propose(float* param, float* old, float prop, float random){
+extern "C" __global__ void setup_randoms_kernel(curandState* randstate, double seed){
+	int id = blockIdx.x*THREADS_BLOCK_RAND+threadIdx.x;
+	curand_init(seed,id,0,&randstate[id]);
+}
+
+__device__ inline void propose(float* param, float* old, float prop, curandState* localrandState){
 	*old=*param;
-	*param = *param + random*prop;
+	*param = *param + curand_normal(localrandState)*prop;
 }
 __device__ inline void reject(float* param, float* prior, float* old, float* m_prior_en, float* m_old_prior_en, float* m_energy, float* m_old_energy, int* rej){
 	*param=old[0];
@@ -49,12 +55,12 @@ __device__ inline void getfsum(float* fsum, float* m_f, float m_f0, int nfib){
 		*fsum = *fsum + m_f[f];
 	}
 }
-__device__ inline bool compute_test_energy(float *m_energy, float* m_old_energy, float m_prior_en, float m_likelihood_en, float random){
+__device__ inline bool compute_test_energy(float *m_energy, float* m_old_energy, float m_prior_en, float m_likelihood_en, curandState* localrandState){
 	*m_old_energy=*m_energy;
       	*m_energy=m_prior_en+m_likelihood_en;
 
 	float tmp=expf(*m_old_energy-*m_energy);
-	return (tmp>random);
+	return (tmp>curand_uniform(localrandState));
 }
 __device__ inline void compute_signal(float *signals,float *oldsignals,float mbvals,float* m_d, float* m_dstd, float* m_R, float angtmp, int model){
 	*oldsignals=*signals;
@@ -484,8 +490,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						const float*			bvals,
 						const float*			alpha,
 						const float*			beta,
-						float*				randomsN,
-						float*				randomsU,
+						curandState*			randstate,
 						const float			R_priormean,
 						const float			R_priorstd,	
 						const float			R_priorfudge,			
@@ -500,8 +505,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						const bool 			rician,
 						const bool			gradnonlin,
 						const int 			updateproposalevery, 	//update every this number of iterations	
-						const int 			iterations,		//num of iterations to do this time (maybe is a part of the total)
-						const int 			current_iter,		//the number of the current iteration over the total iterations
+						const int 			iterations,
 						const int 			iters_burnin,		//iters in burin, we need it to continue the updates at the correct time. 
 						const int 			record_every, 		//record every this number
 						const int 			totalrecords,		//total number of records to do
@@ -532,7 +536,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 
 	////////// DYNAMIC SHARED MEMORY ///////////
 	extern __shared__ double shared[];
-	double* reduction = (double*)shared;				//threadsBlock
+	curandState* localrandState = (curandState*)shared;		//1 curandState
+	double* reduction = (double*)&shared[2];			//threadsBlock (curandState is 48 bytes, jump 64 bytes)
 
 	float* m_S0 = (float*) &reduction[threadsBlock];		//1
 	float* m_d = (float*) &m_S0[1];					//1
@@ -574,10 +579,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	float* m_old_energy = (float*) &m_energy[1];			//1
 	float* old = (float*) &m_old_energy[1];				//2
 
-	float* prerandN = (float*) &old[2];				//nparams
-	float* prerandU = (float*) &prerandN[nparams];			//nparams
-
-	int* m_S0_acc = (int*) &prerandU[nparams];			//1
+	int* m_S0_acc = (int*) &old[2];					//1
 	int* m_d_acc = (int*) &m_S0_acc[1];				//1
 	int* m_dstd_acc = (int*) &m_d_acc[1];				//1
 	int* m_R_acc = (int*) &m_dstd_acc[1];				//1
@@ -603,15 +605,14 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	int* count_update = (int*) &idVOX[1];				//1	
 	int* recordcount = (int*) &count_update[1];			//1
 	int* sample = (int*) &recordcount[1];				//1		
-	int* localrand = (int*) &sample[1];				//1
-	int* posBV = (int*) &localrand[1];				//1
+	int* posBV = (int*) &sample[1];					//1
 	////////// DYNAMIC SHARED MEMORY ///////////
-	
+
 	if (leader){
 		*idVOX= blockIdx.x;
-		*count_update = current_iter+iters_burnin;	//count for updates
-		*recordcount = current_iter;	
-		if(record_every) *sample=1+(current_iter/record_every);		//the next number of sample.....the index start in 0
+		*count_update = iters_burnin;	//count for updates
+		*recordcount = 0;	
+		*sample=1;		//the next number of sample.....the index start in 0
 
 		if(gradnonlin)*posBV = (*idVOX*ndirections);
 		else *posBV = 0;
@@ -685,6 +686,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			*m_tau_prior=0.0f;
 			*m_tau=0.0f;
 		}
+
+		*localrandState = randstate[*idVOX];
 	}
 
 	__syncthreads();
@@ -733,74 +736,18 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	}
 
 	if (leader) getfsum(fsum,m_f,*m_f0,nfib);
-	for (int niter=0; niter<iterations; niter++){
-		//code jump()
 
-		//prefetching randoms
+	// START ITERATIONS: code jump()
+	for (int niter=0; niter<iterations; niter++){
 		if (leader){
 			*count_update=*count_update+1;
 			*recordcount=*recordcount+1;
-			int idrand = *idVOX*iterations*nparams+(niter*nparams);
-			*localrand = 0;
-			if(m_include_f0){
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-			}
-			if(rician){
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-			}
-			//d
-			prerandN[*localrand]=randomsN[idrand];
-			prerandU[*localrand]=randomsU[idrand];
-			idrand++;
-			*localrand=*localrand+1;
-			//d_std
-			if(model>=2){
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-			}
-			//R
-			if(model==3){
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-			}
-			//S0
-			prerandN[*localrand]=randomsN[idrand];
-			prerandU[*localrand]=randomsU[idrand];
-			idrand++;
-			*localrand=*localrand+1;
-
-			for(int f=0;f<nfib;f++){
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-
-				prerandN[*localrand]=randomsN[idrand];
-				prerandU[*localrand]=randomsU[idrand];
-				idrand++;
-				*localrand=*localrand+1;
-
-				prerandN[*localrand]=randomsN[idrand];					
-				prerandU[*localrand]=randomsU[idrand];	
-				idrand++;	
-				*localrand=*localrand+1;	
-			}
-			*localrand = 0;
 		}
+			
 ////////////////////////////////////////////////////////////////// F0
 		if(m_include_f0){
 			if (leader){
-				propose(m_f0,old,*m_f0_prop,prerandN[*localrand]);
+				propose(m_f0,old,*m_f0_prop,localrandState);
 				//compute_f0_prior()     
 				old[1]=*m_f0_prior;
 	      			if(*m_f0<=0.0f || *m_f0 >=1.0f){ 
@@ -825,8 +772,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){
-				rejflag[2]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;	
+				rejflag[2]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 				if(!rejflag[0]){
 					if(!rejflag[1]){
 						if(rejflag[2]){
@@ -849,7 +795,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 ////////////////////////////////////////////////////////////////// TAU
 		if(rician){
 			if (leader){
-				propose(m_tau,old,*m_tau_prop,prerandN[*localrand]);
+				propose(m_tau,old,*m_tau_prop,localrandState);
 				//compute_tau_prior()     
 				old[1]=*m_tau_prior;
 	      			if(*m_tau<=0.0f){ 
@@ -867,8 +813,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){
-				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;
+				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 				if(!rejflag[0]){
 					if(rejflag[1]){
 		  				*m_tau_acc=*m_tau_acc+1;   
@@ -883,7 +828,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}
 ////////////////////////////////////////////////////////////////// D
 		if (leader){
-			propose(m_d,old,*m_d_prop,prerandN[*localrand]);
+			propose(m_d,old,*m_d_prop,localrandState);
 			//compute_d_prior()      
 			old[1]=*m_d_prior;	
 			if(*m_d<0.0f || *m_d>UPPERDIFF){
@@ -922,8 +867,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		__syncthreads();
 				
 		if (leader){
-			rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-			*localrand=*localrand+1;
+			rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 		}	
 		__syncthreads();
 
@@ -948,7 +892,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 ////////////////////////////////////////////////////////////////// D_STD
 		if(model>=2){
 			if (leader){	
-				propose(m_dstd,old,*m_dstd_prop,prerandN[*localrand]);
+				propose(m_dstd,old,*m_dstd_prop,localrandState);
 				//compute_d_std_prior()     
 				old[1]=*m_dstd_prior;
 				float upper_d_std=0.01f;
@@ -985,8 +929,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){
-				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;					
+				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);				
 			}
 			__syncthreads();
 				
@@ -1015,7 +958,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 ////////////////////////////////////////////////////////////////// R
 			if(model==3){
 				if (leader){	
-					propose(m_R,old,*m_R_prop,prerandN[*localrand]);
+					propose(m_R,old,*m_R_prop,localrandState);
 					//compute_R_prior()     
 					old[1]=*m_R_prior;
 					float upper_R=2.0f*R_priormean;
@@ -1062,8 +1005,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				__syncthreads();
 
 				if (leader){
-					rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-					*localrand=*localrand+1;					
+					rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);				
 				}
 				__syncthreads();
 				
@@ -1087,7 +1029,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}
 ////////////////////////////////////////////////////////////////// S0
 		if (leader){
-			propose(m_S0,old,*m_S0_prop,prerandN[*localrand]);
+			propose(m_S0,old,*m_S0_prop,localrandState);
 			//compute_S0_prior()
 			old[1]=*m_S0_prior;
         		if(*m_S0<0.0f) rejflag[0]=true;
@@ -1104,8 +1046,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		__syncthreads();
 
 		if (leader){
-			rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-			*localrand=*localrand+1;
+			rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 
         		if(!rejflag[0]){
 				if(rejflag[1]){
@@ -1121,7 +1062,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 ////////////////////////////////////////////////////////////////////////////     TH
      		for(int fibre=0;fibre<nfib;fibre++){  
 			if (leader){ 
-				propose(&m_th[fibre],old,m_th_prop[fibre],prerandN[*localrand]);
+				propose(&m_th[fibre],old,m_th_prop[fibre],localrandState);
 				//compute_th_prior()
 				old[1]=m_th_prior[fibre];
       	   			if(m_th[fibre]==0.0f){
@@ -1160,8 +1101,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){ 
-				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;	
+				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 			}
 			__syncthreads();
 			
@@ -1177,7 +1117,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 ///////////////////////////////////////     PH
 			if (leader){
-				propose(&m_ph[fibre],old,m_ph_prop[fibre],prerandN[*localrand]);
+				propose(&m_ph[fibre],old,m_ph_prop[fibre],localrandState);
 				//compute_ph_prior()
 				old[1]=m_ph_prior[fibre];
       				m_ph_prior[fibre]=0.0f;
@@ -1213,8 +1153,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){
-				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;
+				rejflag[1]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 			}
 			__syncthreads();
 
@@ -1232,7 +1171,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 ////////////////////////////////////////////             F
 			if (leader){
-				propose(&m_f[fibre],old,m_f_prop[fibre],prerandN[*localrand]);
+				propose(&m_f[fibre],old,m_f_prop[fibre],localrandState);
 
 	     			//compute_f_prior()
 	        		old[1]=m_f_prior[fibre];
@@ -1267,8 +1206,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			__syncthreads();
 
 			if (leader){
-				rejflag[2]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,prerandU[*localrand]);
-				*localrand=*localrand+1;
+				rejflag[2]=compute_test_energy(m_energy,m_old_energy,*m_prior_en,*m_likelihood_en,localrandState);
 
 		      		if(!rejflag[0]){
 					if(!rejflag[1]){
@@ -1411,6 +1349,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				multifibres[*idVOX].m_R_prop=*m_R_prop;
 			}
 		}
+		randstate[*idVOX]=*localrandState; // save state, otherwise random numbers will be repeated (start at the same point)
 	}
 	
 	if(idSubVOX<nfib){

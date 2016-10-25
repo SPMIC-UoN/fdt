@@ -21,7 +21,7 @@
 using namespace Xfibres;
 
 ////////////////////////////////////////////////////// 
-//   MCMC IN GPU
+//   MCMC ON GPU
 ////////////////////////////////////////////////////// 
 
 void init_Fibres_Multifibres(	//INPUT
@@ -32,16 +32,18 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<float> 			alpha_gpu,
 				thrust::device_vector<float> 			beta_gpu,
 				const int 					ndirections,
-				string 						output_file, 
+				string 						output_file,
+				double 						seed,
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 				thrust::device_vector<float>&			signals_gpu,
-				thrust::device_vector<float>&			isosignals_gpu)
+				thrust::device_vector<float>&			isosignals_gpu,
+				curandState*&					randStates)
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "----- MCMC ALGORITHM PART INITIALITATION IN GPU ----- " << "\n";  	
+   	myfile << "----- MCMC ALGORITHM PART INITIALITATION ON GPU ----- " << "\n";  	
 
    	struct timeval t1,t2;
    	double time;
@@ -84,9 +86,19 @@ void init_Fibres_Multifibres(	//INPUT
 	init_Fibres_Multifibres_kernel<<< Dim_Grid_MCMC, Dim_Block_MCMC, amount_shared>>>(datam_ptr, params_ptr, tau_ptr, bvals_ptr, alpha_ptr, beta_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams_fit, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.rician.value(), opts.ardf0.value(), opts.all_ard.value(), opts.no_ard.value(), gradnonlin, angtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr);
 	sync_check("init_Fibres_Multifibres_kernel");
 
+	// Initialise Randoms
+	int total_threads= nvox;
+	int blocks_Rand = total_threads/THREADS_BLOCK_RAND;
+	if(total_threads%THREADS_BLOCK_RAND) blocks_Rand++;
+	cudaMalloc(&randStates,blocks_Rand*THREADS_BLOCK_RAND*sizeof(curandState)); 
+	dim3 Dim_Grid_Rand(blocks_Rand,1);
+	dim3 Dim_Block_Rand(THREADS_BLOCK_RAND,1); 
+	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates,seed);
+	sync_check("Setup_Randoms_kernel");
+
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+   	myfile << "TIME: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n\n" ; 
 	myfile.close();
 }
@@ -97,7 +109,7 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<float> 			alpha_gpu,
 			thrust::device_vector<float> 			beta_gpu,
 			const int 					ndirections,
-			double 						seed,
+			curandState*&					randStates,
 			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
@@ -109,17 +121,13 @@ void runmcmc_burnin(	//INPUT
 	
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app ); 
-   	myfile << "--------- MCMC ALGORITHM PART BURNIN IN GPU --------- " << "\n";  	
+   	myfile << "--------- MCMC ALGORITHM PART BURNIN ON GPU --------- " << "\n";  	
 
-   	struct timeval t1,t2,t_tot1,t_tot2;
-   	double time,timecurand,timemcmc;
+   	struct timeval t_tot1,t_tot2;
+   	double time;
    	time=0;
-   	timecurand=0;
-   	timemcmc=0;
 
    	gettimeofday(&t_tot1,NULL);
-
-   	size_t free,total;
 	
 	int nvox = multifibres_gpu.size();
    	int nfib= opts.nfibres.value();
@@ -145,73 +153,22 @@ void runmcmc_burnin(	//INPUT
 	oldangtmp_gpu.resize(nvox*ndirections);
 	oldsignals_gpu.resize(nvox*ndirections*nfib);
 	oldisosignals_gpu.resize(nvox*ndirections);
-   
-   	unsigned int totalrandoms=(opts.nburn.value() * nvox * nparams);
 
-   	cuMemGetInfo(&free,&total);
-   	myfile << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
-   	//4 bytes each float, 2 random arrays, and 80% of total memory at this moment 
-   	unsigned int maxrandoms=((free*0.8)/(4*2)); 
+	myfile << "Processing " << nvox << " voxels \n";
 
-   	myfile << "Total randoms: " << totalrandoms << "\n"; 
-   	myfile << "Max randoms: " << maxrandoms << "\n"; 
-   
-   	int steps; //num iter if not enough memory
-   	int minrandoms; //min num of randoms ensamble
-   	minrandoms= nvox * nparams;
-
-   	int iters_step=0;
-	int nrandoms=0;	
-
-   	if(totalrandoms>maxrandoms){ 
-		iters_step = maxrandoms / minrandoms; 			//iterations in each step
-		nrandoms = iters_step*minrandoms;			//nrandoms for each step
-		steps =  (opts.nburn.value()/iters_step);  		//repeat process steps times, no enough memory for all randoms 			
-   	}else{ 
-		nrandoms = totalrandoms;
-		iters_step= opts.nburn.value();
-		steps = 0;
-  	}
-	if(nrandoms%2){							//CURAND must generates multiples of 2 randoms
-		nrandoms++;
-	}
-	
-   	myfile << "Process " << opts.nburn.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
-
-   	int last_step = opts.nburn.value() - (iters_step*steps);
-   	int last_randoms = (last_step*minrandoms);
-	if(last_randoms%2){						//CURAND must generates multiples of 2 randoms
-		last_randoms++;
-	}
-
-   	myfile << "Last step with " << last_step << " iterations" << "\n"; 
-	
-	thrust::device_vector<float> randomsN_gpu;
-	thrust::device_vector<float> randomsU_gpu;	
-	randomsN_gpu.resize(nrandoms);
-	randomsU_gpu.resize(nrandoms);
-
-   	cuMemGetInfo(&free,&total);
-   	myfile << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
-   
   	int blocks = nvox;        
   	dim3 Dim_Grid(blocks, 1);
   	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
 
-   	myfile << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
+   	myfile << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n"; 	
 
-   	curandGenerator_t gen;
-   	curandCreateGenerator(&gen,CURAND_RNG_PSEUDO_DEFAULT);
-   	curandSetPseudoRandomGeneratorSeed(gen,seed);
 
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
 	float *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
 	float *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
-	float *randomsN_ptr = thrust::raw_pointer_cast(randomsN_gpu.data());
-	float *randomsU_ptr = thrust::raw_pointer_cast(randomsU_gpu.data());
 	FibreGPU *fibres_ptr =  thrust::raw_pointer_cast(fibres_gpu.data());
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
 	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
@@ -224,81 +181,20 @@ void runmcmc_burnin(	//INPUT
 
 	float *records_null = thrust::raw_pointer_cast(recors_null_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 27)*sizeof(float) + (7*nfib + 21)*sizeof(int);
+	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState);
 
 	myfile << "Shared Memory Used in runmcmc_burnin: " << amount_shared << "\n";
-	
-   	for(int i=0;i<steps;i++){
-
-   		gettimeofday(&t1,NULL);
-
-	   	curandStatus_t status = curandGenerateNormal(gen,randomsN_ptr,nrandoms,0,1); 
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-	   	status = curandGenerateUniform(gen,randomsU_ptr,nrandoms);	//generate randoms
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-
- 	   	gettimeofday(&t2,NULL);
-    	   	timecurand+=timeval_diff(&t2,&t1);
-
-	   	gettimeofday(&t1,NULL);
-
-	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null);   
-	   	sync_check("runmcmc_burnin_kernel");
-
- 	   	gettimeofday(&t2,NULL);
-    	   	timemcmc+=timeval_diff(&t2,&t1);
-   	}
-
-   	gettimeofday(&t1,NULL); 
 
    	if(nvox!=0){
-   		curandStatus_t status = curandGenerateNormal(gen,randomsN_ptr,last_randoms,0,1);
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-   		status = curandGenerateUniform(gen,randomsU_ptr,last_randoms); 	//generate randoms
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-   	}
-	
-   	gettimeofday(&t2,NULL);
-   	timecurand+=timeval_diff(&t2,&t1);
-
-   	gettimeofday(&t1,NULL);
-
-   	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.nburn.value(), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
    		sync_check("runmcmc_burnin_kernel");
    	}
 
-   	gettimeofday(&t2,NULL);
-   	timemcmc+=timeval_diff(&t2,&t1);
-
-    	myfile << "TIME CURAND: " << timecurand << " seconds\n"; 
-    	myfile << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
-   
-   	curandDestroyGenerator(gen);
-
 	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+   	myfile << "TIME: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n\n" ; 
 	myfile.close();
-
-   	sync_check("runmcmc_burnin");
 }
 
 
@@ -312,7 +208,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>			signals_gpu,
 			thrust::device_vector<float>			isosignals_gpu,
 			const int 					ndirections,
-			double 						seed,
+			curandState*&					randStates,
 			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,
@@ -329,17 +225,14 @@ void runmcmc_record(	//INPUT
 	
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "--------- MCMC ALGORITHM PART RECORD IN GPU --------- " << "\n"; 	
+   	myfile << "--------- MCMC ALGORITHM PART RECORD ON GPU --------- " << "\n"; 	
 
-   	struct timeval t1,t2,t_tot1,t_tot2;
-   	double time,timecurand,timemcmc;
+   	struct timeval t_tot1,t_tot2;
+   	double time;
    	time=0;
-   	timecurand=0;
-   	timemcmc=0;
 
    	gettimeofday(&t_tot1,NULL);
 
-   	size_t free,total;
 
 	int totalrecords = (opts.njumps.value()/opts.sampleevery.value()); 
 	
@@ -365,72 +258,20 @@ void runmcmc_record(	//INPUT
 	oldsignals_gpu.resize(nvox*ndirections*nfib);
 	oldisosignals_gpu.resize(nvox*ndirections);
    
-   	unsigned int totalrandoms=(opts.njumps.value() * nvox * nparams);
-
-   	cuMemGetInfo(&free,&total);
-   	myfile << "Free memory Before Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
-   	//4 bytes each float, 2 random arrays, and 80% of total memory at this moment 
-   	unsigned int maxrandoms=((free*0.8)/(4*2)); 
-
-   	myfile << "Total randoms: " << totalrandoms << "\n"; 
-   	myfile << "Max randoms: " << maxrandoms << "\n"; 
-   
-   	int steps; //num iter if not enough memory
-   	int minrandoms; //min num of randoms ensamble
-   	minrandoms= nvox * nparams;
-
-   	int iters_step=0;
-	int nrandoms=0;	
-
-   	if(totalrandoms>maxrandoms){ 
-		iters_step = maxrandoms / minrandoms; 		//iterations in each step
-		nrandoms = iters_step*minrandoms;		//nrandoms for each step
-		steps =  (opts.njumps.value()/iters_step);  	//repeat process steps times, no enough memory for all randoms 			
-   	}else{ 
-		nrandoms = totalrandoms;
-		iters_step= opts.njumps.value();
-		steps = 0;
-  	}   
-	if(nrandoms%2){						//CURAND must generates multiples of 2 randoms
-		nrandoms++;
-	}
-
-   	myfile << "Process " << opts.njumps.value() << " iterations divided in "<< steps << " steps with "<< iters_step << " iterations in each one" << "\n";    
-
-   	int last_step = opts.njumps.value() - (iters_step*steps);
-   	int last_randoms = (last_step*minrandoms); 
-	if(last_randoms%2){					//CURAND must generates multiples of 2 randoms
-		last_randoms++;
-	}
-
-   	myfile << "Last step with " << last_step << " iterations" << "\n"; 
-	
-	thrust::device_vector<float> randomsN_gpu;
-	thrust::device_vector<float> randomsU_gpu;	
-	randomsN_gpu.resize(nrandoms);
-	randomsU_gpu.resize(nrandoms);
-
-   	cuMemGetInfo(&free,&total);
-   	myfile << "Free memory after Malloc Randoms: "<< free <<  " ---- Total memory: " << total << "\n";
+	myfile << "Processing " << nvox << " voxels \n";
    
   	int blocks = nvox;        
   	dim3 Dim_Grid(blocks, 1);
   	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
 
-   	myfile << "\n" << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n\n"; 	
-
-   	curandGenerator_t gen;
-   	curandCreateGenerator(&gen,CURAND_RNG_PSEUDO_DEFAULT);
-   	curandSetPseudoRandomGeneratorSeed(gen,seed);
+   	myfile << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n"; 	
 
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
 	float *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
 	float *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
-	float *randomsN_ptr = thrust::raw_pointer_cast(randomsN_gpu.data());
-	float *randomsU_ptr = thrust::raw_pointer_cast(randomsU_gpu.data());
 	FibreGPU *fibres_ptr =  thrust::raw_pointer_cast(fibres_gpu.data());
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
 	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
@@ -451,80 +292,18 @@ void runmcmc_record(	//INPUT
 	float *rph_ptr = thrust::raw_pointer_cast(rph_gpu.data());
 	float *rf_ptr = thrust::raw_pointer_cast(rf_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 2*nparams + 27)*sizeof(float) + (7*nfib + 21)*sizeof(int);
+	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState);
 
 	myfile << "Shared Memory Used in runmcmc_record: " << amount_shared << "\n";
 
-   	for(int i=0;i<steps;i++){
-
-   		gettimeofday(&t1,NULL);
-
-	   	curandStatus_t status = curandGenerateNormal(gen,randomsN_ptr,nrandoms,0,1);
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-	   	status = curandGenerateUniform(gen,randomsU_ptr,nrandoms);	//generate randoms
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-
- 	   	gettimeofday(&t2,NULL);
-    	   	timecurand+=timeval_diff(&t2,&t1);
-
-	   	gettimeofday(&t1,NULL);
-
-	   	runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), iters_step, (i*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);
-	   	sync_check("runmcmc_record_kernel");
-
- 	   	gettimeofday(&t2,NULL);
-    	   	timemcmc+=timeval_diff(&t2,&t1);
-   	}
-
-   	gettimeofday(&t1,NULL);
-
    	if(nvox!=0){
-   		curandStatus_t status = curandGenerateNormal(gen,randomsN_ptr,last_randoms,0,1);
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-   		status = curandGenerateUniform(gen,randomsU_ptr,last_randoms); 	//generate randoms
-		if (status != CURAND_STATUS_SUCCESS)
-		{
-			printf("Failure generating cuda random numbers: %d\n",status);
-			exit(1);
-		}
-   	}
-	
-   	gettimeofday(&t2,NULL);
-   	timecurand+=timeval_diff(&t2,&t1);
-
-   	gettimeofday(&t1,NULL);
-
-   	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr,randomsN_ptr, randomsU_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), last_step, (steps*iters_step), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);   
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.njumps.value(), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);   
    		sync_check("runmcmc_record_kernel");
    	}
 
-   	gettimeofday(&t2,NULL);
-   	timemcmc+=timeval_diff(&t2,&t1);
-
-
-    	myfile << "TIME CURAND: " << timecurand << " seconds\n"; 
-    	myfile << "TIME RUNMCMC: " << timemcmc << " seconds\n"; 
-   
-   	curandDestroyGenerator(gen);
-
-	gettimeofday(&t_tot2,NULL);
+   	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+   	myfile << "TIME: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n" ;
 	myfile.close(); 
-	
-   	sync_check("runmcmc_record");
 }

@@ -7,8 +7,10 @@
 /*  CCOPYRIGHT  */
 
 ////////////////////////////////////////////////////// 
-//   MCMC IN GPU
-////////////////////////////////////////////////////// 
+//   MCMC ON GPU
+//////////////////////////////////////////////////////
+
+#include <curand_kernel.h>
 
 void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<float> 			datam_gpu,
@@ -18,12 +20,14 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<float> 			alpha_gpu,
 				thrust::device_vector<float> 			beta_gpu,
 				const int 					ndirections,
-				string 						output_file, 
+				string 						output_file,
+				double 						seed,
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 				thrust::device_vector<float>&			signals_gpu,
-				thrust::device_vector<float>&			isosignals_gpu);
+				thrust::device_vector<float>&			isosignals_gpu,
+				curandState*&					randStates);
 
 void runmcmc_burnin(	//INPUT
 			thrust::device_vector<float> 			datam_gpu,
@@ -31,7 +35,7 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<float> 			alpha_gpu,
 			thrust::device_vector<float> 			beta_gpu,
 			const int 					ndirections,
-			double 						seed,
+			curandState*&					randStates,
 			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
@@ -50,7 +54,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>			signals_gpu,
 			thrust::device_vector<float>			isosignals_gpu,
 			const int 					ndirections,
-			double 						seed,
+			curandState*&					randStates,
 			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,

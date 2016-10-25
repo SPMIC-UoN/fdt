@@ -60,7 +60,7 @@ void xfibres_gpu(	//INPUT
 	myfile.open (gpu_log.data(), ios::out | ios::app );
 	myfile << "----------------------------------------------------- " << "\n"; 
    	myfile << "---------------- PART " << idpart  << " SUBPART "<< idSubpart << " ------------------- " << "\n"; 
-   	myfile << "----------------------------------------------------- " << "\n"; 
+   	myfile << "----------------------------------------------------- " << "\n\n"; 
 	myfile.close();
 
 	xfibresOptions& opts = xfibresOptions::getInstance();
@@ -116,17 +116,18 @@ void xfibres_gpu(	//INPUT
 		thrust::device_vector<float> alpha_gpu=alpha_host;
 		thrust::device_vector<float> beta_gpu=beta_host;
 
-		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu);
-
 		srand(opts.seed.value());  //randoms seed
+		curandState* randStates;
 
-		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, rand(), gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
+		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, rand(), fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu,randStates);
+
+		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, randStates, gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
 
 		thrust::device_vector<float> rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu;
 
 		prepare_data_gpu_MCMC_record(nvox,rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu);
 
-		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, rand(), gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rR_gpu, rth_gpu, rph_gpu, rf_gpu);
+		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, randStates, gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rR_gpu, rth_gpu, rph_gpu, rf_gpu);
 
 		/////// FINISH ALL VOXELS  ///////
 		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,idSubpart);
@@ -181,7 +182,8 @@ void fit(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "------------------- FIT IN GPU ---------------------- " << "\n"; 
+   	myfile << "------------------- FIT ON GPU ---------------------- " << "\n";
+	myfile.close();
 
 	struct timeval t1,t2;
    	double time;
@@ -332,7 +334,8 @@ void fit(	//INPUT
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	myfile << "TIME TOTAL: " << time << " seconds\n"; 
+	myfile.open (output_file.data(), ios::out | ios::app );
+   	myfile << "TIME: " << time << " seconds\n"; 
 	myfile << "-----------------------------------------------------" << "\n\n" ; 
 	myfile.close();
 }
@@ -356,7 +359,7 @@ void remove_NonPositive_entries(ColumnVector& Voxdata){
   	}
 }
 
-//prepare the structures for copy all neccesary data to FIT in GPU
+//prepare the structures for copy all neccesary data to FIT on GPU
 void prepare_data_gpu_FIT(	//INPUT
 				const Matrix				datam,
 				const Matrix				bvecs,
@@ -450,7 +453,7 @@ void prepare_data_gpu_FIT(	//INPUT
 	tau_host.resize(nvox);
 }
 
-//prepare the structures for copy all neccesary data to FIT in GPU when is repeated because f0. Only some voxels
+//prepare the structures for copy all neccesary data to FIT on GPU when is repeated because f0. Only some voxels
 void prepare_data_gpu_FIT_repeat(	//INPUT
 					thrust::host_vector<float>   		datam_host,	
 					thrust::host_vector<float>		bvecs_host,				
