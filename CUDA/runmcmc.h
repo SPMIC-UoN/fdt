@@ -13,12 +13,12 @@
 #include <curand_kernel.h>
 
 void init_Fibres_Multifibres(	//INPUT
-				thrust::device_vector<float> 			datam_gpu,
-				thrust::device_vector<float> 			params_gpu,
-				thrust::device_vector<float> 			tau_gpu,
-				thrust::device_vector<float> 			bvals_gpu,
-				thrust::device_vector<float> 			alpha_gpu,
-				thrust::device_vector<float> 			beta_gpu,
+				thrust::device_vector<float>& 			datam_gpu,
+				thrust::device_vector<float>& 			params_gpu,
+				thrust::device_vector<float>& 			tau_gpu,
+				thrust::device_vector<float>& 			bvals_gpu,
+				thrust::device_vector<float>& 			alpha_gpu,
+				thrust::device_vector<float>& 			beta_gpu,
 				const int 					ndirections,
 				string 						output_file,
 				double 						seed,
@@ -27,34 +27,34 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 				thrust::device_vector<float>&			signals_gpu,
 				thrust::device_vector<float>&			isosignals_gpu,
-				curandState*&					randStates);
+				thrust::device_vector<curandState>&		randStates_gpu);
 
 void runmcmc_burnin(	//INPUT
-			thrust::device_vector<float> 			datam_gpu,
-			thrust::device_vector<float> 			bvals_gpu,
-			thrust::device_vector<float> 			alpha_gpu,
-			thrust::device_vector<float> 			beta_gpu,
+			thrust::device_vector<float>& 			datam_gpu,
+			thrust::device_vector<float>& 			bvals_gpu,
+			thrust::device_vector<float>& 			alpha_gpu,
+			thrust::device_vector<float>& 			beta_gpu,
 			const int 					ndirections,
-			curandState*&					randStates,
 			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 			thrust::device_vector<float>&			signals_gpu,
-			thrust::device_vector<float>&			isosignals_gpu);
+			thrust::device_vector<float>&			isosignals_gpu,
+			thrust::device_vector<curandState>&		randStates_gpu);
 
 
 void runmcmc_record(	//INPUT
-			thrust::device_vector<float> 			datam_gpu,
-			thrust::device_vector<float> 			bvals_gpu,
-			thrust::device_vector<float> 			alpha_gpu,
-			thrust::device_vector<float> 			beta_gpu,
-			thrust::device_vector<FibreGPU> 		fibres_gpu,
-			thrust::device_vector<MultifibreGPU> 		multifibres_gpu,
-			thrust::device_vector<float>			signals_gpu,
-			thrust::device_vector<float>			isosignals_gpu,
+			thrust::device_vector<float>& 			datam_gpu,
+			thrust::device_vector<float>& 			bvals_gpu,
+			thrust::device_vector<float>& 			alpha_gpu,
+			thrust::device_vector<float>& 			beta_gpu,
+			thrust::device_vector<FibreGPU>& 		fibres_gpu,
+			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
+			thrust::device_vector<float>&			signals_gpu,
+			thrust::device_vector<float>&			isosignals_gpu,
 			const int 					ndirections,
-			curandState*&					randStates,
+			thrust::device_vector<curandState>&		randStates_gpu,
 			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,
