@@ -25,12 +25,12 @@ using namespace Xfibres;
 ////////////////////////////////////////////////////// 
 
 void init_Fibres_Multifibres(	//INPUT
-				thrust::device_vector<float> 			datam_gpu,
-				thrust::device_vector<float> 			params_gpu,
-				thrust::device_vector<float> 			tau_gpu,
-				thrust::device_vector<float> 			bvals_gpu,
-				thrust::device_vector<float> 			alpha_gpu,
-				thrust::device_vector<float> 			beta_gpu,
+				thrust::device_vector<float>& 			datam_gpu,
+				thrust::device_vector<float>& 			params_gpu,
+				thrust::device_vector<float>& 			tau_gpu,
+				thrust::device_vector<float>& 			bvals_gpu,
+				thrust::device_vector<float>& 			alpha_gpu,
+				thrust::device_vector<float>& 			beta_gpu,
 				const int 					ndirections,
 				string 						output_file,
 				double 						seed,
@@ -39,7 +39,7 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 				thrust::device_vector<float>&			signals_gpu,
 				thrust::device_vector<float>&			isosignals_gpu,
-				curandState*&					randStates)
+				thrust::device_vector<curandState>&		randStates_gpu)
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
@@ -63,9 +63,11 @@ void init_Fibres_Multifibres(	//INPUT
 
 	bool gradnonlin = opts.grad_file.set();
 
-	int blocks = nvox; 
+	int blocks = nvox/VOXELS_BLOCK_MCMC;
+	if(nvox%VOXELS_BLOCK_MCMC) blocks++;
+	int nthreads_block = THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC;
   	dim3 Dim_Grid_MCMC(blocks, 1);
-  	dim3 Dim_Block_MCMC(THREADS_BLOCK_MCMC ,1);	///dimensions for MCMC
+  	dim3 Dim_Block_MCMC(nthreads_block ,1);	///dimensions for MCMC
 
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
 	float *params_ptr = thrust::raw_pointer_cast(params_gpu.data());	
@@ -78,8 +80,9 @@ void init_Fibres_Multifibres(	//INPUT
 	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
 	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
 	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
+	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (3*nfib + 9)*sizeof(float) + sizeof(int);
+	int amount_shared = VOXELS_BLOCK_MCMC*((THREADS_VOXEL_MCMC)*sizeof(double) + (3*nfib + 9)*sizeof(float) + sizeof(int));
 
 	myfile << "Shared Memory Used in init_Fibres_Multifibres: " << amount_shared << "\n";
 
@@ -90,10 +93,9 @@ void init_Fibres_Multifibres(	//INPUT
 	int total_threads= nvox;
 	int blocks_Rand = total_threads/THREADS_BLOCK_RAND;
 	if(total_threads%THREADS_BLOCK_RAND) blocks_Rand++;
-	cudaMalloc(&randStates,blocks_Rand*THREADS_BLOCK_RAND*sizeof(curandState)); 
 	dim3 Dim_Grid_Rand(blocks_Rand,1);
 	dim3 Dim_Block_Rand(THREADS_BLOCK_RAND,1); 
-	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates,seed);
+	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates_ptr,seed);
 	sync_check("Setup_Randoms_kernel");
 
 	gettimeofday(&t2,NULL);
@@ -104,18 +106,18 @@ void init_Fibres_Multifibres(	//INPUT
 }
 
 void runmcmc_burnin(	//INPUT
-			thrust::device_vector<float> 			datam_gpu,
-			thrust::device_vector<float> 			bvals_gpu,
-			thrust::device_vector<float> 			alpha_gpu,
-			thrust::device_vector<float> 			beta_gpu,
+			thrust::device_vector<float>& 			datam_gpu,
+			thrust::device_vector<float>& 			bvals_gpu,
+			thrust::device_vector<float>& 			alpha_gpu,
+			thrust::device_vector<float>& 			beta_gpu,
 			const int 					ndirections,
-			curandState*&					randStates,
 			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
 			thrust::device_vector<float>&			signals_gpu,
-			thrust::device_vector<float>&			isosignals_gpu)
+			thrust::device_vector<float>&			isosignals_gpu,
+			thrust::device_vector<curandState>&		randStates_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	
@@ -156,12 +158,14 @@ void runmcmc_burnin(	//INPUT
 
 	myfile << "Processing " << nvox << " voxels \n";
 
-  	int blocks = nvox;        
+  	int blocks = nvox/VOXELS_BLOCK_MCMC;
+	if(nvox%VOXELS_BLOCK_MCMC) blocks++;
+	int nthreads_block = THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC;
   	dim3 Dim_Grid(blocks, 1);
-  	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
+  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC   
 
    	myfile << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n"; 	
+   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n"; 	
 
 
 	//get pointers
@@ -173,6 +177,7 @@ void runmcmc_burnin(	//INPUT
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
 	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
 	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
+	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
 	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
 	float *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
@@ -181,12 +186,12 @@ void runmcmc_burnin(	//INPUT
 
 	float *records_null = thrust::raw_pointer_cast(recors_null_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState);
+	int amount_shared = VOXELS_BLOCK_MCMC*((THREADS_VOXEL_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState));
 
 	myfile << "Shared Memory Used in runmcmc_burnin: " << amount_shared << "\n";
 
    	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.nburn.value(), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.nburn.value(), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
    		sync_check("runmcmc_burnin_kernel");
    	}
 
@@ -199,16 +204,16 @@ void runmcmc_burnin(	//INPUT
 
 
 void runmcmc_record(	//INPUT
-			thrust::device_vector<float> 			datam_gpu,
-			thrust::device_vector<float> 			bvals_gpu,
-			thrust::device_vector<float> 			alpha_gpu,
-			thrust::device_vector<float> 			beta_gpu,
-			thrust::device_vector<FibreGPU> 		fibres_gpu,
-			thrust::device_vector<MultifibreGPU> 		multifibres_gpu,
-			thrust::device_vector<float>			signals_gpu,
-			thrust::device_vector<float>			isosignals_gpu,
+			thrust::device_vector<float>& 			datam_gpu,
+			thrust::device_vector<float>& 			bvals_gpu,
+			thrust::device_vector<float>& 			alpha_gpu,
+			thrust::device_vector<float>& 			beta_gpu,
+			thrust::device_vector<FibreGPU>& 		fibres_gpu,
+			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
+			thrust::device_vector<float>&			signals_gpu,
+			thrust::device_vector<float>&			isosignals_gpu,
 			const int 					ndirections,
-			curandState*&					randStates,
+			thrust::device_vector<curandState>&		randStates_gpu,
 			string 						output_file, 
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,
@@ -232,7 +237,6 @@ void runmcmc_record(	//INPUT
    	time=0;
 
    	gettimeofday(&t_tot1,NULL);
-
 
 	int totalrecords = (opts.njumps.value()/opts.sampleevery.value()); 
 	
@@ -260,12 +264,14 @@ void runmcmc_record(	//INPUT
    
 	myfile << "Processing " << nvox << " voxels \n";
    
-  	int blocks = nvox;        
+  	int blocks = nvox/VOXELS_BLOCK_MCMC;
+	int nthreads_block = THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC;
+	if(nvox%VOXELS_BLOCK_MCMC) blocks++;
   	dim3 Dim_Grid(blocks, 1);
-  	dim3 Dim_Block(THREADS_BLOCK_MCMC,1);	//dimensions for MCMC   
+  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC   
 
    	myfile << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_MCMC << "\n"; 	
+   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n"; 	
 
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
@@ -276,6 +282,7 @@ void runmcmc_record(	//INPUT
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
 	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
 	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
+	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
 	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
 	float *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
@@ -292,12 +299,12 @@ void runmcmc_record(	//INPUT
 	float *rph_ptr = thrust::raw_pointer_cast(rph_gpu.data());
 	float *rf_ptr = thrust::raw_pointer_cast(rf_gpu.data());
 
-	int amount_shared = (THREADS_BLOCK_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState);
+	int amount_shared = VOXELS_BLOCK_MCMC*((THREADS_VOXEL_MCMC)*sizeof(double) + (10*nfib + 27)*sizeof(float) + (7*nfib + 20)*sizeof(int)+ sizeof(curandState));
 
 	myfile << "Shared Memory Used in runmcmc_record: " << amount_shared << "\n";
 
    	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.njumps.value(), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);   
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.njumps.value(), opts.nburn.value(), opts.sampleevery.value(), totalrecords, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr, rf0_ptr, rtau_ptr, rs0_ptr, rd_ptr, rdstd_ptr, rR_ptr, rth_ptr, rph_ptr, rf_ptr);
    		sync_check("runmcmc_record_kernel");
    	}
 

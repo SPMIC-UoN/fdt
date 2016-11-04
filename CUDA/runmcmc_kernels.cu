@@ -91,24 +91,24 @@ __device__ inline void compute_iso_signal(float *isosignals,float *oldisosignals
 		*isosignals=expf(logf(*m_d/(*m_d+mbvals*sig2))*dalpha); // more numerically stable
 	}
 }
-__device__ inline void restore_signals(float* signals, float* oldsignals, int idVOX, int idSubVOX, int mydirs, int nfib, int ndirections, int threadsBlock){
+__device__ inline void restore_signals(float* signals, float* oldsignals, int idVOX, int idSubVOX, int mydirs, int nfib, int ndirections){
 	for(int f=0;f<nfib;f++){
 		for(int i=0; i<mydirs; i++){
-			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
+			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 			signals[pos] = oldsignals[pos];
 		}	
 	}
 }
-__device__ inline void restore_isosignals(float* isosignals, float* oldisosignals, int idVOX, int idSubVOX, int mydirs, int ndirections, int threadsBlock){
+__device__ inline void restore_isosignals(float* isosignals, float* oldisosignals, int idVOX, int idSubVOX, int mydirs, int ndirections){
 	for(int i=0; i<mydirs; i++){
-		int pos = idVOX*ndirections + idSubVOX + i*threadsBlock;
+		int pos = idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 		isosignals[pos]=oldisosignals[pos];
 	}
 }
-__device__ inline void restore_angtmp_signals(float* signals, float* oldsignals,float* angtmp, float* oldangtmp, int idVOX, int idSubVOX, int mydirs, int nfib, int fibre, int ndirections, int threadsBlock){
+__device__ inline void restore_angtmp_signals(float* signals, float* oldsignals,float* angtmp, float* oldangtmp, int idVOX, int idSubVOX, int mydirs, int nfib, int fibre, int ndirections){
 	for(int i=0; i<mydirs; i++){
-		int pos = idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*threadsBlock;
-		int pos2 = idVOX*ndirections + idSubVOX + i*threadsBlock;
+		int pos = idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+		int pos2 = idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 		angtmp[pos]=oldangtmp[pos2];
 		signals[pos] = oldsignals[pos];	
 	}
@@ -141,7 +141,8 @@ __device__ inline float logIo(const float& x){
 
     	return y;
 }
-__device__ inline void compute_likelihood(int idSubVOX,float* m_S0,float *m_likelihood_en,float *m_f,float *signals,float *isosignals,const float *mdata,float* fsum,double *reduction, float* m_f0, const bool rician, float* m_tau,int mydirs, int threadsBlock, int ndirections, int nfib){
+
+__device__ inline void compute_likelihood(int idSubVOX,float* m_S0,float *m_likelihood_en,float *m_f,float *signals,float *isosignals,const float *mdata,float* fsum,double *reduction, float* m_f0, const bool rician, float* m_tau,int mydirs, int ndirections, int nfib){
 	
 	float pred;
 	int pos;
@@ -150,10 +151,10 @@ __device__ inline void compute_likelihood(int idSubVOX,float* m_S0,float *m_like
 	for(int i=0; i<mydirs; i++){
 		pred=0;
 	      	for(int f=0;f<nfib;f++){
-			pos = f*ndirections + idSubVOX + i*threadsBlock;
+			pos = f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 			pred= pred+m_f[f]*signals[pos];
 	     	}
-		pos = idSubVOX + i*threadsBlock;
+		pos = idSubVOX + i*THREADS_VOXEL_MCMC;
 		pred= *m_S0*(pred+(1-*fsum)*isosignals[pos]+*m_f0); //F0
 	
 		if(!rician){
@@ -167,8 +168,8 @@ __device__ inline void compute_likelihood(int idSubVOX,float* m_S0,float *m_like
 
 	__syncthreads();
 
-	unsigned int s2=threadsBlock;
-	for(unsigned int s=threadsBlock>>1; s>0; s>>=1) {
+	unsigned int s2=THREADS_VOXEL_MCMC;
+	for(unsigned int s=THREADS_VOXEL_MCMC>>1; s>0; s>>=1) {
 		if((s2%2)&&(idSubVOX==(s-1))) reduction[idSubVOX]= reduction[idSubVOX] + reduction[idSubVOX + s +1]; 
         	if (idSubVOX < s){
             		reduction[idSubVOX] = reduction[idSubVOX] + reduction[idSubVOX + s];
@@ -216,31 +217,47 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 								float*				signals,
 								float*				isosignals)
 {
-	int idSubVOX= threadIdx.x;
-	int threadsBlock = blockDim.x;
-	int idVOX= blockIdx.x;
+	int idSubVOX= threadIdx.x%THREADS_VOXEL_MCMC;
+	int idVOX= (blockIdx.x*VOXELS_BLOCK_MCMC)+int(threadIdx.x/THREADS_VOXEL_MCMC);
+	int idVOX_block =  threadIdx.x/THREADS_VOXEL_MCMC;
 	bool leader = (idSubVOX==0);
-
-	////////// DYNAMIC SHARED MEMORY ///////////
+	
+	// there may be several voxels per block: VOXELS_BLOCK_MCMC 
+	////////// DYNAMIC SHARED MEMORY ///////////				// each voxel:
 	extern __shared__ double shared[];
-	double* reduction = (double*)shared;				//threadsBlock
-
-	float* m_S0 = (float*) &reduction[threadsBlock];		//1
-	float* m_d = (float*) &m_S0[1];					//1
-	float* m_dstd =(float*) &m_d[1];				//1
-	float* m_R =(float*) &m_dstd[1];				//1	
-	float* m_f0 = (float*) &m_R[1];					//1
-	float* m_tau = (float*) &m_f0[1];				//1
-	float* m_th = (float*) &m_tau[1];				//nfib
-	float* m_ph = (float*) &m_th[nfib];				//nfib
-	float* m_f = (float*) &m_ph[nfib];				//nfib
-
-	float* fsum = (float*) &m_f[nfib];				//1
-	float* m_likelihood_en = (float*) &fsum[1];			//1
-	float* m_prior_en = (float*) &m_likelihood_en[1];		//1
-
-	int* posBV = (int*) &m_prior_en[1];				//1
+	double* reduction = (double*)shared;					//THREADS_VOXEL_MCMC
+	float* m_S0 = (float*) &reduction[THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC];//1
+	float* m_d = (float*) &m_S0[VOXELS_BLOCK_MCMC];				//1
+	float* m_dstd =(float*) &m_d[VOXELS_BLOCK_MCMC];			//1
+	float* m_R =(float*) &m_dstd[VOXELS_BLOCK_MCMC];			//1	
+	float* m_f0 = (float*) &m_R[VOXELS_BLOCK_MCMC];				//1
+	float* m_tau = (float*) &m_f0[VOXELS_BLOCK_MCMC];			//1
+	float* m_th = (float*) &m_tau[VOXELS_BLOCK_MCMC];			//nfib
+	float* m_ph = (float*) &m_th[VOXELS_BLOCK_MCMC*nfib];			//nfib
+	float* m_f = (float*) &m_ph[VOXELS_BLOCK_MCMC*nfib];			//nfib
+	float* fsum = (float*) &m_f[VOXELS_BLOCK_MCMC*nfib];			//1
+	float* m_likelihood_en = (float*) &fsum[VOXELS_BLOCK_MCMC];		//1
+	float* m_prior_en = (float*) &m_likelihood_en[VOXELS_BLOCK_MCMC];	//1
+	int* posBV = (int*) &m_prior_en[VOXELS_BLOCK_MCMC];			//1
 	////////// DYNAMIC SHARED MEMORY ///////////
+
+	///// UPDATE shared memory pointers depending on the Id of a voxel within a block /////
+										// each voxel:
+	reduction = &reduction[idVOX_block*THREADS_VOXEL_MCMC];			//THREADS_VOXEL_MCMC 
+	m_S0 = &m_S0[idVOX_block];						//1
+	m_d = &m_d[idVOX_block];						//1
+	m_dstd = &m_dstd[idVOX_block];						//1
+	m_R =&m_R[idVOX_block];							//1
+	m_f0 = &m_f0[idVOX_block];						//1
+	m_tau = &m_tau[idVOX_block];						//1
+	m_th = &m_th[idVOX_block*nfib];						//nfib
+	m_ph = &m_ph[idVOX_block*nfib];						//nfib
+	m_f = &m_f[idVOX_block*nfib];						//nfib
+	fsum = &fsum[idVOX_block];						//1
+	m_likelihood_en = &m_likelihood_en[idVOX_block];			//1
+	m_prior_en = &m_prior_en[idVOX_block];					//1
+	posBV = &posBV[idVOX_block];						//1
+	/////////////////////////////////////////////////////////////////////////////////////////////
 	
 	// m_s0-params[0]	m_d-params[1]	m_f-m_th-m_ph-params[add+2,3,4,5, etc..]	m_f0-params[nparams-1]
 	if(leader){
@@ -254,7 +271,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		multifibres[idVOX].m_S0_rej = 0;
 	
 		*m_d=params[idVOX*nparams_fit+1];
-		if(*m_d<0 || *m_d> UPPERDIFF) *m_d=2e-3f;			//this is in xfibres...after fit
+		if(*m_d<0 || *m_d> UPPERDIFF) *m_d=2e-3f;	//this is in xfibres...after fit
 		multifibres[idVOX].m_d = *m_d;
 		multifibres[idVOX].m_d_prior = 0.0f;
 		multifibres[idVOX].m_d_acc = 0;
@@ -264,7 +281,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 			*m_dstd=params[idVOX*nparams_fit+2];
 			float upper_d_std=0.01f;
 			if (model==3) upper_d_std=0.004f;
-      			if(*m_dstd<0.0f || *m_dstd>upper_d_std) *m_dstd=*m_d/10.0f; 	//this is in xfibres...after fit
+      			if(*m_dstd<0.0f || *m_dstd>upper_d_std) *m_dstd=*m_d/10.0f; //this is in xfibres...after fit
 			if (model==3){ 
 				*m_R=R_priormean;	
 			}else{ 
@@ -297,8 +314,8 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	}
 	__syncthreads();
 
-	int mydirs = ndirections/threadsBlock;
-	int mod = ndirections%threadsBlock;
+	int mydirs = ndirections/THREADS_VOXEL_MCMC;
+	int mod = ndirections%THREADS_VOXEL_MCMC;
 	if(mod&&(idSubVOX<mod)) mydirs++;
 
 	//------ Fibre constructor ------
@@ -369,11 +386,11 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	//compute_signal_pre
 	for(int f=0;f<nfib;f++){	
 		for(int i=0; i<mydirs; i++){
-			float myalpha = alpha[*posBV+idSubVOX+i*threadsBlock];
+			float myalpha = alpha[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC];
 			float cos_alpha_minus_theta=cosf(myalpha-m_th[f]);   
 			float cos_alpha_plus_theta=cosf(myalpha+m_th[f]);
-			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-			float aux = (cosf(m_ph[f]-beta[*posBV+idSubVOX+i*threadsBlock])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
+			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+			float aux = (cosf(m_ph[f]-beta[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
 		     	aux =  aux*aux;
 		 	angtmp[pos]= aux;
 		}
@@ -383,8 +400,8 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	float old;
 	for(int f=0;f<nfib;f++){
 		for(int i=0; i<mydirs; i++){
-			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-			compute_signal(&signals[pos],&old,bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+			int pos = idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+			compute_signal(&signals[pos],&old,bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 		}
 	}
 
@@ -396,7 +413,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		if(*m_d>=0 && *m_d<=UPPERDIFF){
 			if (model==3){
  	          		//float alpha=3.0; float beta=4000;  //Gamma_prior around 0.5-1E-3
- 	          		multifibres[idVOX].m_d_prior =(1.0f-3.0f)*logf(*m_d)+4000.0f**m_d;
+ 	          		multifibres[idVOX].m_d_prior =(1.0f-3.0f)*logf(*m_d)+4000.0f*(*m_d);
  	        	}
        		}
 
@@ -457,15 +474,15 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 	//------ initialise_energies ------
 	//compute_iso_signal()
 	for(int i=0; i<mydirs; i++){
-		int pos = idVOX*ndirections + idSubVOX + i*threadsBlock;	
-		compute_iso_signal(&isosignals[pos],&old,bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,model);
+		int pos = idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+		compute_iso_signal(&isosignals[pos],&old,bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,model);
 	}		
  
 	__syncthreads();
 
 	//------ initialise_energies ------
 	//compute_likelihood()
-	compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[idVOX*nfib*ndirections],&isosignals[idVOX*ndirections],&datam[idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+	compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[idVOX*nfib*ndirections],&isosignals[idVOX*ndirections],&datam[idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 
 	__syncthreads();
 
@@ -473,7 +490,7 @@ extern "C" __global__ void init_Fibres_Multifibres_kernel(	//INPUT
 		multifibres[idVOX].m_likelihood_en = *m_likelihood_en;
 	      	//------ initialise_energies ------
 		//compute_energy();	
-		multifibres[idVOX].m_energy = *m_prior_en+*m_likelihood_en;
+		multifibres[idVOX].m_energy = (*m_prior_en)+(*m_likelihood_en);
 
 	    	//initialise_props();
 	      	multifibres[idVOX].m_S0_prop=multifibres[idVOX].m_S0/10.0f; 
@@ -530,86 +547,161 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						float*				rph, 
 						float*				rf)
 {	
-	int idSubVOX= threadIdx.x;
-	int threadsBlock = blockDim.x;
+	int idSubVOX= threadIdx.x%THREADS_VOXEL_MCMC;
+	int idVOX_block =  threadIdx.x/THREADS_VOXEL_MCMC;
 	bool leader = (idSubVOX==0);
 
-	////////// DYNAMIC SHARED MEMORY ///////////
+	// there may be several voxels per block: VOXELS_BLOCK_MCMC 
+	////////// DYNAMIC SHARED MEMORY ///////////				// each voxel:
 	extern __shared__ double shared[];
-	curandState* localrandState = (curandState*)shared;		//1 curandState
-	double* reduction = (double*)&shared[2];			//threadsBlock (curandState is 48 bytes, jump 64 bytes)
+	curandState* localrandState = (curandState*)shared;			//1 curandState (curandState is 48 bytes, jump 64 bytes*VOXELS_BLOCK_MCMC)
+	double* reduction = (double*)&localrandState[VOXELS_BLOCK_MCMC];	// THREADS_VOXEL_MCMC 
 
-	float* m_S0 = (float*) &reduction[threadsBlock];		//1
-	float* m_d = (float*) &m_S0[1];					//1
-	float* m_dstd =(float*) &m_d[1];				//1
-	float* m_R =(float*) &m_dstd[1];				//1	
-	float* m_f0 = (float*) &m_R[1];					//1
-	float* m_tau = (float*) &m_f0[1];				//1
-	float* m_th = (float*) &m_tau[1];				//nfib
-	float* m_ph = (float*) &m_th[nfib];				//nfib
-	float* m_f = (float*) &m_ph[nfib];				//nfib
+	float* m_S0 = (float*) &reduction[VOXELS_BLOCK_MCMC*THREADS_VOXEL_MCMC];//1
+	float* m_d = (float*) &m_S0[VOXELS_BLOCK_MCMC];				//1
+	float* m_dstd =(float*) &m_d[VOXELS_BLOCK_MCMC];			//1
+	float* m_R =(float*) &m_dstd[VOXELS_BLOCK_MCMC];			//1	
+	float* m_f0 = (float*) &m_R[VOXELS_BLOCK_MCMC];				//1
+	float* m_tau = (float*) &m_f0[VOXELS_BLOCK_MCMC];			//1
+	float* m_th = (float*) &m_tau[VOXELS_BLOCK_MCMC];			//nfib
+	float* m_ph = (float*) &m_th[VOXELS_BLOCK_MCMC*nfib];			//nfib
+	float* m_f = (float*) &m_ph[VOXELS_BLOCK_MCMC*nfib];			//nfib
 
-	float* m_S0_prior = (float*) &m_f[nfib];			//1
-	float* m_d_prior = (float*) &m_S0_prior[1];			//1
-	float* m_dstd_prior = (float*) &m_d_prior[1];			//1
-	float* m_R_prior = (float*) &m_dstd_prior[1];			//1	
-	float* m_f0_prior = (float*) &m_R_prior[1];			//1
-	float* m_tau_prior = (float*) &m_f0_prior[1];			//1
-	float* m_th_prior = (float*) &m_tau_prior[1];			//nfib
-	float* m_ph_prior = (float*) &m_th_prior[nfib];			//nfib
-	float* m_f_prior = (float*) &m_ph_prior[nfib];			//nfib
+	float* m_S0_prior = (float*) &m_f[VOXELS_BLOCK_MCMC*nfib];		//1
+	float* m_d_prior = (float*) &m_S0_prior[VOXELS_BLOCK_MCMC];		//1
+	float* m_dstd_prior = (float*) &m_d_prior[VOXELS_BLOCK_MCMC];		//1
+	float* m_R_prior = (float*) &m_dstd_prior[VOXELS_BLOCK_MCMC];		//1	
+	float* m_f0_prior = (float*) &m_R_prior[VOXELS_BLOCK_MCMC];		//1
+	float* m_tau_prior = (float*) &m_f0_prior[VOXELS_BLOCK_MCMC];		//1
+	float* m_th_prior = (float*) &m_tau_prior[VOXELS_BLOCK_MCMC];		//nfib
+	float* m_ph_prior = (float*) &m_th_prior[VOXELS_BLOCK_MCMC*nfib];	//nfib
+	float* m_f_prior = (float*) &m_ph_prior[VOXELS_BLOCK_MCMC*nfib];	//nfib
 
-	float* m_S0_prop = (float*) &m_f_prior[nfib];			//1
-	float* m_d_prop = (float*) &m_S0_prop[1];			//1
-	float* m_dstd_prop = (float*) &m_d_prop[1];			//1
-	float* m_R_prop = (float*) &m_dstd_prop[1];			//1
-	float* m_f0_prop = (float*) &m_R_prop[1];			//1
-	float* m_tau_prop = (float*) &m_f0_prop[1];			//1
-	float* m_th_prop = (float*) &m_tau_prop[1];			//nfib
-	float* m_ph_prop = (float*) &m_th_prop[nfib];			//nfib
-	float* m_f_prop = (float*) &m_ph_prop[nfib];			//nfib
+	float* m_S0_prop = (float*) &m_f_prior[VOXELS_BLOCK_MCMC*nfib];		//1
+	float* m_d_prop = (float*) &m_S0_prop[VOXELS_BLOCK_MCMC];		//1
+	float* m_dstd_prop = (float*) &m_d_prop[VOXELS_BLOCK_MCMC];		//1
+	float* m_R_prop = (float*) &m_dstd_prop[VOXELS_BLOCK_MCMC];		//1
+	float* m_f0_prop = (float*) &m_R_prop[VOXELS_BLOCK_MCMC];		//1
+	float* m_tau_prop = (float*) &m_f0_prop[VOXELS_BLOCK_MCMC];		//1
+	float* m_th_prop = (float*) &m_tau_prop[VOXELS_BLOCK_MCMC];		//nfib
+	float* m_ph_prop = (float*) &m_th_prop[VOXELS_BLOCK_MCMC*nfib];		//nfib
+	float* m_f_prop = (float*) &m_ph_prop[VOXELS_BLOCK_MCMC*nfib];		//nfib
 
-	float* fsum = (float*) &m_f_prop[nfib];				//1
-	float* m_likelihood_en = (float*) &fsum[1];			//1
-	float* m_prior_en = (float*) &m_likelihood_en[1];		//1
-	float* m_old_prior_en = (float*) &m_prior_en[1];		//1
-	float* fm_prior_en = (float*) &m_old_prior_en[1];		//nfib		
-	float* fm_old_prior_en = (float*) &fm_prior_en[nfib];		//1		
-	float* m_energy = (float*) &fm_old_prior_en[1];			//1
-	float* m_old_energy = (float*) &m_energy[1];			//1
-	float* old = (float*) &m_old_energy[1];				//2
+	float* fsum = (float*) &m_f_prop[VOXELS_BLOCK_MCMC*nfib];		//1
+	float* m_likelihood_en = (float*) &fsum[VOXELS_BLOCK_MCMC];		//1
+	float* m_prior_en = (float*) &m_likelihood_en[VOXELS_BLOCK_MCMC];	//1
+	float* m_old_prior_en = (float*) &m_prior_en[VOXELS_BLOCK_MCMC];	//1
+	float* fm_prior_en = (float*) &m_old_prior_en[VOXELS_BLOCK_MCMC];	//nfib
+	float* fm_old_prior_en = (float*) &fm_prior_en[VOXELS_BLOCK_MCMC*nfib];	//1
+	float* m_energy = (float*) &fm_old_prior_en[VOXELS_BLOCK_MCMC];		//1
+	float* m_old_energy = (float*) &m_energy[VOXELS_BLOCK_MCMC];		//1
+	float* old = (float*) &m_old_energy[VOXELS_BLOCK_MCMC];			//2
 
-	int* m_S0_acc = (int*) &old[2];					//1
-	int* m_d_acc = (int*) &m_S0_acc[1];				//1
-	int* m_dstd_acc = (int*) &m_d_acc[1];				//1
-	int* m_R_acc = (int*) &m_dstd_acc[1];				//1
-	int* m_f0_acc = (int*) &m_R_acc[1];				//1
-	int* m_tau_acc = (int*) &m_f0_acc[1];				//1
-	int* m_th_acc = (int*) &m_tau_acc[1];				//nfib
-	int* m_ph_acc = (int*) &m_th_acc[nfib];				//nfib
-	int* m_f_acc = (int*) &m_ph_acc[nfib];				//nfib
+	int* m_S0_acc = (int*) &old[VOXELS_BLOCK_MCMC*2];			//1
+	int* m_d_acc = (int*) &m_S0_acc[VOXELS_BLOCK_MCMC];			//1
+	int* m_dstd_acc = (int*) &m_d_acc[VOXELS_BLOCK_MCMC];			//1
+	int* m_R_acc = (int*) &m_dstd_acc[VOXELS_BLOCK_MCMC];			//1
+	int* m_f0_acc = (int*) &m_R_acc[VOXELS_BLOCK_MCMC];			//1
+	int* m_tau_acc = (int*) &m_f0_acc[VOXELS_BLOCK_MCMC];			//1
+	int* m_th_acc = (int*) &m_tau_acc[VOXELS_BLOCK_MCMC];			//nfib
+	int* m_ph_acc = (int*) &m_th_acc[VOXELS_BLOCK_MCMC*nfib];		//nfib
+	int* m_f_acc = (int*) &m_ph_acc[VOXELS_BLOCK_MCMC*nfib];		//nfib
 
-	int* m_S0_rej = (int*) &m_f_acc[nfib];				//1
-	int* m_d_rej = (int*) &m_S0_rej[1];				//1
-	int* m_dstd_rej = (int*) &m_d_rej[1];				//1	
-	int* m_R_rej = (int*) &m_dstd_rej[1];				//1	
-	int* m_f0_rej = (int*) &m_R_rej[1];				//1
-	int* m_tau_rej = (int*) &m_f0_rej[1];				//1	
-	int* m_th_rej = (int*) &m_tau_rej[1];				//nfib
-	int* m_ph_rej = (int*) &m_th_rej[nfib];				//nfib
-	int* m_f_rej = (int*) &m_ph_rej[nfib];				//nfib
+	int* m_S0_rej = (int*) &m_f_acc[VOXELS_BLOCK_MCMC*nfib];		//1
+	int* m_d_rej = (int*) &m_S0_rej[VOXELS_BLOCK_MCMC];			//1
+	int* m_dstd_rej = (int*) &m_d_rej[VOXELS_BLOCK_MCMC];			//1
+	int* m_R_rej = (int*) &m_dstd_rej[VOXELS_BLOCK_MCMC];			//1
+	int* m_f0_rej = (int*) &m_R_rej[VOXELS_BLOCK_MCMC];			//1
+	int* m_tau_rej = (int*) &m_f0_rej[VOXELS_BLOCK_MCMC];			//1
+	int* m_th_rej = (int*) &m_tau_rej[VOXELS_BLOCK_MCMC];			//nfib
+	int* m_ph_rej = (int*) &m_th_rej[VOXELS_BLOCK_MCMC*nfib];		//nfib
+	int* m_f_rej = (int*) &m_ph_rej[VOXELS_BLOCK_MCMC*nfib];		//nfib
 	
-	int* rejflag = (int*) &m_f_rej[nfib];				//3					
-	int* m_lam_jump = (int*) &rejflag[3];				//nfib	
-	int* idVOX = (int*) &m_lam_jump[nfib];				//1		
-	int* count_update = (int*) &idVOX[1];				//1	
-	int* recordcount = (int*) &count_update[1];			//1
-	int* sample = (int*) &recordcount[1];				//1		
-	int* posBV = (int*) &sample[1];					//1
+	int* rejflag = (int*) &m_f_rej[VOXELS_BLOCK_MCMC*nfib];			//3
+	int* m_lam_jump = (int*) &rejflag[VOXELS_BLOCK_MCMC*3];			//nfib
+	int* idVOX = (int*) &m_lam_jump[VOXELS_BLOCK_MCMC*nfib];		//1
+	int* count_update = (int*) &idVOX[VOXELS_BLOCK_MCMC];			//1	
+	int* recordcount = (int*) &count_update[VOXELS_BLOCK_MCMC];		//1
+	int* sample = (int*) &recordcount[VOXELS_BLOCK_MCMC];			//1
+	int* posBV = (int*) &sample[VOXELS_BLOCK_MCMC];				//1
 	////////// DYNAMIC SHARED MEMORY ///////////
+	
+	///// UPDATE shared memory pointers depending on the Id of a voxel within a block /////
+										//each voxel:
+	localrandState = (curandState*)&localrandState[idVOX_block];			// 1 curandState: jump 2 doubles per State
+	reduction = &reduction[idVOX_block*THREADS_VOXEL_MCMC];			// THREADS_VOXEL_MCMC 
+
+	m_S0 = &m_S0[idVOX_block];						//1
+	m_d = &m_d[idVOX_block];						//1
+	m_dstd = &m_dstd[idVOX_block];						//1
+	m_R =&m_R[idVOX_block];							//1
+	m_f0 = &m_f0[idVOX_block];						//1
+	m_tau = &m_tau[idVOX_block];						//1
+	m_th = &m_th[idVOX_block*nfib];						//nfib
+	m_ph = &m_ph[idVOX_block*nfib];						//nfib
+	m_f = &m_f[idVOX_block*nfib];						//nfib
+
+	m_S0_prior = &m_S0_prior[idVOX_block];					//1
+	m_d_prior = &m_d_prior[idVOX_block];					//1
+	m_dstd_prior = &m_dstd_prior[idVOX_block];				//1
+	m_R_prior = &m_R_prior[idVOX_block];					//1
+	m_f0_prior = &m_f0_prior[idVOX_block];					//1
+	m_tau_prior = &m_tau_prior[idVOX_block];				//1
+	m_th_prior = &m_th_prior[idVOX_block*nfib];				//nfib
+	m_ph_prior = &m_ph_prior[idVOX_block*nfib];				//nfib
+	m_f_prior = &m_f_prior[idVOX_block*nfib];				//nfib
+
+	m_S0_prop = &m_S0_prop[idVOX_block];					//1
+	m_d_prop = &m_d_prop[idVOX_block];					//1
+	m_dstd_prop = &m_dstd_prop[idVOX_block];				//1
+	m_R_prop = &m_R_prop[idVOX_block];					//1
+	m_f0_prop = &m_f0_prop[idVOX_block];					//1
+	m_tau_prop = &m_tau_prop[idVOX_block];					//1
+	m_th_prop = &m_th_prop[idVOX_block*nfib];				//nfib
+	m_ph_prop = &m_ph_prop[idVOX_block*nfib];				//nfib
+	m_f_prop = &m_f_prop[idVOX_block*nfib];					//nfib
+
+	fsum = &fsum[idVOX_block];						//1
+	m_likelihood_en = &m_likelihood_en[idVOX_block];			//1
+	m_prior_en = &m_prior_en[idVOX_block];					//1
+	m_old_prior_en = &m_old_prior_en[idVOX_block];				//1
+	fm_prior_en = &fm_prior_en[idVOX_block*nfib];				//nfib
+	fm_old_prior_en = &fm_old_prior_en[idVOX_block];			//1
+	m_energy = &m_energy[idVOX_block];					//1
+	m_old_energy = &m_old_energy[idVOX_block];				//1
+	old = &old[idVOX_block*2];						//2
+
+	m_S0_acc = &m_S0_acc[idVOX_block];					//1
+	m_d_acc = &m_d_acc[idVOX_block];					//1
+	m_dstd_acc = &m_dstd_acc[idVOX_block];					//1
+	m_R_acc = &m_R_acc[idVOX_block];					//1
+	m_f0_acc = &m_f0_acc[idVOX_block];					//1
+	m_tau_acc = &m_tau_acc[idVOX_block];					//1
+	m_th_acc = &m_th_acc[idVOX_block*nfib];					//nfib
+	m_ph_acc = &m_ph_acc[idVOX_block*nfib];					//nfib
+	m_f_acc = &m_f_acc[idVOX_block*nfib];					//nfib
+
+	m_S0_rej = &m_S0_rej[idVOX_block];					//1
+	m_d_rej = &m_d_rej[idVOX_block];					//1
+	m_dstd_rej = &m_dstd_rej[idVOX_block];					//1
+	m_R_rej = &m_R_rej[idVOX_block];					//1
+	m_f0_rej = &m_f0_rej[idVOX_block];					//1
+	m_tau_rej = &m_tau_rej[idVOX_block];					//1
+	m_th_rej = &m_th_rej[idVOX_block*nfib];					//nfib
+	m_ph_rej = &m_ph_rej[idVOX_block*nfib];					//nfib
+	m_f_rej = &m_f_rej[idVOX_block*nfib];					//nfib
+	
+	rejflag = &rejflag[idVOX_block*3];					//3
+	m_lam_jump =  &m_lam_jump[idVOX_block*nfib];				//nfib
+	idVOX = &idVOX[idVOX_block];						//1
+	count_update = &count_update[idVOX_block];				//1
+	recordcount = &recordcount[idVOX_block];				//1
+	sample = &sample[idVOX_block];						//1
+	posBV = &posBV[idVOX_block];						//1
+	/////////////////////////////////////////////////////////////////////////////////////////////
 
 	if (leader){
-		*idVOX= blockIdx.x;
+		*idVOX= (blockIdx.x*VOXELS_BLOCK_MCMC)+int(threadIdx.x/THREADS_VOXEL_MCMC);
 		*count_update = iters_burnin;	//count for updates
 		*recordcount = 0;	
 		*sample=1;		//the next number of sample.....the index start in 0
@@ -692,8 +784,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 
 	__syncthreads();
 
-	int mydirs = ndirections/threadsBlock;
-	int mod = ndirections%threadsBlock;
+	int mydirs = ndirections/THREADS_VOXEL_MCMC;
+	int mod = ndirections%THREADS_VOXEL_MCMC;
 	if(mod&&(idSubVOX<mod)) mydirs++;
 
 	if(idSubVOX<nfib){
@@ -725,11 +817,11 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 	//compute_signal_pre
 	for(int f=0;f<nfib;f++){
 		for(int i=0; i<mydirs; i++){	
-			float myalpha = alpha[*posBV+idSubVOX+i*threadsBlock];		
+			float myalpha = alpha[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC];		
 			float cos_alpha_minus_theta=cosf(myalpha-m_th[f]);   
 			float cos_alpha_plus_theta=cosf(myalpha+m_th[f]);
-			int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-			float aux = (cosf(m_ph[f]-beta[*posBV+idSubVOX+i*threadsBlock])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
+			int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+			float aux = (cosf(m_ph[f]-beta[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
 		     	aux =  aux*aux;
 		 	angtmp[pos]= aux;
 		}
@@ -768,7 +860,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			}
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 			__syncthreads();
 
 			if (leader){
@@ -809,7 +901,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			}
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 			__syncthreads();
 
 			if (leader){
@@ -830,7 +922,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		if (leader){
 			propose(m_d,old,*m_d_prop,localrandState);
 			//compute_d_prior()      
-			old[1]=*m_d_prior;	
+			old[1]=*m_d_prior;
 			if(*m_d<0.0f || *m_d>UPPERDIFF){
 				rejflag[0]=true;
 			}else{
@@ -847,14 +939,14 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		//compute_signal()
 		for(int f=0;f<nfib;f++){
 			for(int i=0; i<mydirs; i++){
-				int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+				int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 		}
 		//compute_iso_signal()
 		for(int i=0; i<mydirs; i++){
-			int pos = *idVOX*ndirections + idSubVOX + i*threadsBlock;
-			compute_iso_signal(&isosignals[pos],&oldisosignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,model);
+			int pos = *idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+			compute_iso_signal(&isosignals[pos],&oldisosignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,model);
 		}				
 
 		if (leader){
@@ -863,7 +955,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}
 		__syncthreads();	
 		//compute_likelihood()
-		compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);		
+		compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);		
 		__syncthreads();
 				
 		if (leader){
@@ -878,15 +970,15 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				if (leader){
 					reject(m_d,m_d_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_d_rej);
 				}
-				restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
-				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
+				restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
+				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections);
 			}
         	}else{ 
 			if (leader){
 				reject(m_d,m_d_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_d_rej);
 			}
-      			restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
-			restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
+      			restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
+			restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections);
         	}
 		 __syncthreads(); // old
 ////////////////////////////////////////////////////////////////// D_STD
@@ -909,15 +1001,15 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			if(model==2){
 				for(int f=0;f<nfib;f++){
 					for(int i=0; i<mydirs; i++){				
-						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 					}
 				}
 			}
 			//compute_iso_signal()
 			for(int i=0; i<mydirs; i++){
-				int pos = *idVOX*ndirections + idSubVOX + i*threadsBlock;
-				compute_iso_signal(&isosignals[pos],&oldisosignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,model);
+				int pos = *idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+				compute_iso_signal(&isosignals[pos],&oldisosignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,model);
 			}
 			if (leader){
 				//compute_prior()
@@ -925,7 +1017,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			}
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 			__syncthreads();
 
 			if (leader){
@@ -941,18 +1033,18 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						reject(m_dstd,m_dstd_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_dstd_rej);
 					}
 					if(model==2){
-						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
 					}
-					restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
+					restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections);
 				}
 			}else{ 
 				if (leader){
 					reject(m_dstd,m_dstd_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_dstd_rej);
 				}
 				if(model==2){
-					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
 				}
-				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections,threadsBlock);
+				restore_isosignals(isosignals,oldisosignals,*idVOX,idSubVOX,mydirs,ndirections);
 			}
 			 __syncthreads(); // old
 ////////////////////////////////////////////////////////////////// R
@@ -991,8 +1083,8 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				//compute_signal()
 				for(int f=0;f<nfib;f++){
 					for(int i=0; i<mydirs; i++){				
-						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*threadsBlock;
-						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+						int pos = *idVOX*ndirections*nfib + f*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+						compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 					}
 				}
 				if (leader){
@@ -1001,7 +1093,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 				}
 				__syncthreads();
 				//compute_likelihood()
-				compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+				compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 				__syncthreads();
 
 				if (leader){
@@ -1016,13 +1108,13 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 						if (leader){
 							reject(m_R,m_R_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_R_rej);
 						}
-						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+						restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
 					}
 				}else{ 
 					if (leader){
 						reject(m_R,m_R_prior,old,m_prior_en,m_old_prior_en,m_energy,m_old_energy,m_R_rej);
 					}
-					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections,threadsBlock);
+					restore_signals(signals,oldsignals,*idVOX,idSubVOX,mydirs,nfib,ndirections);
 				}
 				 __syncthreads(); // old
 			}
@@ -1042,7 +1134,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 		}
 		__syncthreads();
 		//compute_likelihood()
-		compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+		compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 		__syncthreads();
 
 		if (leader){
@@ -1079,17 +1171,17 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			//compute_signal()
 			//compute_signal_pre	
 			for(int i=0; i<mydirs; i++){
-				float myalpha = alpha[*posBV+idSubVOX+i*threadsBlock];
+				float myalpha = alpha[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC];
 				float cos_alpha_minus_theta=cosf(myalpha-m_th[fibre]);   
 				float cos_alpha_plus_theta=cosf(myalpha+m_th[fibre]);
-				int pos = *idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*threadsBlock;
-				int pos2 = *idVOX*ndirections + idSubVOX + i*threadsBlock;
+				int pos = *idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+				int pos2 = *idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 				oldangtmp[pos2]=angtmp[pos];
-				float aux = (cosf(m_ph[fibre]-beta[*posBV+idSubVOX+i*threadsBlock])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
+				float aux = (cosf(m_ph[fibre]-beta[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
 		     		aux =  aux*aux;
 		 		angtmp[pos]= aux;
 
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 			if (leader){
 				//compute_prior()
@@ -1097,7 +1189,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			}
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 			__syncthreads();
 
 			if (leader){ 
@@ -1112,7 +1204,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					rejectF(&m_th[fibre],&m_th_prior[fibre],old,m_prior_en,m_old_prior_en,&fm_prior_en[fibre],fm_old_prior_en,m_energy,m_old_energy,&m_th_rej[fibre]);
 				}
 				//compute_signal_pre undo
-				restore_angtmp_signals(signals,oldsignals,angtmp,oldangtmp,*idVOX,idSubVOX,mydirs,nfib,fibre,ndirections,threadsBlock);
+				restore_angtmp_signals(signals,oldsignals,angtmp,oldangtmp,*idVOX,idSubVOX,mydirs,nfib,fibre,ndirections);
 			}
 			__syncthreads();
 ///////////////////////////////////////     PH
@@ -1130,17 +1222,17 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			//compute_signal()
 			//compute_signal_pre
 			for(int i=0; i<mydirs; i++){
-				float myalpha = alpha[*posBV+idSubVOX+i*threadsBlock];
+				float myalpha = alpha[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC];
 				float cos_alpha_minus_theta=cosf(myalpha-m_th[fibre]);   
 			  	float cos_alpha_plus_theta=cosf(myalpha+m_th[fibre]);
-				int pos = *idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*threadsBlock;
-				int pos2 = *idVOX*ndirections + idSubVOX + i*threadsBlock;
+				int pos = *idVOX*ndirections*nfib + fibre*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
+				int pos2 = *idVOX*ndirections + idSubVOX + i*THREADS_VOXEL_MCMC;
 				oldangtmp[pos2]=angtmp[pos];
-				float aux = (cosf(m_ph[fibre]-beta[*posBV+idSubVOX+i*threadsBlock])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
+				float aux = (cosf(m_ph[fibre]-beta[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC])*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2.0f)+(cos_alpha_minus_theta+cos_alpha_plus_theta)/2.0f;
 		     		aux =  aux*aux;
 		 		angtmp[pos]= aux;
 				
-				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*threadsBlock],m_d,m_dstd,m_R,angtmp[pos],model);
+				compute_signal(&signals[pos],&oldsignals[pos],bvals[*posBV+idSubVOX+i*THREADS_VOXEL_MCMC],m_d,m_dstd,m_R,angtmp[pos],model);
 			}
 
 			if (leader){
@@ -1149,7 +1241,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 			}
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);
 			__syncthreads();
 
 			if (leader){
@@ -1165,7 +1257,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 					rejectF(&m_ph[fibre],&m_ph_prior[fibre],old,m_prior_en,m_old_prior_en,&fm_prior_en[fibre],fm_old_prior_en,m_energy,m_old_energy,&m_ph_rej[fibre]);
 				}
 				//compute_signal_pre undo
-				restore_angtmp_signals(signals,oldsignals,angtmp,oldangtmp,*idVOX,idSubVOX,mydirs,nfib,fibre,ndirections,threadsBlock);
+				restore_angtmp_signals(signals,oldsignals,angtmp,oldangtmp,*idVOX,idSubVOX,mydirs,nfib,fibre,ndirections);
 			}
 
 			__syncthreads();
@@ -1202,7 +1294,7 @@ extern "C" __global__ void runmcmc_kernel(	//INPUT
 
 			__syncthreads();
 			//compute_likelihood()
-			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,threadsBlock,ndirections,nfib);	
+			compute_likelihood(idSubVOX,m_S0,m_likelihood_en,m_f,&signals[*idVOX*nfib*ndirections],&isosignals[*idVOX*ndirections],&datam[*idVOX*ndirections],fsum,reduction,m_f0,rician,m_tau,mydirs,ndirections,nfib);	
 			__syncthreads();
 
 			if (leader){

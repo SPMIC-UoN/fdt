@@ -11,6 +11,7 @@
 #include <device_vector.h> 
 
 #include "fibre_gpu.h"
+#include <curand_kernel.h>
 
 //implemented and used in xfibres_gpu.cu
 void fit(	//INPUT
@@ -68,7 +69,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 
 //implemented and used in xfibres_gpu.cu
 void mix_params(	//INPUT
-			thrust::host_vector<float>   		params_repeat_gpu,
+			thrust::host_vector<float>   			params_repeat_gpu,
 			thrust::host_vector<int>			vox_repeat,
 			int						nrepeat,
 			int						nvox,
@@ -101,6 +102,18 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 					thrust::device_vector<float>&			rph_gpu,
 					thrust::device_vector<float>&			rf_gpu);
 
+void resize_structures(		//INPUT
+				int					nVOX_multiple,
+				int 					ndirections,
+				//OUTPUT
+				thrust::device_vector<float>&   	datam_gpu,
+				thrust::device_vector<float>&		params_gpu,
+				thrust::device_vector<float>&		tau_gpu,
+				thrust::device_vector<float>&		bvals_gpu,				
+				thrust::device_vector<float>&		alpha_gpu,
+				thrust::device_vector<float>&		beta_gpu,
+				thrust::device_vector<curandState>&	randStates_gpu);
+
 //implemented and used in xfibres_gpu.cu
 void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rf0_gpu,
@@ -113,5 +126,6 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,
 				int 						nvox,
+				int						nVOX_multiple,
 				int						idpart);
 

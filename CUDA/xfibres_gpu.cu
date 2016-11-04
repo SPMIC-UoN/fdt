@@ -30,9 +30,10 @@ void xfibres_gpu(	//INPUT
 			const Matrix			datam,
 			const Matrix			bvecs,
 			const Matrix			bvals,
-			const Matrix	 		gradm, 
+			const Matrix	 		gradm,
 			int				idpart,
 			int				idSubpart,
+			float				seed,
 			string				subjdir)
 {
 	//write num of part in a string for log file
@@ -101,13 +102,19 @@ void xfibres_gpu(	//INPUT
 		bvecs_gpu.shrink_to_fit();
 	
 		//////   RUN MCMC  //////
+		// At MCMC step it can happens that the number of voxels is not multipe of VOXELS_BLOCK_MCMC 
+		// make it multiple
+		// At Levenberg step, I launch as many blocks as voxels, so there is not such a problem 
+		int nVOX_multiple = int(nvox/VOXELS_BLOCK_MCMC)*VOXELS_BLOCK_MCMC;
+		if(nvox%VOXELS_BLOCK_MCMC) nVOX_multiple=nVOX_multiple+VOXELS_BLOCK_MCMC;
+
 		thrust::host_vector<float> signals_host;
 		thrust::host_vector<float> isosignals_host;
 		thrust::host_vector<FibreGPU> fibres_host;
 		thrust::host_vector<MultifibreGPU> multifibres_host;
 	
-		prepare_data_gpu_MCMC(nvox, ndirections, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
-
+		prepare_data_gpu_MCMC(nVOX_multiple, ndirections, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
+		
 		thrust::device_vector<float> signals_gpu=signals_host;
 		thrust::device_vector<float> isosignals_gpu=isosignals_host;
 		thrust::device_vector<FibreGPU> fibres_gpu=fibres_host;
@@ -116,21 +123,21 @@ void xfibres_gpu(	//INPUT
 		thrust::device_vector<float> alpha_gpu=alpha_host;
 		thrust::device_vector<float> beta_gpu=beta_host;
 
-		srand(opts.seed.value());  //randoms seed
-		curandState* randStates;
+		thrust::device_vector<curandState> randStates_gpu;
+		resize_structures(nVOX_multiple,ndirections,datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, randStates_gpu);
 
-		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, rand(), fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu,randStates);
+		init_Fibres_Multifibres(datam_gpu, params_gpu, tau_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, seed, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu,randStates_gpu);
 
-		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, randStates, gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu);
+		runmcmc_burnin(datam_gpu, bvals_gpu, alpha_gpu, beta_gpu, ndirections, gpu_log, fibres_gpu,multifibres_gpu, signals_gpu, isosignals_gpu, randStates_gpu);
 
 		thrust::device_vector<float> rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu;
 
-		prepare_data_gpu_MCMC_record(nvox,rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu);
+		prepare_data_gpu_MCMC_record(nVOX_multiple,rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu);
 
-		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, randStates, gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rR_gpu, rth_gpu, rph_gpu, rf_gpu);
+		runmcmc_record(datam_gpu, bvals_gpu, alpha_gpu,beta_gpu, fibres_gpu, multifibres_gpu, signals_gpu, isosignals_gpu, ndirections, randStates_gpu, gpu_log, rf0_gpu, rtau_gpu, rs0_gpu, rd_gpu, rdstd_gpu, rR_gpu, rth_gpu, rph_gpu, rf_gpu);
 
 		/////// FINISH ALL VOXELS  ///////
-		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,idSubpart);
+		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,nVOX_multiple,idSubpart);
 	}else{
 		/////// FINISH EMPTY SLICE  ///////	
 		Samples samples(nvox,ndirections);
@@ -613,6 +620,42 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 	rf_gpu.resize(nvox*nsamples*nfib);  
 }
 
+void resize_structures(		//INPUT
+				int					nVOX_multiple,
+				int 					ndirections,
+				//OUTPUT
+				thrust::device_vector<float>&   	datam_gpu,
+				thrust::device_vector<float>&		params_gpu,
+				thrust::device_vector<float>&		tau_gpu,
+				thrust::device_vector<float>&		bvals_gpu,				
+				thrust::device_vector<float>&		alpha_gpu,
+				thrust::device_vector<float>&		beta_gpu,
+				thrust::device_vector<curandState>&	randStates_gpu)
+{
+	xfibresOptions& opts = xfibresOptions::getInstance();
+	int nfib= opts.nfibres.value();
+	int nparams;
+	nparams=2+nfib*3;	
+	if(opts.modelnum.value()>=2) nparams++;
+
+
+	datam_gpu.resize(nVOX_multiple*ndirections);
+	params_gpu.resize(nVOX_multiple*nparams);
+	tau_gpu.resize(nVOX_multiple);
+
+	if (opts.grad_file.set()){
+		bvals_gpu.resize(nVOX_multiple*ndirections);
+		alpha_gpu.resize(nVOX_multiple*ndirections);
+		beta_gpu.resize(nVOX_multiple*ndirections);
+	}else{
+		bvals_gpu.resize(1*ndirections);
+		alpha_gpu.resize(1*ndirections);
+		beta_gpu.resize(1*ndirections);
+	}
+
+	randStates_gpu.resize(nVOX_multiple);
+}
+
 void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rf0_gpu,
 				thrust::device_vector<float>&			rtau_gpu,
@@ -624,6 +667,7 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,
 				int 						nvox,
+				int						nVOX_multiple,
 				int						idpart)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
@@ -633,15 +677,15 @@ void record_finish_voxels(	//INPUT
 
 	thrust::host_vector<float> rf0_host,rtau_host,rs0_host,rd_host,rdstd_host,rR_host,rth_host,rph_host,rf_host;
 
-	rf0_host.resize(nvox*nsamples);
-	rtau_host.resize(nvox*nsamples);
-	rs0_host.resize(nvox*nsamples);
-	rd_host.resize(nvox*nsamples);
-	if(opts.modelnum.value()>=2) rdstd_host.resize(nvox*nsamples);
-	if(opts.modelnum.value()==3) rR_host.resize(nvox*nsamples);
-	rth_host.resize(nvox*nfib*nsamples);
-	rph_host.resize(nvox*nfib*nsamples);
-	rf_host.resize(nvox*nfib*nsamples);
+	rf0_host.resize(nVOX_multiple*nsamples);
+	rtau_host.resize(nVOX_multiple*nsamples);
+	rs0_host.resize(nVOX_multiple*nsamples);
+	rd_host.resize(nVOX_multiple*nsamples);
+	if(opts.modelnum.value()>=2) rdstd_host.resize(nVOX_multiple*nsamples);
+	if(opts.modelnum.value()==3) rR_host.resize(nVOX_multiple*nsamples);
+	rth_host.resize(nVOX_multiple*nfib*nsamples);
+	rph_host.resize(nVOX_multiple*nfib*nsamples);
+	rf_host.resize(nVOX_multiple*nfib*nsamples);
 
 	if(opts.f0.value()) thrust::copy(rf0_gpu.begin(), rf0_gpu.end(), rf0_host.begin());
 	if(opts.rician.value()) thrust::copy(rtau_gpu.begin(), rtau_gpu.end(), rtau_host.begin());
