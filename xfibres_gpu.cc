@@ -14,8 +14,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include "CUDA/init_gpu.h"
-
-#define SIZE_SUB_PART 12800 //16 SM * 800 
+#include "CUDA/options/options.h"
 
 using namespace Xfibres;
 
@@ -36,6 +35,7 @@ int main(int argc, char *argv[]){
     	Log& logger = LogSingleton::getInstance();
     	xfibresOptions& opts = xfibresOptions::getInstance();
 	opts.parse_command_line(argc-4,argv,logger);
+	srand(opts.seed.value());  //randoms seed
 
 	Matrix bvals,bvecs;
     	bvals=read_ascii_matrix(opts.bvalsfile.value());
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]){
 		cout << "SubPart " << i+1 << " of " << nsubparts << ": processing " << size_sub_part << " voxels" <<  endl;
 		mydatam_part = mydatam.SubMatrix(1,ndirections,i*size_sub_part+1,(i+1)*size_sub_part);
 		if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,i*size_sub_part+1,(i+1)*size_sub_part);
-		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,i,subjdir);
+		xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,i,rand(),subjdir);
 		//for the monitor
 		if(nParts==1){
 			std::string file_name;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]){
 	cout << "SubPart " << nsubparts << " of " << nsubparts << ": processing " << last_sub_part << " voxels" <<  endl;
 	mydatam_part = mydatam.SubMatrix(1,ndirections,(nsubparts-1)*size_sub_part+1,size_part);
 	if (opts.grad_file.set()) mygradm_part = mygradm.SubMatrix(1,dirs_grad,(nsubparts-1)*size_sub_part+1,size_part);
-	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,nsubparts-1,subjdir);
+	xfibres_gpu(mydatam_part,bvecs,bvals,mygradm_part,idPart,nsubparts-1,rand(),subjdir);
 	//for the monitor
 	if(nParts==1){
 		std::string file_name;
