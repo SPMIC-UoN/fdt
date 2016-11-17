@@ -50,7 +50,7 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpostx "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrackx "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current & motion correction / Outlier detection" bedpostx "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrackx "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
     $w.tool.menu.menu entryconfigure 4 -state disabled -background black
     pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 
@@ -126,23 +126,49 @@ proc fdt:dialog { w tclstartupfile } {
     }
     
     registration_packframe $w
-    #------- ECC --------
-    frame $w.ecc
+    #------- EDDY --------
+    frame $w.eddy
 
-    proc ecc_update_files { w filename } {
+    proc eddy_set_working_directory { cwd filename } {
+	global eddy
+	set dirname [file dirname $filename]
+	#puts "switching from $eddy(cwd) to $dirname" 
+	set eddy(cwd) $dirname
+    }
+
+    proc eddy_update_files { w filename } {
 	global eddy
 	set eddy(output) [ file join [file dirname $eddy(input)] data ]
-    }    
+	set_working_directory eddy(cwd) $eddy(input)
+    }
+   
+    set eddy(cwd) [ pwd ]
 
-    FileEntry $w.ecc.input -textvariable eddy(input) -label "Diffusion weighted data:" -title "Choose diffusion weighted image" -filetypes IMAGE -command "ecc_update_files $w"
+    option add *eddy.FileEntry*labf*width 27
+    FileEntry $w.eddy.input -textvariable eddy(input) -label "Diffusion weighted data:" -title "Choose diffusion weighted image" -filetypes IMAGE -command "eddy_update_files $w"
+    FileEntry $w.eddy.mask -textvariable eddy(mask) -label "Binary brain mask:" -title "Choose brain mask file" -filetypes IMAGE -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.bvecs -textvariable eddy(bvecs) -label "Gradient directions:" -title  "Choose bvecs file" -filetypes * -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.bvals -textvariable eddy(bvals) -label  "b values:" -title  "Choose bvals file" -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.acqp -textvariable eddy(acqp) -label "Acquisition parameters file:" -title  "Choose text file with acquisition parameters" -filetypes * -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.idx -textvariable eddy(idx)  -label "Index file:" -title  "Choose text file with indices for all volumes pointing to acq params" -filetypes * -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.topup -textvariable eddy(topup) -label "Topup basename:" -title  "Choose basename for output files from topup" -filetypes * -command "eddy_set_working_directory eddy(cwd)"
+    FileEntry $w.eddy.output -textvariable eddy(output) -label "Output basename:" -title  "Choose output basename" -filetypes * -command "eddy_set_working_directory eddy(cwd)"
 
-    FileEntry $w.ecc.output -textvariable eddy(output) 	-label "Corrected output data:" -title  "Choose output image name" -filetypes IMAGE -command "ecc_update_files $w"
+    pack $w.eddy.input $w.eddy.mask $w.eddy.bvecs $w.eddy.bvals $w.eddy.acqp $w.eddy.idx $w.eddy.topup $w.eddy.output -side top -padx 3 -pady 3 -expand yes -anchor w
 
+
+    collapsible frame $w.eddy.advanced -title "Advanced Options"
+
+    checkbutton $w.eddy.advanced.repol -text "Replace Outliers" -variable eddy(doRepol)
+    checkbutton $w.eddy.advanced.usegpu -text "Use GPU Version" -variable eddy(usegpu)
     set eddy(refnum) 0
-    LabelSpinBox  $w.ecc.refnum -label "Reference volume"  -textvariable eddy(refnum) -range { 0 100 1 } -width 6 
-    FileEntry $w.ecc.bvecdata -textvariable eddy(bVecData) 	-label "bvecs file:" -title  "Choose bvecs name" -filetypes IMAGE 
+    LabelSpinBox  $w.eddy.refnum -label "Reference volume"  -textvariable eddy(refnum) -range { 0 500 1 } -width 6 
+    set eddy(olnstd) 4
+    LabelSpinBox  $w.eddy.olnstd -label "#std off for Outliers"  -textvariable eddy(olnstd) -range { 0 10 0.1 } -width 6 
 
-    pack $w.ecc.input $w.ecc.output $w.ecc.refnum -side top -padx 3 -pady 3 -expand yes -anchor w
+    
+    pack $w.eddy.advanced.repol $w.eddy.advanced.usegpu $w.eddy.refnum $w.eddy.olnstd -in $w.eddy.advanced.b -anchor w
+    pack $w.eddy.input $w.eddy.advanced -side top -padx 3 -pady 3 -expand yes -anchor w
 
    #------- DTIFit --------
 
@@ -552,10 +578,10 @@ proc fdt:dialog { w tclstartupfile } {
     }
 }
 
-proc fdt:eddycorrect_mode { w } {
-    global eddy 
-    pack forget $w.ecc.bvecdata
-}
+#proc fdt:eddycorrect_mode { w } {
+  #  global eddy 
+  #pack forget $w.ecc.bvecdata
+#}
 
 proc fdt:matrix_mode { w } {
     global probtrack
@@ -615,7 +641,7 @@ proc fdt:probtrack_mode { w } {
 
 proc fdt:select_tool { w } {
     global probtrack
-    pack forget $w.ecc
+    pack forget $w.eddy
     pack forget $w.probtrack
     pack forget $w.bedpost
     pack forget $w.registration
@@ -627,7 +653,7 @@ proc fdt:select_tool { w } {
     } elseif {$probtrack(tool) == "dtifit"}  { 
 	pack $w.dtifit -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     } elseif {$probtrack(tool) == "eddy_current"}  { 
-	pack $w.ecc -in $w.opts -side top -padx 3 -pady 3 -anchor nw
+	pack $w.eddy -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     } elseif {$probtrack(tool) == "registration"} {
 	pack $w.registration -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     }
@@ -709,20 +735,30 @@ proc fdt:apply { w dialog } {
 
 	    set errorStr ""
 	    if { $eddy(input) == "" } { set errorStr "You need to specify the input image! " }
-	    if { $eddy(output) == "" } { set errorStr "$errorStr You need to specify an output image!" }
+	    if { $eddy(mask) == "" } { set errorStr "You need to specify the brain mask! " }
+	    if { $eddy(bvals) == "" } { set errorStr "You need to specify the bvals! " }
+	    if { $eddy(bvecs) == "" } { set errorStr "You need to specify the bvecs! " }
+	    if { $eddy(acqp) == "" } { set errorStr "You need to specify the acquisition parameters file! " }
+	    if { $eddy(idx) == "" } { set errorStr "You need to specify the index file! " }
+	    if { $eddy(output) == "" } { set errorStr "$errorStr You need to specify an output basename!" }
 	    if { $errorStr != "" } {
 		MxPause $errorStr
 		return
 	    }
 
-	    #	    check output!=input
-	    set canwrite 1
-	    if { $eddy(input) == $eddy(output) } {
-		set canwrite [ YesNoWidget "Output and input images have the same name. Overwrite input?" Yes No ]
+	    set flags  "--imain=$eddy(input) --mask=$eddy(mask) --bvals=$eddy(bvals) --bvecs=$eddy(bvecs) --acqp=$eddy(acqp) --index=$eddy(idx) --out=$eddy(output) --ref_scan_no=$eddy(refnum) --ol_nstd=$eddy(olnstd)"
+	    if { $eddy(topup) != "" } { set flags "$flags --topup=$eddy(topup)" }
+	    if { $eddy(doRepol) } { set flags "$flags --repol" }
+
+	    set eddycall ""
+	    if { $eddy(usegpu) } {
+		set eddycall "${FSLDIR}/bin/eddy_cuda $flags"
+	    } else {
+		set eddycall "${FSLDIR}/bin/eddy $flags"
 	    }
-	    if { $canwrite } {
-		fdt_monitor $w "${FSLDIR}/bin/eddy_correct $eddy(input) $eddy(output) $eddy(refnum) "
-	    }
+	    
+	    fdt_monitor $w $eddycall
+
 	}
 	dtifit {
 	    global dtifit
