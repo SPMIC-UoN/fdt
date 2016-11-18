@@ -13,7 +13,7 @@ set TCLPATH [file dirname [ info script ] ]
 regsub tcl $TCLPATH bin BINPATH
 regsub tcl $TCLPATH doc/redirects HTMLPATH
 
-set VERSION "3.0"
+set VERSION "5.0"
 
 proc mm_to_voxels { X Y Z mask } {
 
@@ -746,7 +746,9 @@ proc fdt:apply { w dialog } {
 		return
 	    }
 
-	    set flags  "--imain=$eddy(input) --mask=$eddy(mask) --bvals=$eddy(bvals) --bvecs=$eddy(bvecs) --acqp=$eddy(acqp) --index=$eddy(idx) --out=$eddy(output) --ref_scan_no=$eddy(refnum) --ol_nstd=$eddy(olnstd)"
+	    set canwrite 1
+
+	    set flags  "--imain=$eddy(input) --mask=$eddy(mask) --bvals=$eddy(bvals) --bvecs=$eddy(bvecs) --acqp=$eddy(acqp) --index=$eddy(idx) --out=$eddy(output) --ref_scan_no=$eddy(refnum) --ol_nstd=$eddy(olnstd) --verbose"
 	    if { $eddy(topup) != "" } { set flags "$flags --topup=$eddy(topup)" }
 	    if { $eddy(doRepol) } { set flags "$flags --repol" }
 
@@ -754,7 +756,7 @@ proc fdt:apply { w dialog } {
 	    if { $eddy(usegpu) } {
 		set eddycall "${FSLDIR}/bin/eddy_cuda $flags"
 	    } else {
-		set eddycall "${FSLDIR}/bin/eddy $flags"
+		set eddycall "${FSLDIR}/bin/eddy_openmp $flags"
 	    }
 	    
 	    fdt_monitor $w $eddycall
