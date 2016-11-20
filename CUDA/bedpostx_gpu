@@ -238,9 +238,9 @@ fi
 echo Pre-processing stage
 
 if [ ${gflag} -eq 1 ]; then
-	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}/grad_dev 1 $njobs ${subjdir}.bedpostX"
+	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/bvals ${subjdir}.bedpostX/bvecs ${subjdir}/grad_dev 1 $njobs ${subjdir}.bedpostX"
 else
-	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask NULL 0 $njobs ${subjdir}.bedpostX"
+	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/bvals ${subjdir}.bedpostX/bvecs NULL 0 $njobs ${subjdir}.bedpostX"
 fi
 if [ $qsys -eq 0 ]; then
 	#SGE

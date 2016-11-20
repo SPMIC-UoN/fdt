@@ -15,8 +15,19 @@
 #include <sys/time.h>
 #include "CUDA/init_gpu.h"
 #include "CUDA/options/options.h"
+#include <sys/stat.h>
 
 using namespace Xfibres;
+
+inline bool isInteger(const std::string & s)
+{
+   if(s.empty() || ((!isdigit(s[0])) && (s[0] != '-') && (s[0] != '+'))) return false ;
+
+   char * p ;
+   strtol(s.c_str(), &p, 10) ;
+
+   return (*p == 0) ;
+}
 
 //////////////////////////////////////////////////////////
 //       XFIBRES CPU PART. IT CALLS TO GPU PART
@@ -50,18 +61,56 @@ int main(int argc, char *argv[]){
 			bvecs(3,i)=bvecs(3,i)/tmpsum;
       		}  
     	}
+	int ndirections = bvals.Ncols();
+	int dirs_grad = 9;  // always ???
+	if(ndirections<=0){
+		cerr << "The number of gradient directions must be greater than 0" << endl;
+    		exit (EXIT_FAILURE);
+	}
+	if(bvecs.Ncols()!=ndirections){
+		cerr << "xfibres_gpu error: The number of elements in bvals and number of vectors in bvecs must be the same\n" << endl;
+    		exit (EXIT_FAILURE);
+    	}
+	
+
+	///////////////////////////////////////////
+	///////////// Check Arguments /////////////
+	///////////////////////////////////////////
+	string subjdir=argv[argc-4];
+	struct stat sb;
+	if (stat(subjdir.data(), &sb) != 0 || !S_ISDIR(sb.st_mode)){
+		cerr << "xfibres_gpu. The last 4 arguments must be:\n\tSubject-directory \n\tNumThisPart \n\tTotalNumParts \n\tTotalNumVoxels(all parts)" << endl;
+		cerr << "\nSubject-directory: "<< subjdir << " is not a directory" << endl;
+    		exit (EXIT_FAILURE);
+	}
+	
+	istringstream ss_idPart(argv[argc-3]);
+	int idPart;
+	if (!(ss_idPart >> idPart)){
+		cerr << "xfibres_gpu. The last 4 arguments must be:\n\tSubject-directory \n\tNumThisPart \n\tTotalNumParts \n\tTotalNumVoxels(all parts)" << endl;
+		cerr << "\nNumThisPart: " << argv[argc-3] << " is not a valid number" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	istringstream ss_nParts(argv[argc-2]);
+	int nParts;
+	if (!(ss_nParts >> nParts)){
+		cerr << "xfibres_gpu. The last 4 arguments must be:\n\tSubject-directory \n\tNumThisPart \n\tTotalNumParts \n\tTotalNumVoxels(all parts)" << endl;
+		cerr << "\nTotalNumParts: " << argv[argc-2] << " is not a valid number" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	istringstream ss_totalNvox(argv[argc-1]);
+	int totalNvox;
+	if (!(ss_totalNvox >> totalNvox)|| totalNvox<=0){
+		cerr << "xfibres_gpu. The last 4 arguments must be:\n\tSubject-directory \n\tNumThisPart \n\tTotalNumParts \n\tTotalNumVoxels(all parts)" << endl;
+		cerr << "\nThe number of voxels must be greater than 0" << endl;
+    		exit (EXIT_FAILURE);
+	}
 
 	///////////////////////////////////////////
 	////////// Read my part of data ///////////
 	///////////////////////////////////////////
-	string subjdir=argv[argc-4];
-	int idPart = atoi(argv[argc-3]);
-	int nParts = atoi(argv[argc-2]);
-	int totalNvox = atoi(argv[argc-1]);
-	int ndirections = bvals.Ncols();
-	int dirs_grad = 9;  // always ???
-	
-
 	int size_part = totalNvox / nParts;
 	// if last part
 	if(idPart==(nParts-1)) size_part = totalNvox-(size_part*(nParts-1));

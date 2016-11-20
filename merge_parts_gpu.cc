@@ -9,6 +9,7 @@
 #include "xfibresoptions.h"
 #include "newmat.h"
 #include "newimage/newimageall.h"
+#include <sys/stat.h>
 
 using namespace Xfibres;
 
@@ -100,11 +101,38 @@ int main(int argc, char *argv[])
 
 	cout << opts.maskfile.value() << endl;
     	
-	int nvox = atoi(argv[argc-3]);
-	int nParts = atoi(argv[argc-2]);
-	string subjdir = argv[argc-1];
+	///////////////////////////////////////////
+	///////////// Check Arguments /////////////
+	///////////////////////////////////////////
+	istringstream ss_nvox(argv[argc-3]);
+	int nvox;
+	if (!(ss_nvox >> nvox)|| nvox<=0){
+		cerr << "merge_parts_gpu. The last 3 arguments must be:\n\tTotalNumVoxels(all parts)\n\tTotalNumParts \n\tSubject-directory" << endl;
+		cerr << "\nThe number of voxels must be greater than 0" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	istringstream ss_nParts(argv[argc-2]);
+	int nParts;
+	if (!(ss_nParts >> nParts)){
+		cerr << "merge_parts_gpu. The last 3 arguments must be:\n\tTotalNumVoxels(all parts)\n\tTotalNumParts \n\tSubject-directory" << endl;
+		cerr << "\nTotalNumParts: " << argv[argc-2] << " is not a valid number" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	string subjdir=argv[argc-1];
+	struct stat sb;
+	if (stat(subjdir.data(), &sb) != 0 || !S_ISDIR(sb.st_mode)){
+		cerr << "merge_parts_gpu. The last 3 arguments must be:\n\tTotalNumVoxels(all parts)\n\tTotalNumParts \n\tSubject-directory" << endl;
+		cerr << "\nSubject-directory: "<< subjdir << " is not a directory" << endl;
+    		exit (EXIT_FAILURE);
+	}
 
 	int nsamples = opts.njumps.value()/opts.sampleevery.value();
+	if(nsamples<=0){
+		cerr << "The number of samples must be greater than 0" << endl;
+    		exit (EXIT_FAILURE);
+	}
 	
 	//////////////////////////////////////////////////////////////
 	////////// JOIN Results of the Parts //////////////////////

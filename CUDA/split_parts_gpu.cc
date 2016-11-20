@@ -10,6 +10,7 @@
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 void save_part(Matrix data, string name, int idpart){
 
@@ -29,22 +30,69 @@ void save_part(Matrix data, string name, int idpart){
 // parameters:
 // 1. data.nii.gz
 // 2. mask.nii.gz
-// 3. grad_dev.nii.gz
-// 4. gflag
-// 5. nparts
-// 6. output directory
+// 3. bvals
+// 4. bvecs
+// 5. grad_dev.nii.gz
+// 6. gflag
+// 7. nparts
+// 8. output directory
 
 
 int main(int argc, char *argv[]){
 
-	std::string data_str = argv[1];
-	std::string mask_str = argv[2];
-	std::string grad_str = argv[3];
-	int gflag = atoi(argv[4]);
-	int nparts = atoi(argv[5]);
-	std::string out_dir = argv[6];
+	///////////////////////////////////////////
+	///////////// Check Arguments /////////////
+	///////////////////////////////////////////
+	if (argc!=9){
+		cerr << "\nsplit_parts_gpu. Wrong number of parameters\nUsage:\nsplit_parts_gpu  Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+    		exit (EXIT_FAILURE);
+	}
 
-	//printf("%s\n%s\n%s\n%i\n%i\n%s\n",data_str.data(),mask_str.data(),grad_str.data(),gflag,nparts,out_dir.data());
+	std::string data_str = argv[1];	
+	std::string mask_str = argv[2];
+
+	Matrix bvals,bvecs;
+    	bvals=read_ascii_matrix(argv[3]);
+    	bvecs=read_ascii_matrix(argv[4]);
+    	if(bvecs.Nrows()>3) bvecs=bvecs.t();
+    	if(bvals.Nrows()>1) bvals=bvals.t();
+	if(bvecs.Nrows()!=3){
+		cerr << "split_parts_gpu error: bvecs is not 3xN or Nx3 format\n" << endl;
+    		exit (EXIT_FAILURE);
+    	}
+    	for(int i=1;i<=bvecs.Ncols();i++){
+      		float tmpsum=sqrt(bvecs(1,i)*bvecs(1,i)+bvecs(2,i)*bvecs(2,i)+bvecs(3,i)*bvecs(3,i));
+      		if(tmpsum!=0){
+			bvecs(1,i)=bvecs(1,i)/tmpsum;
+			bvecs(2,i)=bvecs(2,i)/tmpsum;
+			bvecs(3,i)=bvecs(3,i)/tmpsum;
+      		}  
+    	}
+	
+	std::string grad_str = argv[5];
+
+	istringstream ss_gflag(argv[6]);
+	int gflag;
+	if (!(ss_gflag >> gflag)){
+		cerr << "\nsplit_parts_gpu. Wrong flag Use_grad_file: " << argv[4] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	istringstream ss_nparts(argv[7]);
+	int nparts;
+	if (!(ss_nparts >> nparts)){
+		cerr << "\nsplit_parts_gpu. Wrong number of parts: " << argv[5] <<  "\nUsage:\nsplit_parts_gpu Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+    		exit (EXIT_FAILURE);
+	}
+
+	std::string out_dir = argv[8];
+	struct stat sb;
+	if (stat(out_dir.data(), &sb) != 0 || !S_ISDIR(sb.st_mode)){
+		cerr << "\nsplit_parts_gpu. Wrong output directory: " << argv[6] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+    		exit (EXIT_FAILURE);
+	}
+	///////////////////////////////////////////
+
 	NEWIMAGE::volume4D<float> data;
 	NEWIMAGE::volume<float> mask;
     	read_volume4D(data,data_str);
@@ -52,8 +100,16 @@ int main(int argc, char *argv[]){
 	Matrix datam;
     	datam=data.matrix(mask); 
 
+	int ndirections=bvals.Ncols();
+    	if(bvecs.Ncols()!=ndirections || datam.Nrows()!=ndirections){
+		cerr << "split_parts_gpu error: The number of elements in bvals, number of vectors in bvecs and number of vols in data must be the same\n" << endl;
+    		exit (EXIT_FAILURE);
+    	}
 	int nvoxels=datam.Ncols();
-	int ndirections=datam.Nrows();
+	if(nvoxels<=0 || ndirections<=0){
+		cerr << "The number of voxels and gradient directions must be greater than 0" << endl;
+    		exit (EXIT_FAILURE);
+	}
 	
 	NEWIMAGE::volume4D<float> grad; 
 	Matrix gradm;
@@ -64,7 +120,6 @@ int main(int argc, char *argv[]){
 		dirs_grad = gradm.Nrows();
 	}
 	
-
 	int size_part=nvoxels/nparts;
 
 	Matrix data_part;

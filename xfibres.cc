@@ -855,6 +855,10 @@ int main(int argc, char *argv[])
     bvecs=read_ascii_matrix(opts.bvecsfile.value());
     if(bvecs.Nrows()>3) bvecs=bvecs.t();
     if(bvals.Nrows()>1) bvals=bvals.t();
+    if(bvecs.Nrows()!=3){
+	cerr << "xfibres error: bvecs is not 3xN or Nx3 format\n" << endl;
+    	exit (EXIT_FAILURE);
+    }
     for(int i=1;i<=bvecs.Ncols();i++){
       float tmpsum=sqrt(bvecs(1,i)*bvecs(1,i)+bvecs(2,i)*bvecs(2,i)+bvecs(3,i)*bvecs(3,i));
       if(tmpsum!=0){
@@ -871,6 +875,12 @@ int main(int argc, char *argv[])
     matrix2volkey=data.matrix2volkey(mask);
     vol2matrixkey=data.vol2matrixkey(mask);
     Samples samples(vol2matrixkey,matrix2volkey,datam.Ncols(),datam.Nrows());
+
+    int ndirs=bvals.Ncols();
+    if(bvecs.Ncols()!=ndirs || datam.Nrows()!=ndirs){
+	cerr << "xfibres error: The number of elements in bvals, number of vectors in bvecs and number of vols in data must be the same\n" << endl;
+    	exit (EXIT_FAILURE);
+    }
 
     //Read Gradient Non_linearity Maps if provided
     volume4D<float> grad; Matrix gradm;
