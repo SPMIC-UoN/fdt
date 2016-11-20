@@ -74,21 +74,21 @@ int main(int argc, char *argv[]){
 	istringstream ss_gflag(argv[6]);
 	int gflag;
 	if (!(ss_gflag >> gflag)){
-		cerr << "\nsplit_parts_gpu. Wrong flag Use_grad_file: " << argv[4] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+		cerr << "\nsplit_parts_gpu. Wrong flag Use_grad_file: " << argv[6] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
     		exit (EXIT_FAILURE);
 	}
 
 	istringstream ss_nparts(argv[7]);
 	int nparts;
 	if (!(ss_nparts >> nparts)){
-		cerr << "\nsplit_parts_gpu. Wrong number of parts: " << argv[5] <<  "\nUsage:\nsplit_parts_gpu Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+		cerr << "\nsplit_parts_gpu. Wrong number of parts: " << argv[7] <<  "\nUsage:\nsplit_parts_gpu Datafile  Maskfile   bvals_file   bvecs_file  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
     		exit (EXIT_FAILURE);
 	}
 
 	std::string out_dir = argv[8];
 	struct stat sb;
 	if (stat(out_dir.data(), &sb) != 0 || !S_ISDIR(sb.st_mode)){
-		cerr << "\nsplit_parts_gpu. Wrong output directory: " << argv[6] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
+		cerr << "\nsplit_parts_gpu. Wrong output directory: " << argv[8] <<  "\nUsage:\nsplit_parts_gpu  Datafile  Maskfile  Grad_file(can be null)  Use_grad_file(0 or 1)  TotalNumParts  OutputDirectory\n" << endl;
     		exit (EXIT_FAILURE);
 	}
 	///////////////////////////////////////////
