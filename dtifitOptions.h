@@ -34,9 +34,11 @@ class dtifitOptions {
   Option<string> maskfile;
   Option<string> bvecsfile;
   Option<string> bvalsfile;
-  Option<string> cni; //confounds of no interest. 
-  Option<bool> sse; // Sum of squared errors
-  Option<bool> wls; //Perform Weighted Least squares for tensor fitting 
+  Option<string> cni;              // confounds of no interest. 
+  Option<bool> sse;                // Sum of squared errors
+  Option<bool> wls;                // Perform Weighted Least squares for tensor fitting 
+  Option<bool> kurt;               // Output mean kurtosis 
+  Option<bool> kurtdir;            // Output parallel and perpendicular kurtosis maps
   Option<bool> littlebit;
   Option<bool> savetensor;
   Option<int> z_min;
@@ -47,7 +49,7 @@ class dtifitOptions {
   Option<int> x_max;
   Option<string> grad_file;
   FmribOption<bool> save_bvals;
-  FmribOption<bool> kurt;
+
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -99,6 +101,12 @@ class dtifitOptions {
    wls(string("-w,--wls"),false, 
              string("Fit the tensor with weighted least squares"), 
              false, no_argument),
+   kurt(string("--kurt"), false,
+	     string("Output mean kurtosis map (for multi-shell data)"),
+	     false,  no_argument),
+   kurtdir(string("--kurtdir"), false,
+	     string("Output  parallel/perpendicular kurtosis maps (for multi-shell data)"),
+	     false,  no_argument),
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
 	     false, no_argument),
@@ -129,9 +137,6 @@ class dtifitOptions {
    save_bvals(string("--savebvals"), false,
 	     string("Save 4D file with bvalues, corrected for gradient nonlinearities"),
 	     false,  no_argument),
-   kurt(string("--kurt"), false,
-	     string("Fit single Kurtosis parameter (for multi-shell data)"),
-	     false,  no_argument),
    options("dtifit", "dtifit -k <filename>\n dtifit --verbose\n")
    {
      
@@ -147,6 +152,8 @@ class dtifitOptions {
        options.add(cni);
        options.add(sse);
        options.add(wls);
+       options.add(kurt);
+       options.add(kurtdir);
        options.add(littlebit);
        options.add(savetensor);
        options.add(z_min);
@@ -157,7 +164,6 @@ class dtifitOptions {
        options.add(x_max);
        options.add(grad_file);
        options.add(save_bvals);
-       options.add(kurt);
      }
      catch(X_OptionError& e) {
        options.usage();
