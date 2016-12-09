@@ -3,16 +3,6 @@ include $(FSLCONFDIR)/default.mk
 ifeq ($(COMPILE_GPU), 1)
 	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
-	SM_20 = -gencode arch=compute_20,code=sm_20
-	SM_21 = -gencode arch=compute_20,code=sm_21
-	SM_30 = -gencode arch=compute_30,code=sm_30
-	SM_35 = -gencode arch=compute_35,code=sm_35
-	SM_37 = -gencode arch=compute_37,code=sm_37
-	SM_50 = -gencode arch=compute_50,code=sm_50
-	SM_52 = -gencode arch=compute_52,code=sm_52
-	SM_60 = -gencode arch=compute_60,code=sm_60
-	SM_61 = -gencode arch=compute_61,code=sm_61
-	GPU_CARDS = $(SM_20) $(SM_21) $(SM_30) $(SM_35) $(SM_37) $(SM_50) $(SM_52)
 endif
 
 PROJNAME = fdt
@@ -177,7 +167,7 @@ ${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
 
 ${LIBBEDPOSTX_CUDA}: 
-		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GPU_CARDS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -I${INC_CUDA}/thrust -maxrregcount=64
+		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GENCODE_FLAGS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -I${INC_CUDA}/thrust -maxrregcount=64
 		@if [ ! -d ${FSLDEVDIR}/lib/ ] ; then ${MKDIR} ${FSLDEVDIR}/lib ; fi
 		${CP} -rf CUDA/libbedpostx_cuda.so ${FSLDEVDIR}/lib
 
