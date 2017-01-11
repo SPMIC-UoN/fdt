@@ -41,15 +41,73 @@ Option<string> bvalsfile(string("-b,--bvals"),string(""),
 Option<string> maskfile(string("-m,--mask"),string(""),
 		       string("brain mask"),
 		       true,requires_argument);
+Option<string> kurtfile(string("--kurt"),string(""),
+		       string("mean kurtosis map"),
+		       false,requires_argument);
+
+
+
+Matrix form_Amat(const Matrix& r,const Matrix& b)
+{
+  Matrix A(r.Ncols(),7);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+  }
+  return A;
+}
+
+
+Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
+{
+  Matrix A(r.Ncols(),8);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  ColumnVector v(r.Ncols());
+  for( int i = 1; i <= r.Ncols(); i++){
+    v(i) = -b(1,i)*b(1,i)/6;
+  }
+  Matrix M(r.Ncols(),7);
+  M = form_Amat(r,b);
+
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+    A(i,8) = v(i); 
+  }
+  return A;
+}
+
+
 
 int do_dtigen(){
-  volume<float> mask,S0;
+  volume<float> mask,S0,kurt;
   volume4D<float> data,tensor;
 
   read_volume(mask,maskfile.value());
   read_volume(S0,s0file.value());
   read_volume4D(tensor,itensor.value());
   
+  if(kurtfile.set()){
+    read_volume(kurt,kurtfile.value());
+  }
+
   Matrix r = read_ascii_matrix(bvecsfile.value());
   if(r.Nrows()>3) r=r.t();
   for(int i=1;i<=r.Ncols();i++){
@@ -68,22 +126,39 @@ int do_dtigen(){
   data.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),b.Ncols());
   copybasicproperties(tensor[0],data);
 
+  Matrix Amat = form_Amat(r,b);
+  ColumnVector Dvec(7);
+  if(kurtfile.set()){
+    Amat = form_Amat_kurt(r,b);
+    Dvec.ReSize(8);
+  }
+  ColumnVector logpred(data.tsize());
+  float md;
   cout << "generate data" << endl << endl;;
   for(int z=mask.minz();z<=mask.maxz();z++){
     cout << "processing slice" << z << endl;
     for(int y=mask.miny();y<=mask.maxy();y++)
       for(int x=mask.minx();x<=mask.maxx();x++){
-	if(mask(x,y,z)==0)continue;
+	if(mask(x,y,z)==0)continue;		
+
 	
-	for(int t=1;t<=data.tsize();t++){
-	  data(x,y,z,t-1) = S0(x,y,z);
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(1,t) * r(1,t) * tensor(x,y,z,0) );
-	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(1,t) * r(2,t) * tensor(x,y,z,1) );
-	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(1,t) * r(3,t) * tensor(x,y,z,2) );
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(2,t) * r(2,t) * tensor(x,y,z,3) );
-	  data(x,y,z,t-1) *= exp( -2*b(1,t) * r(2,t) * r(3,t) * tensor(x,y,z,4) );
-	  data(x,y,z,t-1) *= exp( -b(1,t) * r(3,t) * r(3,t) * tensor(x,y,z,5) );
+	  Dvec(1) = tensor(x,y,z,0);
+	  Dvec(2) = tensor(x,y,z,1);
+	  Dvec(3) = tensor(x,y,z,2);
+	  Dvec(4) = tensor(x,y,z,3);
+	  Dvec(5) = tensor(x,y,z,4);
+	  Dvec(6) = tensor(x,y,z,5);
+
+	  Dvec(7) = -log(S0(x,y,z));
 	  
+	  if(kurtfile.set()){
+	    md = (Dvec(1)+Dvec(4)+Dvec(6))/3.0;
+	    Dvec(8) = kurt(x,y,z)*md*md;
+	  }
+	  logpred = -Amat*Dvec;
+
+	  for(int t=1;t<=data.tsize();t++){
+	    data(x,y,z,t-1) = exp(logpred(t));	  
 	}
 
       }
@@ -109,6 +184,7 @@ int main(int argc,char *argv[]){
     options.add(bvecsfile);
     options.add(bvalsfile);
     options.add(maskfile);
+    options.add(kurtfile);
 
     options.parse_command_line(argc,argv);
 

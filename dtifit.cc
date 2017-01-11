@@ -213,7 +213,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
 	logS(i)=0;
     }
   Dvec=-Amat_pinv*logS;       //Estimate the model parameters
-  
+
   if(Dvec(7)>-maxlogfloat )
     s0=exp(-Dvec(7));
   else
@@ -259,7 +259,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));  
   float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
  
-  if(denom>0) fsquared=numer/denom;
+  if(denom>minfloat) fsquared=numer/denom; //In case of voxels with all intensities being zero, lambdas are ~1e-15 and denom ~1e-30
   else fsquared=0;
   if(fsquared>0){f=sqrt(fsquared);}
   else{f=0;}
