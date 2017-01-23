@@ -40,6 +40,9 @@ void fit_PVM_single(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile << "--- fit_PVM_single --- \n"; 
+	struct timeval t1,t2;
+   	double timeDTI=0;
 
 	int nvox = datam_vec.size();
 	int nparams;
@@ -56,8 +59,11 @@ void fit_PVM_single(	//INPUT
 		int pos_bv;
 		if (gradnonlin) pos_bv=vox;
 		else pos_bv=0;
+		gettimeofday(&t1,NULL);
   		DTI dti(datam_vec[vox],bvecs_vec[pos_bv],bvals_vec[pos_bv]);
   		dti.linfit();
+		gettimeofday(&t2,NULL);
+		timeDTI+=timeval_diff(&t2,&t1);
 
   		// set starting parameters for nonlinear fitting
   		float _th,_ph;
@@ -86,12 +92,17 @@ void fit_PVM_single(	//INPUT
 	  	if (m_include_f0)
 	    		params_host[vox*nparams+nparams-1]=f2x(FSMALL);
 	}
+	myfile << "Processing " << nvox << " voxels \n";
+   	myfile << "time DTI: " << timeDTI << " seconds\n"; 
 
 	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
+
+	myfile << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_FIT << "\n"; 
 
 	int amount_shared = 6*sizeof(double)+(THREADS_BLOCK_FIT*nparams+THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+2)*sizeof(float)+(2+nparams)*sizeof(int);
 
@@ -100,6 +111,7 @@ void fit_PVM_single(	//INPUT
 	fit_PVM_single_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_kernel");
 
+	myfile << "--- end fit_PVM_single --- \n"; 
 	myfile.close();
 }
 
@@ -120,6 +132,9 @@ void fit_PVM_single_c(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile << "--- fit_PVM_single_c --- \n"; 
+	struct timeval t1,t2;
+   	double timeDTI=0;
 
 	int nvox = datam_vec.size(); 
 	int nparams;
@@ -136,8 +151,11 @@ void fit_PVM_single_c(	//INPUT
 		int pos_bv;
 		if (gradnonlin) pos_bv=vox;
 		else pos_bv=0;
+		gettimeofday(&t1,NULL);
   		DTI dti(datam_vec[vox],bvecs_vec[pos_bv],bvals_vec[pos_bv]);
   		dti.linfit();
+		gettimeofday(&t2,NULL);
+		timeDTI+=timeval_diff(&t2,&t1);
 
   		// set starting parameters for nonlinear fitting
   		float _th,_ph;
@@ -164,12 +182,17 @@ void fit_PVM_single_c(	//INPUT
 			params_host[vox*nparams+i]=start(i+1);
 		}
 	}
+	myfile << "Processing " << nvox << " voxels \n";
+	myfile << "time DTI: " << timeDTI << " seconds\n"; 
 
 	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
+
+	myfile << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_FIT << "\n"; 
 
 	int amount_shared = 6*sizeof(double)+(THREADS_BLOCK_FIT*nparams+THREADS_BLOCK_FIT+5*nparams+2*nparams*nparams+4*nfib+nfib*nfib+6)*sizeof(float)+(2+nparams)*sizeof(int);
 
@@ -178,6 +201,7 @@ void fit_PVM_single_c(	//INPUT
 	fit_PVM_single_c_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()) ,nvox, ndirections, nfib, nparams, false, m_include_f0, false, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_single_c_kernel");
 
+	myfile << "--- end fit_PVM_single_c --- \n"; 
 	myfile.close();
 }
 
@@ -198,10 +222,15 @@ void fit_PVM_multi(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile << "--- fit_PVM_multi --- \n"; 
 
 	int blocks = nvox;
    	dim3 Dim_Grid(blocks,1);
   	dim3 Dim_Block(THREADS_BLOCK_FIT,1);
+
+	myfile << "Processing " << nvox << " voxels \n";
+	myfile << "NUM BLOCKS: " << blocks << "\n"; 
+   	myfile << "THREADS PER BLOCK : " << THREADS_BLOCK_FIT << "\n"; 
 
 	int nparams;
 	if (m_include_f0)
@@ -223,6 +252,7 @@ void fit_PVM_multi(	//INPUT
 	fit_PVM_multi_kernel<<<Dim_Grid, Dim_Block, amount_shared>>>(thrust::raw_pointer_cast(datam_gpu.data()), thrust::raw_pointer_cast(params_PVM_single_c_gpu.data()), thrust::raw_pointer_cast(bvecs_gpu.data()), thrust::raw_pointer_cast(bvals_gpu.data()), R_prior_mean, invR, nvox, ndirections, nfib, nparams, Gamma_ball_only, m_include_f0, gradnonlin,thrust::raw_pointer_cast(params_gpu.data()));
 	sync_check("fit_PVM_multi_kernel");
 
+	myfile << "--- end fit_PVM_multi --- \n"; 
 	myfile.close();
 }
 
