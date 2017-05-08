@@ -29,16 +29,16 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<float>& 			params_gpu,
 				thrust::device_vector<float>& 			tau_gpu,
 				thrust::device_vector<float>& 			bvals_gpu,
-				thrust::device_vector<float>& 			alpha_gpu,
-				thrust::device_vector<float>& 			beta_gpu,
+				thrust::device_vector<double>& 			alpha_gpu,
+				thrust::device_vector<double>& 			beta_gpu,
 				const int 					ndirections,
 				string 						output_file,
 				double 						seed,
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
 				thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
-				thrust::device_vector<float>&			signals_gpu,
-				thrust::device_vector<float>&			isosignals_gpu,
+				thrust::device_vector<double>&			signals_gpu,
+				thrust::device_vector<double>&			isosignals_gpu,
 				thrust::device_vector<curandState>&		randStates_gpu)
 {
 	std::ofstream myfile;
@@ -57,7 +57,7 @@ void init_Fibres_Multifibres(	//INPUT
 	if(opts.modelnum.value()>=2) nparams_fit++;
 	if(opts.f0.value()) nparams_fit++;
 
-	thrust::device_vector<float> angtmp_gpu;
+	thrust::device_vector<double> angtmp_gpu;
 	angtmp_gpu.resize(nvox*ndirections*nfib);
 	
 
@@ -73,13 +73,13 @@ void init_Fibres_Multifibres(	//INPUT
 	float *params_ptr = thrust::raw_pointer_cast(params_gpu.data());	
 	float *tau_ptr = thrust::raw_pointer_cast(tau_gpu.data());	
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
-	float *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
-	float *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
+	double *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
+	double *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
 	FibreGPU *fibres_ptr =  thrust::raw_pointer_cast(fibres_gpu.data());
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
-	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
-	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
-	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
+	double *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
+	double *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
+	double *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
 	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
 	int amount_shared = VOXELS_BLOCK_MCMC*((THREADS_VOXEL_MCMC)*sizeof(double) + (3*nfib + 9)*sizeof(float) + sizeof(int));
@@ -108,15 +108,15 @@ void init_Fibres_Multifibres(	//INPUT
 void runmcmc_burnin(	//INPUT
 			thrust::device_vector<float>& 			datam_gpu,
 			thrust::device_vector<float>& 			bvals_gpu,
-			thrust::device_vector<float>& 			alpha_gpu,
-			thrust::device_vector<float>& 			beta_gpu,
+			thrust::device_vector<double>& 			alpha_gpu,
+			thrust::device_vector<double>& 			beta_gpu,
 			const int 					ndirections,
 			string 						output_file, 
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
-			thrust::device_vector<float>&			signals_gpu,
-			thrust::device_vector<float>&			isosignals_gpu,
+			thrust::device_vector<double>&			signals_gpu,
+			thrust::device_vector<double>&			isosignals_gpu,
 			thrust::device_vector<curandState>&		randStates_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
@@ -146,10 +146,10 @@ void runmcmc_burnin(	//INPUT
 	thrust::device_vector<float> recors_null_gpu;
 	recors_null_gpu.resize(1);
 
-	thrust::device_vector<float> angtmp_gpu;
-	thrust::device_vector<float> oldangtmp_gpu;
-	thrust::device_vector<float> oldsignals_gpu;
-	thrust::device_vector<float> oldisosignals_gpu;
+	thrust::device_vector<double> angtmp_gpu;
+	thrust::device_vector<double> oldangtmp_gpu;
+	thrust::device_vector<double> oldsignals_gpu;
+	thrust::device_vector<double> oldisosignals_gpu;
 	
 	angtmp_gpu.resize(nvox*ndirections*nfib);
 	oldangtmp_gpu.resize(nvox*ndirections);
@@ -171,18 +171,18 @@ void runmcmc_burnin(	//INPUT
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
-	float *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
-	float *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
+	double *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
+	double *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
 	FibreGPU *fibres_ptr =  thrust::raw_pointer_cast(fibres_gpu.data());
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
-	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
-	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
+	double *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
+	double *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
 	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
-	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
-	float *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
-	float *oldsignals_ptr = thrust::raw_pointer_cast(oldsignals_gpu.data());
-	float *oldisosignals_ptr = thrust::raw_pointer_cast(oldisosignals_gpu.data());
+	double *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
+	double *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
+	double *oldsignals_ptr = thrust::raw_pointer_cast(oldsignals_gpu.data());
+	double *oldisosignals_ptr = thrust::raw_pointer_cast(oldisosignals_gpu.data());
 
 	float *records_null = thrust::raw_pointer_cast(recors_null_gpu.data());
 
@@ -206,12 +206,12 @@ void runmcmc_burnin(	//INPUT
 void runmcmc_record(	//INPUT
 			thrust::device_vector<float>& 			datam_gpu,
 			thrust::device_vector<float>& 			bvals_gpu,
-			thrust::device_vector<float>& 			alpha_gpu,
-			thrust::device_vector<float>& 			beta_gpu,
+			thrust::device_vector<double>& 			alpha_gpu,
+			thrust::device_vector<double>& 			beta_gpu,
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
-			thrust::device_vector<float>&			signals_gpu,
-			thrust::device_vector<float>&			isosignals_gpu,
+			thrust::device_vector<double>&			signals_gpu,
+			thrust::device_vector<double>&			isosignals_gpu,
 			const int 					ndirections,
 			thrust::device_vector<curandState>&		randStates_gpu,
 			string 						output_file, 
@@ -252,10 +252,10 @@ void runmcmc_record(	//INPUT
 	if(opts.modelnum.value()==3) nparams++;	
 	if(opts.rician.value()) nparams++;
 
-	thrust::device_vector<float> angtmp_gpu;
-	thrust::device_vector<float> oldangtmp_gpu;
-	thrust::device_vector<float> oldsignals_gpu;
-	thrust::device_vector<float> oldisosignals_gpu;
+	thrust::device_vector<double> angtmp_gpu;
+	thrust::device_vector<double> oldangtmp_gpu;
+	thrust::device_vector<double> oldsignals_gpu;
+	thrust::device_vector<double> oldisosignals_gpu;
 	
 	angtmp_gpu.resize(nvox*ndirections*nfib);
 	oldangtmp_gpu.resize(nvox*ndirections);
@@ -276,18 +276,18 @@ void runmcmc_record(	//INPUT
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
-	float *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
-	float *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
+	double *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
+	double *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
 	FibreGPU *fibres_ptr =  thrust::raw_pointer_cast(fibres_gpu.data());
 	MultifibreGPU *multifibres_ptr = thrust::raw_pointer_cast(multifibres_gpu.data());
-	float *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
-	float *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
+	double *signals_ptr = thrust::raw_pointer_cast(signals_gpu.data());
+	double *isosignals_ptr = thrust::raw_pointer_cast(isosignals_gpu.data());
 	curandState *randStates_ptr = thrust::raw_pointer_cast(randStates_gpu.data());
 
-	float *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
-	float *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
-	float *oldsignals_ptr = thrust::raw_pointer_cast(oldsignals_gpu.data());
-	float *oldisosignals_ptr = thrust::raw_pointer_cast(oldisosignals_gpu.data());
+	double *angtmp_ptr = thrust::raw_pointer_cast(angtmp_gpu.data());
+	double *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
+	double *oldsignals_ptr = thrust::raw_pointer_cast(oldsignals_gpu.data());
+	double *oldisosignals_ptr = thrust::raw_pointer_cast(oldisosignals_gpu.data());
 	
 	float *rf0_ptr = thrust::raw_pointer_cast(rf0_gpu.data());
 	float *rtau_ptr = thrust::raw_pointer_cast(rtau_gpu.data());
