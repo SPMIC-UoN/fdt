@@ -119,7 +119,7 @@ __device__ void solver(	//INPUT
 		temp = el[ip]; 
 		el[ip] = el[i];
 		el[i] = temp;
-      		if (temp != 0.0f) { ii = i; break; }
+      		if (temp != 0.0) { ii = i; break; }
    	}
 	
   	float* bi; 

@@ -17,37 +17,37 @@
 /////////////////////////////////////
 
 __device__ inline float isoterm_PVM_multi(const int pt,const float* _a,const float* _b, const float *bvals){
-	return expf(-*_a*logf(1.0f+bvals[pt]**_b));
+	return exp(-*_a*log(1+bvals[pt]**_b));
 }
 
 __device__ inline float isoterm_a_PVM_multi(const int pt,const float* _a,const float* _b, const float *bvals){
-    	return  -logf(1.0f+bvals[pt]**_b)*expf(-*_a*logf(1.0f+bvals[pt]**_b));
+    	return  -log(1+bvals[pt]**_b)*exp(-*_a*log(1+bvals[pt]**_b));
 }
 
 __device__ inline float isoterm_b_PVM_multi(const int pt,const float* _a,const float* _b, const float *bvals){
-      	return -*_a*bvals[pt]/(1.0f+bvals[pt]**_b)*expf(-*_a*logf(1.0f+bvals[pt]**_b));
+      	return -*_a*bvals[pt]/(1+bvals[pt]**_b)*exp(-*_a*log(1+bvals[pt]**_b));
 }
 
 __device__ inline float anisoterm_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
 	if(Gamma_for_ball_only==1){
-		return expf(-bvals[pt]**_a**_b*dp*dp);
+		return exp(-bvals[pt]**_a**_b*dp*dp);
 	}else if(Gamma_for_ball_only==2){
-		return expf(-bvals[pt]*3.0f**_a**_b*invR*((1.0f-R)*dp*dp+R));		
+		return exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R));		
 	}else{
-  		return expf(-*_a*logf(1.0f+bvals[pt]**_b*(dp*dp)));
+  		return exp(-*_a*log(1+bvals[pt]**_b*(dp*dp)));
 	}
 }
  
 __device__ inline float anisoterm_a_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
 	if(Gamma_for_ball_only==1){
-		return (-bvals[pt]**_b*dp*dp* expf(-bvals[pt]**_a**_b*dp*dp));
+		return (-bvals[pt]**_b*dp*dp* exp(-bvals[pt]**_a**_b*dp*dp));
   	}else if(Gamma_for_ball_only==2){
-		float dp2=bvals[pt]*3.0f**_b*invR*((1.0f-R)*dp*dp+R);
-		return(-dp2*expf(-dp2**_a));
+		float dp2=bvals[pt]*3**_b*invR*((1-R)*dp*dp+R);
+		return(-dp2*exp(-dp2**_a));
 	}else{
-		return -logf(1.0f+bvals[pt]*(dp*dp)**_b)* expf(-*_a*logf(1.0f+bvals[pt]*(dp*dp)**_b));
+		return -log(1+bvals[pt]*(dp*dp)**_b)* exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b));
   	}
   	
 }
@@ -55,44 +55,44 @@ __device__ inline float anisoterm_a_PVM_multi(const int pt,const float* _a,const
 __device__ inline float anisoterm_b_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
 	if(Gamma_for_ball_only==1){
-		return(-bvals[pt]**_a*dp*dp*expf(-bvals[pt]**_a**_b*dp*dp));
+		return(-bvals[pt]**_a*dp*dp*exp(-bvals[pt]**_a**_b*dp*dp));
   	}else if(Gamma_for_ball_only==2){
-		float dp2=bvals[pt]*3.0f**_a*invR*((1.0f-R)*dp*dp+R);
-		return(-dp2*expf(-dp2**_b));
+		float dp2=bvals[pt]*3**_a*invR*((1-R)*dp*dp+R);
+		return(-dp2*exp(-dp2**_b));
   	}else{
-		return (-*_a*bvals[pt]*(dp*dp)/ (1.0f+bvals[pt]*(dp*dp)**_b)*expf(-*_a*logf(1.0f+bvals[pt]*(dp*dp)**_b)));
+		return (-*_a*bvals[pt]*(dp*dp)/ (1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b)));
   	}
 }
 
 __device__ inline float anisoterm_th_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float sinth,costh,sinph,cosph;
-	sincosf(_th,&sinth,&costh);
-	sincosf(_ph,&sinph,&cosph);
+	sincos(_th,&sinth,&costh);
+	sincos(_ph,&sinph,&cosph);
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
   	float dp1 = costh* (bvecs[pt]*cosph + bvecs[ndirections+pt]*sinph) - bvecs[(2*ndirections)+pt]*sinth;
 	if(Gamma_for_ball_only==1){
-  		return(-2*bvals[pt]**_a**_b*dp*dp1*expf(-bvals[pt]**_a**_b*dp*dp));
+  		return(-2*bvals[pt]**_a**_b*dp*dp1*exp(-bvals[pt]**_a**_b*dp*dp));
   	}else if(Gamma_for_ball_only==2){
-		float dp2=2.0f*bvals[pt]*3.0f**_a**_b*invR*(1.0f-R)*dp1;
-		return(-dp2*expf(-bvals[pt]*3.0f**_a**_b*invR*((1.0f-R)*dp*dp+R)));
+		float dp2=2*bvals[pt]*3**_a**_b*invR*(1-R)*dp1;
+		return(-dp2*exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R)));
   	}else{
-		return  (-*_a**_b*bvals[pt]/(1.0f+bvals[pt]*(dp*dp)**_b)*expf(-*_a*logf(1.0f+bvals[pt]*(dp*dp)**_b))*2.0f*dp*dp1);	
+		return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);	
 	}
 }
 
 __device__ inline float anisoterm_ph_PVM_multi(const int pt,const float* _a,const float* _b,const float3 x,const float _th,const float _ph,const float *bvecs, const float *bvals, const float R, const float invR, const int ndirections,const int Gamma_for_ball_only){
 	float sinth,sinph,cosph;
-	sinth=sinf(_th);
-	sincosf(_ph,&sinph,&cosph);
+	sinth=sin(_th);
+	sincos(_ph,&sinph,&cosph);
   	float dp = bvecs[pt]*x.x+bvecs[ndirections+pt]*x.y+bvecs[(2*ndirections)+pt]*x.z;
   	float dp1 = sinth* (-bvecs[pt]*sinph + bvecs[ndirections+pt]*cosph);
 	if(Gamma_for_ball_only==1){
-  		return(-2.0f*bvals[pt]**_a**_b*dp*dp1*expf(-bvals[pt]**_a**_b*dp*dp));
+  		return(-2*bvals[pt]**_a**_b*dp*dp1*exp(-bvals[pt]**_a**_b*dp*dp));
   	}else if(Gamma_for_ball_only==2){
-		float dp2=2.0f*bvals[pt]*3.0f**_a**_b*invR*(1.0f-R)*dp1;
-		return(-dp2*expf(-bvals[pt]*3.0f**_a**_b*invR*((1.0f-R)*dp*dp+R)));
+		float dp2=2*bvals[pt]*3**_a**_b*invR*(1-R)*dp1;
+		return(-dp2*exp(-bvals[pt]*3**_a**_b*invR*((1-R)*dp*dp+R)));
  	}else{
-		return  (-*_a**_b*bvals[pt]/(1.0f+bvals[pt]*(dp*dp)**_b)*expf(-*_a*logf(1.0f+bvals[pt]*(dp*dp)**_b))*2.0f*dp*dp1);
+		return  (-*_a**_b*bvals[pt]/(1+bvals[pt]*(dp*dp)**_b)*exp(-*_a*log(1+bvals[pt]*(dp*dp)**_b))*2*dp*dp1);
   	}
 }
 
@@ -104,14 +104,14 @@ __device__ void fix_fsum_PVM_multi(	//INPUT
 					//INPUT - OUTPUT){
 					float *params)
 {
-  	float sumf=0.0f;
+  	float sumf=0;
   	if (m_include_f0) 
     		sumf=params[nparams-1];
   	for(int i=0;i<nfib;i++){
-    		if (params[3+(i*3)]==0.0f) 
+    		if (params[3+(i*3)]==0) 
 			params[3+(i*3)]=FSMALL_gpu;
     		sumf+=params[3+(i*3)];
-    		if(sumf>=1.0f){
+    		if(sumf>=1){
 			for(int j=i;j<nfib;j++)
 				params[3+(j*3)]=FSMALL_gpu;
 			break;
@@ -167,20 +167,20 @@ __device__ void cf_PVM_multi(		//INPUT
 	if(idSubVOX<nfib){
 		int kk = 3+3*(idSubVOX);
 		float sinth,costh,sinph,cosph;
-		sincosf(params[kk+1],&sinth,&costh);
-		sincosf(params[kk+2],&sinph,&cosph);
+		sincos(params[kk+1],&sinth,&costh);
+		sincos(params[kk+2],&sinph,&cosph);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
   	}
 	if(idSubVOX==0){
-		*_a= fabsf(params[1]);
-		*_b= fabsf(params[2]); 
-		*cfv = 0.0f;
-		*sumf=0.0f;
+		*_a= abs(params[1]);
+		*_b= abs(params[2]); 
+		*cfv = 0.0;
+		*sumf=0;
 		for(int k=0;k<nfib;k++){
 			fs[k] = x2f_gpu(params[3+3*k]);
-			*sumf+= fs[k];
+		 	*sumf+= fs[k];
 		}
 	}
 
@@ -195,7 +195,7 @@ __device__ void cf_PVM_multi(		//INPUT
 	
 	reduction[idSubVOX]=0;
 	for(int dir=0;dir<ndir;dir++){
-    		err = 0.0f;
+    		err = 0.0;
     		for(int k=0;k<nfib;k++){
 			x2.x=x[k*3];
 			x2.y=x[k*3+1];
@@ -204,9 +204,9 @@ __device__ void cf_PVM_multi(		//INPUT
     		}
 		if(m_include_f0){
 			float temp_f0=x2f_gpu(params[nparams-1]);
-			err = (fabsf(params[0])*(temp_f0+((1.0f-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+err)))-mdata[dir_iter];
+			err = (abs(params[0])*(temp_f0+((1-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+err)))-mdata[dir_iter];
 		}else{
-			err = fabsf(params[0])*((1.0f-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+err)-mdata[dir_iter];
+			err = abs(params[0])*((1-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+err)-mdata[dir_iter];
 		}
 		reduction[idSubVOX]+= err*err;  
 		dir_iter+=THREADS_BLOCK_FIT;
@@ -248,21 +248,21 @@ __device__ void grad_PVM_multi(		//INPUT
 	if(idSubVOX<nfib){
 		int kk = 3+3*(idSubVOX);
 		float sinth,costh,sinph,cosph;
-		sincosf(params[kk+1],&sinth,&costh);
-		sincosf(params[kk+2],&sinph,&cosph);
+		sincos(params[kk+1],&sinth,&costh);
+		sincos(params[kk+2],&sinph,&cosph);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
   	}
 	if(idSubVOX==0){
-		*_a= fabsf(params[1]);
-		*_b= fabsf(params[2]); 
-		*sumf=0.0f;
+		*_a= abs(params[1]);
+		*_b= abs(params[2]); 
+		*sumf=0;
 		for(int k=0;k<nfib;k++){
 			fs[k] = x2f_gpu(params[3+3*k]);
-			*sumf+= fs[k];
+	 		*sumf+= fs[k];
 		}
-		for (int p=0;p<nparams;p++) grad[p]=0.0f;
+		for (int p=0;p<nparams;p++) grad[p]=0;
 	}
 
   	int ndir = ndirections/THREADS_BLOCK_FIT;
@@ -279,9 +279,9 @@ __device__ void grad_PVM_multi(		//INPUT
 	__syncthreads();
 
   	for(int dir=0;dir<max_dir;dir++){
-		for (int p=0; p<nparams; p++) myJ[p]=0.0f;
+		for (int p=0; p<nparams; p++) myJ[p]=0;
 		if(dir<ndir){
-    			sig = 0.0f;
+    			sig = 0;
     			for(int k=0;k<nfib;k++){
       				int kk = 3+3*(k);
       				xx.x=x[k*3];
@@ -289,41 +289,41 @@ __device__ void grad_PVM_multi(		//INPUT
       				xx.z=x[k*3+2];		
       				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-      				myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*fs[k]*
+      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*
 				anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only); 
 
-				myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*fs[k]*
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*
 				anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-				myJ[kk] = fabsf(params[0])*(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only)
-				-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[kk])*1.0f/(1.0f+params[kk]*params[kk]); 
+				myJ[kk] = abs(params[0])*(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only)
+				-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[kk])*1/(1+params[kk]*params[kk]); 
 
-      				myJ[kk+1] = fabsf(params[0])*fs[k]*
+      				myJ[kk+1] = abs(params[0])*fs[k]*
 				anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);  
 
-      				myJ[kk+2] = fabsf(params[0])*fs[k]*
+      				myJ[kk+2] = abs(params[0])*fs[k]*
 				anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
     			}
     			if(m_include_f0){
 				float temp_f0=x2f_gpu(params[nparams-1]);
-				myJ[nparams-1]= fabsf(params[0])*(1.0f-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*
-				two_pi_gpu*sign_gpu(params[nparams-1])*1.0f/(1.0f+params[nparams-1]*params[nparams-1]);
+				myJ[nparams-1]= abs(params[0])*(1-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*
+				two_pi_gpu*sign_gpu(params[nparams-1])*1/(1+params[nparams-1]*params[nparams-1]);
 
-				sig=fabsf(params[0])*((temp_f0+(1.0f-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals))+sig);
-    				myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf-temp_f0)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
-				myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf-temp_f0)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);
+				sig=abs(params[0])*((temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals))+sig);
+    				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);
     			}else{
-	    			sig = fabsf(params[0]) * ((1.0f-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
-	    			myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
-	    			myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);	
+	    			sig = abs(params[0]) * ((1-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
+	    			myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*(1-*sumf)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
+	    			myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*(1-*sumf)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);	
     			}
     
     			diff = sig - mdata[dir_iter];
-    			myJ[0] = (params[0]>0.0f?1.0f:-1.0f)*sig/params[0]; 
+    			myJ[0] = (params[0]>0?1.0:-1.0)*sig/params[0]; 
 		}
 
 		for (int p=0;p<nparams;p++){ 
-			reduction[idSubVOX]=2.0f*myJ[p]*diff;
+			reduction[idSubVOX]=2*myJ[p]*diff;
 
 			__syncthreads();
 			if(idSubVOX==0){
@@ -363,23 +363,23 @@ __device__ void hess_PVM_multi(		//INPUT
 	if(idSubVOX<nfib){
 		int kk = 3+3*(idSubVOX);
 		float sinth,costh,sinph,cosph;
-		sincosf(params[kk+1],&sinth,&costh);
-		sincosf(params[kk+2],&sinph,&cosph);
+		sincos(params[kk+1],&sinth,&costh);
+		sincos(params[kk+2],&sinph,&cosph);
 		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
     		x[idSubVOX*3+2] = costh;
   	}
 	if(idSubVOX==0){
-		*_a= fabsf(params[1]);
-		*_b= fabsf(params[2]); 
-		*sumf=0.0f;
+		*_a= abs(params[1]);
+		*_b= abs(params[2]); 
+		*sumf=0;
 		for(int k=0;k<nfib;k++){
 			fs[k] = x2f_gpu(params[3+3*k]);
 			*sumf+= fs[k];
 		}
 		for (int p=0;p<nparams;p++){
 			for (int p2=0;p2<nparams;p2++){ 
-				hess[p*nparams+p2] = 0.0f;
+				hess[p*nparams+p2] = 0;
 			}
 		}
 	}
@@ -397,9 +397,9 @@ __device__ void hess_PVM_multi(		//INPUT
 	__syncthreads(); 
 	
   	for(int dir=0;dir<max_dir;dir++){
-		for (int p=0; p<nparams; p++) myJ[p]=0.0f;
+		for (int p=0; p<nparams; p++) myJ[p]=0;
 		if(dir<ndir){
-    			sig = 0.0f;
+    			sig = 0;
     			for(int k=0;k<nfib;k++){
       				int kk = 3+3*(k);
       				xx.x=x[k*3];
@@ -407,33 +407,33 @@ __device__ void hess_PVM_multi(		//INPUT
       				xx.z=x[k*3+2];		
       				sig += fs[k]*anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-      				float cov = two_pi_gpu*sign_gpu(params[kk])*1.0f/(1.0f+params[kk]*params[kk]);	
-      				myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*fs[k]*
+      				float cov = two_pi_gpu*sign_gpu(params[kk])*1/(1+params[kk]*params[kk]);	
+      				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*fs[k]*
 				anisoterm_a_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-				myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*fs[k]*
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*fs[k]*
 				anisoterm_b_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-				myJ[kk] = fabsf(params[0])*
+				myJ[kk] = abs(params[0])*
 				(anisoterm_PVM_multi(dir_iter,_a,_b,xx,bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only)-
 				isoterm_PVM_multi(dir_iter,_a,_b,bvals))*cov;
 
-      				myJ[kk+1] = fabsf(params[0])*fs[k]*
+      				myJ[kk+1] = abs(params[0])*fs[k]*
 				anisoterm_th_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
 
-      				myJ[kk+2] = fabsf(params[0])*fs[k]*
+      				myJ[kk+2] = abs(params[0])*fs[k]*
 				anisoterm_ph_PVM_multi(dir_iter,_a,_b,xx,params[kk+1],params[kk+2],bvecs,bvals,R,invR,ndirections,Gamma_for_ball_only);
     			}
     			if(m_include_f0){
 				float temp_f0=x2f_gpu(params[nparams-1]);
-				myJ[nparams-1]= fabsf(params[0])*(1.0f-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[nparams-1])*1.0f/(1.0f+params[nparams-1]*params[nparams-1]);
-	    			sig = fabsf(params[0])* (temp_f0+(1.0f-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
-    				myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf-temp_f0)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
-				myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf-temp_f0)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);
+				myJ[nparams-1]= abs(params[0])*(1-isoterm_PVM_multi(dir_iter,_a,_b,bvals))*two_pi_gpu*sign_gpu(params[nparams-1])*1/(1+params[nparams-1]*params[nparams-1]);
+	    			sig = abs(params[0])* (temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
+    				myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
+				myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*(1-*sumf-temp_f0)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);
     			}else{
-				sig = fabsf(params[0])*((1.0f-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
-	    			myJ[1] += (params[1]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
-	    			myJ[2] += (params[2]>0.0f?1.0f:-1.0f)*fabsf(params[0])*(1.0f-*sumf)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);	
+				sig = abs(params[0])*((1-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,bvals)+sig);
+	    			myJ[1] += (params[1]>0?1.0:-1.0)*abs(params[0])*(1-*sumf)*isoterm_a_PVM_multi(dir_iter,_a,_b,bvals);
+	    			myJ[2] += (params[2]>0?1.0:-1.0)*abs(params[0])*(1-*sumf)*isoterm_b_PVM_multi(dir_iter,_a,_b,bvals);	
     			}
 	
     			myJ[0] = sig/params[0]; 
@@ -442,7 +442,7 @@ __device__ void hess_PVM_multi(		//INPUT
 		for (int p=0;p<nparams;p++){
 			for (int p2=p;p2<nparams;p2++){ 
 
-				reduction[idSubVOX]=2.0f*(myJ[p]*myJ[p2]);
+				reduction[idSubVOX]=2*(myJ[p]*myJ[p2]);
 				__syncthreads();
 				if(idSubVOX==0){
 					for(int i=0;i<THREADS_BLOCK_FIT;i++){
@@ -522,7 +522,7 @@ extern "C" __global__ void fit_PVM_multi_kernel(	//INPUT
 		int nparams_single_c = nparams-1;
 
 		myparams[0] = params_PVM_single_c[(idVOX*nparams_single_c)+0];			//pvm1.get_s0();
-  		myparams[1] = 1.0f;								//start with d=d_std
+  		myparams[1] = 1.0;								//start with d=d_std
   		for(int i=0,ii=3;i<nfib;i++,ii+=3){
     			myparams[ii] = f2x_gpu(params_PVM_single_c[(idVOX*nparams_single_c)+ii-1]);
     			myparams[ii+1] = params_PVM_single_c[(idVOX*nparams_single_c)+ii];
@@ -557,8 +557,8 @@ extern "C" __global__ void fit_PVM_multi_kernel(	//INPUT
 	if(idSubVOX==0){  	
 		float aux = myparams[1];
 
-  		myparams[1] = fabsf(aux*myparams[2]);
-		myparams[2] = sqrt(fabsf(aux*myparams[2]*myparams[2]));
+  		myparams[1] = abs(aux*myparams[2]);
+		myparams[2] = sqrt(float(abs(aux*myparams[2]*myparams[2])));
   		for(int i=3,k=0;k<nfib;i+=3,k++){
     			myparams[i]  = x2f_gpu(myparams[i]);
   		}
@@ -636,8 +636,8 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
     		myparams[kk+1] = params[(idVOX*nparams)+kk+1];
     		myparams[kk+2] = params[(idVOX*nparams)+kk+2];
 
-		sincosf(myparams[kk+1],&sinth,&costh);
-		sincosf(myparams[kk+2],&sinph,&cosph);		
+		sincos(myparams[kk+1],&sinth,&costh);
+		sincos(myparams[kk+2],&sinph,&cosph);		
     		fs[idSubVOX] = x2f_gpu(myparams[kk]);
     		x[idSubVOX*3] = sinth*cosph;
     		x[idSubVOX*3+1] = sinth*sinph;
@@ -647,9 +647,9 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 	__syncthreads(); 
 
 	if(idSubVOX==0){
-  		*_a = fabsf(myparams[1]);
-  		*_b = fabsf(myparams[2]);
-  		*sumf=0.0f;
+  		*_a = abs(myparams[1]);
+  		*_b = abs(myparams[2]);
+  		*sumf=0;
   		for(int k=0;k<nfib;k++){
 	    		*sumf += fs[k];
 		}
@@ -674,8 +674,8 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
 
   	for(int dir=0;dir<ndir;dir++){
 		mydata = data[(idVOX*ndirections)+dir_iter];
-  		predicted_signal=0.0f;	//pred = 0;
-    		val = 0.0f;
+  		predicted_signal=0;	//pred = 0;
+    		val = 0.0;
     		for(int k=0;k<nfib;k++){
 			x2.x=x[k*3];
 			x2.y=x[k*3+1];
@@ -684,9 +684,9 @@ extern "C" __global__ void get_residuals_PVM_multi_kernel(	//INPUT
     		}	
     		if (*my_include_f0){
       			float temp_f0=x2f_gpu(myparams[nparams-1]);
-      			predicted_signal = fabsf(myparams[0])*(temp_f0+(1.0f-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,&bvals[pos_bvals])+val);
+      			predicted_signal = abs(myparams[0])*(temp_f0+(1-*sumf-temp_f0)*isoterm_PVM_multi(dir_iter,_a,_b,&bvals[pos_bvals])+val);
     		}else{
-      			predicted_signal = fabsf(myparams[0])*((1.0f-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,&bvals[pos_bvals])+val); 
+      			predicted_signal = abs(myparams[0])*((1-*sumf)*isoterm_PVM_multi(dir_iter,_a,_b,&bvals[pos_bvals])+val); 
   		}   
 
 		//residuals=m_data-predicted_signal;
