@@ -95,7 +95,7 @@ void init_Fibres_Multifibres(	//INPUT
 	if(total_threads%THREADS_BLOCK_RAND) blocks_Rand++;
 	dim3 Dim_Grid_Rand(blocks_Rand,1);
 	dim3 Dim_Block_Rand(THREADS_BLOCK_RAND,1); 
-	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates_ptr,seed);
+	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates_ptr,seed,nvox);
 	sync_check("Setup_Randoms_kernel");
 
 	gettimeofday(&t2,NULL);

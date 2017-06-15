@@ -23,9 +23,11 @@
 #define maxfloat 1e10
 #define UPPERDIFF 0.005
 
-extern "C" __global__ void setup_randoms_kernel(curandState* randstate, double seed){
+extern "C" __global__ void setup_randoms_kernel(curandState* randstate, double seed, int nvox){
 	int id = blockIdx.x*THREADS_BLOCK_RAND+threadIdx.x;
-	curand_init(seed,id,0,&randstate[id]);
+	if(id<nvox){
+		curand_init(seed,id,0,&randstate[id]);
+	}
 }
 
 __device__ inline void propose(float* param, float* old, float prop, curandState* localrandState){
