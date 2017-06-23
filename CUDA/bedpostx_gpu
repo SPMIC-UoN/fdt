@@ -138,6 +138,10 @@ gflag=0
 other=""
 queue=""
 
+if [ $qsys -eq 0 ] && [ "x$SGE_ROOT" != "x" ]; then
+	queue="-q $FSLGECUDAQ"
+fi
+
 shift
 while [ ! -z "$1" ]
 do
@@ -159,11 +163,6 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
-
-if [ $qsys -eq 0 ] && [ "x$SGE_ROOT" != "x" ]; then
-	queue="-q $FSLGECUDAQ"
-fi
-
 
 #check that all required files exist
 
