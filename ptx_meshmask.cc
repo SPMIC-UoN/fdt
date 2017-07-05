@@ -38,9 +38,9 @@ void meshmask()
   
   Matrix mm_to_vox(4,4);
   if(opts.meshspace.value()=="freesurfer"){
-    mm_to_vox << -1 << 0 << 0 <<  (seeds.xsize())/2
-	      <<  0 << 0 << -1 << (seeds.zsize())/2
-	      <<  0 << 1 << 0 <<  (seeds.ysize())/2
+    mm_to_vox << -1 << 0 << 0 <<  (int)seeds.xsize()/2
+	      <<  0 << 0 << -1 << (int)seeds.zsize()/2
+	      <<  0 << 1 << 0 <<  (int)seeds.ysize()/2
 	      <<  0 << 0 << 0 << 1;
   }
   else if(opts.meshspace.value()=="caret"){
