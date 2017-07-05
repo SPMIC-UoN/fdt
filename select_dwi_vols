@@ -67,13 +67,10 @@ echo volume list = $list
 cmd="$cmd }'"
 
 
-bcmd="echo $bvals | `echo $cmd` > ${o}.bval"
-echo $bcmd
-eval $bcmd
-echo $outbv
-if [ -f $outbv ];then
+if [ "$outbv" != "" ];then
+    bcmd="echo $bvals | `echo $cmd` > ${o}.bval"
+    eval $bcmd
     vcmd="cat $outbv | `echo $cmd` > ${o}.bvec"
-    echo $vcmd
     eval $vcmd
 fi
 
