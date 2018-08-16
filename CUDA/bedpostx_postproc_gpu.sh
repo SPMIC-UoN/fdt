@@ -8,9 +8,9 @@
 parameters=""
 while [ ! -z "$2" ]
 do
-	if [[ $1 =~ "--nf=" ]]; then
-    		numfib=`echo $1 | cut -d '=' -f2`
-	fi
+	case $1 in
+          "--nf="*) numfib=`echo $1 | cut -d '=' -f2` ;;
+        esac
  	all=$all" "$1
 	subjdir=$1
 	shift
