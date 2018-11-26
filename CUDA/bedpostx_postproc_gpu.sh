@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #   Copyright (C) 2012 University of Oxford
 #
@@ -45,7 +45,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/mean_f1samples` -eq 1 ];then
     do
 	${FSLDIR}/bin/fslmaths ${subjdir}.bedpostX/mean_fsumsamples -add ${subjdir}.bedpostX/mean_f${fib}samples ${subjdir}.bedpostX/mean_fsumsamples
 	fib=$(($fib + 1))
-    done	
+    done
 fi
 
 
@@ -57,7 +57,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
     if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
       rm -rf ${subjdir}.bedpostX/diff_parts
       rm -rf ${subjdir}.bedpostX/data*
-      rm -rf ${subjdir}.bedpostX/grad_dev*	  
+      rm -rf ${subjdir}.bedpostX/grad_dev*
     fi
   fi
 fi
