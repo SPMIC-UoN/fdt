@@ -124,7 +124,7 @@ int do_dtigen(){
   if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
  
   data.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),b.Ncols());
-  copybasicproperties(tensor[0],data[0]);
+  copybasicproperties(tensor[0],data);
 
   Matrix Amat = form_Amat(r,b);
   ColumnVector Dvec(7);

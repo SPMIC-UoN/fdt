@@ -44,7 +44,7 @@ namespace TRACT{
   void imgradient(const volume<float>& im,volume4D<float>& grad){
     
     grad.reinitialize(im.xsize(),im.ysize(),im.zsize(),3);
-    copybasicproperties(im,grad[0]);
+    copybasicproperties(im,grad);
     
     int fx,fy,fz,bx,by,bz;
     float dx,dy,dz; 
@@ -997,14 +997,9 @@ namespace TRACT{
 	if(first_row > m_ConMat2.xsize()) break;
 
 	// set limits
-	m_ConMat2.setROIlimits(first_row-1,m_ConMat2.miny(),m_ConMat2.minz(),last_row-1,m_ConMat2.maxy(),m_ConMat2.maxz());
-	m_ConMat2.activateROI();
-	tmpmat = m_ConMat2.ROI();
+	tmpmat = m_ConMat2.ROI(first_row-1,m_ConMat2.miny(),m_ConMat2.minz(),0,last_row-1,m_ConMat2.maxy(),m_ConMat2.maxz(),0);
 	save_volume(tmpmat,logger.appendDir("fdt_matrix2_"+num2str(i)));
-
-	m_CoordMat2.setROIlimits(first_row-1,m_CoordMat2.miny(),m_CoordMat2.minz(),last_row-1,m_CoordMat2.maxy(),m_CoordMat2.maxz());
-	m_CoordMat2.activateROI();
-	tmpmat = m_CoordMat2.ROI();
+	tmpmat = m_CoordMat2.ROI(first_row-1,m_CoordMat2.miny(),m_CoordMat2.minz(),0,last_row-1,m_CoordMat2.maxy(),m_CoordMat2.maxz(),0);
 	save_volume(tmpmat,logger.appendDir("coords_for_fdt_matrix2_"+num2str(i)));
 
 

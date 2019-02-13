@@ -84,7 +84,7 @@ int do_bpxgen(){
   Matrix bvals = read_ascii_matrix(bvalsfile.value());
  
   data.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),bvals.Ncols());
-  copybasicproperties(fvol[0],data[0]);
+  copybasicproperties(fvol[0],data);
   data=0;
 
   
