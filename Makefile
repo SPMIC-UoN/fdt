@@ -167,7 +167,7 @@ ${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
 
 ${LIBBEDPOSTX_CUDA}: 
-		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GENCODE_FLAGS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -I${INC_CUDA}/thrust -maxrregcount=64
+		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GENCODE_FLAGS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -L${LIB_CUDA}/stubs -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -I${INC_CUDA}/thrust -maxrregcount=64
 		@if [ ! -d ${FSLDEVDIR}/lib/ ] ; then ${MKDIR} ${FSLDEVDIR}/lib ; fi
 		${CP} -rf CUDA/libbedpostx_cuda.so ${FSLDEVDIR}/lib
 
@@ -178,4 +178,4 @@ ${SPLIT_PARTS_GPU}: ${SPLIT_PARTS_GPUOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLIT_PARTS_GPUOBJS} ${DLIBS}
 
 ${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${LIB_CUDA}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${LIB_CUDA} -L${LIB_CUDA}/stubs
