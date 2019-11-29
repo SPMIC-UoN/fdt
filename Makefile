@@ -1,5 +1,9 @@
 include $(FSLCONFDIR)/default.mk
 
+ifeq ($(FSLMASTERBUILD),1)
+	COMPILE_GPU=FDT_COMPILE_GPU
+endif
+
 ifeq ($(COMPILE_GPU), 1)
 	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
@@ -44,16 +48,16 @@ XFIBRES_GPU=xfibres_gpu
 DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
-MEDOBJS=medianfilter.o 
+MEDOBJS=medianfilter.o
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
-XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
+XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
 XFIBOBJS2=xfibres_2.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
-TESTOBJS=testfile.o 
+TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
@@ -69,7 +73,7 @@ MERGE_PARTS_GPUOBJS=merge_parts_gpu.o xfibresoptions.o
 SPLIT_PARTS_GPUOBJS=CUDA/split_parts_gpu.o
 XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
 
-SGEBEDPOST = bedpost 
+SGEBEDPOST = bedpost
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
 SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs select_dwi_vols ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
@@ -82,27 +86,27 @@ FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres
 
 RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} 
+all: ${XFILES} ${FXFILES}
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
 
 ${PT}:		   ${PTOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS} 
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS}
 
 ${FTB}:    	${FTBOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FTBOBJS} ${DLIBS} 
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FTBOBJS} ${DLIBS}
 
 ${PJ}:    	${PJOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PJOBJS} ${DLIBS} 
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PJOBJS} ${DLIBS}
 
 ${MED}:    	${MEDOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MEDOBJS} ${DLIBS} 
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MEDOBJS} ${DLIBS}
 
 ${DTIFIT}:    	${DTIFITOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIFITOBJS} ${DLIBS}
 
-${CCOPS}:    	${CCOPSOBJS}	
+${CCOPS}:    	${CCOPSOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CCOPSOBJS} ${DLIBS}
 
 ${ROM}:    	${ROMOBJS}
@@ -166,7 +170,7 @@ ${RBXPRED}: 	${RBXPREDOBJS}
 ${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
 
-${LIBBEDPOSTX_CUDA}: 
+${LIBBEDPOSTX_CUDA}:
 		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GENCODE_FLAGS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -L${LIB_CUDA}/stubs -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -I${INC_CUDA}/thrust -maxrregcount=64
 		@if [ ! -d ${FSLDEVDIR}/lib/ ] ; then ${MKDIR} ${FSLDEVDIR}/lib ; fi
 		${CP} -rf CUDA/libbedpostx_cuda.so ${FSLDEVDIR}/lib
