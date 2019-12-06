@@ -515,10 +515,10 @@ int main(int argc, char** argv)
             // para and perp kurt
             ColumnVector logS(S.Nrows());
             for (int t = 1; t <= S.Nrows(); t++) {
-                if (S(t) > 0)
+                if (S(t) > 0.01 * s0)
                     logS(t) = log(S(t));
                 else
-                    logS(t) = 0;
+                    logS(t) = log(0.01 * s0);
             }
             kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3);
             Kvec = pinv(kurtMat) * logS;
