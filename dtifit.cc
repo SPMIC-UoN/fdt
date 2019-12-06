@@ -124,6 +124,7 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
 		 const ColumnVector& v1, const ColumnVector& v2, const ColumnVector& v3)
 {
+    // Returns matrix mapping eigen-values and kurtosis terms to log(signal) given a set of eigenvectors
   Matrix A(r.Ncols(),6);
   Matrix tmpvec(3,1);
   ColumnVector  tmp(3);
@@ -137,12 +138,12 @@ Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
     tmp(3) = tmp(3)*tmp(3);
 
 
-    A(i,1) = 1;
-    A(i,2) = b(1,i)*tmp(1);
-    A(i,3) = b(1,i)*tmp(2);
-    A(i,4) = b(1,i)*tmp(3);
-    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1)*tmp(1);
-    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)*tmp(1))*(1-tmp(1)*tmp(1));
+    A(i,1) = 1;  // log(S0)
+    A(i,2) = b(1,i)*tmp(1); // L1
+    A(i,3) = b(1,i)*tmp(2); // L2
+    A(i,4) = b(1,i)*tmp(3); // L3
+    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1)*tmp(1); // K_para
+    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)*tmp(1))*(1-tmp(1)*tmp(1)); // K_perp
   }
   return A;
 }
