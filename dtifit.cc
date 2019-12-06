@@ -142,8 +142,8 @@ Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
     A(i,2) = b(1,i)*tmp(1); // L1
     A(i,3) = b(1,i)*tmp(2); // L2
     A(i,4) = b(1,i)*tmp(3); // L3
-    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1)*tmp(1); // K_para
-    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)*tmp(1))*(1-tmp(1)*tmp(1)); // K_perp
+    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1); // K_para
+    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)); // K_perp
   }
   return A;
 }
