@@ -120,7 +120,39 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 }
 
 
-Matrix form_Amat(const Matrix& r,const Matrix& b, const Matrix & cni )
+
+Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
+		 const ColumnVector& v1, const ColumnVector& v2, const ColumnVector& v3)
+{
+  Matrix A(r.Ncols(),6);
+  Matrix tmpvec(3,1);
+  ColumnVector  tmp(3);
+  
+
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);    
+    tmp << MISCMATHS::dot(tmpvec,v1) << MISCMATHS::dot(tmpvec,v2) << MISCMATHS::dot(tmpvec,v3);
+    tmp(1) = tmp(1)*tmp(1);
+    tmp(2) = tmp(2)*tmp(2);
+    tmp(3) = tmp(3)*tmp(3);
+
+
+    A(i,1) = 1;
+    A(i,2) = b(1,i)*tmp(1);
+    A(i,3) = b(1,i)*tmp(2);
+    A(i,4) = b(1,i)*tmp(3);
+    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1)*tmp(1);
+    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)*tmp(1))*(1-tmp(1)*tmp(1));
+  }
+  return A;
+}
+
+
+
+
+
+
+Matrix form_Amat(const Matrix& r,const Matrix& b,const Matrix & cni)
 {
   //cni are confound regressors of no interest
   Matrix A(r.Ncols(),7 + cni.Ncols());
@@ -186,7 +218,6 @@ ReturnMatrix WLS_pinv(const Matrix& Amat, const ColumnVector& S)
   W=0;
   for (int i=1; i<=S.Nrows(); i++)
       W(i)=(S(i)>0 ? S(i)*S(i):1);             //Weights according to (Salvador, HBM 2005) 
- 
   pinvA=(((Amat.t()*W)*Amat).i()*Amat.t())*W;  //WLS pseudoinverse of Amat
   pinvA.Release();
   return pinvA;
@@ -205,25 +236,23 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   DiagonalMatrix Ddsorted(3);
   float mDd, fsquared;
 
-  for (int i=1; i<=S.Nrows(); i++)
-    {
-      if(S(i)>0)
-	logS(i)=log(S(i));
-      else
-	logS(i)=0;
-    }
+
+  // Robustify the fit: create extra regressors for data<=0
+  
+  
+  for (int i=1; i<=S.Nrows(); i++){
+    if(S(i)>0){logS(i)=log(S(i));}
+    else{logS(i)=0;}
+  }
   Dvec=-Amat_pinv*logS;       //Estimate the model parameters
 
-  if(Dvec(7)>-maxlogfloat )
-    s0=exp(-Dvec(7));
-  else
-    s0=S.MaximumAbsoluteValue();
+  if(Dvec(7)>-maxlogfloat){s0=exp(-Dvec(7));}
+  else{s0=S.MaximumAbsoluteValue();}
   
-  for ( int i = 1; i <= S.Nrows(); i++)
-    {
-      if(s0<S.Sum()/S.Nrows()){ s0=S.MaximumAbsoluteValue();  }
+  for ( int i = 1; i <= S.Nrows(); i++){
+      if(s0<S.Sum()/S.Nrows()){ s0=S.MaximumAbsoluteValue();}
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
-    }
+  }
   Dvec = -Amat_pinv*logS;
   sse=(Amat*Dvec+logS).SumSquare();
   //sse = (W*(Amat*Dvec+logS)).SumSquare();   //In case of WLS, the weighted SSE will be evaluated, otherwise W=I, so OLS SSE is computed 
@@ -366,7 +395,7 @@ int main(int argc, char** argv)
     bvalmap.reinitialize(maxx-minx,maxy-miny,maxz-minz,data.tsize());
   volume4D<float> cni_cope;
   volume<float> sse;
-  volume<float> kurt;
+  volume<float> kurt,kurt_para,kurt_perp;
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
@@ -376,12 +405,12 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],FA);
   copybasicproperties(data[0],S0);
   copybasicproperties(data[0],MODE);
-  copybasicproperties(data[0],V1);
-  copybasicproperties(data[0],V2);
-  copybasicproperties(data[0],V3);
-  copybasicproperties(data[0],Delements);
+  copybasicproperties(data[0],V1[0]);
+  copybasicproperties(data[0],V2[0]);
+  copybasicproperties(data[0],V3[0]);
+  copybasicproperties(data[0],Delements[0]);
   if (opts.save_bvals.value()){
-    copybasicproperties(data[0],bvalmap);
+    copybasicproperties(data[0],bvalmap[0]);
     bvalmap=0;
   }
 
@@ -399,7 +428,7 @@ int main(int argc, char** argv)
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
-    copybasicproperties(data[0],cni_cope);
+    copybasicproperties(data[0],cni_cope[0]);
     cni_cope=0;
   }
   else if(opts.kurt.value()){
@@ -417,14 +446,21 @@ int main(int argc, char** argv)
     kurt.reinitialize(maxx-minx,maxy-miny,maxz-minz);
     copybasicproperties(data[0],kurt);
     kurt=0;
+    kurt_para.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    copybasicproperties(data[0],kurt_para);
+    kurt_para=0;
+    kurt_perp.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    copybasicproperties(data[0],kurt_perp);
+    kurt_perp=0;
   }
 
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   ColumnVector Dvec(7); Dvec=0; 
   Matrix pinv_Amat=pinv(Amat);
+  Matrix kurtMat;
 
   for(int k = minz; k < maxz; k++){
-    cout<<k<<" slices processed"<<endl;
+    cout<<k<<" slices processed"<<endl;    
       for(int j=miny; j < maxy; j++){
 	for(int i =minx; i< maxx; i++){
 	
@@ -434,8 +470,9 @@ int main(int argc, char** argv)
 	      S(t+1)=data(i,j,k,t);
 	    }
 	    if (!opts.grad_file.set()){ //Check whether Gradient-Nonlinearities are considered. If not proceed as normal
-	      if (opts.wls.value())
+	      if (opts.wls.value()){
 		pinv_Amat=WLS_pinv(Amat,S);
+	      }
 	    }
 	    else{   //If they are, correct the bvals and bvecs and get a new Amat for each voxel
 	      Matrix bvals_c, bvecs_c;
@@ -491,29 +528,23 @@ int main(int argc, char** argv)
 	    }
 	    if(opts.kurt.value()){
 	      kurt(i-minx,j-miny,k-minz)=Dvec(8)/MD(i-minx,j-miny,k-minz)/MD(i-minx,j-miny,k-minz);
-	    }
 
-//	    EigenValues(dyad,dyad_D,dyad_V);
-	   
+	      // para and perp kurt
+	      ColumnVector logS(S.Nrows());
+	      for (int t=1; t<=S.Nrows(); t++){
+		if(S(t)>0)
+		  logS(t)=log(S(t));
+		else
+		  logS(t)=0;
+	      }
+	      kurtMat=form_Amat_kurt2(r,b,evec1,evec2,evec3);	      
+	      Dvec=pinv(kurtMat)*logS;
 
-	    
-//  	    // work out which is the maximum eigenvalue;
-//  	    int maxeig;
-//  	    if(dyad_D(1)>dyad_D(2)){
-//  	      if(dyad_D(1)>dyad_D(3)) maxeig=1;
-//  	      else maxeig=3;
-//  	    }
-//  	    else{
-//  	      if(dyad_D(2)>dyad_D(3)) maxeig=2;
-//  	      else maxeig=3;
-//  	    }
-//  	    dyadic_vecs(i-minx,j-miny,k-minz,0)=dyad_V(1,maxeig);
-//  	    dyadic_vecs(i-minx,j-miny,k-minz,1)=dyad_V(2,maxeig);
-//  	    dyadic_vecs(i-minx,j-miny,k-minz,2)=dyad_V(3,maxeig);
-	    
+	      kurt_para(i-minx,j-miny,k-minz) = Dvec(5)/evals(1)/evals(1);
+	      kurt_perp(i-minx,j-miny,k-minz) = Dvec(6)/(evals(2)+evals(3))/(evals(2)+evals(3))*4;
 
 
-
+	    }	  
 	  }
 	}
       }
@@ -602,6 +633,15 @@ int main(int argc, char** argv)
       }
       kurt.setDisplayMaximumMinimum(2,0);
       save_volume(kurt,kurtfile);
+
+      kurt_para.setDisplayMaximumMinimum(2,0);
+      save_volume(kurt_para,opts.ofile.value()+"_kurt_para");
+      kurt_perp.setDisplayMaximumMinimum(2,0);
+      save_volume(kurt_perp,opts.ofile.value()+"_kurt_perp");
+
+      
+
+
     }
   return 0;
 }
