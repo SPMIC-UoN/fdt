@@ -368,6 +368,9 @@ int main(int argc, char** argv)
   if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
   if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
 
+  // raise errors if flags are inconsistent
+  if( (opts.kurt.value() | opts.kurtdir.value()) & opts.cni.value()!=""){ cerr << "Error: the CNI flag can not be combined with kurtosis fitting (--kurt or --kurtdir)" << endl; return (-1);}
+
   //Read Gradient Non_linearity Maps if provided
   volume4D<float> grad, bvalmap; 
   if (opts.grad_file.set())
@@ -432,7 +435,7 @@ int main(int argc, char** argv)
     copybasicproperties(data[0],cni_cope);
     cni_cope=0;
   }
-  else if(opts.kurt.value()){
+  else if(opts.kurt.value() | opts.kurtdir.value()){
     Amat = form_Amat_kurt(r,b);
   }
   else{
@@ -443,16 +446,18 @@ int main(int argc, char** argv)
     copybasicproperties(data[0],sse);
     sse=0;
   }
-  if(opts.kurt.value()){
-    kurt.reinitialize(maxx-minx,maxy-miny,maxz-minz);
-    copybasicproperties(data[0],kurt);
-    kurt=0;
-    kurt_para.reinitialize(maxx-minx,maxy-miny,maxz-minz);
-    copybasicproperties(data[0],kurt_para);
-    kurt_para=0;
-    kurt_perp.reinitialize(maxx-minx,maxy-miny,maxz-minz);
-    copybasicproperties(data[0],kurt_perp);
-    kurt_perp=0;
+  if(opts.kurt.value() | opts.kurtdir.value()) {
+      kurt.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+      copybasicproperties(data[0], kurt);
+      kurt = 0;
+      if (opts.kurtdir.value()) {
+          kurt_para.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt_para);
+          kurt_para = 0;
+          kurt_perp.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt_perp);
+          kurt_perp = 0;
+      }
   }
 
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
@@ -486,11 +491,11 @@ int main(int argc, char** argv)
 		  bvalmap(i-minx,j-miny,k-minz,t)=bvals_c(1,t+1);
 	      }
 	      if(opts.cni.value()!="")
-		Amat=form_Amat(bvecs_c,bvals_c,cni);
+            Amat=form_Amat(bvecs_c,bvals_c,cni);
 	      else if(opts.kurt.value())
-		Amat=form_Amat_kurt(bvecs_c,bvals_c);
+            Amat=form_Amat_kurt(bvecs_c,bvals_c);
 	      else
-		Amat=form_Amat(bvecs_c,bvals_c);
+            Amat=form_Amat(bvecs_c,bvals_c);
 	      pinv_Amat=pinv(Amat);
 	      if (opts.wls.value())
 		pinv_Amat=WLS_pinv(Amat,S);
@@ -527,17 +532,20 @@ int main(int argc, char** argv)
 	    if(opts.sse.value()){
 	      sse(i-minx,j-miny,k-minz)=sseval;
 	    }
-	    if(opts.kurt.value()){
-	      kurt(i-minx,j-miny,k-minz)=Dvec(8)/MD(i-minx,j-miny,k-minz)/MD(i-minx,j-miny,k-minz);
+	    if(opts.kurt.value()) {
+            kurt(i - minx, j - miny, k - minz) =
+                    Dvec(8) / MD(i - minx, j - miny, k - minz) / MD(i - minx, j - miny, k - minz);
+        }
+	    if(opts.kurtdir.value()) {
 
 	      // para and perp kurt
 	      ColumnVector logS(S.Nrows());
 	      for (int t=1; t<=S.Nrows(); t++){
-		if(S(t)>0)
-		  logS(t)=log(S(t));
-		else
-		  logS(t)=0;
-	      }
+            if(S(t)>0)
+              logS(t)=log(S(t));
+            else
+              logS(t)=0;
+          }
 	      kurtMat=form_Amat_kurt2(r,b,evec1,evec2,evec3);	      
 	      Dvec=pinv(kurtMat)*logS;
 
@@ -627,22 +635,19 @@ int main(int argc, char** argv)
       sse.setDisplayMaximumMinimum(sse.max(),0);
       save_volume(sse,ssefile);
     }
-    if(opts.kurt.value()){
-      string kurtfile=opts.ofile.value()+"_kurt";
-      if(opts.littlebit.value()){
-	kurtfile+="littlebit";
-      }
-      kurt.setDisplayMaximumMinimum(2,0);
-      save_volume(kurt,kurtfile);
-
-      kurt_para.setDisplayMaximumMinimum(2,0);
-      save_volume(kurt_para,opts.ofile.value()+"_kurt_para");
-      kurt_perp.setDisplayMaximumMinimum(2,0);
-      save_volume(kurt_perp,opts.ofile.value()+"_kurt_perp");
-
-      
-
-
+    if(opts.kurt.value()) {
+        string kurtfile = opts.ofile.value() + "_kurt";
+        if (opts.littlebit.value()) {
+            kurtfile += "littlebit";
+        }
+        kurt.setDisplayMaximumMinimum(2, 0);
+        save_volume(kurt, kurtfile);
+    }
+    if(opts.kurtdir.value()) {
+        kurt_para.setDisplayMaximumMinimum(2, 0);
+        save_volume(kurt_para, opts.ofile.value() + "_kurt_para");
+        kurt_perp.setDisplayMaximumMinimum(2, 0);
+        save_volume(kurt_perp, opts.ofile.value() + "_kurt_perp");
     }
   return 0;
 }
