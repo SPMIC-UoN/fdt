@@ -120,12 +120,11 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 }
 
 
-
 Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
 		 const ColumnVector& v1, const ColumnVector& v2, const ColumnVector& v3)
 {
-    // Returns matrix mapping eigen-values and kurtosis terms to log(signal) given a set of eigenvectors
-  Matrix A(r.Ncols(),6);
+  // Returns matrix mapping eigen-values and kurtosis terms to log(signal) given a set of eigenvectors
+  Matrix A(r.Ncols(),7);
   Matrix tmpvec(3,1);
   ColumnVector  tmp(3);
   
@@ -142,15 +141,12 @@ Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
     A(i,2) = b(1,i)*tmp(1); // L1
     A(i,3) = b(1,i)*tmp(2); // L2
     A(i,4) = b(1,i)*tmp(3); // L3
-    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1); // K_para
-    A(i,6) = -b(1,i)*b(1,i)/6*(1-tmp(1)); // K_perp
+    A(i,5) = -b(1,i)*b(1,i)/6*tmp(1); // K1
+    A(i,6) = -b(1,i)*b(1,i)/6*tmp(2); // K2
+    A(i,7) = -b(1,i)*b(1,i)/6*tmp(3); // K3
   }
   return A;
 }
-
-
-
-
 
 
 Matrix form_Amat(const Matrix& r,const Matrix& b,const Matrix & cni)
@@ -406,7 +402,8 @@ int main(int argc, char** argv)
     bvalmap.reinitialize(maxx-minx,maxy-miny,maxz-minz,data.tsize());
   volume4D<float> cni_cope;
   volume<float> sse;
-  volume<float> kurt,kurt_para,kurt_perp;
+  volume<float> kurt;
+  volume<float> kurt1, kurt2, kurt3, kurt_mean;
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
@@ -458,12 +455,18 @@ int main(int argc, char** argv)
       copybasicproperties(data[0], kurt);
       kurt = 0;
       if (opts.kurtdir.value()) {
-          kurt_para.reinitialize(maxx - minx, maxy - miny, maxz - minz);
-          copybasicproperties(data[0], kurt_para);
-          kurt_para = 0;
-          kurt_perp.reinitialize(maxx - minx, maxy - miny, maxz - minz);
-          copybasicproperties(data[0], kurt_perp);
-          kurt_perp = 0;
+          kurt1.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt1);
+          kurt1 = 0;
+          kurt2.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt2);
+          kurt2 = 0;
+          kurt3.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt3);
+          kurt3 = 0;
+          kurt_mean.reinitialize(maxx - minx, maxy - miny, maxz - minz);
+          copybasicproperties(data[0], kurt_mean);
+          kurt_mean = 0;
       }
   }
 
@@ -471,6 +474,7 @@ int main(int argc, char** argv)
   ColumnVector Dvec(8); Dvec=0;
   Matrix pinv_Amat=pinv(Amat);
   Matrix kurtMat;
+  ColumnVector Kvec(7);
 
   for(int k = minz; k < maxz; k++){
     cout<<k<<" slices processed"<<endl;    
@@ -510,7 +514,7 @@ int main(int argc, char** argv)
 	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,pinv_Amat,S);
 
         if(opts.kurtdir.value()) {
-            ColumnVector Kvec(7); Kvec=0;
+            Kvec=0;
 
             // para and perp kurt
             ColumnVector logS(S.Nrows());
@@ -528,11 +532,17 @@ int main(int argc, char** argv)
             evals(1) = -Kvec(2);
             evals(2) = -Kvec(3);
             evals(3) = -Kvec(4);
-
-            kurt_para(i - minx, j - miny, k - minz) = -Kvec(5) / evals(1) / evals(1);
-            kurt_perp(i - minx, j - miny, k - minz) = -Kvec(6) / (evals(2) + evals(3)) / (evals(2) + evals(3)) * 4;
             calc_mode(mode, evals);
             calc_FA(fa, evals);
+
+            kurt1(i - minx, j - miny, k - minz) = -Kvec(5) / evals(1) / evals(1);
+            kurt2(i - minx, j - miny, k - minz) = -Kvec(6) / evals(2) / evals(2);
+            kurt3(i - minx, j - miny, k - minz) = -Kvec(7) / evals(3) / evals(3);
+            float MK=0;
+            for (int t=1; t<=3; t++) {
+                MK -= Kvec(4 + t) / evals(t) / evals(t) / 3;
+            }
+            kurt_mean(i - minx, j - miny, k - minz) = MK;
         }
 
         l1(i-minx,j-miny,k-minz)=evals(1);
@@ -659,10 +669,24 @@ int main(int argc, char** argv)
         save_volume(kurt, kurtfile);
     }
     if(opts.kurtdir.value()) {
-        kurt_para.setDisplayMaximumMinimum(2, 0);
-        save_volume(kurt_para, opts.ofile.value() + "_kurt_para");
-        kurt_perp.setDisplayMaximumMinimum(2, 0);
-        save_volume(kurt_perp, opts.ofile.value() + "_kurt_perp");
+        kurt1.setDisplayMaximumMinimum(2, 0);
+        kurt2.setDisplayMaximumMinimum(2, 0);
+        kurt3.setDisplayMaximumMinimum(2, 0);
+        kurt_mean.setDisplayMaximumMinimum(2, 0);
+        string kurt1file = opts.ofile.value() + "_kurt1";
+        string kurt2file = opts.ofile.value() + "_kurt2";
+        string kurt3file = opts.ofile.value() + "_kurt3";
+        string kurt_meanfile = opts.ofile.value() + "_MK";
+        if (opts.littlebit.value()) {
+            kurt1file += "littlebit";
+            kurt2file += "littlebit";
+            kurt3file += "littlebit";
+            kurt_meanfile += "littlebit";
+        }
+        save_volume(kurt1, kurt1file);
+        save_volume(kurt2, kurt2file);
+        save_volume(kurt3, kurt3file);
+        save_volume(kurt_mean, kurt_meanfile);
     }
   return 0;
 }
