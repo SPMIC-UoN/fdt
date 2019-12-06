@@ -1,15 +1,15 @@
 include $(FSLCONFDIR)/default.mk
 
+PROJNAME = fdt
+
 ifeq ($(FSLMASTERBUILD),1)
-	COMPILE_GPU=FDT_COMPILE_GPU
+     $(eval $($(PROJNAME)_MASTERBUILD))
 endif
 
 ifeq ($(COMPILE_GPU), 1)
 	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
 endif
-
-PROJNAME = fdt
 
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
