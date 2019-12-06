@@ -225,74 +225,81 @@ ReturnMatrix WLS_pinv(const Matrix& Amat, const ColumnVector& S)
 }
 
 
+void calc_mode(float& mode, DiagonalMatrix Dd) {
+    float mDd = Dd.Sum() / Dd.Nrows();
+    float e1 = Dd(3) - mDd, e2 = Dd(2) - mDd, e3 = Dd(1) - mDd;
+    float n = (e1 + e2 - 2 * e3) * (2 * e1 - e2 - e3) * (e1 - 2 * e2 + e3);
+    float d = (e1 * e1 + e2 * e2 + e3 * e3 - e1 * e2 - e2 * e3 - e1 * e3);
+    d = sqrt(MAX(0, d));
+    d = 2 * d * d * d;
+    mode = MIN(MAX(d ? n / d : 0.0, -1), 1);
+}
 
-  
+//Compute the FA
+void calc_FA(float& f, DiagonalMatrix Dd) {
+    float fsquared;
+    float mDd = Dd.Sum() / Dd.Nrows();
+    float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
+    float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
+
+    if(denom>minfloat) fsquared=numer/denom; //In case of voxels with all intensities being zero, lambdas are ~1e-15 and denom ~1e-30
+    else fsquared=0;
+    if(fsquared>0){f=sqrt(fsquared);}
+    else{f=0;}
+}
+
+
 //Performs fitting of the tensor using a precalculated pseudoinverse of the design matrix (Amat_pinv)
 //Depending on Amat_pinv, the function performs an OLS or WLS fiting of the DTI model.
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat, const Matrix& Amat_pinv, const ColumnVector& S)
-{
-  ColumnVector logS(S.Nrows());
-  SymmetricMatrix tens;   //Basser's Diffusion Tensor;
-  Matrix Vd;   //eigenvectors
-  DiagonalMatrix Ddsorted(3);
-  float mDd, fsquared;
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat, const Matrix& Amat_pinv, const ColumnVector& S) {
+    ColumnVector logS(S.Nrows());
+    SymmetricMatrix tens;   //Basser's Diffusion Tensor;
+    Matrix Vd;   //eigenvectors
+    DiagonalMatrix Ddsorted(3);
 
 
-  // Robustify the fit: create extra regressors for data<=0
-  
-  
-  for (int i=1; i<=S.Nrows(); i++){
-    if(S(i)>0){logS(i)=log(S(i));}
-    else{logS(i)=0;}
-  }
-  Dvec=-Amat_pinv*logS;       //Estimate the model parameters
+    // Robustify the fit: create extra regressors for data<=0
 
-  if(Dvec(7)>-maxlogfloat){s0=exp(-Dvec(7));}
-  else{s0=S.MaximumAbsoluteValue();}
-  
-  for ( int i = 1; i <= S.Nrows(); i++){
-      if(s0<S.Sum()/S.Nrows()){ s0=S.MaximumAbsoluteValue();}
-      logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
-  }
-  Dvec = -Amat_pinv*logS;
-  sse=(Amat*Dvec+logS).SumSquare();
-  //sse = (W*(Amat*Dvec+logS)).SumSquare();   //In case of WLS, the weighted SSE will be evaluated, otherwise W=I, so OLS SSE is computed 
-  
-  s0=exp(-Dvec(7));
-  if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
-  tens = vec2tens(Dvec);
-  
-  EigenValues(tens,Dd,Vd);
-  mDd = Dd.Sum()/Dd.Nrows();
-  int maxind = Dd(1) > Dd(2) ? 1:2;   //finding max,mid and min eigenvalues
-  maxind = Dd(maxind) > Dd(3) ? maxind:3;
-  int midind;
-  if( (Dd(1)>=Dd(2) && Dd(2)>=Dd(3)) || (Dd(1)<=Dd(2) && Dd(2)<=Dd(3)) ){midind=2;}
-  else if( (Dd(2)>=Dd(1) && Dd(1)>=Dd(3)) || (Dd(2)<=Dd(1) && Dd(1)<=Dd(3)) ){midind=1;}
-  else {midind=3;}
-  int minind = Dd(1) < Dd(2) ? 1:2;   //finding minimum eigenvalue
-  minind = Dd(minind) < Dd(3) ? minind:3;
-  Ddsorted << Dd(maxind) << Dd(midind) << Dd(minind);
-  Dd=Ddsorted;
-  evec1 << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
-  evec2 << Vd(1,midind) << Vd(2,midind) << Vd(3,midind);
-  evec3 << Vd(1,minind) << Vd(2,minind) << Vd(3,minind);
 
-  float e1=Dd(maxind)-mDd, e2=Dd(midind)-mDd, e3=Dd(minind)-mDd;
-  float n = (e1 + e2 - 2*e3)*(2*e1 - e2 - e3)*(e1 - 2*e2 + e3);
-  float d = (e1*e1 + e2*e2 + e3*e3 - e1*e2 - e2*e3 - e1*e3);
-  d = sqrt(MAX(0, d));
-  d = 2*d*d*d;
-  mode = MIN(MAX(d ? n/d : 0.0, -1),1);
+    for (int i = 1; i <= S.Nrows(); i++) {
+        if (S(i) > 0) { logS(i) = log(S(i)); }
+        else { logS(i) = 0; }
+    }
+    Dvec = -Amat_pinv * logS;       //Estimate the model parameters
 
-  //Compute the FA  
-  float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));  
-  float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
- 
-  if(denom>minfloat) fsquared=numer/denom; //In case of voxels with all intensities being zero, lambdas are ~1e-15 and denom ~1e-30
-  else fsquared=0;
-  if(fsquared>0){f=sqrt(fsquared);}
-  else{f=0;}
+    if (Dvec(7) > -maxlogfloat) { s0 = exp(-Dvec(7)); }
+    else { s0 = S.MaximumAbsoluteValue(); }
+
+    for (int i = 1; i <= S.Nrows(); i++) {
+        if (s0 < S.Sum() / S.Nrows()) { s0 = S.MaximumAbsoluteValue(); }
+        logS(i) = (S(i) / s0) > 0.01 ? log(S(i)) : log(0.01 * s0);
+    }
+    Dvec = -Amat_pinv * logS;
+    sse = (Amat * Dvec + logS).SumSquare();
+    //sse = (W*(Amat*Dvec+logS)).SumSquare();   //In case of WLS, the weighted SSE will be evaluated, otherwise W=I, so OLS SSE is computed
+
+    s0 = exp(-Dvec(7));
+    if (s0 < S.Sum() / S.Nrows()) { s0 = S.Sum() / S.Nrows(); }
+    tens = vec2tens(Dvec);
+
+    EigenValues(tens, Dd, Vd);
+    float mDd = Dd.Sum() / Dd.Nrows();
+    int maxind = Dd(1) > Dd(2) ? 1 : 2;   //finding max,mid and min eigenvalues
+    maxind = Dd(maxind) > Dd(3) ? maxind : 3;
+    int midind;
+    if ((Dd(1) >= Dd(2) && Dd(2) >= Dd(3)) || (Dd(1) <= Dd(2) && Dd(2) <= Dd(3))) { midind = 2; }
+    else if ((Dd(2) >= Dd(1) && Dd(1) >= Dd(3)) || (Dd(2) <= Dd(1) && Dd(1) <= Dd(3))) { midind = 1; }
+    else { midind = 3; }
+    int minind = Dd(1) < Dd(2) ? 1 : 2;   //finding minimum eigenvalue
+    minind = Dd(minind) < Dd(3) ? minind : 3;
+    Ddsorted << Dd(maxind) << Dd(midind) << Dd(minind);
+    Dd = Ddsorted;
+    evec1 << Vd(1, maxind) << Vd(2, maxind) << Vd(3, maxind);
+    evec2 << Vd(1, midind) << Vd(2, midind) << Vd(3, midind);
+    evec3 << Vd(1, minind) << Vd(2, minind) << Vd(3, minind);
+
+    calc_mode(mode, Dd);
+    calc_FA(f, Dd);
 }
 
 
@@ -461,7 +468,7 @@ int main(int argc, char** argv)
   }
 
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
-  ColumnVector Dvec(7); Dvec=0; 
+  ColumnVector Dvec(8); Dvec=0;
   Matrix pinv_Amat=pinv(Amat);
   Matrix kurtMat;
 
@@ -501,8 +508,34 @@ int main(int argc, char** argv)
 		pinv_Amat=WLS_pinv(Amat,S);
 	    }
 	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,pinv_Amat,S);
-	      
-	    l1(i-minx,j-miny,k-minz)=evals(1);
+
+        if(opts.kurtdir.value()) {
+            ColumnVector Kvec(7); Kvec=0;
+
+            // para and perp kurt
+            ColumnVector logS(S.Nrows());
+            for (int t = 1; t <= S.Nrows(); t++) {
+                if (S(t) > 0)
+                    logS(t) = log(S(t));
+                else
+                    logS(t) = 0;
+            }
+            kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3);
+            Kvec = pinv(kurtMat) * logS;
+            sseval = (kurtMat * Kvec - logS).SumSquare();
+
+            s0 = exp(Kvec(1));
+            evals(1) = -Kvec(2);
+            evals(2) = -Kvec(3);
+            evals(3) = -Kvec(4);
+
+            kurt_para(i - minx, j - miny, k - minz) = -Kvec(5) / evals(1) / evals(1);
+            kurt_perp(i - minx, j - miny, k - minz) = -Kvec(6) / (evals(2) + evals(3)) / (evals(2) + evals(3)) * 4;
+            calc_mode(mode, evals);
+            calc_FA(fa, evals);
+        }
+
+        l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
 	    MD(i-minx,j-miny,k-minz)=(evals(1)+evals(2)+evals(3))/3;
@@ -536,24 +569,6 @@ int main(int argc, char** argv)
             kurt(i - minx, j - miny, k - minz) =
                     Dvec(8) / MD(i - minx, j - miny, k - minz) / MD(i - minx, j - miny, k - minz);
         }
-	    if(opts.kurtdir.value()) {
-
-	      // para and perp kurt
-	      ColumnVector logS(S.Nrows());
-	      for (int t=1; t<=S.Nrows(); t++){
-            if(S(t)>0)
-              logS(t)=log(S(t));
-            else
-              logS(t)=0;
-          }
-	      kurtMat=form_Amat_kurt2(r,b,evec1,evec2,evec3);	      
-	      Dvec=pinv(kurtMat)*logS;
-
-	      kurt_para(i-minx,j-miny,k-minz) = Dvec(5)/evals(1)/evals(1);
-	      kurt_perp(i-minx,j-miny,k-minz) = Dvec(6)/(evals(2)+evals(3))/(evals(2)+evals(3))*4;
-
-
-	    }	  
 	  }
 	}
       }
