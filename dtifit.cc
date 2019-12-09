@@ -530,7 +530,7 @@ int main(int argc, char** argv)
                 pinv_kurtMat=WLS_pinv(kurtMat,S);
             else
                 pinv_kurtMat=pinv(kurtMat);
-            Kvec = pinv_Amat * logS;
+            Kvec = pinv_kurtMat * logS;
             sseval = (kurtMat * Kvec - logS).SumSquare();
 
             s0 = exp(Kvec(1));
