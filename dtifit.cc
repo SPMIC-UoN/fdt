@@ -516,13 +516,13 @@ int main(int argc, char** argv)
         if(opts.kurtdir.value()) {
             Kvec=0;
 
-            // para and perp kurt
+            // fit kurtosis along eigenvectors
             ColumnVector logS(S.Nrows());
             for (int t = 1; t <= S.Nrows(); t++) {
-                if (S(t) > 0.01 * s0)
+                if (S(t) > 0.001 * s0)
                     logS(t) = log(S(t));
                 else
-                    logS(t) = log(0.01 * s0);
+                    logS(t) = log(0.001 * s0);
             }
             kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3);
             pinv_kurtMat=pinv(kurtMat);
