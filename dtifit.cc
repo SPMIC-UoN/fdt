@@ -473,7 +473,7 @@ int main(int argc, char** argv)
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   ColumnVector Dvec(8); Dvec=0;
   Matrix pinv_Amat=pinv(Amat);
-  Matrix kurtMat;
+  Matrix kurtMat, pinv_kurtMat;
   ColumnVector Kvec(7);
 
   for(int k = minz; k < maxz; k++){
@@ -525,7 +525,12 @@ int main(int argc, char** argv)
                     logS(t) = log(0.01 * s0);
             }
             kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3);
-            Kvec = pinv(kurtMat) * logS;
+            pinv_kurtMat=pinv(kurtMat);
+            if (opts.wls.value())
+                pinv_kurtMat=WLS_pinv(kurtMat,S);
+            else
+                pinv_kurtMat=pinv(kurtMat);
+            Kvec = pinv_Amat * logS;
             sseval = (kurtMat * Kvec - logS).SumSquare();
 
             s0 = exp(Kvec(1));
