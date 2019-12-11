@@ -355,7 +355,10 @@ int main(int argc, char** argv)
       cout<<"max x     "<<opts.x_max.value()<<endl;
     }
   }
-  
+  // raise errors if flags are inconsistent
+  if( (opts.kurt.value() | opts.kurtdir.value()) & opts.cni.value()!=""){ cerr << "Error: the CNI flag can not be combined with kurtosis fitting (--kurt or --kurtdir)" << endl; return (-1);}
+  if( opts.wls.value() & opts.kurtdir.value()){ cerr << "Error: Weighted least square fitting (--wls) not implemented for the directional kurtosis (--kurtdir)" << endl; return (-1);}
+
   // Set random seed:
   Matrix r = read_ascii_matrix(opts.bvecsfile.value());
   if(r.Nrows()>3) r=r.t();
@@ -381,10 +384,6 @@ int main(int argc, char** argv)
   if( b.Ncols() != r.Ncols() ){ cerr << "Error: bvecs and bvals don't have the same number of entries" << endl; return(-1);}
   if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
   if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
-
-  // raise errors if flags are inconsistent
-  if( (opts.kurt.value() | opts.kurtdir.value()) & opts.cni.value()!=""){ cerr << "Error: the CNI flag can not be combined with kurtosis fitting (--kurt or --kurtdir)" << endl; return (-1);}
-  if( opts.wls.value() & opts.kurtdir.value()){ cerr << "Error: Weighted least square fitting (--wls) not implemented for the directional kurtosis (--kurtdir)" << endl; return (-1);}
 
   //Read Gradient Non_linearity Maps if provided
   volume4D<float> grad, bvalmap; 
