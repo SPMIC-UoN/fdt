@@ -530,10 +530,10 @@ int main(int argc, char** argv)
             // fit kurtosis along eigenvectors
             ColumnVector logS(S.Nrows() + 3);
             for (int t = 1; t <= S.Nrows(); t++) {
-                if (S(t) > 0.001 * s0)
+                if (S(t) > 0.01 * s0)
                     logS(t) = log(S(t));
                 else
-                    logS(t) = log(0.001 * s0);
+                    logS(t) = log(0.01 * s0);
             }
 
             for (int t = 1; t <= 3; t ++)
