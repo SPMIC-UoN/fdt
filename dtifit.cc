@@ -121,12 +121,13 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 
 
 Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
-		 const ColumnVector& v1, const ColumnVector& v2, const ColumnVector& v3)
+		 const ColumnVector& v1, const ColumnVector& v2, const ColumnVector& v3,
+		 const ColumnVector& lambda)
 {
   // Returns matrix mapping eigen-values and kurtosis terms to log(signal) given a set of eigenvectors
-  Matrix A(r.Ncols(),7);
+  Matrix A(r.Ncols()+3,7);
   Matrix tmpvec(3,1);
-  ColumnVector  tmp(3);
+  ColumnVector tmp(3);
   
 
   for( int i = 1; i <= r.Ncols(); i++){
@@ -144,6 +145,16 @@ Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
     A(i,5) = -b(1,i)*b(1,i)/6*tmp(1); // K1
     A(i,6) = -b(1,i)*b(1,i)/6*tmp(2); // K2
     A(i,7) = -b(1,i)*b(1,i)/6*tmp(3); // K3
+  }
+
+  // Add L2 regularisation term for the kurtosis
+  for(int i =1; i <= 7; i++){
+      for (int k=1; k<=3; k++){
+          if (i == k + 4)
+              A(r.Ncols()+k,i) = lambda(k);
+          else
+              A(r.Ncols()+k,i) = 0.;
+      }
   }
   return A;
 }
@@ -474,7 +485,7 @@ int main(int argc, char** argv)
   ColumnVector Dvec(8); Dvec=0;
   Matrix pinv_Amat=pinv(Amat);
   Matrix kurtMat, pinv_kurtMat;
-  ColumnVector Kvec(7);
+  ColumnVector Kvec(7), lambda(3);
 
   for(int k = minz; k < maxz; k++){
     cout<<k<<" slices processed"<<endl;    
@@ -517,26 +528,36 @@ int main(int argc, char** argv)
             Kvec=0;
 
             // fit kurtosis along eigenvectors
-            ColumnVector logS(S.Nrows());
+            ColumnVector logS(S.Nrows() + 3);
             for (int t = 1; t <= S.Nrows(); t++) {
                 if (S(t) > 0.001 * s0)
                     logS(t) = log(S(t));
                 else
                     logS(t) = log(0.001 * s0);
             }
-            kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3);
-            pinv_kurtMat=pinv(kurtMat);
-            if (opts.wls.value())
-                pinv_kurtMat=WLS_pinv(kurtMat,S);
-            else
+
+            for (int t = 1; t <= 3; t ++)
+                logS(S.Nrows() + t) = 0.;  // Target kurtosis value (=0)
+
+            for (int iter = 1; iter <= 2; iter++) {
+                // Set to the lambda equivalent to having a prior on the Kurtosis with mean of 0 and stdev of 1
+                lambda << sqrt(sseval / (S.Nrows() - 1)) / (evals(1) * evals(1))
+                       << sqrt(sseval / (S.Nrows() - 1)) / (evals(2) * evals(2))
+                       << sqrt(sseval / (S.Nrows() - 1)) / (evals(3) * evals(3));
+                kurtMat = form_Amat_kurt2(r, b, evec1, evec2, evec3, lambda);
                 pinv_kurtMat=pinv(kurtMat);
-            Kvec = pinv_kurtMat * logS;
-            sseval = (kurtMat * Kvec - logS).SumSquare();
+                if (opts.wls.value())
+                    pinv_kurtMat=WLS_pinv(kurtMat,S);
+                else
+                    pinv_kurtMat=pinv(kurtMat);
+                Kvec = pinv_kurtMat * logS;
+                sseval = (kurtMat * Kvec - logS).SumSquare();
+                evals(1) = -Kvec(2);
+                evals(2) = -Kvec(3);
+                evals(3) = -Kvec(4);
+            }
 
             s0 = exp(Kvec(1));
-            evals(1) = -Kvec(2);
-            evals(2) = -Kvec(3);
-            evals(3) = -Kvec(4);
             calc_mode(mode, evals);
             calc_FA(fa, evals);
 
