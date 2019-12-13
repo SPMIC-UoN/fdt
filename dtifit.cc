@@ -414,7 +414,7 @@ int main(int argc, char** argv)
   volume4D<float> cni_cope;
   volume<float> sse;
   volume<float> kurt;
-  volume<float> kurt1, kurt2, kurt3, kurt_mean;
+  volume<float> kurt1, kurt2, kurt3;
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
@@ -475,9 +475,6 @@ int main(int argc, char** argv)
           kurt3.reinitialize(maxx - minx, maxy - miny, maxz - minz);
           copybasicproperties(data[0], kurt3);
           kurt3 = 0;
-          kurt_mean.reinitialize(maxx - minx, maxy - miny, maxz - minz);
-          copybasicproperties(data[0], kurt_mean);
-          kurt_mean = 0;
       }
   }
 
@@ -565,11 +562,6 @@ int main(int argc, char** argv)
             kurt1(i - minx, j - miny, k - minz) = -Kvec(5) / evals(1) / evals(1);
             kurt2(i - minx, j - miny, k - minz) = -Kvec(6) / evals(2) / evals(2);
             kurt3(i - minx, j - miny, k - minz) = -Kvec(7) / evals(3) / evals(3);
-            float MK=0;
-            for (int t=1; t<=3; t++) {
-                MK -= Kvec(4 + t) / evals(t) / evals(t) / 3;
-            }
-            kurt_mean(i - minx, j - miny, k - minz) = MK;
         }
 
         l1(i-minx,j-miny,k-minz)=evals(1);
@@ -699,21 +691,17 @@ int main(int argc, char** argv)
         kurt1.setDisplayMaximumMinimum(2, 0);
         kurt2.setDisplayMaximumMinimum(2, 0);
         kurt3.setDisplayMaximumMinimum(2, 0);
-        kurt_mean.setDisplayMaximumMinimum(2, 0);
         string kurt1file = opts.ofile.value() + "_kurt1";
         string kurt2file = opts.ofile.value() + "_kurt2";
         string kurt3file = opts.ofile.value() + "_kurt3";
-        string kurt_meanfile = opts.ofile.value() + "_MK";
         if (opts.littlebit.value()) {
             kurt1file += "littlebit";
             kurt2file += "littlebit";
             kurt3file += "littlebit";
-            kurt_meanfile += "littlebit";
         }
         save_volume(kurt1, kurt1file);
         save_volume(kurt2, kurt2file);
         save_volume(kurt3, kurt3file);
-        save_volume(kurt_mean, kurt_meanfile);
     }
   return 0;
 }
