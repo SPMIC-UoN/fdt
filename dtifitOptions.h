@@ -38,7 +38,7 @@ class dtifitOptions {
   Option<bool> sse;                // Sum of squared errors
   Option<bool> wls;                // Perform Weighted Least squares for tensor fitting 
   Option<bool> kurt;               // Output mean kurtosis 
-  Option<bool> kurtdir;            // Output parallel and perpendicular kurtosis maps
+  Option<bool> kurtdir;            // Output kurtosis maps along each eigenvector
   Option<bool> littlebit;
   Option<bool> savetensor;
   Option<int> z_min;
@@ -105,7 +105,7 @@ class dtifitOptions {
 	     string("Output mean kurtosis map (for multi-shell data)"),
 	     false,  no_argument),
    kurtdir(string("--kurtdir"), false,
-	     string("Output  parallel/perpendicular kurtosis maps (for multi-shell data)"),
+	     string("Output maps of kurtosis along each eigenvector: K1, K2, and K3 (for multi-shell data)"),
 	     false,  no_argument),
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
