@@ -42,26 +42,26 @@ if [ "$outmean" == "-m" ] && [ "$outvar" == "-v" ];then
     exit 1
 fi
 
-list="" 
+list=""
 cmd="awk '{"
 echo "Extracting bvals=$b"
 for bval in $b;do
     cnt=0
     for i in $bvals;do
 	j=`echo $i | awk -F"E" 'BEGIN{OFMT="%10.10f"} {print $1 * (10 ^ $2)}' `
-	j=${j/.*}   
+	j=${j/.*}
 	j=`echo "$j - $bval" |bc | awk ' { if($1>=0) { print $1} else {print $1*-1 }}'`
 	if [ $j -lt 100 ];then
 	    if [ "${list}" == "" ];then
 		list="${cnt}"
-		cmd="$cmd print \$1 \" \""
+        cmd="$cmd print \$$(($cnt+1)) \" \""
 	    else
 		list="${list},${cnt}"
 		cmd="$cmd \" \" \$$(($cnt+1))"
 	    fi
 	fi
 	cnt=$(($cnt + 1))
-    done    
+    done
 done
 echo volume list = $list
 cmd="$cmd }'"
@@ -76,5 +76,3 @@ fi
 
 echo $FSLDIR/bin/fslselectvols -i $d -o $o --vols=$list $outmean $outvar
 $FSLDIR/bin/fslselectvols -i $d -o $o --vols=$list $outmean $outvar
-
-
