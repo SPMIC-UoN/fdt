@@ -8,11 +8,11 @@
 
 #include <iostream>
 #include "stdlib.h"
-#include "libprob.h"
+#include "cprob/libprob.h"
 #include <cmath>
 #include "miscmaths/miscprob.h"
 
-using namespace std; 
+using namespace std;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 
@@ -24,7 +24,7 @@ const float minlogfloat=-23;
 #define UPPERDIFF 0.005
 
 namespace FIBRE{
-  
+
 
   //Returns the natural log of the 0th order modified Bessel function of first kind for an argument x
   //Follows the exponential implementation of the Bessel function in Numerical Recipes, Ch. 6
@@ -40,7 +40,7 @@ namespace FIBRE{
       y=std::log(y);
     }
     else{
-      float a=3.75/b; 
+      float a=3.75/b;
       //Bessel function evaluation
       //y=(exp(b)/sqrt(b))*(0.39894228+a*(0.01328592+a*(0.00225319+a*(-0.00157565+a*(0.00916281+a*(-0.02057706+a*(0.02635537+a*(-0.01647633+a*0.00392377))))))));
       //Logarithm of Bessel function
@@ -52,9 +52,9 @@ namespace FIBRE{
 
 
 
- ///////////////////////////////////////////////////////////////////////////////////////////// 
- ////Class that represents one anisotropic compartment of the PVM model in an MCMC framework 
- //////////////////////////////////////////////////////////////////////////////////////////// 
+ /////////////////////////////////////////////////////////////////////////////////////////////
+ ////Class that represents one anisotropic compartment of the PVM model in an MCMC framework
+ ////////////////////////////////////////////////////////////////////////////////////////////
  class Fibre{
     float m_th;                   //Current/candidate MCMC state
     float m_ph;
@@ -68,7 +68,7 @@ namespace FIBRE{
     float m_ph_old;
     float m_f_old;
     float m_lam_old;
-    float m_th_prior;             //Priors for the model parameters 
+    float m_th_prior;             //Priors for the model parameters
     float m_ph_prior;
     float m_f_prior;
     float m_lam_prior;
@@ -76,31 +76,31 @@ namespace FIBRE{
     float m_ph_old_prior;
     float m_f_old_prior;
     float m_lam_old_prior;
-    float m_prior_en;             //Joint Prior 
+    float m_prior_en;             //Joint Prior
     float m_old_prior_en;
     float m_ardfudge;
-    int m_th_acc;     
+    int m_th_acc;
     int m_th_rej;
     int m_ph_acc;
-    int m_ph_rej; 
+    int m_ph_rej;
     int m_f_acc;
     int m_f_rej;
-    int m_lam_acc; 
+    int m_lam_acc;
     int m_lam_rej;
     bool m_lam_jump;
-    ColumnVector m_Signal;        //Vector that stores the signal from the anisotropic compartment during the candidate/current MCMC state  
-    ColumnVector m_Signal_old; 
+    ColumnVector m_Signal;        //Vector that stores the signal from the anisotropic compartment during the candidate/current MCMC state
+    ColumnVector m_Signal_old;
     const float& m_d;
     const float& m_d_std;         //second d param in multi-shell model - std in gamma dist of diffusivities
-    const float& m_R;             //R=Perpendicular/Axial diffusivity in model3 
-    const ColumnVector& m_alpha;  //Theta angles of bvecs 
-    const ColumnVector& m_beta;   //Phi angles of bvecs 
+    const float& m_R;             //R=Perpendicular/Axial diffusivity in model3
+    const ColumnVector& m_alpha;  //Theta angles of bvecs
+    const ColumnVector& m_beta;   //Phi angles of bvecs
     const Matrix& m_bvals;        //b values
     const int& m_modelnum;        //1 for deconvolution with sticks, 2 for deconvolution with sticks and a Gamma distribution of diffusivities, 3 for deconvolution with zeppelins
  public:
     //constructors::
 
-    Fibre( const ColumnVector& alpha, const ColumnVector& beta, 
+    Fibre( const ColumnVector& alpha, const ColumnVector& beta,
 	   const Matrix& bvals,const float& d,const float& ardfudge=1,const int& modelnum=1, const float& d_std=0.01,const float& R=0.13):
     m_ardfudge(ardfudge), m_d(d),m_d_std(d_std), m_R(R), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum){
 	m_th=M_PI/2;
@@ -119,10 +119,10 @@ namespace FIBRE{
 
 	m_th_prior=0;
 	compute_th_prior();
-	
+
 	m_ph_prior=0;
 	compute_ph_prior();
-	
+
 	m_f_prior=0;
 	compute_f_prior();
 	//cc	OUT(m_f_prior);
@@ -143,13 +143,13 @@ namespace FIBRE{
       m_lam_acc=0; m_lam_rej=0;
 
     }
-    Fibre(const ColumnVector& alpha, 
+    Fibre(const ColumnVector& alpha,
 	  const ColumnVector& beta, const Matrix& bvals, const float& d, const float& ardfudge,
-	  const float& th, const float& ph, const float& f, 
-	  const bool lam_jump=true, const int& modelnum=1, const float& d_std=0.01, const float& R=0.13) : 
+	  const float& th, const float& ph, const float& f,
+	  const bool lam_jump=true, const int& modelnum=1, const float& d_std=0.01, const float& R=0.13) :
     m_th(th), m_ph(ph), m_f(f), m_ardfudge(ardfudge),m_lam_jump(lam_jump),  m_d(d), m_d_std(d_std), m_R(R), m_alpha(alpha), m_beta(beta), m_bvals(bvals), m_modelnum(modelnum)
     {
-      
+
       m_th_old=m_th;
       m_ph_old=m_ph;
       m_f_old=m_f;
@@ -158,18 +158,18 @@ namespace FIBRE{
       m_ph_prop=0.2;
       m_f_prop=0.2;
       m_lam_prop=1;
-      
+
       m_th_prior=0;
       compute_th_prior();
-      
+
       m_ph_prior=0;
       compute_ph_prior();
-      
+
       m_f_prior=0;
       compute_f_prior();
       m_lam_prior=0;
       compute_lam_prior();
-      
+
 
       m_Signal.ReSize(alpha.Nrows());
       m_Signal=0;
@@ -177,33 +177,33 @@ namespace FIBRE{
 
       compute_prior();
       compute_signal();
-	    
+
       m_th_acc=0; m_th_rej=0;
       m_ph_acc=0; m_ph_rej=0;
       m_f_acc=0; m_f_rej=0;
       m_lam_acc=0; m_lam_rej=0;
-     
+
     }
-    Fibre(const Fibre& rhs): 
+    Fibre(const Fibre& rhs):
       m_d(rhs.m_d), m_d_std(rhs.m_d_std), m_R(rhs.m_R), m_alpha(rhs.m_alpha), m_beta(rhs.m_beta), m_bvals(rhs.m_bvals), m_modelnum(rhs.m_modelnum){
       *this=rhs;
     }
 
-      
+
     ~Fibre(){}
-    
+
     inline float get_th() const{ return m_th;}
     inline void set_th(const float th){ m_th=th; }
-    
+
     inline float get_ph() const{ return m_ph;}
     inline void set_ph(const float ph){ m_ph=ph; }
-    
+
     inline float get_f() const{ return m_f;}
     inline void set_f(const float f){ m_f=f; }
-    
+
     inline float get_lam() const{ return m_lam;}
     inline void set_lam(const float lam){ m_lam=lam; }
-    
+
     inline void report() const {
     OUT(m_th);
     OUT(m_ph);
@@ -227,59 +227,59 @@ namespace FIBRE{
     OUT(m_lam_old_prior);
     OUT(m_prior_en);
     OUT(m_old_prior_en);
-    OUT(m_th_acc); 
+    OUT(m_th_acc);
     OUT(m_th_rej);
     OUT(m_ph_acc);
-    OUT(m_ph_rej); 
+    OUT(m_ph_rej);
     OUT(m_f_acc);
     OUT(m_f_rej);
-    OUT(m_lam_acc); 
+    OUT(m_lam_acc);
     OUT(m_lam_rej);
     OUT(m_lam_jump);
     OUT(m_R);
     }
-    
-    inline const ColumnVector& getSignal() const{  
-      return m_Signal;                      
+
+    inline const ColumnVector& getSignal() const{
+      return m_Signal;
     }
-    
+
     inline void restoreSignal() {
       m_Signal=m_Signal_old;
     }
     inline void setSignal(const ColumnVector& Signal){
       m_Signal=Signal;
     }
-    
+
     inline void setSignal(const int i, const float val){
       m_Signal(i)=val;
     }
 
     inline float get_prior() const{ return m_prior_en;}
     inline float get_modelnum() const{ return m_modelnum;}
-    
 
-    //Adapt the standard deviation of the proposal distributions during MCMC execution 
+
+    //Adapt the standard deviation of the proposal distributions during MCMC execution
     //to avoid over-rejection/over-acceptance of samples
-    inline void update_proposals(){  
+    inline void update_proposals(){
       m_th_prop*=sqrt(float(m_th_acc+1)/float(m_th_rej+1));
       m_th_prop=min(m_th_prop,maxfloat);
       m_ph_prop*=sqrt(float(m_ph_acc+1)/float(m_ph_rej+1));
       m_ph_prop=min(m_ph_prop,maxfloat);
       m_f_prop*=sqrt(float(m_f_acc+1)/float(m_f_rej+1));
       m_f_prop=min(m_f_prop,maxfloat);
-      //m_lam_prop*=sqrt(float(m_lam_acc+1)/float(m_lam_rej+1));   
+      //m_lam_prop*=sqrt(float(m_lam_acc+1)/float(m_lam_rej+1));
       //m_lam_prop=min(m_lam_prop,maxfloat);
-      m_th_acc=0; 
+      m_th_acc=0;
       m_th_rej=0;
-      m_ph_acc=0; 
+      m_ph_acc=0;
       m_ph_rej=0;
-      m_f_acc=0; 
+      m_f_acc=0;
       m_f_rej=0;
-      m_lam_acc=0; 
+      m_lam_acc=0;
       m_lam_rej=0;
     }
-    
-    
+
+
     inline bool compute_th_prior(){
       m_th_old_prior=m_th_prior;
       if(m_th==0){m_th_prior=0;}
@@ -308,7 +308,7 @@ namespace FIBRE{
 	if(!can_use_ard)
 	  m_f_prior=0;
 	else{
-	  if(m_lam_jump){              
+	  if(m_lam_jump){
 	    // m_f_prior=log(1-m_f)+2*log(fabs(log(1-m_f))); //marginalised with uniform prior on lambda
 	    m_f_prior=std::log(m_f);
 	    //cc	  OUT(m_f);
@@ -325,7 +325,7 @@ namespace FIBRE{
       }
     }
 
-     
+
     inline bool compute_lam_prior(){
       m_lam_old_prior=m_lam_prior;
       if((m_lam <0) | (m_lam > 1e16))
@@ -335,37 +335,37 @@ namespace FIBRE{
 	return false;
       }
     }
-    
+
 
     inline void compute_prior(){
       m_old_prior_en=m_prior_en;
-      //m_prior_en=m_th_prior+m_ph_prior+m_f_prior+m_lam_prior;   
+      //m_prior_en=m_th_prior+m_ph_prior+m_f_prior+m_lam_prior;
       m_prior_en=m_th_prior+m_ph_prior+m_f_prior;
     }
 
 
-    //Compute model predicted signal, only due to the anisotropic compartment 
+    //Compute model predicted signal, only due to the anisotropic compartment
     void compute_signal(){
        m_Signal_old=m_Signal;
-       
+
        if(m_modelnum==1 || (m_d_std<1e-5 && m_modelnum==2)){
 	 for (int i = 1; i <= m_alpha.Nrows(); i++){
-	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   //Used trigonometric identities to reduce the number of sinusoids evaluated  
+	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   //Used trigonometric identities to reduce the number of sinusoids evaluated
            float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
-          
+
 	  //float angtmp=cos(m_ph-m_beta(i))*sin(m_alpha(i))*sin(m_th) + cos(m_alpha(i))*cos(m_th);
 	  float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
- 	  angtmp=angtmp*angtmp;	  
+ 	  angtmp=angtmp*angtmp;
 	  m_Signal(i)=exp(-m_d*m_bvals(1,i)*angtmp);
 	 }
        }
        else if(m_modelnum==2){
 	 //float dbeta=m_d/(m_d_std*m_d_std);
-	 //float dalpha=m_d*dbeta;     
+	 //float dalpha=m_d*dbeta;
          float sig2=m_d_std*m_d_std;
-	 float dalpha=m_d*m_d/sig2;                        
+	 float dalpha=m_d*m_d/sig2;
 	 for (int i = 1; i <= m_alpha.Nrows(); i++){
-	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   
+	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);
            float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
      	   float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
  	   angtmp=angtmp*angtmp;
@@ -376,7 +376,7 @@ namespace FIBRE{
        else if(m_modelnum==3){
 	 float invR=1.0/(2*m_R+1.0);
 	 for (int i = 1; i <= m_alpha.Nrows(); i++){
-	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);   
+	   float cos_alpha_minus_theta=cos(m_alpha(i)-m_th);
            float cos_alpha_plus_theta=cos(m_alpha(i)+m_th);
      	   float angtmp=cos(m_ph-m_beta(i))*(cos_alpha_minus_theta-cos_alpha_plus_theta)/2 + (cos_alpha_minus_theta+cos_alpha_plus_theta)/2;
  	   angtmp=angtmp*angtmp;
@@ -398,9 +398,9 @@ namespace FIBRE{
 
 
     inline void accept_th(){
-      m_th_acc++;      
+      m_th_acc++;
     }
-    
+
 
     inline void reject_th(){
       m_th=m_th_old;
@@ -409,7 +409,7 @@ namespace FIBRE{
       m_Signal=m_Signal_old;//Is there a better way of doing this??
       m_th_rej++;
     }
-    
+
 
     inline bool propose_ph(){
       //cout<<"ph"<<endl;
@@ -420,12 +420,12 @@ namespace FIBRE{
       compute_signal();
       return rejflag;
     };
-    
+
 
     inline void accept_ph(){
       m_ph_acc++;
     }
-    
+
 
     inline void reject_ph(){
       m_ph=m_ph_old;
@@ -434,8 +434,8 @@ namespace FIBRE{
       m_Signal=m_Signal_old;//Is there a better way of doing this??
       m_ph_rej++;
     }
-    
-    
+
+
     bool propose_th_ph(float th,float ph){
       //m_th_old=m_th;m_ph_old=m_ph;
       //cout<<"thph"<<endl;
@@ -478,13 +478,13 @@ namespace FIBRE{
       compute_prior();
       return rejflag;
     };
-    
+
 
     inline void accept_f(){
       m_f_acc++;
     }
 
-    
+
     inline void reject_f(){
       m_f=m_f_old;
       m_f_prior=m_f_old_prior;
@@ -492,7 +492,7 @@ namespace FIBRE{
       m_f_rej++;
     }
 
-    
+
     inline bool propose_lam(){
       if(m_lam_jump){
 	m_lam_old=m_lam;
@@ -505,20 +505,20 @@ namespace FIBRE{
       else {return true;}
     };
 
-    
+
     inline void accept_lam(){
       m_lam_acc++;
     }
 
-    
+
     inline void reject_lam(){
       m_lam=m_lam_old;
       m_lam_prior=m_lam_old_prior;
       m_prior_en=m_old_prior_en;
       m_lam_rej++;
     }
-    
-    
+
+
     Fibre& operator=(const Fibre& rhs){
       m_th=rhs.m_th;
       m_ph=rhs.m_ph;
@@ -542,17 +542,17 @@ namespace FIBRE{
       m_lam_old_prior=rhs.m_lam_old_prior;
       m_prior_en=rhs.m_prior_en;
       m_old_prior_en=rhs.m_old_prior_en;
-      m_th_acc=rhs.m_th_acc; 
+      m_th_acc=rhs.m_th_acc;
       m_th_rej=rhs.m_th_rej;
       m_ph_acc=rhs.m_ph_acc;
-      m_ph_rej=rhs.m_ph_rej; 
+      m_ph_rej=rhs.m_ph_rej;
       m_f_acc=rhs.m_f_acc;
       m_f_rej=rhs.m_f_rej;
-      m_lam_acc=rhs.m_lam_acc; 
+      m_lam_acc=rhs.m_lam_acc;
       m_lam_rej=rhs.m_lam_rej;
       m_lam_jump=rhs.m_lam_jump;
-      m_Signal=rhs.m_Signal; 
-      m_Signal_old=rhs.m_Signal_old; 
+      m_Signal=rhs.m_Signal;
+      m_Signal_old=rhs.m_Signal_old;
       m_ardfudge=rhs.m_ardfudge;
       return *this;
     }
@@ -568,33 +568,33 @@ namespace FIBRE{
   }
 
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////// 
-  //Class that represents the PVM model in an MCMC framework. An isotropic compartment and M>=1 
-  //anisotropic compartments (Fibre objects) are considered. Functions are defined for performing 
-  //a single MCMC iteration   
-  ///////////////////////////////////////////////////////////////////////////////////////////////////// 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  //Class that represents the PVM model in an MCMC framework. An isotropic compartment and M>=1
+  //anisotropic compartments (Fibre objects) are considered. Functions are defined for performing
+  //a single MCMC iteration
+  /////////////////////////////////////////////////////////////////////////////////////////////////////
   class Multifibre{
     vector<Fibre> m_fibres;
     float m_d;
     float m_d_old;
     float m_d_prop;
-    float m_d_prior; 
+    float m_d_prior;
     float m_d_old_prior;
     float m_d_acc;
     float m_d_rej;
- 
-    float m_d_std; //second d param in multi-shell model - std in gamma dist of diffusivities - to get non-monoexponential decay. 
+
+    float m_d_std; //second d param in multi-shell model - std in gamma dist of diffusivities - to get non-monoexponential decay.
     float m_d_std_old;
     float m_d_std_prop;
-    float m_d_std_prior; 
+    float m_d_std_prior;
     float m_d_std_old_prior;
     float m_d_std_acc;
     float m_d_std_rej;
-    
-    float m_R;   //anisotropy parameter in model3 - R=l2/l1 for the zeppelin compartment 
+
+    float m_R;   //anisotropy parameter in model3 - R=l2/l1 for the zeppelin compartment
     float m_R_old;
     float m_R_prop;
-    float m_R_prior; 
+    float m_R_prior;
     float m_R_old_prior;
     float m_R_acc;
     float m_R_rej;
@@ -606,8 +606,8 @@ namespace FIBRE{
     float m_S0_old_prior;
     float m_S0_acc;
     float m_S0_rej;
-    
-    float m_tau;                  //Precision parameter (1/sigma^2) for Rician noise 
+
+    float m_tau;                  //Precision parameter (1/sigma^2) for Rician noise
     float m_tau_old;
     float m_tau_prop;
     float m_tau_prior;
@@ -615,7 +615,7 @@ namespace FIBRE{
     float m_tau_acc;
     float m_tau_rej;
 
-    float m_f0;                  //Volume fraction for the unattenuated signal compartment 
+    float m_f0;                  //Volume fraction for the unattenuated signal compartment
     float m_f0_old;
     float m_f0_prop;
     float m_f0_prior;
@@ -630,32 +630,32 @@ namespace FIBRE{
     float m_energy;               //Posterior
     float m_old_energy;
     float m_ardfudge;
-    ColumnVector m_iso_Signal;    //Vector that stores the signal from the isotropic compartment during the candidate/current state 
-    ColumnVector m_iso_Signal_old; 
+    ColumnVector m_iso_Signal;    //Vector that stores the signal from the isotropic compartment during the candidate/current state
+    ColumnVector m_iso_Signal_old;
 
-    const ColumnVector& m_data;   //Data vector 
-    const ColumnVector& m_alpha;  //Theta angles of bvecs 
+    const ColumnVector& m_data;   //Data vector
+    const ColumnVector& m_alpha;  //Theta angles of bvecs
     const ColumnVector& m_beta;   //Phi angles of bvecs
     const Matrix& m_bvals;        //b values
     const int m_modelnum;         //1 for single-shell, 2 for multi-shell model
-    const bool m_rician;          //If true, use Rician noise model 
+    const bool m_rician;          //If true, use Rician noise model
     const bool m_includef0;       //If true, include an unattenuated signal compartment in the model with fraction f0
-    const bool m_ardf0;           //If true, use ard on the f0 compartment 
+    const bool m_ardf0;           //If true, use ard on the f0 compartment
     const float m_R_priormean;    //Parameters to use for the Gaussian prior on R. Mean
     const float m_R_priorstd;     //and variance
-    const float m_R_priorfudge;   //and fudge. Default is zero. If set >0, then an ARD prior is used for R at the high diffusivity regions with the requested fugde  
+    const float m_R_priorfudge;   //and fudge. Default is zero. If set >0, then an ARD prior is used for R at the high diffusivity regions with the requested fugde
 
 
   public:
     //Constructor
-    Multifibre(const ColumnVector& data,const ColumnVector& alpha, 
+    Multifibre(const ColumnVector& data,const ColumnVector& alpha,
 	       const ColumnVector& beta, const Matrix& b, int N ,float ardfudge=1, int modelnum=1, bool rician=false, bool inclf0=false, bool ardf0=false, float Rmean=0.13, float Rstd=0.03, float Rfudge=0):
     m_ardfudge(ardfudge),m_data(data), m_alpha(alpha), m_beta(beta), m_bvals(b), m_modelnum(modelnum), m_rician(rician), m_includef0(inclf0), m_ardf0(ardf0), m_R_priormean(Rmean), m_R_priorstd(Rstd), m_R_priorfudge(Rfudge){
       m_iso_Signal.ReSize(alpha.Nrows());
       m_iso_Signal=0;
       m_iso_Signal_old=m_iso_Signal;            //Initialize vectors that keep the signal from the isotropic compartment
-     
-      m_d_acc=0; m_d_rej=0;                
+
+      m_d_acc=0; m_d_rej=0;
       m_d_std_acc=0; m_d_std_rej=0;
       m_S0_acc=0; m_S0_rej=0;
       m_tau_acc=0; m_tau_rej=0;
@@ -663,11 +663,11 @@ namespace FIBRE{
       m_R_acc=0; m_R_rej=0;
       m_d_prior=0; m_d_std_prior=0; m_S0_prior=0; m_f0_prior=0; m_tau_prior=0; m_R_prior=0;
       m_d=0; m_d_old=0; m_d_std=0; m_d_std_old=0; m_S0=0; m_S0_old=0; m_R=0; m_R_old=0;
-      m_f0=0.0; m_f0_old=0.0;   //Set this parameter to 0, it will be initialized later only if m_includef0 is true  
+      m_f0=0.0; m_f0_old=0.0;   //Set this parameter to 0, it will be initialized later only if m_includef0 is true
    }
-    
+
     ~Multifibre(){}
-    
+
     const vector<Fibre>& fibres() const{
       return m_fibres;
     }
@@ -675,7 +675,7 @@ namespace FIBRE{
     vector<Fibre>& get_fibres(){
       return m_fibres;
     }
-    
+
     void addfibre(const float th, const float ph, const float f,const bool use_ard=true){
       Fibre fib(m_alpha,m_beta,m_bvals,m_d,m_ardfudge,th,ph,f,use_ard,m_modelnum,m_d_std,m_R);
        m_fibres.push_back(fib);
@@ -702,14 +702,14 @@ namespace FIBRE{
       m_prior_en=0;
       compute_prior();
       m_likelihood_en=0;
-      compute_iso_signal();                  
+      compute_iso_signal();
       compute_likelihood();
       compute_energy();
     }
 
 
     //Initialize standard deviations for the proposal distributions
-    void initialise_props(){   
+    void initialise_props(){
       m_S0_prop=m_S0/10.0; //must have set initial values before this is called;
       m_d_prop=m_d/10.0;
       m_d_std_prop=m_d_std/10.0;
@@ -717,7 +717,7 @@ namespace FIBRE{
       m_f0_prop=0.2;
       m_R_prop=m_R/10.0;
     }
-    
+
 
     inline float get_d() const{ return m_d;}
     inline void set_d(const float d){ m_d=d; }
@@ -729,17 +729,17 @@ namespace FIBRE{
     inline void set_R(const float R){ m_R=R; }
 
     inline int get_nfibre(){return m_fibres.size();}
-    
+
     inline float get_energy() const { return m_likelihood_en+m_prior_en;}
     inline float get_likelihood_energy() const { return m_likelihood_en;}
     inline float get_prior() const {return m_prior_en;}
-    
+
     inline float get_S0() const{ return m_S0;}
     inline void set_S0(const float S0){ m_S0=S0; }
-    
+
     inline float get_tau() const { return m_tau; }
     inline void set_tau(const float tau){ m_tau=tau;}
-  
+
     inline float get_f0() const{ return m_f0;}
     inline void set_f0(const float f0){ m_f0=f0; }
 
@@ -747,21 +747,21 @@ namespace FIBRE{
       OUT(m_d);
       OUT(m_d_old);
       OUT(m_d_prop);
-      OUT(m_d_prior); 
+      OUT(m_d_prior);
       OUT(m_d_old_prior);
       OUT(m_d_acc);
       OUT(m_d_rej);
       OUT(m_d_std);
       OUT(m_d_std_old);
       OUT(m_d_std_prop);
-      OUT(m_d_std_prior); 
+      OUT(m_d_std_prior);
       OUT(m_d_std_old_prior);
       OUT(m_d_std_acc);
       OUT(m_d_std_rej);
       OUT(m_R);
       OUT(m_R_old);
       OUT(m_R_prop);
-      OUT(m_R_prior); 
+      OUT(m_R_prior);
       OUT(m_R_old_prior);
       OUT(m_R_acc);
       OUT(m_R_rej);
@@ -812,19 +812,19 @@ namespace FIBRE{
       }
     }
 
-    
+
     inline bool compute_R_prior(){
       m_R_old_prior=m_R_prior;
-      
+
       float upper_R=2*m_R_priormean;
-      float lower_R=m_R_priormean-2.0*m_R_priorstd; 
+      float lower_R=m_R_priormean-2.0*m_R_priorstd;
 
       if (m_R_priormean>0.5)
 	upper_R=1;
 
       if (lower_R<0)
 	lower_R=1E-8;
-      
+
       if (m_R_priorfudge>0 && m_d>UPPERDIFF/2.0){ //then use an ARD prior to avoid competition with the isotropic compartments
 	if (m_R<1E-8 || m_R>upper_R)
 	  return true;
@@ -833,22 +833,22 @@ namespace FIBRE{
 	  return false;
 	}
       }
-      if(m_R<=lower_R || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles 
+      if(m_R<=lower_R || m_R>upper_R)  //Truncate prior to avoid too spherical (high m_R) or too anisotropic (small m_R) profiles
 	return true;
       else{
-	float Rstd2=m_R_priorstd*m_R_priorstd; 
+	float Rstd2=m_R_priorstd*m_R_priorstd;
 	m_R_prior=(m_R-m_R_priormean)*(m_R-m_R_priormean)/Rstd2;  //Gaussian prior
 	return false;
       }
     }
- 
 
-    
+
+
     inline bool compute_S0_prior(){
       m_S0_old_prior=m_S0_prior;
       if(m_S0<0) return true;
       else
-	{    
+	{
 	  m_S0_prior=0;
 	  return false;
 	}
@@ -875,20 +875,20 @@ namespace FIBRE{
 	  m_f0_prior=0;
 	else              //With ARD
 	  m_f0_prior=std::log(m_f0);
-	return false;	
+	return false;
       }
-    } 
+    }
 
 
     //Check if sum of volume fractions is >1
     bool reject_f_sum(){
       float fsum=m_f0;
       for(unsigned int f=0;f<m_fibres.size();f++){
-	fsum+=m_fibres[f].get_f();	
+	fsum+=m_fibres[f].get_f();
       }
       return fsum>1; //true if sum(f) > 1 and therefore, we should reject f
     }
-    
+
 
     //Compute Joint Prior
     inline void compute_prior(){
@@ -905,11 +905,11 @@ namespace FIBRE{
 	m_prior_en=m_prior_en+m_f0_prior;
       for(unsigned int f=0;f<m_fibres.size(); f++){
 	m_prior_en=m_prior_en+m_fibres[f].get_prior();
-      } 
+      }
     }
-    
 
-    void compute_iso_signal(){               //Function that computes the signal from the isotropic compartment 
+
+    void compute_iso_signal(){               //Function that computes the signal from the isotropic compartment
       m_iso_Signal_old=m_iso_Signal;
       if(m_modelnum==1 || m_d_std<1e-5){
 	for(int i=1;i<=m_alpha.Nrows();i++)
@@ -917,17 +917,17 @@ namespace FIBRE{
       }
       else if(m_modelnum>=2){
 	float sig2=m_d_std*m_d_std;
-	float dalpha=m_d*m_d/sig2;	  
+	float dalpha=m_d*m_d/sig2;
 	for(int i=1;i<=m_alpha.Nrows();i++){
 	  m_iso_Signal(i)=exp(log(m_d/(m_d+m_bvals(1,i)*sig2))*dalpha); // more numerically stable
 	  //float dbeta=m_d/(m_d_std*m_d_std);
-	  //float dalpha=m_d*dbeta;	  
+	  //float dalpha=m_d*dbeta;
 	  //m_iso_Signal(i)=exp(log(dbeta/(dbeta+m_bvals(1,i)))*dalpha);
 	}
       }
-    }	
-   
- 
+    }
+
+
    void compute_likelihood(){
       m_old_likelihood_en=m_likelihood_en;
       ColumnVector pred(m_alpha.Nrows()),pred2;
@@ -939,27 +939,27 @@ namespace FIBRE{
       }
 
       for(int i=1;i<=pred.Nrows();i++){
-      	pred(i)=m_S0*(pred(i)+(1-fsum)*m_iso_Signal(i)+m_f0);   //Add the signal from the isotropic compartment     
+      	pred(i)=m_S0*(pred(i)+(1-fsum)*m_iso_Signal(i)+m_f0);   //Add the signal from the isotropic compartment
       }                                                         //and multiply by S0 to get the total signal
-      
+
       if (!m_rician){     //Likelihood energy for Gaussian noise
-	float sumsquares=(m_data-pred).SumSquare();             //Sum of squared residuals 
+	float sumsquares=(m_data-pred).SumSquare();             //Sum of squared residuals
 	m_likelihood_en=(m_data.Nrows()/2.0)*log(sumsquares/2.0);
       }
       else{   //Likelihood energy for Rician noise
 	for(int i=1;i<=pred.Nrows();i++)
-	  pred2(i)=std::log(m_data(i))-0.5*m_tau*(m_data(i)*m_data(i)+pred(i)*pred(i))+logIo(m_tau*pred(i)*m_data(i));     
+	  pred2(i)=std::log(m_data(i))-0.5*m_tau*(m_data(i)*m_data(i)+pred(i)*pred(i))+logIo(m_tau*pred(i)*m_data(i));
 	m_likelihood_en=-m_data.Nrows()*std::log(m_tau)-pred2.Sum();
       }
    }
-    
-    
+
+
     inline void compute_energy(){
       m_old_energy=m_energy;
       m_energy=m_prior_en+m_likelihood_en;
       //cout<<m_prior_en<<" "<<m_likelihood_en<<endl;
     }
-   
+
     /*
     void evaluate_energy(){
       m_old_energy=m_energy;
@@ -967,7 +967,7 @@ namespace FIBRE{
 	m_fibres[f].compute_th_prior();
 	m_fibres[f].compute_ph_prior();
 	m_fibres[f].compute_f_prior();
-	//m_fibres[f].compute_lam_prior();     
+	//m_fibres[f].compute_lam_prior();
 	m_fibres[f].compute_signal();
 	m_fibres[f].compute_prior();
       }
@@ -977,20 +977,20 @@ namespace FIBRE{
       } */
 
 
-    //Test whether the candidate state will be accepted 
+    //Test whether the candidate state will be accepted
     bool test_energy(){
       float tmp=exp(m_old_energy-m_energy);
       return (tmp>unifrnd().AsScalar());
     }
 
-    
+
     inline void restore_energy(){
       m_prior_en=m_old_prior_en;
       m_likelihood_en=m_old_likelihood_en;
       m_energy=m_old_energy;
     }
 
-    
+
     inline void restore_energy_no_lik(){
       m_prior_en=m_old_prior_en;
       m_energy=m_old_energy;
@@ -1005,23 +1005,23 @@ namespace FIBRE{
       rejflag=compute_d_prior();
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].compute_signal();
-      compute_iso_signal();        
+      compute_iso_signal();
       return rejflag;
     };
-    
+
 
     inline void accept_d(){
-      m_d_acc++;      
+      m_d_acc++;
     }
 
-    
+
     inline void reject_d(){
       m_d=m_d_old;
       m_d_prior=m_d_old_prior;
       m_prior_en=m_old_prior_en;
       for(unsigned int f=0;f<m_fibres.size();f++)
 	m_fibres[f].restoreSignal();
-      m_iso_Signal=m_iso_Signal_old;   
+      m_iso_Signal=m_iso_Signal_old;
       m_d_rej++;
     }
 
@@ -1034,17 +1034,17 @@ namespace FIBRE{
 	for(unsigned int f=0;f<m_fibres.size();f++)
 	  m_fibres[f].compute_signal();
       }
-      compute_iso_signal();   
+      compute_iso_signal();
       return rejflag;
     };
-    
+
 
     inline void accept_d_std(){
-      m_d_std_acc++;      
+      m_d_std_acc++;
     }
-    
 
-    inline void reject_d_std(){      
+
+    inline void reject_d_std(){
       m_d_std=m_d_std_old;
       m_d_std_prior=m_d_std_old_prior;
       m_prior_en=m_old_prior_en;
@@ -1052,10 +1052,10 @@ namespace FIBRE{
 	for(unsigned int f=0;f<m_fibres.size();f++)
 	  m_fibres[f].restoreSignal();
       }
-      m_iso_Signal=m_iso_Signal_old;   
+      m_iso_Signal=m_iso_Signal_old;
       m_d_std_rej++;
     }
-    
+
 
 
     inline bool propose_R(){
@@ -1066,14 +1066,14 @@ namespace FIBRE{
 	m_fibres[f].compute_signal();
       return rejflag;
     };
-    
+
 
     inline void accept_R(){
-      m_R_acc++;      
+      m_R_acc++;
     }
-    
 
-    inline void reject_R(){      
+
+    inline void reject_R(){
       m_R=m_R_old;
       m_R_prior=m_R_old_prior;
       m_prior_en=m_old_prior_en;
@@ -1089,12 +1089,12 @@ namespace FIBRE{
       bool rejflag=compute_S0_prior();//inside this it stores the old prior
       return rejflag;
     };
-    
+
 
     inline void accept_S0(){
-      m_S0_acc++;      
+      m_S0_acc++;
     }
-    
+
 
     inline void reject_S0(){
       m_S0=m_S0_old;
@@ -1102,7 +1102,7 @@ namespace FIBRE{
       m_prior_en=m_old_prior_en;
       m_S0_rej++;
     }
-    
+
 
     inline bool propose_tau(){
       m_tau_old=m_tau;
@@ -1110,19 +1110,19 @@ namespace FIBRE{
       bool rejflag=compute_tau_prior();//inside this it stores the old prior
       return rejflag;
     };
-    
+
 
     inline void accept_tau(){
-      m_tau_acc++;      
+      m_tau_acc++;
     }
-    
+
     inline void reject_tau(){
       m_tau=m_tau_old;
       m_tau_prior=m_tau_old_prior;
       m_prior_en=m_old_prior_en;
       m_tau_rej++;
     }
-    
+
 
     inline bool propose_f0(){
       m_f0_old=m_f0;
@@ -1131,7 +1131,7 @@ namespace FIBRE{
       compute_prior();
       return rejflag;
     };
-    
+
 
     inline void accept_f0(){
       m_f0_acc++;
@@ -1143,9 +1143,9 @@ namespace FIBRE{
       m_prior_en=m_old_prior_en;
       m_f0_rej++;
     }
-    
 
-    //Adapt standard deviation of proposal distributions during MCMC execution 
+
+    //Adapt standard deviation of proposal distributions during MCMC execution
     //to avoid over-rejection/over-acceptance of MCMC samples
     inline void update_proposals(){
       m_d_prop*=sqrt(float(m_d_acc+1)/float(m_d_rej+1));
@@ -1153,44 +1153,44 @@ namespace FIBRE{
       if(m_modelnum>=2){
 	m_d_std_prop*=sqrt(float(m_d_std_acc+1)/float(m_d_std_rej+1));
 	m_d_std_prop=min(m_d_std_prop,maxfloat);
-	m_d_std_acc=0; 
+	m_d_std_acc=0;
 	m_d_std_rej=0;
 	if (m_modelnum==3){
 	  m_R_prop*=sqrt(float(m_R_acc+1)/float(m_R_rej+1));
 	  m_R_prop=min(m_R_prop,maxfloat);
-	  m_R_acc=0; 
+	  m_R_acc=0;
 	  m_R_rej=0;
 	}
       }
       if (m_rician){
       	m_tau_prop*=sqrt(float(m_tau_acc+1)/float(m_tau_rej+1));
 	m_tau_prop=min(m_tau_prop,maxfloat);
-	m_tau_acc=0; 
+	m_tau_acc=0;
 	m_tau_rej=0;
-      }  
+      }
       if (m_includef0){
       	m_f0_prop*=sqrt(float(m_f0_acc+1)/float(m_f0_rej+1));
 	m_f0_prop=min(m_f0_prop,maxfloat);
-	m_f0_acc=0; 
+	m_f0_acc=0;
 	m_f0_rej=0;
-      } 
+      }
       m_S0_prop*=sqrt(float(m_S0_acc+1)/float(m_S0_rej+1));
       m_S0_prop=min(m_S0_prop,maxfloat);
-      m_d_acc=0; 
+      m_d_acc=0;
       m_d_rej=0;
-      m_S0_acc=0; 
+      m_S0_acc=0;
       m_S0_rej=0;
       for(unsigned int f=0; f<m_fibres.size();f++){
 	m_fibres[f].update_proposals();
       }
-      
+
     }
-    
-    
+
+
     //Function that performs a single MCMC iteration
     void jump( bool can_use_ard=true ){
-      if (m_includef0){     //Try f0 
-	if(!propose_f0()){  
+      if (m_includef0){     //Try f0
+	if(!propose_f0()){
 	  if(!reject_f_sum()){
 	    compute_prior();
 	    compute_likelihood();
@@ -1222,11 +1222,11 @@ namespace FIBRE{
 	    restore_energy();
 	  }
 	}
-	else 
+	else
 	  reject_tau();
-	  } 
-   
-      if(!propose_d()){          //Try d 
+	  }
+
+      if(!propose_d()){          //Try d
 	compute_prior();
 	compute_likelihood();
 	compute_energy();
@@ -1238,10 +1238,10 @@ namespace FIBRE{
 	  restore_energy();
 	}
       }
-      else 
+      else
 	reject_d();
-      
-      
+
+
       if(m_modelnum>=2){     //Try d_std
 	if(!propose_d_std()){
 	  compute_prior();
@@ -1255,7 +1255,7 @@ namespace FIBRE{
 	    restore_energy();
 	  }
 	}
-	else 
+	else
 	  reject_d_std();
 
 	if (m_modelnum==3){ //Try R
@@ -1271,10 +1271,10 @@ namespace FIBRE{
 	      restore_energy();
 	    }
 	  }
-	else 
+	else
 	  reject_R();
 	  }
-	} 
+	}
 
 
       if(!propose_S0()){    //Try S0
@@ -1290,8 +1290,8 @@ namespace FIBRE{
       }
       else
 	reject_S0();
-      
- 
+
+
 
 
       for(unsigned int f=0;f<m_fibres.size();f++){  //For each fibre
@@ -1307,10 +1307,10 @@ namespace FIBRE{
 	    restore_energy();
 	  }
 	}
-	else 
+	else
 	  m_fibres[f].reject_th();
-	
-	
+
+
 	if(!m_fibres[f].propose_ph()){  //Try phi
 	    compute_prior();
 	    compute_likelihood();
@@ -1324,9 +1324,9 @@ namespace FIBRE{
 	  }
 	else
 	  m_fibres[f].reject_ph();
-	 
-	  
-	if(!m_fibres[f].propose_f( can_use_ard )){  //Try f 
+
+
+	if(!m_fibres[f].propose_f( can_use_ard )){  //Try f
 	    if(!reject_f_sum()){
 	      compute_prior();
 	      compute_likelihood();
@@ -1343,8 +1343,8 @@ namespace FIBRE{
 	}
 	else    //else for rejecting rejflag returned from propose_f()
 	  m_fibres[f].reject_f();
-	  
-	  
+
+
 //	   if(!m_fibres[f].propose_lam()){
 // 	    compute_prior();
 // 	    compute_energy();
@@ -1362,27 +1362,27 @@ namespace FIBRE{
       }
     }
 
-    
+
     Multifibre& operator=(const Multifibre& rhs){
       m_fibres=rhs.m_fibres;
       m_d=rhs.m_d;
       m_d_old=rhs.m_d_old;
       m_d_prop=rhs.m_d_prop;
-      m_d_prior=rhs.m_d_prior; 
+      m_d_prior=rhs.m_d_prior;
       m_d_old_prior=rhs.m_d_old_prior;
       m_d_acc=rhs.m_d_acc;
       m_d_rej=rhs.m_d_rej;
       m_d_std=rhs.m_d_std;
       m_d_std_old=rhs.m_d_std_old;
       m_d_std_prop=rhs.m_d_std_prop;
-      m_d_std_prior=rhs.m_d_std_prior; 
+      m_d_std_prior=rhs.m_d_std_prior;
       m_d_std_old_prior=rhs.m_d_std_old_prior;
       m_d_std_acc=rhs.m_d_std_acc;
       m_d_std_rej=rhs.m_d_std_rej;
       m_R=rhs.m_R;
       m_R_old=rhs.m_R_old;
       m_R_prop=rhs.m_R_prop;
-      m_R_prior=rhs.m_R_prior; 
+      m_R_prior=rhs.m_R_prior;
       m_R_old_prior=rhs.m_R_old_prior;
       m_R_acc=rhs.m_R_acc;
       m_R_rej=rhs.m_R_rej;
@@ -1414,14 +1414,14 @@ namespace FIBRE{
       m_energy=rhs.m_energy;
       m_old_energy=rhs.m_old_energy;
       m_ardfudge=rhs.m_ardfudge;
-      m_iso_Signal=rhs.m_iso_Signal;              
+      m_iso_Signal=rhs.m_iso_Signal;
       m_iso_Signal_old=rhs.m_iso_Signal_old;
       return *this;
       }
- 
-   
+
+
   };
-  
+
 }
 
 #endif
