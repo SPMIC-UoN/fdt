@@ -14,7 +14,7 @@ endif
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
-DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lNewNifti -lznz -lcprob -lprob -lm -lz
+DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lmiscmaths -lutils -lnewmat -lnewran -lNewNifti -lznz -lcprob -lprob -lm -lz
 
 DTIFIT=dtifit
 CCOPS=ccops
