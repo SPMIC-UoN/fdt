@@ -8,21 +8,21 @@
 
 #include "newimage/newimageall.h"
 #include <thrust/host_vector.h>
-#include <thrust/device_vector.h> 
+#include <thrust/device_vector.h>
 
 #include "fibre_gpu.h"
 #include <curand_kernel.h>
 
 //implemented and used in xfibres_gpu.cu
 void fit(	//INPUT
-		const vector<ColumnVector> 	datam_vec, 
+		const vector<ColumnVector> 	datam_vec,
 		const vector<Matrix> 		bvecs_vec,
 		const vector<Matrix> 		bvals_vec,
-		thrust::host_vector<float> 	datam_host,	
-		thrust::host_vector<float>	bvecs_host, 
+		thrust::host_vector<float> 	datam_host,
+		thrust::host_vector<float>	bvecs_host,
 		thrust::host_vector<float>	bvals_host,
-		thrust::device_vector<float> 	datam_gpu, 
-		thrust::device_vector<float>	bvecs_gpu, 
+		thrust::device_vector<float> 	datam_gpu,
+		thrust::device_vector<float>	bvecs_gpu,
 		thrust::device_vector<float>	bvals_gpu,
 		int				ndirections,
 		string 				output_file,
@@ -36,13 +36,13 @@ void prepare_data_gpu_FIT(	//INPUT
 				const Matrix				datam,
 				const Matrix				bvecs,
 				const Matrix				bvals,
-				const Matrix	 			gradm, 
+				const Matrix	 			gradm,
 				//OUTPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,
 				vector<Matrix>&				bvals_vec,
-				thrust::host_vector<float>&   		datam_host,	
-				thrust::host_vector<float>&		bvecs_host,				
+				thrust::host_vector<float>&   		datam_host,
+				thrust::host_vector<float>&		bvecs_host,
 				thrust::host_vector<float>&		bvals_host,
 				thrust::host_vector<double>&		alpha_host,
 				thrust::host_vector<double>&		beta_host,
@@ -52,8 +52,8 @@ void prepare_data_gpu_FIT(	//INPUT
 
 //implemented and used in xfibres_gpu.cu
 void prepare_data_gpu_FIT_repeat(	//INPUT
-					thrust::host_vector<float>   		datam_host,	
-					thrust::host_vector<float>		bvecs_host,				
+					thrust::host_vector<float>   		datam_host,
+					thrust::host_vector<float>		bvecs_host,
 					thrust::host_vector<float>		bvals_host,
 					thrust::host_vector<int>		vox_repeat,
 					int					nrepeat,
@@ -63,7 +63,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 					vector<Matrix>&				bvecs_repeat_vec,
 					vector<Matrix>&				bvals_repeat_vec,
 					thrust::host_vector<float>&   		datam_repeat_host,
-					thrust::host_vector<float>&		bvecs_repeat_host,				
+					thrust::host_vector<float>&		bvecs_repeat_host,
 					thrust::host_vector<float>&		bvals_repeat_host,
 					thrust::host_vector<float>&		params_repeat_host);
 
@@ -109,7 +109,7 @@ void resize_structures(		//INPUT
 				thrust::device_vector<float>&   	datam_gpu,
 				thrust::device_vector<float>&		params_gpu,
 				thrust::device_vector<float>&		tau_gpu,
-				thrust::device_vector<float>&		bvals_gpu,				
+				thrust::device_vector<float>&		bvals_gpu,
 				thrust::device_vector<double>&		alpha_gpu,
 				thrust::device_vector<double>&		beta_gpu,
 				thrust::device_vector<curandState>&	randStates_gpu);
@@ -128,4 +128,3 @@ void record_finish_voxels(	//INPUT
 				int 						nvox,
 				int						nVOX_multiple,
 				int						idpart);
-

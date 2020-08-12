@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
-//#include "newmatall.h"
+
 using namespace Utilities;
 
 namespace TRACT {

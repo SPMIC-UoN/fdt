@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include "dtifitOptions.h"
 #include "utils/options.h"
-//#include "newmat.h"
+
 using namespace Utilities;
 
 namespace DTIFIT {

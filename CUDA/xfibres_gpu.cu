@@ -6,7 +6,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include "xfibresoptions.h"
 
@@ -17,7 +17,7 @@
 #include "options.h"
 
 #include <thrust/host_vector.h>
-#include <thrust/device_vector.h> 
+#include <thrust/device_vector.h>
 
 #include <time.h>
 #include <sys/time.h>
@@ -59,16 +59,16 @@ void xfibres_gpu(	//INPUT
 	gpu_log += subpart_str;
 	std::ofstream myfile;
 	myfile.open (gpu_log.data(), ios::out | ios::app );
-	myfile << "----------------------------------------------------- " << "\n"; 
-   	myfile << "---------------- PART " << idpart  << " SUBPART "<< idSubpart << " ------------------- " << "\n"; 
-   	myfile << "----------------------------------------------------- " << "\n\n"; 
+	myfile << "----------------------------------------------------- " << "\n";
+   	myfile << "---------------- PART " << idpart  << " SUBPART "<< idSubpart << " ------------------- " << "\n";
+   	myfile << "----------------------------------------------------- " << "\n\n";
 	myfile.close();
 
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
 	int nvox = datam.Ncols();
 	int ndirections = datam.Nrows();
-	int nfib= opts.nfibres.value(); 
+	int nfib= opts.nfibres.value();
 	bool gradnonlin=opts.grad_file.set();
 
 	if(nvox>0){
@@ -79,11 +79,11 @@ void xfibres_gpu(	//INPUT
 		vector<Matrix> bvecs_vec, bvals_vec;
 
 		///// FIT /////
-		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);	
+		prepare_data_gpu_FIT(datam,bvecs,bvals,gradm,datam_vec, bvecs_vec, bvals_vec, datam_host, bvecs_host,  bvals_host, alpha_host, beta_host, params_host, tau_host);
 
 		thrust::device_vector<float> datam_gpu=datam_host;
 		thrust::device_vector<float> bvecs_gpu=bvecs_host;
-		thrust::device_vector<float> bvals_gpu=bvals_host;	
+		thrust::device_vector<float> bvals_gpu=bvals_host;
 		thrust::device_vector<float> params_gpu=params_host;
 		thrust::host_vector<int> vox_repeat;	//contains the id's of voxels repeated
 		vox_repeat.resize(nvox);
@@ -94,17 +94,17 @@ void xfibres_gpu(	//INPUT
 		if(opts.rician.value()){
 			float R = opts.R_prior_mean.value();
 			int Gamma_ball_only=0;  //That flag for diffmodels means default model2
-      			if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)	
+      			if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)
 			calculate_tau(datam_gpu,params_gpu,bvecs_gpu,bvals_gpu,vox_repeat,nrepeat,ndirections,nfib,opts.modelnum.value(),opts.f0.value(),opts.nonlin.value(),gradnonlin,R,Gamma_ball_only,gpu_log,tau_host);
 		}
 
 		bvecs_gpu.clear();		//free bvecs_gpu
 		bvecs_gpu.shrink_to_fit();
-	
+
 		//////   RUN MCMC  //////
-		// At MCMC step it can happens that the number of voxels is not multipe of VOXELS_BLOCK_MCMC 
+		// At MCMC step it can happens that the number of voxels is not multipe of VOXELS_BLOCK_MCMC
 		// make it multiple
-		// At Levenberg step, I launch as many blocks as voxels, so there is not such a problem 
+		// At Levenberg step, I launch as many blocks as voxels, so there is not such a problem
 		int nVOX_multiple = int(nvox/VOXELS_BLOCK_MCMC)*VOXELS_BLOCK_MCMC;
 		if(nvox%VOXELS_BLOCK_MCMC) nVOX_multiple=nVOX_multiple+VOXELS_BLOCK_MCMC;
 
@@ -112,9 +112,9 @@ void xfibres_gpu(	//INPUT
 		thrust::host_vector<double> isosignals_host;
 		thrust::host_vector<FibreGPU> fibres_host;
 		thrust::host_vector<MultifibreGPU> multifibres_host;
-	
+
 		prepare_data_gpu_MCMC(nVOX_multiple, ndirections, nfib, signals_host, isosignals_host, fibres_host, multifibres_host);
-		
+
 		thrust::device_vector<double> signals_gpu=signals_host;
 		thrust::device_vector<double> isosignals_gpu=isosignals_host;
 		thrust::device_vector<FibreGPU> fibres_gpu=fibres_host;
@@ -139,7 +139,7 @@ void xfibres_gpu(	//INPUT
 		/////// FINISH ALL VOXELS  ///////
 		record_finish_voxels(rf0_gpu,rtau_gpu,rs0_gpu,rd_gpu,rdstd_gpu,rR_gpu,rth_gpu,rph_gpu,rf_gpu,nvox,nVOX_multiple,idSubpart);
 	}else{
-		/////// FINISH EMPTY SLICE  ///////	
+		/////// FINISH EMPTY SLICE  ///////
 		Samples samples(nvox,ndirections);
 		samples.save(idSubpart);
 	}
@@ -157,7 +157,7 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
   	L(3,1)=grad_nonlin(3);  L(3,2)=grad_nonlin(6);  L(3,3)=grad_nonlin(9);
 
   	IdentityMatrix Id(3);
-  
+
   	for (int l=1; l<=bvals.Ncols(); l++){
     		if (bvals(1,l)>0){ //do not correct b0s
      		 	bvecs_c.Column(l)=(Id+L)*bvecs.Column(l);
@@ -171,14 +171,14 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
 
 //////   FIT  //////
 void fit(	//INPUT
-		const vector<ColumnVector> 	datam_vec, 
+		const vector<ColumnVector> 	datam_vec,
 		const vector<Matrix> 		bvecs_vec,
 		const vector<Matrix> 		bvals_vec,
 		thrust::host_vector<float> 	datam_host,
-		thrust::host_vector<float>	bvecs_host, 
+		thrust::host_vector<float>	bvecs_host,
 		thrust::host_vector<float>	bvals_host,
-		thrust::device_vector<float> 	datam_gpu, 
-		thrust::device_vector<float>	bvecs_gpu, 
+		thrust::device_vector<float> 	datam_gpu,
+		thrust::device_vector<float>	bvecs_gpu,
 		thrust::device_vector<float>	bvals_gpu,
 		int 				ndirections,
 		string 				output_file,
@@ -205,15 +205,15 @@ void fit(	//INPUT
 	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.modelnum.value()==1){
-		if(opts.nonlin.value()){ 
+		if(opts.nonlin.value()){
 			fit_PVM_single(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 
 			if (opts.f0.value()){
-				float md,mf,f0;	
+				float md,mf,f0;
 				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
-				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
-				for(int vox=0;vox<nvox;vox++){			
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());
+				for(int vox=0;vox<nvox;vox++){
 					md = params_host[vox*nparams_fit+(1)];
 					mf = params_host[vox*nparams_fit+(2)];
 					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
@@ -224,23 +224,23 @@ void fit(	//INPUT
 				}
 				if(nrepeat>0){
 					//prepare structures for the voxels that need to be reprocessed
-					vector<ColumnVector> 	datam_repeat_vec; 
+					vector<ColumnVector> 	datam_repeat_vec;
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
 					thrust::host_vector<float> 	datam_repeat_host;
-					thrust::host_vector<float> 	bvecs_repeat_host;	
-					thrust::host_vector<float> 	bvals_repeat_host;	
-					thrust::host_vector<float> 	params_repeat_host;	
-								
+					thrust::host_vector<float> 	bvecs_repeat_host;
+					thrust::host_vector<float> 	bvals_repeat_host;
+					thrust::host_vector<float> 	params_repeat_host;
+
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host, bvals_repeat_host, params_repeat_host);
 
 					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
 					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;
 					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
-				
+
 		 			fit_PVM_single(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
-					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());
 					//mix all the parameteres: repeated and not repeated
 					mix_params(params_repeat_host,vox_repeat, nrepeat, nvox, params_gpu);
 				}
@@ -249,11 +249,11 @@ void fit(	//INPUT
 			fit_PVM_single_c(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
 
 			if (opts.f0.value()){
-				float md,mf,f0;	
+				float md,mf,f0;
 				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
-				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
-				for(int vox=0;vox<nvox;vox++){		
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());
+				for(int vox=0;vox<nvox;vox++){
 					md = params_host[vox*nparams_fit+(1)];
 					mf = params_host[vox*nparams_fit+(2)];
 					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
@@ -264,23 +264,23 @@ void fit(	//INPUT
 				}
 				if(nrepeat>0){
 					//prepare structures for the voxels that need to be reprocessed
-					vector<ColumnVector> 	datam_repeat_vec; 
+					vector<ColumnVector> 	datam_repeat_vec;
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
 					thrust::host_vector<float> 	datam_repeat_host;
-					thrust::host_vector<float> 	bvecs_repeat_host;	
-					thrust::host_vector<float> 	bvals_repeat_host;	
-					thrust::host_vector<float> 	params_repeat_host;	
-								
+					thrust::host_vector<float> 	bvecs_repeat_host;
+					thrust::host_vector<float> 	bvals_repeat_host;
+					thrust::host_vector<float> 	params_repeat_host;
+
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host, bvals_repeat_host, params_repeat_host);
 
 					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
 					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;
 					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
-				
+
 		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
-					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());
 
 					//mix all the parameteres: repeated and not repeated
 					mix_params(params_repeat_host ,vox_repeat, nrepeat, nvox, params_gpu);
@@ -290,19 +290,19 @@ void fit(	//INPUT
 	}else{
       		//model 2 or 3
 		fit_PVM_single(datam_vec,bvecs_vec,bvals_vec,datam_gpu,bvecs_gpu,bvals_gpu,ndirections,nfib,opts.f0.value(),gradnonlin,output_file,params_gpu);
-	
+
 		float R = opts.R_prior_mean.value();
 		int Gamma_ball_only=0;  //That flag for diffmodels means default model2
       		if (opts.modelnum.value()==3) Gamma_ball_only=2;  //That flag for diffmodels means default model3 (with constant R)
 
-		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),gradnonlin,R,Gamma_ball_only,output_file,params_gpu);	
+		fit_PVM_multi(datam_gpu,bvecs_gpu,bvals_gpu,nvox,ndirections,nfib,opts.f0.value(),gradnonlin,R,Gamma_ball_only,output_file,params_gpu);
 
 		if (opts.f0.value()){
-				float md,mf,f0;	
+				float md,mf,f0;
 				thrust::host_vector<float> params_host;
 				params_host.resize(nvox*nparams_fit);
-				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
-				for(int vox=0;vox<nvox;vox++){			
+				thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());
+				for(int vox=0;vox<nvox;vox++){
 					md = params_host[vox*nparams_fit+(1)];
 					mf = params_host[vox*nparams_fit+(3)];
 					f0 = params_host[vox*nparams_fit+(nparams_fit-1)];
@@ -313,46 +313,46 @@ void fit(	//INPUT
 				}
 				if(nrepeat>0){
 					//prepare structures for the voxels that need to be reprocessed
-					vector<ColumnVector> 	datam_repeat_vec; 
+					vector<ColumnVector> 	datam_repeat_vec;
 					vector<Matrix> 		bvecs_repeat_vec;
 					vector<Matrix> 		bvals_repeat_vec;
 					thrust::host_vector<float> 	datam_repeat_host;
-					thrust::host_vector<float> 	bvecs_repeat_host;	
-					thrust::host_vector<float> 	bvals_repeat_host;	
-					thrust::host_vector<float> 	params_repeat_host;		
-								
+					thrust::host_vector<float> 	bvecs_repeat_host;
+					thrust::host_vector<float> 	bvals_repeat_host;
+					thrust::host_vector<float> 	params_repeat_host;
+
 					prepare_data_gpu_FIT_repeat(datam_host, bvecs_host, bvals_host, vox_repeat, nrepeat, ndirections, datam_repeat_vec, bvecs_repeat_vec, bvals_repeat_vec, datam_repeat_host, bvecs_repeat_host,  bvals_repeat_host, params_repeat_host);
 
 					thrust::device_vector<float> datam_repeat_gpu=datam_repeat_host;
 					thrust::device_vector<float> bvecs_repeat_gpu=bvecs_repeat_host;
-					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;	
+					thrust::device_vector<float> bvals_repeat_gpu=bvals_repeat_host;
 					thrust::device_vector<float> params_repeat_gpu=params_repeat_host;
-				
+
 		 			fit_PVM_single_c(datam_repeat_vec,bvecs_repeat_vec,bvals_repeat_vec,datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,ndirections,nfib,false,gradnonlin,output_file,params_repeat_gpu);
 
-					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,gradnonlin,R,Gamma_ball_only,output_file,params_repeat_gpu);	
-					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());	
-		
+					fit_PVM_multi(datam_repeat_gpu,bvecs_repeat_gpu,bvals_repeat_gpu,nrepeat,ndirections,nfib,false,gradnonlin,R,Gamma_ball_only,output_file,params_repeat_gpu);
+					thrust::copy(params_repeat_gpu.begin(), params_repeat_gpu.end(), params_repeat_host.begin());
+
 					//mix all the parameteres: repeated and not repeated
 					mix_params(params_repeat_host ,vox_repeat, nrepeat,  nvox, params_gpu);
 				}
-	  		}	
+	  		}
 	}
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "TIME: " << time << " seconds\n"; 
-	myfile << "-----------------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME: " << time << " seconds\n";
+	myfile << "-----------------------------------------------------" << "\n\n" ;
 	myfile.close();
 }
 
-void remove_NonPositive_entries(ColumnVector& Voxdata){  
-//Zero, Negative Entries can be obtained from spline interpolation 
-  	int pos; 
-  	float MinS=Voxdata.Minimum1(pos); 
+void remove_NonPositive_entries(ColumnVector& Voxdata){
+//Zero, Negative Entries can be obtained from spline interpolation
+  	int pos;
+  	float MinS=Voxdata.Minimum1(pos);
   	float MaxS=Voxdata.Maximum();
-	if (MinS<=0 && MaxS>0){  
+	if (MinS<=0 && MaxS>0){
 	//when there are some non-positive entries, but not all are zero
     		vector<int> minpositions;
 	    	while (MinS<=0){
@@ -371,13 +371,13 @@ void prepare_data_gpu_FIT(	//INPUT
 				const Matrix				datam,
 				const Matrix				bvecs,
 				const Matrix				bvals,
-				const Matrix	 			gradm, 
+				const Matrix	 			gradm,
 				//OUTPUT
 				vector<ColumnVector>&			datam_vec,
 				vector<Matrix>&				bvecs_vec,
 				vector<Matrix>&				bvals_vec,
 				thrust::host_vector<float>&   		datam_host,	//data prepared for copy to GPU
-				thrust::host_vector<float>&		bvecs_host,				
+				thrust::host_vector<float>&		bvecs_host,
 				thrust::host_vector<float>&		bvals_host,
 				thrust::host_vector<double>&		alpha_host,
 				thrust::host_vector<double>&		beta_host,
@@ -385,11 +385,11 @@ void prepare_data_gpu_FIT(	//INPUT
 				thrust::host_vector<float>&		tau_host)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
-	int nvox = datam.Ncols(); 
-	int ndirections = datam.Nrows(); 
+	int nvox = datam.Ncols();
+	int ndirections = datam.Nrows();
 
 	datam_vec.resize(nvox);
-	datam_host.resize(nvox*ndirections); 
+	datam_host.resize(nvox*ndirections);
 	for(int vox=0;vox<nvox;vox++){
 		ColumnVector voxdata;
 		voxdata=datam.Column(vox+1);
@@ -422,7 +422,7 @@ void prepare_data_gpu_FIT(	//INPUT
 		for(int vox=0;vox<nvox;vox++){
 			correct_bvals_bvecs(bvals,bvecs, gradm.Column(vox+1),bvals_vec[vox],bvecs_vec[vox]); //correct for gradient nonlinearities
  			MISCMATHS::cart2sph(bvecs_vec[vox],alpha,beta);
-			
+
 			for(int dir=0;dir<ndirections;dir++){
 				bvecs_host[vox*ndirections*3+dir] = bvecs_vec[vox](1,dir+1);
 				bvecs_host[vox*ndirections*3+ndirections+dir] = bvecs_vec[vox](2,dir+1);
@@ -433,7 +433,7 @@ void prepare_data_gpu_FIT(	//INPUT
         			beta_host[vox*ndirections+dir] = beta(dir+1);
 			}
 		}
-		
+
 	}else{
  		MISCMATHS::cart2sph(bvecs,alpha,beta);
 		bvecs_vec[0]=bvecs;
@@ -443,17 +443,17 @@ void prepare_data_gpu_FIT(	//INPUT
 			bvecs_host[ndirections+dir] = bvecs(2,dir+1);
 			bvecs_host[ndirections*2+dir] = bvecs(3,dir+1);
         		bvals_host[dir] = bvals(1,dir+1);
-			
+
 			alpha_host[dir] = alpha(dir+1);
         		beta_host[dir] = beta(dir+1);
 		}
 	}
-	
+
 	int nfib= opts.nfibres.value();
 	int nparams;
 
 	if(opts.f0.value()) nparams=3+nfib*3;
-	else nparams=2+nfib*3;	
+	else nparams=2+nfib*3;
 	if(opts.modelnum.value()>=2) nparams++;
 
 	params_host.resize(nvox*nparams);
@@ -462,8 +462,8 @@ void prepare_data_gpu_FIT(	//INPUT
 
 //prepare the structures for copy all neccesary data to FIT on GPU when is repeated because f0. Only some voxels
 void prepare_data_gpu_FIT_repeat(	//INPUT
-					thrust::host_vector<float>   		datam_host,	
-					thrust::host_vector<float>		bvecs_host,				
+					thrust::host_vector<float>   		datam_host,
+					thrust::host_vector<float>		bvecs_host,
 					thrust::host_vector<float>		bvals_host,
 					thrust::host_vector<int>		vox_repeat,
 					int					nrepeat,
@@ -473,7 +473,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 					vector<Matrix>&				bvecs_repeat_vec,
 					vector<Matrix>&				bvals_repeat_vec,
 					thrust::host_vector<float>&   		datam_repeat_host,	//data prepared for copy to GPU
-					thrust::host_vector<float>&		bvecs_repeat_host,				
+					thrust::host_vector<float>&		bvecs_repeat_host,
 					thrust::host_vector<float>&		bvals_repeat_host,
 					thrust::host_vector<float>&		params_repeat_host)
 {
@@ -484,8 +484,8 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 	Matrix	bvals(1,ndirections);
 
 	datam_repeat_vec.resize(nrepeat);
-	datam_repeat_host.resize(nrepeat*ndirections); 
-	
+	datam_repeat_host.resize(nrepeat*ndirections);
+
 	if (opts.grad_file.set()){
 		bvecs_repeat_vec.resize(nrepeat);
 		bvals_repeat_vec.resize(nrepeat);
@@ -498,10 +498,10 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 		bvals_repeat_host.resize(1*ndirections);
 	}
 
-	
+
 	for(int vox=0;vox<nrepeat;vox++){
 		for(int dir=0;dir<ndirections;dir++){
-			datam(dir+1)= datam_host[vox_repeat[vox]*ndirections+dir]; 
+			datam(dir+1)= datam_host[vox_repeat[vox]*ndirections+dir];
 			datam_repeat_host[vox*ndirections+dir]=datam_host[vox_repeat[vox]*ndirections+dir];
 		}
 		datam_repeat_vec[vox]=datam;
@@ -514,7 +514,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 				bvecs_repeat_host[vox*ndirections*3+ndirections+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
 				bvecs_repeat_host[vox*ndirections*3+ndirections*2+dir] = bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
 				bvals_repeat_host[vox*ndirections+dir] = bvals_host[vox_repeat[vox]*ndirections+dir];
-			
+
 				bvecs(1,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+dir];
 				bvecs(2,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections+dir];
 				bvecs(3,dir+1)= bvecs_host[vox_repeat[vox]*ndirections*3+ndirections*2+dir];
@@ -529,7 +529,7 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 			bvecs_repeat_host[ndirections+dir] = bvecs_host[ndirections+dir];
 			bvecs_repeat_host[ndirections*2+dir] = bvecs_host[ndirections*2+dir];
 			bvals_repeat_host[dir] = bvals_host[dir];
-			
+
 			bvecs(1,dir+1)= bvecs_host[dir];
 			bvecs(2,dir+1)= bvecs_host[ndirections+dir];
 			bvecs(3,dir+1)= bvecs_host[ndirections*2+dir];
@@ -538,11 +538,11 @@ void prepare_data_gpu_FIT_repeat(	//INPUT
 		bvecs_repeat_vec[0]=bvecs;
 		bvals_repeat_vec[0]=bvals;
 	}
-	
+
 	int nfib= opts.nfibres.value();
 	int nparams;
 
-	nparams=2+nfib*3;	
+	nparams=2+nfib*3;
 	if(opts.modelnum.value()>=2) nparams++;
 
 	params_repeat_host.resize(nrepeat*nparams);
@@ -564,7 +564,7 @@ void mix_params(	//INPUT
 
 	thrust::host_vector<float> params_host;
 	params_host.resize(nvox*(nparams+1));
-	thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());	
+	thrust::copy(params_gpu.begin(), params_gpu.end(), params_host.begin());
 
 	for(int vox=0;vox<nrepeat;vox++){
 		for(int par=0;par<nparams;par++){
@@ -572,7 +572,7 @@ void mix_params(	//INPUT
 		}
 		params_host[vox_repeat[vox]*(nparams+1)+nparams] = 0.001;	//pvmf0=0.001
 	}
-	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());	
+	thrust::copy(params_host.begin(), params_host.end(), params_gpu.begin());
 }
 
 void prepare_data_gpu_MCMC(	//INPUT
@@ -584,10 +584,10 @@ void prepare_data_gpu_MCMC(	//INPUT
 				thrust::host_vector<double>&		isosignals_host,
 				thrust::host_vector<FibreGPU>& 		fibres_host,
 				thrust::host_vector<MultifibreGPU>& 	multifibres_host)
-{ 	
+{
 	signals_host.resize(nvox*nfib*ndirections);
-	isosignals_host.resize(nvox*ndirections);	
-	fibres_host.resize(nvox*nfib);	
+	isosignals_host.resize(nvox*ndirections);
+	fibres_host.resize(nvox*nfib);
 	multifibres_host.resize(nvox);
 }
 
@@ -603,21 +603,21 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 					thrust::device_vector<float>&			rth_gpu,
 					thrust::device_vector<float>&			rph_gpu,
 					thrust::device_vector<float>&			rf_gpu)
-{ 	
+{
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
-	int nfib = opts.nfibres.value();	
-	int nsamples = (opts.njumps.value()/opts.sampleevery.value());   
-	
-	if(opts.f0.value()) rf0_gpu.resize(nvox*nsamples); 
-	if(opts.rician.value()) rtau_gpu.resize(nvox*nsamples);  
-	rs0_gpu.resize(nvox*nsamples);  
+	int nfib = opts.nfibres.value();
+	int nsamples = (opts.njumps.value()/opts.sampleevery.value());
+
+	if(opts.f0.value()) rf0_gpu.resize(nvox*nsamples);
+	if(opts.rician.value()) rtau_gpu.resize(nvox*nsamples);
+	rs0_gpu.resize(nvox*nsamples);
 	rd_gpu.resize(nvox*nsamples);
-	if(opts.modelnum.value()>=2) rdstd_gpu.resize(nvox*nsamples);  
-	if(opts.modelnum.value()==3) rR_gpu.resize(nvox*nsamples); 
-	rth_gpu.resize(nvox*nsamples*nfib);  
-	rph_gpu.resize(nvox*nsamples*nfib);  
-	rf_gpu.resize(nvox*nsamples*nfib);  
+	if(opts.modelnum.value()>=2) rdstd_gpu.resize(nvox*nsamples);
+	if(opts.modelnum.value()==3) rR_gpu.resize(nvox*nsamples);
+	rth_gpu.resize(nvox*nsamples*nfib);
+	rph_gpu.resize(nvox*nsamples*nfib);
+	rf_gpu.resize(nvox*nsamples*nfib);
 }
 
 void resize_structures(		//INPUT
@@ -627,7 +627,7 @@ void resize_structures(		//INPUT
 				thrust::device_vector<float>&   	datam_gpu,
 				thrust::device_vector<float>&		params_gpu,
 				thrust::device_vector<float>&		tau_gpu,
-				thrust::device_vector<float>&		bvals_gpu,				
+				thrust::device_vector<float>&		bvals_gpu,
 				thrust::device_vector<double>&		alpha_gpu,
 				thrust::device_vector<double>&		beta_gpu,
 				thrust::device_vector<curandState>&	randStates_gpu)
@@ -635,7 +635,7 @@ void resize_structures(		//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 	int nfib= opts.nfibres.value();
 	int nparams;
-	nparams=2+nfib*3;	
+	nparams=2+nfib*3;
 	if(opts.modelnum.value()>=2) nparams++;
 
 
@@ -672,8 +672,8 @@ void record_finish_voxels(	//INPUT
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
-	int nfib = opts.nfibres.value();	
-	int nsamples = (opts.njumps.value()/opts.sampleevery.value());   
+	int nfib = opts.nfibres.value();
+	int nsamples = (opts.njumps.value()/opts.sampleevery.value());
 
 	thrust::host_vector<float> rf0_host,rtau_host,rs0_host,rd_host,rdstd_host,rR_host,rth_host,rph_host,rf_host;
 
@@ -695,33 +695,33 @@ void record_finish_voxels(	//INPUT
 	if(opts.modelnum.value()==3) thrust::copy(rR_gpu.begin(), rR_gpu.end(), rR_host.begin());
 	thrust::copy(rth_gpu.begin(), rth_gpu.end(), rth_host.begin());
 	thrust::copy(rph_gpu.begin(), rph_gpu.end(), rph_host.begin());
-	thrust::copy(rf_gpu.begin(), rf_gpu.end(), rf_host.begin());	
+	thrust::copy(rf_gpu.begin(), rf_gpu.end(), rf_host.begin());
 
 	Samples samples(nvox,nsamples);
 
-	float ard,arf0,artau,ardstd,arR,ars0;	
+	float ard,arf0,artau,ardstd,arR,ars0;
 	float *arth = new float[nfib];
-    	float *arph = new float[nfib]; 
+    	float *arph = new float[nfib];
     	float *arf = new float[nfib];
 
 	for(int vox=0;vox<nvox;vox++){
-		for(int rec=0;rec<nsamples;rec++){	
+		for(int rec=0;rec<nsamples;rec++){
 			ard=rd_host[(vox*nsamples)+rec];
-			if(opts.f0.value()){	
+			if(opts.f0.value()){
 				arf0=rf0_host[(vox*nsamples)+rec];
 			}
 
-			if(opts.rician.value()){	
+			if(opts.rician.value()){
 				artau=rtau_host[(vox*nsamples)+rec];
 			}
 
-			if(opts.modelnum.value()>=2){	
+			if(opts.modelnum.value()>=2){
 				ardstd=rdstd_host[(vox*nsamples)+rec];
 			}
-			if(opts.modelnum.value()==3){	
+			if(opts.modelnum.value()==3){
 				arR=rR_host[(vox*nsamples)+rec];
 			}
-		
+
 			ars0=rs0_host[(vox*nsamples)+rec];
 
 			for(int j=0;j<nfib;j++){
@@ -731,9 +731,8 @@ void record_finish_voxels(	//INPUT
 
 			}
 			samples.record(ard,arf0,artau,ardstd,arR,ars0,arth,arph,arf,vox+1,rec+1);
-		}	
+		}
 		samples.finish_voxel(vox+1);
    	}
 	samples.save(idpart);
 }
-

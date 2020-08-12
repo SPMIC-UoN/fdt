@@ -8,7 +8,7 @@
 #include <cmath>
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/minimize.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include "dtifitOptions.h"
 

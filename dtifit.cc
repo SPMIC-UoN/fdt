@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cmath>
 #include "miscmaths/miscmaths.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "dtifitOptions.h"
 #include "newimage/newimageall.h"
 

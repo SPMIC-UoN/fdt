@@ -6,7 +6,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include <string>
 
@@ -16,9 +16,8 @@ void xfibres_gpu(	//INPUT
 			const NEWMAT::Matrix			datam,
 			const NEWMAT::Matrix			bvecs,
 			const NEWMAT::Matrix			bvals,
-			const NEWMAT::Matrix	 		gradm, 
+			const NEWMAT::Matrix	 		gradm,
 			int					idpart,
 			int					idSubpart,
 			float					seed,
 			string					subjdir);
-

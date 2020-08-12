@@ -6,7 +6,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include "xfibresoptions.h"
 
@@ -69,16 +69,16 @@ class Samples{
   	vector<float> *m_sum_lam;
   	ColumnVector *m_vec;
   	////////////////////////////////////////////////
-  
+
   	int m_nsamps;
 
 	public:
 
   	Samples(int nvoxels,int nmeasures);
-    
+
 	void record(float rd,float rf0,float rtau,float rdstd,float rR,float rs0,float *rth,float *rph, float *rf, int vox, int samp);
-  
+
   	void finish_voxel(int vox);
-  
+
   	void save(int idpart);
 };

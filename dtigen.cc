@@ -6,7 +6,7 @@
 #include <cmath>
 #include "utils/options.h"
 #include "miscmaths/miscmaths.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 
 using namespace std;

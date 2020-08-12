@@ -12,7 +12,7 @@
 #include "sync_check.h"
 
 #include <thrust/host_vector.h>
-#include <thrust/device_vector.h> 
+#include <thrust/device_vector.h>
 
 #include <time.h>
 #include <sys/time.h>
@@ -20,9 +20,9 @@
 
 using namespace Xfibres;
 
-////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////
 //   MCMC ON GPU
-////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////
 
 void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<float>& 			datam_gpu,
@@ -43,7 +43,7 @@ void init_Fibres_Multifibres(	//INPUT
 {
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "----- MCMC ALGORITHM PART INITIALITATION ON GPU ----- " << "\n";  	
+   	myfile << "----- MCMC ALGORITHM PART INITIALITATION ON GPU ----- " << "\n";
 
    	struct timeval t1,t2;
    	double time;
@@ -59,7 +59,7 @@ void init_Fibres_Multifibres(	//INPUT
 
 	thrust::device_vector<double> angtmp_gpu;
 	angtmp_gpu.resize(nvox*ndirections*nfib);
-	
+
 
 	bool gradnonlin = opts.grad_file.set();
 
@@ -70,8 +70,8 @@ void init_Fibres_Multifibres(	//INPUT
   	dim3 Dim_Block_MCMC(nthreads_block ,1);	///dimensions for MCMC
 
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
-	float *params_ptr = thrust::raw_pointer_cast(params_gpu.data());	
-	float *tau_ptr = thrust::raw_pointer_cast(tau_gpu.data());	
+	float *params_ptr = thrust::raw_pointer_cast(params_gpu.data());
+	float *tau_ptr = thrust::raw_pointer_cast(tau_gpu.data());
 	float *bvals_ptr = thrust::raw_pointer_cast(bvals_gpu.data());
 	double *alpha_ptr = thrust::raw_pointer_cast(alpha_gpu.data());
 	double *beta_ptr = thrust::raw_pointer_cast(beta_gpu.data());
@@ -94,14 +94,14 @@ void init_Fibres_Multifibres(	//INPUT
 	int blocks_Rand = total_threads/THREADS_BLOCK_RAND;
 	if(total_threads%THREADS_BLOCK_RAND) blocks_Rand++;
 	dim3 Dim_Grid_Rand(blocks_Rand,1);
-	dim3 Dim_Block_Rand(THREADS_BLOCK_RAND,1); 
+	dim3 Dim_Block_Rand(THREADS_BLOCK_RAND,1);
 	setup_randoms_kernel <<<Dim_Grid_Rand,Dim_Block_Rand>>>(randStates_ptr,seed,nvox);
 	sync_check("Setup_Randoms_kernel");
 
 	gettimeofday(&t2,NULL);
     	time=timeval_diff(&t2,&t1);
-   	myfile << "TIME: " << time << " seconds\n"; 
-	myfile << "-----------------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME: " << time << " seconds\n";
+	myfile << "-----------------------------------------------------" << "\n\n" ;
 	myfile.close();
 }
 
@@ -111,7 +111,7 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<double>& 			alpha_gpu,
 			thrust::device_vector<double>& 			beta_gpu,
 			const int 					ndirections,
-			string 						output_file, 
+			string 						output_file,
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
@@ -120,17 +120,17 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<curandState>&		randStates_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
-	
+
 	std::ofstream myfile;
-	myfile.open (output_file.data(), ios::out | ios::app ); 
-   	myfile << "--------- MCMC ALGORITHM PART BURNIN ON GPU --------- " << "\n";  	
+	myfile.open (output_file.data(), ios::out | ios::app );
+   	myfile << "--------- MCMC ALGORITHM PART BURNIN ON GPU --------- " << "\n";
 
    	struct timeval t_tot1,t_tot2;
    	double time;
    	time=0;
 
    	gettimeofday(&t_tot1,NULL);
-	
+
 	int nvox = multifibres_gpu.size();
    	int nfib= opts.nfibres.value();
 	int nparams;
@@ -138,9 +138,9 @@ void runmcmc_burnin(	//INPUT
 	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.f0.value()) nparams=3+nfib*3;
-	else nparams=2+nfib*3;	
+	else nparams=2+nfib*3;
 	if(opts.modelnum.value()>=2) nparams++;
-	if(opts.modelnum.value()==3) nparams++;	
+	if(opts.modelnum.value()==3) nparams++;
 	if(opts.rician.value()) nparams++;
 
 	thrust::device_vector<float> recors_null_gpu;
@@ -150,7 +150,7 @@ void runmcmc_burnin(	//INPUT
 	thrust::device_vector<double> oldangtmp_gpu;
 	thrust::device_vector<double> oldsignals_gpu;
 	thrust::device_vector<double> oldisosignals_gpu;
-	
+
 	angtmp_gpu.resize(nvox*ndirections*nfib);
 	oldangtmp_gpu.resize(nvox*ndirections);
 	oldsignals_gpu.resize(nvox*ndirections*nfib);
@@ -162,10 +162,10 @@ void runmcmc_burnin(	//INPUT
 	if(nvox%VOXELS_BLOCK_MCMC) blocks++;
 	int nthreads_block = THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC;
   	dim3 Dim_Grid(blocks, 1);
-  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC   
+  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC
 
-   	myfile << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n"; 	
+   	myfile << "NUM BLOCKS: " << blocks << "\n";
+   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n";
 
 
 	//get pointers
@@ -191,14 +191,14 @@ void runmcmc_burnin(	//INPUT
 	myfile << "Shared Memory Used in runmcmc_burnin: " << amount_shared << "\n";
 
    	if(nvox!=0){
-		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.nburn.value(), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null); 
+		runmcmc_kernel<<< Dim_Grid, Dim_Block, amount_shared >>>(datam_ptr, bvals_ptr, alpha_ptr, beta_ptr, randStates_ptr, opts.R_prior_mean.value(), opts.R_prior_std.value(),opts.R_prior_fudge.value(), ndirections, nfib, nparams, opts.modelnum.value(), opts.fudge.value(), opts.f0.value(), opts.ardf0.value(), !opts.no_ard.value(), opts.rician.value(), gradnonlin, opts.updateproposalevery.value(), opts.nburn.value(), 0, 0, 0, oldsignals_ptr, oldisosignals_ptr, angtmp_ptr, oldangtmp_ptr, fibres_ptr, multifibres_ptr, signals_ptr, isosignals_ptr,records_null,records_null,records_null,records_null,records_null,records_null,records_null, records_null,records_null);
    		sync_check("runmcmc_burnin_kernel");
    	}
 
 	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	myfile << "TIME: " << time << " seconds\n"; 
-	myfile << "-----------------------------------------------------" << "\n\n" ; 
+   	myfile << "TIME: " << time << " seconds\n";
+	myfile << "-----------------------------------------------------" << "\n\n" ;
 	myfile.close();
 }
 
@@ -214,7 +214,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<double>&			isosignals_gpu,
 			const int 					ndirections,
 			thrust::device_vector<curandState>&		randStates_gpu,
-			string 						output_file, 
+			string 						output_file,
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,
 			thrust::device_vector<float>&			rtau_gpu,
@@ -227,10 +227,10 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<float>&			rf_gpu)
 {
 	xfibresOptions& opts = xfibresOptions::getInstance();
-	
+
 	std::ofstream myfile;
 	myfile.open (output_file.data(), ios::out | ios::app );
-   	myfile << "--------- MCMC ALGORITHM PART RECORD ON GPU --------- " << "\n"; 	
+   	myfile << "--------- MCMC ALGORITHM PART RECORD ON GPU --------- " << "\n";
 
    	struct timeval t_tot1,t_tot2;
    	double time;
@@ -238,8 +238,8 @@ void runmcmc_record(	//INPUT
 
    	gettimeofday(&t_tot1,NULL);
 
-	int totalrecords = (opts.njumps.value()/opts.sampleevery.value()); 
-	
+	int totalrecords = (opts.njumps.value()/opts.sampleevery.value());
+
 	int nvox = multifibres_gpu.size();
    	int nfib= opts.nfibres.value();
 	int nparams;
@@ -247,31 +247,31 @@ void runmcmc_record(	//INPUT
 	bool gradnonlin=opts.grad_file.set();
 
 	if(opts.f0.value()) nparams=3+nfib*3;
-	else nparams=2+nfib*3;	
+	else nparams=2+nfib*3;
 	if(opts.modelnum.value()>=2) nparams++;
-	if(opts.modelnum.value()==3) nparams++;	
+	if(opts.modelnum.value()==3) nparams++;
 	if(opts.rician.value()) nparams++;
 
 	thrust::device_vector<double> angtmp_gpu;
 	thrust::device_vector<double> oldangtmp_gpu;
 	thrust::device_vector<double> oldsignals_gpu;
 	thrust::device_vector<double> oldisosignals_gpu;
-	
+
 	angtmp_gpu.resize(nvox*ndirections*nfib);
 	oldangtmp_gpu.resize(nvox*ndirections);
 	oldsignals_gpu.resize(nvox*ndirections*nfib);
 	oldisosignals_gpu.resize(nvox*ndirections);
-   
+
 	myfile << "Processing " << nvox << " voxels \n";
-   
+
   	int blocks = nvox/VOXELS_BLOCK_MCMC;
 	int nthreads_block = THREADS_VOXEL_MCMC*VOXELS_BLOCK_MCMC;
 	if(nvox%VOXELS_BLOCK_MCMC) blocks++;
   	dim3 Dim_Grid(blocks, 1);
-  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC   
+  	dim3 Dim_Block(nthreads_block,1);	//dimensions for MCMC
 
-   	myfile << "NUM BLOCKS: " << blocks << "\n"; 
-   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n"; 	
+   	myfile << "NUM BLOCKS: " << blocks << "\n";
+   	myfile << "THREADS PER BLOCK : " << nthreads_block << "\n";
 
 	//get pointers
 	float *datam_ptr = thrust::raw_pointer_cast(datam_gpu.data());
@@ -288,13 +288,13 @@ void runmcmc_record(	//INPUT
 	double *oldangtmp_ptr = thrust::raw_pointer_cast(oldangtmp_gpu.data());
 	double *oldsignals_ptr = thrust::raw_pointer_cast(oldsignals_gpu.data());
 	double *oldisosignals_ptr = thrust::raw_pointer_cast(oldisosignals_gpu.data());
-	
+
 	float *rf0_ptr = thrust::raw_pointer_cast(rf0_gpu.data());
 	float *rtau_ptr = thrust::raw_pointer_cast(rtau_gpu.data());
 	float *rs0_ptr = thrust::raw_pointer_cast(rs0_gpu.data());
 	float *rd_ptr = thrust::raw_pointer_cast(rd_gpu.data());
 	float *rdstd_ptr = thrust::raw_pointer_cast(rdstd_gpu.data());
-	float *rR_ptr = thrust::raw_pointer_cast(rR_gpu.data());	
+	float *rR_ptr = thrust::raw_pointer_cast(rR_gpu.data());
 	float *rth_ptr = thrust::raw_pointer_cast(rth_gpu.data());
 	float *rph_ptr = thrust::raw_pointer_cast(rph_gpu.data());
 	float *rf_ptr = thrust::raw_pointer_cast(rf_gpu.data());
@@ -310,7 +310,7 @@ void runmcmc_record(	//INPUT
 
    	gettimeofday(&t_tot2,NULL);
     	time=timeval_diff(&t_tot2,&t_tot1);
-   	myfile << "TIME: " << time << " seconds\n"; 
+   	myfile << "TIME: " << time << " seconds\n";
 	myfile << "-----------------------------------------------------" << "\n" ;
-	myfile.close(); 
+	myfile.close();
 }

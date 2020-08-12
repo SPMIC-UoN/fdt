@@ -8,7 +8,7 @@
 #include <cmath>
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/nonlin.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "pvmfitOptions.h"
 #include "newimage/newimageall.h"
 #include "diffmodels.h"

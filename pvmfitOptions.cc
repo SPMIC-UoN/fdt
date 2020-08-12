@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include "pvmfitOptions.h"
 #include "utils/options.h"
-//#include "newmat.h"
+
 using namespace Utilities;
 
 namespace PVMFIT {

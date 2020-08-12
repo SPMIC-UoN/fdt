@@ -7,7 +7,7 @@
 /*  CCOPYRIGHT  */
 
 #include "xfibresoptions.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include <sys/stat.h>
 
@@ -37,10 +37,10 @@ void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, s
 			std::string file_name;
 			file_name.assign(subjdir);
 			file_name += ".bedpostX/diff_parts/data_part_";
-			file_name += part_number; 
-			file_name += "/"; 
-			file_name += name_in; 
-			file_name += "J"; 
+			file_name += part_number;
+			file_name += "/";
+			file_name += name_in;
+			file_name += "J";
 
 			ifstream in;
 			in.open (file_name.data(), ios::in | ios::binary);
@@ -62,10 +62,10 @@ void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, s
 		std::string file_name;
 		file_name.assign(subjdir);
 		file_name += ".bedpostX/diff_parts/data_part_";
-		file_name += part_number; 
-		file_name += "/"; 
+		file_name += part_number;
+		file_name += "/";
 		file_name += name_in;
-		file_name += "J";  
+		file_name += "J";
 
 		ifstream in;
 		in.open (file_name.data(), ios::in | ios::binary);
@@ -76,7 +76,7 @@ void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, s
 		NEWIMAGE::volume4D<float> tmp;
       		tmp.setmatrix(result,mask);
 		if(max==-10) max=tmp.max();
-		if(min==-10) min=tmp.min(); 
+		if(min==-10) min=tmp.min();
 		tmp.setDisplayMaximumMinimum(max,min);
      		save_volume4D(tmp,subjdir+".bedpostX/"+name_out);
 }
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
     	read_volume(mask,opts.maskfile.value());
 
 	cout << opts.maskfile.value() << endl;
-    	
+
 	///////////////////////////////////////////
 	///////////// Check Arguments /////////////
 	///////////////////////////////////////////
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 		cerr << "The number of samples must be greater than 0" << endl;
     		exit (EXIT_FAILURE);
 	}
-	
+
 	//////////////////////////////////////////////////////////////
 	////////// JOIN Results of the Parts //////////////////////
 	//////////////////////////////////////////////////////////////
@@ -147,8 +147,8 @@ int main(int argc, char *argv[])
 		//join_Parts(mask,"d_stdsamples","d_stdsamples",subjdir, nvox, nsamples, nParts, -10, 0);
 		if(opts.modelnum.value()==3){
 			join_Parts(mask,"mean_Rsamples","mean_Rsamples",subjdir, nvox, 1, nParts, 1, 0);
-		}	
-	}	
+		}
+	}
 	if (opts.f0.value()){
       		join_Parts(mask,"mean_f0samples","mean_f0samples",subjdir, nvox, 1, nParts, 1, 0);
 		//join_Parts(mask,"f0samples","f0samples",subjdir, nvox, nsamples, nParts, 1, 0);
@@ -165,8 +165,7 @@ int main(int argc, char *argv[])
 
 		//join_Parts(mask,"mean_f"+num2str(f+1)+"samples",subjdir, nvox, 1, nParts, 1, 0);
 		//join_Parts(mask,"dyads"+num2str(f+1),subjdir, nvox, nsamples, nParts, 1, -1);
-	}	
-		
+	}
+
   	return 0;
 }
-

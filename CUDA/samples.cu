@@ -6,7 +6,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include "xfibresoptions.h"
 #include "samples.h"
@@ -30,9 +30,9 @@ opts(xfibresOptions::getInstance()){
     	m_vec=new ColumnVector[nvoxels];
     	m_dyad=new vector<SymmetricMatrix>[nvoxels];
     	m_sum_f=new vector<float> [nvoxels];
-    	m_sum_lam=new vector<float> [nvoxels];	
+    	m_sum_lam=new vector<float> [nvoxels];
     	////////////////////////////////////////////////
-    
+
     	m_dsamples.ReSize(nsamples,nvoxels);
     	m_dsamples=0;
     	m_S0samples.ReSize(nsamples,nvoxels);
@@ -104,14 +104,14 @@ opts(xfibresOptions::getInstance()){
     	//m_vec.ReSize(3);  changed GPU version
 
     	/////////////// GPU version /////////////////////
-    	for(int i=0;i<nvoxels;i++){ 
+    	for(int i=0;i<nvoxels;i++){
         	m_vec[i].ReSize(3);
 		for(int f=0;f<opts.nfibres.value();f++){
 			m_dyad[i].push_back(tmpdyad);
                 	m_sum_f[i].push_back(0);
                 	m_sum_lam[i].push_back(0);
         	}
-    	}	 
+    	}
     	////////////////////////////////////////////////
 
     	for(int f=0;f<opts.nfibres.value();f++){
@@ -142,7 +142,7 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rR,float rs
 	if(opts.modelnum.value()==3){
 		m_Rsamples(samp,vox)=rR;
 		m_sum_R[vox-1]+=rR;
-    	}	
+    	}
     	if (opts.f0.value()){
      		m_f0samples(samp,vox)=rf0;
       		m_sum_f0[vox-1]+=rf0;
@@ -167,7 +167,7 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rR,float rs
       		m_sum_f[vox-1][f]+=rf[f];
       		m_sum_lam[vox-1][f]+=0;
     	}
-}  
+}
 
 //new version for GPU
  void Samples::finish_voxel(int vox){
@@ -186,7 +186,7 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rR,float rs
 
     	m_sum_d[vox-1]=0;
     	m_sum_S0[vox-1]=0;
-   
+
     	if(opts.rician.value())
     		m_sum_tau[vox-1]=0;
 
@@ -214,13 +214,13 @@ void Samples::record(float rd,float rf0,float rtau,float rdstd,float rR,float rs
       		m_dyadic_vectors[f](1,vox)=dyad_V(1,maxeig);
       		m_dyadic_vectors[f](2,vox)=dyad_V(2,maxeig);
       		m_dyadic_vectors[f](3,vox)=dyad_V(3,maxeig);
-      
+
       		if((m_sum_f[vox-1][f]/m_nsamps)>0.05){
 			nfibs++;
       		}
       		m_mean_fsamples[f](vox)=m_sum_f[vox-1][f]/m_nsamps;
       		m_mean_lamsamples[f](vox)=m_sum_lam[vox-1][f]/m_nsamps;
-      
+
       		m_dyad[vox-1][f]=0;
       		m_sum_f[vox-1][f]=0;
       		m_sum_lam[vox-1][f]=0;
@@ -258,14 +258,14 @@ void save_part(Matrix data, string name, int idpart){
 	out.write((char*)&data(1,1),nvox*nsamples*sizeof(Real));
 	out.close();
 }
-  
+
 void Samples::save(int idpart){
 
 	vector<Matrix> thsamples_out=m_thsamples;
 	vector<Matrix> phsamples_out=m_phsamples;
 	vector<Matrix> fsamples_out=m_fsamples;
 	vector<Matrix> lamsamples_out=m_lamsamples;
-    
+
     	vector<Matrix> dyadic_vectors_out=m_dyadic_vectors;
     	vector<Matrix> mean_fsamples_out;
     	for(unsigned int f=0;f<m_mean_fsamples.size();f++)
@@ -289,29 +289,29 @@ void Samples::save(int idpart){
 		//save_part(m_f0samples,"f0samples",idpart);
     	}
     	if (opts.rician.value()){
-		save_part(m_mean_tausamples,"mean_tausamples",idpart);	
+		save_part(m_mean_tausamples,"mean_tausamples",idpart);
     	}
 
 	save_part(m_mean_S0samples,"mean_S0samples",idpart);
-	
+
     	//Sort the output based on mean_fsamples
-    	// 
+    	//
     	vector<Matrix> sumf;
     	for(int f=0;f<opts.nfibres.value();f++){
       		Matrix tmp=sum(m_fsamples[f],1);
       		sumf.push_back(tmp);
-    	}  
+    	}
     	for(int vox=1;vox<=m_dsamples.Ncols();vox++){
       		vector<pair<float,int> > sfs;
       		pair<float,int> ftmp;
-      
+
       		for(int f=0;f<opts.nfibres.value();f++){
 			ftmp.first=sumf[f](1,vox);
 			ftmp.second=f;
 			sfs.push_back(ftmp);
       		}
       		sort(sfs.begin(),sfs.end());
-      
+
       		for(int samp=1;samp<=m_dsamples.Nrows();samp++){
 			for(int f=0;f<opts.nfibres.value();f++){;
 	  			thsamples_out[f](samp,vox)=m_thsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
@@ -320,7 +320,7 @@ void Samples::save(int idpart){
 	  			lamsamples_out[f](samp,vox)=m_lamsamples[sfs[(sfs.size()-1)-f].second](samp,vox);
 			}
       		}
-      
+
       		for(int f=0;f<opts.nfibres.value();f++){
 			mean_fsamples_out[f](1,vox)=m_mean_fsamples[sfs[(sfs.size()-1)-f].second](vox);
 			dyadic_vectors_out[f](1,vox)=m_dyadic_vectors[sfs[(sfs.size()-1)-f].second](1,vox);
@@ -341,7 +341,7 @@ void Samples::save(int idpart){
 
 		//save_part(mean_fsamples_out[f],"mean_f"+num2str(f+1)+"samples",idpart);
 		//save_part(dyadic_vectors_out[f],"dyads"+num2str(f+1),idpart);
-      
-      			
+
+
     	}
 }

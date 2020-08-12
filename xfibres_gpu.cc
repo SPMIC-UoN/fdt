@@ -8,7 +8,7 @@
 
 #include "CUDA/xfibres_gpu.h"
 #include "xfibresoptions.h"
-#include "newmat.h"
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 
 #include <time.h>
