@@ -33,16 +33,16 @@ tractOptions* tractOptions::gopt = NULL;
       cerr<<"try: tract2 --help"<<endl;
       exit(0);
     }
-    
-    
+
+
     if(help.value() || ! options.check_compulsory_arguments())
       {
 	options.usage();
 	exit(2);
-      }      
-    
+      }
+
   }
-  
+
   void tractOptions::status()
   {
     cerr<<"basename   "<<basename.value()<<endl;
@@ -53,17 +53,7 @@ tractOptions* tractOptions::gopt = NULL;
     cerr<<"nparticles "<<nparticles.value()<<endl;
     cerr<<"nsteps     "<<nsteps.value()<<endl;
     cerr<<"usef       "<<usef.value()<<endl;
-    cerr<<"rseed      "<<rseed.value()<<endl; 
+    cerr<<"rseed      "<<rseed.value()<<endl;
   }
-  
+
 }
-
-
-
-
-
-
-
-
-
-

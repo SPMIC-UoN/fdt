@@ -65,7 +65,7 @@ int do_bpxgen(){
   if( fsl_imageexists(dir.value()+"/mean_f0samples") ){
     read_volume(f0vol,dir.value()+"/mean_f0samples");
     usef0=true;
-  }  
+  }
 
   // fibres
   int nfibres=1;
@@ -79,15 +79,15 @@ int do_bpxgen(){
   }
   nfibres=(int)fvol.size();
 
-  // bvals/bvecs  
+  // bvals/bvecs
   Matrix bvecs = read_ascii_matrix(bvecsfile.value());
   Matrix bvals = read_ascii_matrix(bvalsfile.value());
- 
+
   data.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),bvals.Ncols());
   copybasicproperties(fvol[0],data);
   data=0;
 
-  
+
   float s0,d,d_std=0;
   ColumnVector pvf(nfibres);
   Matrix dyads(nfibres,3);
@@ -100,7 +100,7 @@ int do_bpxgen(){
     for(int y=0;y<mask.ysize();y++){
       for(int x=0;x<mask.xsize();x++){
 	if(mask(x,y,z)==0)continue;
-	
+
 	s0=s0vol(x,y,z);
 	d=dvol(x,y,z);
 	if(model==2)
@@ -123,7 +123,7 @@ int do_bpxgen(){
 	  }
 
 	  Y = pvm1.get_prediction();
-	 
+
 	  for(int t=1;t<=bvals.Ncols();t++)
 	    data(x,y,z,t-1)=Y(t);
 	}
@@ -139,7 +139,7 @@ int do_bpxgen(){
 	  }
 
 	  Y = pvm2.get_prediction();
-	  
+
 	  for(int t=1;t<=bvals.Ncols();t++)
 	    data(x,y,z,t-1)=Y(t);
 	}
@@ -150,7 +150,7 @@ int do_bpxgen(){
   //cout<<"saving results" << endl;
   data.setDisplayMaximumMinimum(data.max(),0);
   save_volume4D(data,odata.value());
-  
+
   cout<<endl<<"Done."<<endl;
 
   return 0;
@@ -171,7 +171,7 @@ int main(int argc,char *argv[]){
 
     options.parse_command_line(argc,argv);
 
-    
+
     if ( (help.value()) || (!options.check_compulsory_arguments(true)) ){
       options.usage();
       exit(EXIT_FAILURE);
@@ -181,12 +181,12 @@ int main(int argc,char *argv[]){
     options.usage();
     cerr << endl << e.what() << endl;
     exit(EXIT_FAILURE);
-  } 
+  }
   catch(std::exception &e) {
     cerr << e.what() << endl;
-  } 
-  
+  }
+
   return do_bpxgen();
-  
-  
+
+
 }

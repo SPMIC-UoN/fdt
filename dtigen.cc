@@ -51,7 +51,7 @@ Matrix form_Amat(const Matrix& r,const Matrix& b)
 {
   Matrix A(r.Ncols(),7);
   Matrix tmpvec(3,1), tmpmat;
-  
+
   for( int i = 1; i <= r.Ncols(); i++){
     tmpvec << r(1,i) << r(2,i) << r(3,i);
     tmpmat = tmpvec*tmpvec.t()*b(1,i);
@@ -71,7 +71,7 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 {
   Matrix A(r.Ncols(),8);
   Matrix tmpvec(3,1), tmpmat;
-  
+
   ColumnVector v(r.Ncols());
   for( int i = 1; i <= r.Ncols(); i++){
     v(i) = -b(1,i)*b(1,i)/6;
@@ -89,7 +89,7 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
     A(i,5) = 2*tmpmat(2,3);
     A(i,6) = tmpmat(3,3);
     A(i,7) = 1;
-    A(i,8) = v(i); 
+    A(i,8) = v(i);
   }
   return A;
 }
@@ -103,7 +103,7 @@ int do_dtigen(){
   read_volume(mask,maskfile.value());
   read_volume(S0,s0file.value());
   read_volume4D(tensor,itensor.value());
-  
+
   if(kurtfile.set()){
     read_volume(kurt,kurtfile.value());
   }
@@ -116,13 +116,13 @@ int do_dtigen(){
       r(1,i)=r(1,i)/tmpsum;
       r(2,i)=r(2,i)/tmpsum;
       r(3,i)=r(3,i)/tmpsum;
-    }  
+    }
   }
   Matrix b = read_ascii_matrix(bvalsfile.value());
   if(b.Nrows()>1) b=b.t();
   if( b.Ncols() != r.Ncols() ){ cerr << "Error: bvecs and bvals don't have the same number of entries" << endl; return(-1);}
   if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
- 
+
   data.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),b.Ncols());
   copybasicproperties(tensor[0],data);
 
@@ -139,9 +139,9 @@ int do_dtigen(){
     cout << "processing slice" << z << endl;
     for(int y=mask.miny();y<=mask.maxy();y++)
       for(int x=mask.minx();x<=mask.maxx();x++){
-	if(mask(x,y,z)==0)continue;		
+	if(mask(x,y,z)==0)continue;
 
-	
+
 	  Dvec(1) = tensor(x,y,z,0);
 	  Dvec(2) = tensor(x,y,z,1);
 	  Dvec(3) = tensor(x,y,z,2);
@@ -150,7 +150,7 @@ int do_dtigen(){
 	  Dvec(6) = tensor(x,y,z,5);
 
 	  Dvec(7) = -log(S0(x,y,z));
-	  
+
 	  if(kurtfile.set()){
 	    md = (Dvec(1)+Dvec(4)+Dvec(6))/3.0;
 	    Dvec(8) = kurt(x,y,z)*md*md;
@@ -158,7 +158,7 @@ int do_dtigen(){
 	  logpred = -Amat*Dvec;
 
 	  for(int t=1;t<=data.tsize();t++){
-	    data(x,y,z,t-1) = exp(logpred(t));	  
+	    data(x,y,z,t-1) = exp(logpred(t));
 	}
 
       }
@@ -188,7 +188,7 @@ int main(int argc,char *argv[]){
 
     options.parse_command_line(argc,argv);
 
-    
+
     if ( (help.value()) || (!options.check_compulsory_arguments(true)) ){
       options.usage();
       exit(EXIT_FAILURE);
@@ -198,12 +198,12 @@ int main(int argc,char *argv[]){
     options.usage();
     cerr << endl << e.what() << endl;
     exit(EXIT_FAILURE);
-  } 
+  }
   catch(std::exception &e) {
     cerr << e.what() << endl;
-  } 
-  
+  }
+
   return do_dtigen();
-  
-  
+
+
 }

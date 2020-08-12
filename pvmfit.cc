@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     cout<<"bvecs     "<<opts.bvecsfile.value()<<endl;
     cout<<"bvals     "<<opts.bvalsfile.value()<<endl;
   }
-  
+
   // Set random seed:
   Matrix bvecs = read_ascii_matrix(opts.bvecsfile.value());
   if(bvecs.Nrows()>3) bvecs=bvecs.t();
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
       bvecs(1,i)=bvecs(1,i)/tmpsum;
       bvecs(2,i)=bvecs(2,i)/tmpsum;
       bvecs(3,i)=bvecs(3,i)/tmpsum;
-    }  
+    }
   }
   Matrix bvals = read_ascii_matrix(opts.bvalsfile.value());
   if(bvals.Nrows()>1) bvals=bvals.t();
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 
   vector< volume<float> > fvol,thvol,phvol,k1vol,k2vol, psivol;
   vector< volume4D<float> > dyads;
-  vector< volume4D<float> > fanning_vecs; 
+  vector< volume4D<float> > fanning_vecs;
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],S0);
@@ -113,8 +113,8 @@ int main(int argc, char** argv)
   BIC=0;
   f0.reinitialize(maxx-minx,maxy-miny,maxz-minz);
   f0=0;
-  
-  
+
+
 
   if(opts.verbose.value()) cout<<"ok"<<endl;
 
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 	  if (opts.cnonlinear.value()){  //Use pseudo-constrained optimization
 	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value());
 	    pvm.fit();
-	  
+
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 	  else if (opts.cnonlinear_Fanning.value()){  //Use pseudo-constrained optimization and return fanning angle estimates using the Hessian of the cost function
 	    PVM_single_c pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),true);
 	    pvm.fit();
-	  
+
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
 	  else{  //Use original optimization
 	    PVM_single pvm(S,bvecs,bvals,opts.nfibres.value(), opts.use_f0.value());
 	    pvm.fit();
-	  
+
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	    f0(i-minx,j-miny,k-minz) = pvm.get_f0();
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
 	/////////////////////////////////////////////////////////
 	//Fit Ball & sticks (model 2) with "nfibres" compartments
 	/////////////////////////////////////////////////////////
-	else if (opts.modelnum.value()==2){ 
+	else if (opts.modelnum.value()==2){
 	  PVM_multi pvm(S,bvecs,bvals,opts.nfibres.value());
 	  pvm.fit();
 
@@ -198,12 +198,12 @@ int main(int argc, char** argv)
 	///////////////////////////////////////////////////
 	//Fit Ball & Watsons with "nfibres" compartments
 	///////////////////////////////////////////////////
-	else if (opts.modelnum.value()==3){ 
+	else if (opts.modelnum.value()==3){
 	  cout<<i<<" "<<j<<" "<<k<<endl;
 	  if (!opts.all.value()){
 	    PVM_Ball_Watsons pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),opts.gridsearch.value());
 	    pvm.fit();
-	    
+
 	    S0(i-minx,j-miny,k-minz)   = pvm.get_s0();
 	    dvol(i-minx,j-miny,k-minz) = pvm.get_d();
 	    BIC(i-minx,j-miny,k-minz) = pvm.get_BIC();
@@ -212,19 +212,19 @@ int main(int argc, char** argv)
 	      thvol[f](i-minx,j-miny,k-minz) = pvm.get_th(f+1);
 	      phvol[f](i-minx,j-miny,k-minz) = pvm.get_ph(f+1);
 	      k1vol[f](i-minx,j-miny,k-minz) = pvm.get_k(f+1);
-	    } 
+	    }
 	  }
 	  else{  //Fit all Ball & Watsons with up to "nfibres" compartments and choose the best using BIC
 	    float bestBIC=1.0e20;
 	    for (int n=1; n<=opts.nfibres.value(); n++){
 	      PVM_Ball_Watsons pvmn(S,bvecs,bvals,n,true,opts.use_f0.value(),opts.gridsearch.value());
-	      pvmn.fit();	    
+	      pvmn.fit();
 	      if (pvmn.get_BIC()<bestBIC){ //Keep the model with the smallest BIC
 		bestBIC=pvmn.get_BIC();
 		S0(i-minx,j-miny,k-minz)   = pvmn.get_s0();
 		dvol(i-minx,j-miny,k-minz) = pvmn.get_d();
 		BIC(i-minx,j-miny,k-minz) = pvmn.get_BIC();
-		for (int f=0;f<n;f++){   //compartments are not sorted here! 
+		for (int f=0;f<n;f++){   //compartments are not sorted here!
 		  fvol[f](i-minx,j-miny,k-minz)  = pvmn.get_f(f+1);
 		  thvol[f](i-minx,j-miny,k-minz) = pvmn.get_th(f+1);
 		  phvol[f](i-minx,j-miny,k-minz) = pvmn.get_ph(f+1);
@@ -238,9 +238,9 @@ int main(int argc, char** argv)
 	///////////////////////////////////////////////////
 	//Fit Ball & Binghams with "nfibres" compartments
 	///////////////////////////////////////////////////
-	else if (opts.modelnum.value()==4){ 
+	else if (opts.modelnum.value()==4){
 	  cout<<i<<" "<<j<<" "<<k<<endl;
-	  
+
 	  if (!opts.all.value()){
 	    PVM_Ball_Binghams pvm(S,bvecs,bvals,opts.nfibres.value(),opts.saveBIC.value(),opts.use_f0.value(),opts.gridsearch.value());
 	    pvm.fit();
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
 	      fanning_vecs[f](i-minx,j-miny,k-minz,0)=tmp_vec(1);
 	      fanning_vecs[f](i-minx,j-miny,k-minz,1)=tmp_vec(2);
 	      fanning_vecs[f](i-minx,j-miny,k-minz,2)=tmp_vec(3);
-	    } 
+	    }
 	  }
 	  else{	//Fit all Ball & Binghams with up to "nfibres" compartments and choose the best using BIC
 	    float bestBIC=1.0e20;
@@ -272,7 +272,7 @@ int main(int argc, char** argv)
 		dvol(i-minx,j-miny,k-minz) = pvmn.get_d();
 		BIC(i-minx,j-miny,k-minz) = pvmn.get_BIC();
 		f0(i-minx,j-miny,k-minz) = pvmn.get_f0();
-		for (int f=0;f<n;f++){   //compartments are not sorted here! 
+		for (int f=0;f<n;f++){   //compartments are not sorted here!
 		  fvol[f](i-minx,j-miny,k-minz)  = pvmn.get_f(f+1);
 		  thvol[f](i-minx,j-miny,k-minz) = pvmn.get_th(f+1);
 		  phvol[f](i-minx,j-miny,k-minz) = pvmn.get_ph(f+1);
@@ -353,16 +353,3 @@ int main(int argc, char** argv)
   }
  return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

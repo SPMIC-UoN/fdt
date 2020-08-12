@@ -28,7 +28,7 @@ int main(int argc, char *argv[]){
 
 	struct timeval t1,t2;
 	double time;
-    	gettimeofday(&t1,NULL); 
+    	gettimeofday(&t1,NULL);
 
 	init_gpu();
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
 			bvecs(1,i)=bvecs(1,i)/tmpsum;
 			bvecs(2,i)=bvecs(2,i)/tmpsum;
 			bvecs(3,i)=bvecs(3,i)/tmpsum;
-      		}  
+      		}
     	}
 	int ndirections = bvals.Ncols();
 	int dirs_grad = 9;  // always ???
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]){
 		cerr << "xfibres_gpu error: The number of elements in bvals and number of vectors in bvecs must be the same\n" << endl;
     		exit (EXIT_FAILURE);
     	}
-	
+
 
 	///////////////////////////////////////////
 	///////////// Check Arguments /////////////
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
 		cerr << "\nSubject-directory: "<< subjdir << " is not a directory" << endl;
     		exit (EXIT_FAILURE);
 	}
-	
+
 	istringstream ss_idPart(argv[argc-3]);
 	int idPart;
 	if (!(ss_idPart >> idPart)){
@@ -121,8 +121,8 @@ int main(int argc, char *argv[]){
 		in.close();
 	}
 
-	cout << "Number of Voxels to compute in this part: " << size_part << endl;  
-	cout << "Number of Directions: " << ndirections << endl;  
+	cout << "Number of Voxels to compute in this part: " << size_part << endl;
+	cout << "Number of Directions: " << ndirections << endl;
 
     	if(opts.rician.value() && !opts.nonlin.value())
       		cout<<"Rician noise model requested. Non-linear parameter initialization will be performed, overriding other initialization options!"<<endl<<endl;
@@ -146,9 +146,9 @@ int main(int argc, char *argv[]){
 		last_sub_part = size_part - ((nsubparts-1)*size_sub_part);
 	}
 
-	Matrix mydatam_part;	
-	Matrix mygradm_part;	
-	
+	Matrix mydatam_part;
+	Matrix mygradm_part;
+
 	for(int i=0;i<nsubparts-1;i++){
 		cout << "SubPart " << i+1 << " of " << nsubparts << ": processing " << size_sub_part << " voxels" <<  endl;
 		mydatam_part = mydatam.SubMatrix(1,ndirections,i*size_sub_part+1,(i+1)*size_sub_part);
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]){
 			out.open(file_name.data(), ios::out | ios::binary);
 			out.write("done",4*sizeof(char));
 			out.close();
-		}	
+		}
 	}
 
 	cout << "SubPart " << nsubparts << " of " << nsubparts << ": processing " << last_sub_part << " voxels" <<  endl;
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]){
 		out.open(file_name.data(), ios::out | ios::binary);
 		out.write("done",4*sizeof(char));
 		out.close();
-	}	
+	}
 
 	//////////////////////////////////////////////////////////////
 	////////// JOIN Results of the Subparts //////////////////////
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]){
 		if(opts.modelnum.value()==3){
 			join_subParts("mean_Rsamples",size_part,nsubparts,size_sub_part,last_sub_part,true);
 		}
-	}	
+	}
 	if (opts.f0.value()){
       		join_subParts("mean_f0samples",size_part,nsubparts,size_sub_part,last_sub_part,true);
 		//join_subParts("f0samples",size_part,nsubparts,size_sub_part,last_sub_part,false);
@@ -217,27 +217,27 @@ int main(int argc, char *argv[]){
 
 		//join_subParts("mean_f"+num2str(f+1)+"samples",size_part,nsubparts,size_sub_part,last_sub_part,true);
 		//join_subParts("dyads"+num2str(f+1),size_part,nsubparts,size_sub_part,last_sub_part,false);
-	}	
+	}
 
 	join_subParts("mean_S0samples",size_part,nsubparts,size_sub_part,last_sub_part,true); //the last one to control with monitor
-		
+
 	gettimeofday(&t2,NULL);
-    	time=timeval_diff(&t2,&t1); 
+    	time=timeval_diff(&t2,&t1);
 	cout << endl << "Part processed in: " << time << " seconds" << endl;
-	
-	//for the monitor	
+
+	//for the monitor
 	if(nParts>1){
 		std::string file_name;
 		file_name.assign(subjdir);
 		file_name += ".bedpostX/logs/monitor/";
 		char n[4];
 		sprintf(n,"%d",idPart);
-		file_name += n;	
+		file_name += n;
 		ofstream out;
 		out.open(file_name.data(), ios::out | ios::binary);
 		out.write("done",4*sizeof(char));
 		out.close();
-	}	
+	}
 
   	return 0;
 }
@@ -250,12 +250,12 @@ void join_subParts(string name, int size_part, int nsubparts, int size_sub_part,
 	if(mean) nsamples=1;
 
 	Matrix tmp(nsamples,0);
-	Matrix part; 
+	Matrix part;
 	ifstream in;
 	ofstream out;
 
 	string file_name;
-		
+
 	for(int i=0;i<nsubparts-1;i++){
 		part.ReSize(nsamples,size_sub_part);
 		file_name = logger.appendDir(name+"_"+num2str(i));

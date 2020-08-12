@@ -20,7 +20,7 @@ const float maxfloat=1e10;
 const float minfloat=1e-10;
 const float maxlogfloat=23;
 const float minlogfloat=-23;
-const int maxint=1000000000; 
+const int maxint=1000000000;
 
 inline float PI() { return  3.14159265358979;}
 inline float min(float a,float b){
@@ -28,7 +28,7 @@ inline float min(float a,float b){
 inline float max(float a,float b){
   return a>b ? a:b;}
 inline Matrix Anis()
-{ 
+{
   Matrix A(3,3);
   A << 1 << 0 << 0
     << 0 << 0 << 0
@@ -37,7 +37,7 @@ inline Matrix Anis()
 }
 
 inline Matrix Is()
-{ 
+{
   Matrix I(3,3);
   I << 1 << 0 << 0
     << 0 << 1 << 0
@@ -75,7 +75,7 @@ Matrix form_Amat(const Matrix& r,const Matrix& b)
 {
   Matrix A(r.Ncols(),7);
   Matrix tmpvec(3,1), tmpmat;
-  
+
   for( int i = 1; i <= r.Ncols(); i++){
     tmpvec << r(1,i) << r(2,i) << r(3,i);
     tmpmat = tmpvec*tmpvec.t()*b(1,i);
@@ -95,7 +95,7 @@ Matrix form_Amat_kurt(const Matrix& r,const Matrix& b)
 {
   Matrix A(r.Ncols(),8);
   Matrix tmpvec(3,1), tmpmat;
-  
+
   ColumnVector v(r.Ncols());
   for( int i = 1; i <= r.Ncols(); i++){
     v(i) = -b(1,i)*b(1,i)/6;
@@ -128,10 +128,10 @@ Matrix form_Amat_kurt2(const Matrix& r,const Matrix& b,
   Matrix A(r.Ncols()+3,7);
   Matrix tmpvec(3,1);
   ColumnVector tmp(3);
-  
+
 
   for( int i = 1; i <= r.Ncols(); i++){
-    tmpvec << r(1,i) << r(2,i) << r(3,i);    
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
     tmp << MISCMATHS::dot(tmpvec,v1) << MISCMATHS::dot(tmpvec,v2) << MISCMATHS::dot(tmpvec,v3);
     tmp(1) = tmp(1)*tmp(1);
     tmp(2) = tmp(2)*tmp(2);
@@ -166,7 +166,7 @@ Matrix form_Amat(const Matrix& r,const Matrix& b,const Matrix & cni)
   Matrix A(r.Ncols(),7 + cni.Ncols());
   Matrix A_noconf(r.Ncols(),7);
   Matrix tmpvec(3,1), tmpmat;
-  
+
   for( int i = 1; i <= r.Ncols(); i++){
     tmpvec << r(1,i) << r(2,i) << r(3,i);
     tmpmat = tmpvec*tmpvec.t()*b(1,i);   //this is the b-Matrix for direction i
@@ -177,7 +177,7 @@ Matrix form_Amat(const Matrix& r,const Matrix& b,const Matrix & cni)
     A(i,5) = 2*tmpmat(2,3);
     A(i,6) = tmpmat(3,3);
     A(i,7) = 1;
-    
+
     A_noconf(i,1) = tmpmat(1,1);
     A_noconf(i,2) = 2*tmpmat(1,2);
     A_noconf(i,3) = 2*tmpmat(1,3);
@@ -185,13 +185,13 @@ Matrix form_Amat(const Matrix& r,const Matrix& b,const Matrix & cni)
     A_noconf(i,5) = 2*tmpmat(2,3);
     A_noconf(i,6) = tmpmat(3,3);
     A_noconf(i,7) = 1;
-    
+
     for( int col=1;col<=cni.Ncols();col++){
       A(i,col+7)=cni(i,col);
     }
   }
-  
-  
+
+
   Matrix tmp1=(A_noconf.t()*A_noconf).i();
   Matrix tmp2=(A.t()*A).i();
   cout<<"Efficiency loss due to confounds: xx xy xz yy yz zz"<<endl;
@@ -225,7 +225,7 @@ ReturnMatrix WLS_pinv(const Matrix& Amat, const ColumnVector& S)
 
   W=0;
   for (int i=1; i<=S.Nrows(); i++)
-      W(i)=(S(i)>0 ? S(i)*S(i):1);             //Weights according to (Salvador, HBM 2005) 
+      W(i)=(S(i)>0 ? S(i)*S(i):1);             //Weights according to (Salvador, HBM 2005)
   pinvA=(((Amat.t()*W)*Amat).i()*Amat.t())*W;  //WLS pseudoinverse of Amat
   pinvA.Release();
   return pinvA;
@@ -320,8 +320,8 @@ void correct_bvals_bvecs(const Matrix& bvals,const Matrix& bvecs, const ColumnVe
   L(2,1)=grad_nonlin(2);  L(2,2)=grad_nonlin(5);  L(2,3)=grad_nonlin(8);
   L(3,1)=grad_nonlin(3);  L(3,2)=grad_nonlin(6);  L(3,3)=grad_nonlin(9);
 
-  IdentityMatrix Id(3); 
-  
+  IdentityMatrix Id(3);
+
   //Correct each gradient
   for (int l=1; l<=bvals.Ncols(); l++){
     if (bvals(1,l)>0){ //do not correct b0s
@@ -368,7 +368,7 @@ int main(int argc, char** argv)
       r(1,i)=r(1,i)/tmpsum;
       r(2,i)=r(2,i)/tmpsum;
       r(3,i)=r(3,i)/tmpsum;
-    }  
+    }
   }
   Matrix b = read_ascii_matrix(opts.bvalsfile.value());
   if(b.Nrows()>1) b=b.t();
@@ -386,7 +386,7 @@ int main(int argc, char** argv)
   if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
 
   //Read Gradient Non_linearity Maps if provided
-  volume4D<float> grad, bvalmap; 
+  volume4D<float> grad, bvalmap;
   if (opts.grad_file.set())
     read_volume4D(grad,opts.grad_file.value());
 
@@ -441,7 +441,7 @@ int main(int argc, char** argv)
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
   float fa,s0,mode,sseval;
-  Matrix Amat, cni; 
+  Matrix Amat, cni;
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   if(opts.cni.value()!=""){
     cni=read_ascii_matrix(opts.cni.value());
@@ -485,12 +485,12 @@ int main(int argc, char** argv)
   ColumnVector Kvec(7), lambda(3);
 
   for(int k = minz; k < maxz; k++){
-    cout<<k<<" slices processed"<<endl;    
+    cout<<k<<" slices processed"<<endl;
       for(int j=miny; j < maxy; j++){
 	for(int i =minx; i< maxx; i++){
-	
+
 	  if(mask(i,j,k)>0){
-	    
+
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
@@ -586,7 +586,7 @@ int main(int argc, char** argv)
 	    Delements(i-minx,j-miny,k-minz,3)=Dvec(4);
 	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
 	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
-	    
+
  	    if(opts.cni.value()!=""){
  	      for(int iter=0;iter<cni.Ncols();iter++)
  		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
@@ -602,7 +602,7 @@ int main(int argc, char** argv)
 	}
       }
   }
-  
+
     string fafile=opts.ofile.value()+"_FA";
     string s0file=opts.ofile.value()+"_S0";
     string l1file=opts.ofile.value()+"_L1";
@@ -705,16 +705,3 @@ int main(int argc, char** argv)
     }
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -25,7 +25,7 @@ pvmfitOptions* pvmfitOptions::gopt = NULL;
 bool pvmfitOptions::parse_command_line(int argc, char** argv)
 {
 
-  
+
   for(int a = options.parse_command_line(argc, argv); a < argc; a++)
     ;
   if(help.value() || ! options.check_compulsory_arguments())
@@ -33,15 +33,8 @@ bool pvmfitOptions::parse_command_line(int argc, char** argv)
       options.usage();
       //throw NEWMAT::Exception("Not all of the compulsory arguments have been provided");
       return false;
-    }      
+    }
   return true;
 }
 
 }
-
-
-
-
-
-
-
