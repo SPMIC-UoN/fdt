@@ -1,185 +1,77 @@
 include $(FSLCONFDIR)/default.mk
 
 PROJNAME = fdt
-
-ifeq ($(FSLMASTERBUILD),1)
-     $(eval $($(PROJNAME)_MASTERBUILD))
-endif
-
-ifeq ($(COMPILE_GPU), 1)
-	COMPILE_WITH_GPU=libbedpostx_cuda.so merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
-	SCRIPTS_GPU=CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
-endif
-
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_BOOST} -I${INC_ZLIB}
-USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_ZLIB}
-
-DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lmiscmaths -lutils -lnewmat -lnewran -lNewNifti -lznz -lcprob -lprob -lm -lz
-
-DTIFIT=dtifit
-CCOPS=ccops
-PTX=probtrackx
-MED=medianfilter
-ROM=reord_OM
-SAUS=sausages
-XFIBRES=xfibres
-XFIBRES2=xfibres_2
-RV=replacevols
-MDV=make_dyadic_vectors
-FMO=fdt_matrix_ops
-INDEXER=indexer
-TEST=testfile
-VECREG=vecreg
-KURTOSIS=kurtosis
-SWAPDYADS=swap_dyadic_vectors
-PVMFIT=pvmfit
-DTIGEN=dtigen
-BASGEN=basgen
-RARNG=rearrange
-XPRED=xfibres_pred
-RUBIX=rubix
-RBXPRED=rubix_pred
-EDDYCOMBINE=eddy_combine
-LIBBEDPOSTX_CUDA=libbedpostx_cuda.so
-MERGE_PARTS_GPU=merge_parts_gpu
-SPLIT_PARTS_GPU=CUDA/split_parts_gpu
-XFIBRES_GPU=xfibres_gpu
-
-DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
-CCOPSOBJS=ccops.o ccopsOptions.o
-PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
-MEDOBJS=medianfilter.o
-ROMOBJS=reord_OM.o
-SAUSOBJS=sausages.o
-XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
-XFIBOBJS2=xfibres_2.o xfibresoptions.o
-RVOBJS=replacevols.o
-MDVOBJS=make_dyadic_vectors.o
-FMOOBJS=fdt_matrix_ops.o
-INDEXEROBJS=indexer.o
-TESTOBJS=testfile.o
-VECREGOBJS=vecreg.o
-KURTOSISOBJS=kurtosis.o dtifitOptions.o
-SWAPDYADSOBJS=swap_dyadic_vectors.o
-PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o Bingham_Watson_approx.o
-DTIGENOBJS=dtigen.o
-BASGENOBJS=basgen.o diffmodels.o Bingham_Watson_approx.o
-RARNGOBJS=rearrange.o
-XPREDOBJS=xfibres_pred.o
-RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
-RBXPREDOBJS=rubix_pred.o
-EDDYCOMBINEOBJS=eddy_combine.o
-MERGE_PARTS_GPUOBJS=merge_parts_gpu.o xfibresoptions.o
-SPLIT_PARTS_GPUOBJS=CUDA/split_parts_gpu.o
-XFIBRES_GPUOBJS=xfibres_gpu.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
-
-SGEBEDPOST = bedpost
-SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
-
-SCRIPTS = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs select_dwi_vols ${SGEBEDPOST} ${SGEBEDPOSTX} ${SCRIPTS_GPU}
+SCRIPTS  = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs \
+           select_dwi_vols bedpost bedpostx bedpostx_postproc.sh \
+           bedpostx_preproc.sh bedpostx_single_slice.sh \
+           bedpostx_datacheck
 FSCRIPTS = correct_and_average ocmr_preproc
+XFILES   = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres \
+           probtrackx pvmfit dtigen eddy_combine
+FXFILES  = reord_OM sausages replacevols fdt_matrix_ops indexer \
+           rearrange xfibres_pred
+SOFILES  =
+RUNTCLS  = Fdt
+LIBS     = -lfsl-warpfns -lfsl-basisfield -lfsl-meshclass \
+           -lfsl-newimage -lfsl-miscmaths -lfsl-NewNifti \
+           -lfsl-utils -lfsl-znz -lfsl-cprob
+CUDALIBS = -lcurand -lcudart -lcuda
 
-XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit dtigen eddy_combine ${COMPILE_WITH_GPU}
-
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
-
-
-RUNTCLS = Fdt
-
-all: ${XFILES} ${FXFILES}
-
-${PTX}:		   ${PTXOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
-
-${PT}:		   ${PTOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTOBJS} ${DLIBS}
-
-${FTB}:    	${FTBOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FTBOBJS} ${DLIBS}
-
-${PJ}:    	${PJOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PJOBJS} ${DLIBS}
-
-${MED}:    	${MEDOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MEDOBJS} ${DLIBS}
-
-${DTIFIT}:    	${DTIFITOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIFITOBJS} ${DLIBS}
-
-${CCOPS}:    	${CCOPSOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CCOPSOBJS} ${DLIBS}
-
-${ROM}:    	${ROMOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ROMOBJS} ${DLIBS}
-
-${SAUS}:    	${SAUSOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SAUSOBJS} ${DLIBS}
-
-${XFIBRES}:    	${XFIBOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS} ${DLIBS}
-
-${XFIBRES2}:    	${XFIBOBJS2}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS2} ${DLIBS}
-
-${RV}:    	${RVOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RVOBJS} ${DLIBS}
-
-${MDV}:    	${MDVOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MDVOBJS} ${DLIBS}
-
-${FMO}:    	${FMOOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FMOOBJS} ${DLIBS}
-
-${INDEXER}:    	${INDEXEROBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${INDEXEROBJS} ${DLIBS}
-
-${TEST}:    	${TESTOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
-
-${VECREG}:    	${VECREGOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
+ifeq ($(FDT_COMPILE_GPU), 1)
+	XFILES  += merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
+	SCRIPTS += CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
+    SOFILES += libfsl-bedpostx_cuda.so
+endif
 
 
-${KURTOSIS}:   ${KURTOSISOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
+all: ${XFILES} ${FXFILES} ${SOFILES}
 
-${SWAPDYADS}: ${SWAPDYADSOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SWAPDYADSOBJS} ${DLIBS}
+%: %.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${PVMFIT}:    	${PVMFITOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PVMFITOBJS} ${DLIBS}
+ccops: ccops.o ccopsOptions.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${DTIGEN}:    	${DTIGENOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
+probtrackx: probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${BASGEN}:    	${BASGENOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${BASGENOBJS} ${DLIBS}
+dtifit: dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${RARNG}: 	${RARNGOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RARNGOBJS} ${DLIBS}
+xfibres: xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${XPRED}: 	${XPREDOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XPREDOBJS} ${DLIBS}
+xfibres_2: xfibres_2.o xfibresoptions.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${RUBIX}: 	${RUBIXOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}
+kurtosis: kurtosis.o dtifitOptions.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${RBXPRED}: 	${RBXPREDOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RBXPREDOBJS} ${DLIBS}
+pvmfit: pvmfit.o pvmfitOptions.o diffmodels.o Bingham_Watson_approx.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
+basgen: basgen.o diffmodels.o Bingham_Watson_approx.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${LIBBEDPOSTX_CUDA}:
-		${NVCC} --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3 ${GENCODE_FLAGS} -lcudart -lcuda -lcurand -I. -L${LIB_CUDA} -L${LIB_CUDA}/stubs -ICUDA/options -I${INC_NEWMAT} -I${FSLDIR}/include -I${INC_BOOST} -I${INC_CUDA} -maxrregcount=64
-		@if [ ! -d ${FSLDEVDIR}/lib/ ] ; then ${MKDIR} ${FSLDEVDIR}/lib ; fi
-		${CP} -rf CUDA/libbedpostx_cuda.so ${FSLDEVDIR}/lib
+rubix: rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${MERGE_PARTS_GPU}: ${MERGE_PARTS_GPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MERGE_PARTS_GPUOBJS} ${DLIBS}
+libfsl-bedpostx_cuda.so:
+	${NVCC} --shared \
+	  ${CUDACXXFLAGS} -ICUDA -ICUDA/options \
+      -o $@ \
+      CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu \
+      CUDA/runmcmc.cu CUDA/xfibres_gpu.cu
 
-${SPLIT_PARTS_GPU}: ${SPLIT_PARTS_GPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SPLIT_PARTS_GPUOBJS} ${DLIBS}
+merge_parts_gpu: merge_parts_gpu.o xfibresoptions.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
-${XFIBRES_GPU}: ${XFIBRES_GPUOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBRES_GPUOBJS} ${DLIBS} -lcudart -lcuda -lcurand -lbedpostx_cuda -LCUDA -L${LIB_CUDA} -L${LIB_CUDA}/stubs
+CUDA/split_parts_gpu: CUDA/split_parts_gpu.o
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
+
+XFIBRES_OBJS = xfibres_gpu.o xfibresoptions.o diffmodels.o \
+               Bingham_Watson_approx.o
+
+xfibres_gpu: libfsl-bedpostx_cuda.so ${XFIBRES_OBJS}
+	${CXX} ${CXXFLAGS} -o $@ ${XFIBRES_OBJS} \
+        ${LDFLAGS} -lfsl-bedpostx_cuda ${CUDALDFLAGS}
