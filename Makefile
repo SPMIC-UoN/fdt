@@ -61,7 +61,7 @@ libfsl-bedpostx_cuda.so:
 	  ${CUDACXXFLAGS} -ICUDA -ICUDA/options \
       -o $@ \
       CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu \
-      CUDA/runmcmc.cu CUDA/xfibres_gpu.cu
+      CUDA/runmcmc.cu CUDA/xfibres_gpu.cu ${CUDALDFLAGS}
 
 merge_parts_gpu: merge_parts_gpu.o xfibresoptions.o
 	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
