@@ -1,3 +1,11 @@
+# This is the Makefile for the fdt project
+#
+# Some commands provided by fdt are CUDA-capable - these
+# commands can be compiled by setting the "cuda" variable
+# when calling make, i.e.:
+#
+#     make gpu=1
+
 include $(FSLCONFDIR)/default.mk
 
 PROJNAME = fdt
@@ -17,7 +25,7 @@ LIBS     = -lfsl-warpfns -lfsl-basisfield -lfsl-meshclass \
            -lfsl-utils -lfsl-znz -lfsl-cprob
 CUDALIBS = -lcurand -lcudart -lcuda
 
-ifeq ($(FDT_COMPILE_GPU), 1)
+ifdef cuda
 	XFILES  += merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS += CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
     SOFILES += libfsl-bedpostx_cuda.so
