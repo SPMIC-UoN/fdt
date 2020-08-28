@@ -58,10 +58,10 @@ rubix: rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
 
 libfsl-bedpostx_cuda.so:
 	${NVCC} --shared \
-	  ${CUDACXXFLAGS} -ICUDA -ICUDA/options \
+	  ${NVCCFLAGS} -ICUDA -ICUDA/options \
       -o $@ \
       CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu \
-      CUDA/runmcmc.cu CUDA/xfibres_gpu.cu ${CUDALDFLAGS}
+      CUDA/runmcmc.cu CUDA/xfibres_gpu.cu ${NVCCLDFLAGS}
 
 merge_parts_gpu: merge_parts_gpu.o xfibresoptions.o
 	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
@@ -74,4 +74,4 @@ XFIBRES_OBJS = xfibres_gpu.o xfibresoptions.o diffmodels.o \
 
 xfibres_gpu: libfsl-bedpostx_cuda.so ${XFIBRES_OBJS}
 	${CXX} ${CXXFLAGS} -o $@ ${XFIBRES_OBJS} \
-        ${LDFLAGS} -lfsl-bedpostx_cuda ${CUDALDFLAGS}
+        ${LDFLAGS} -lfsl-bedpostx_cuda ${NVCCLDFLAGS}
