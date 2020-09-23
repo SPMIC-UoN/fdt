@@ -17,7 +17,7 @@ Usage() {
     echo "<options>:"
     #echo "-QSYS (Queue System, 0 use fsl_sub: FMRIB, 1 TORQUE (default): WashU)"
     echo "-Q (name of the GPU(s) queue, default cuda.q (defined in environment variable: FSLGECUDAQ)"
-    #echo "-Q (name of the GPU(s) queue, default cuda.q for QSYS=0 and no queue for QSYS=1)"	
+    #echo "-Q (name of the GPU(s) queue, default cuda.q for QSYS=0 and no queue for QSYS=1)"
     echo "-NJOBS (number of jobs to queue, the data is divided in NJOBS parts, usefull for a GPU cluster, default 4)"
     echo "-n (number of fibres per voxel, default 3)"
     echo "-w (ARD weight, more weight means less secondary fibres per voxel, default 1)"
@@ -45,12 +45,12 @@ if [ $njobs -eq 1 ]; then
 #1 part (GPU) and several subparts
 #voxels processed in each subpart are 12800 or more if the last one is less than 6400 (1 part less)
 	nparts=\$(($nvox/12800))
-	if [ \$nparts%12800 != 0 ];then 
-		nparts=\$((\$nparts + 1)) 
+	if [ \$nparts%12800 != 0 ];then
+		nparts=\$((\$nparts + 1))
 	fi
 	last_part=\$(($nvox-(((\$nparts-1))*12800)))
-	if [ \$last_part -lt 6400 ];then 
-		nparts=\$((\$nparts - 1)) 
+	if [ \$last_part -lt 6400 ];then
+		nparts=\$((\$nparts - 1))
 	fi
 else
 	nparts=$njobs
@@ -88,7 +88,7 @@ while [ \$finished -eq 0 ] ; do
     if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
         echo "All parts processed"
-	exit 
+	exit
     fi
     if [ ! \$havedad -gt 0 ]; then
        exit 0
@@ -138,10 +138,6 @@ gflag=0
 other=""
 queue=""
 
-if [ $qsys -eq 0 ] && [ "x$SGE_ROOT" != "x" ]; then
-	queue="-q $FSLGECUDAQ"
-fi
-
 shift
 while [ ! -z "$1" ]
 do
@@ -155,11 +151,16 @@ do
       -j) njumps=$2;shift;;
       -s) sampleevery=$2;shift;;
       -model) model=$2;shift;;
-      -g) gflag=1;; 
+      -g) gflag=1;;
       *) other=$other" "$1;;
   esac
   shift
 done
+
+if [ $qsys -eq 0 ]; then
+	queue="--coprocessor=cuda"
+fi
+
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
@@ -207,7 +208,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 fi
 
 if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
-	echo "${subjdir} has already been processed: ${subjdir}.bedpostX." 
+	echo "${subjdir} has already been processed: ${subjdir}.bedpostX."
 	echo "Delete or rename ${subjdir}.bedpostX before repeating the process."
 	exit 1
 fi
@@ -233,7 +234,7 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` = 1 ] ; then
 fi
 
 
-# Split the dataset in parts 
+# Split the dataset in parts
 echo Pre-processing stage
 
 if [ ${gflag} -eq 1 ]; then
@@ -269,15 +270,15 @@ part=0
 while [ $part -lt $njobs ]
 do
     	partzp=`$FSLDIR/bin/zeropad $part 4`
-    
+
 	if [ ${gflag} -eq 1 ]; then
 	    gopts="$opts --gradnonlin=${subjdir}.bedpostX/grad_dev_$part"
 	else
 	    gopts=$opts
-	fi    
+	fi
 
 	echo "${FSLDIR}/bin/xfibres_gpu --data=${subjdir}.bedpostX/data_$part --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs --forcedir --logdir=$subjdir.bedpostX/diff_parts/data_part_$partzp $gopts ${subjdir} $part $njobs $nvox" >> ${subjdir}.bedpostX/commands.txt
-    
+
     	part=$(($part + 1))
 done
 
