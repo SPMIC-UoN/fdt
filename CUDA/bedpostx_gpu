@@ -220,7 +220,7 @@ mkdir -p ${subjdir}.bedpostX/diff_parts
 mkdir -p ${subjdir}.bedpostX/logs
 mkdir -p ${subjdir}.bedpostX/logs/logs_gpu
 mkdir -p ${subjdir}.bedpostX/logs/monitor
-rm -f ${subjdir}.bedpostX/logs/monitor/*
+rm -f "${subjdir}".bedpostX/logs/monitor/*
 mkdir -p ${subjdir}.bedpostX/xfms
 
 #mailto=`whoami`@fmrib.ox.ac.uk
@@ -250,7 +250,7 @@ else
 	echo $pre_command > ${subjdir}.bedpostX/temp
 	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=00:40:00 -N bedpostx_preproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs"
 	splitID=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
-        rm ${subjdir}.bedpostX/temp
+        rm "${subjdir}.bedpostX/temp"
 	sleep 10
 fi
 
@@ -259,7 +259,7 @@ nvox=`${FSLDIR}/bin/fslstats $subjdir.bedpostX/nodif_brain_mask -V  | cut -d ' '
 
 echo Queuing parallel processing stage
 
-[ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+[ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
 if [ "x$SGE_ROOT" = "x" ]; then
@@ -294,7 +294,7 @@ else
 	#PBS -t x-y: x and y are the array bounds
 	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=3:00:00,pmem=16gb -N bedpostx_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterok:$splitID $sge_tasks"
 	bedpostid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
-        rm ${subjdir}.bedpostX/temp
+        rm "${subjdir}.bedpostX/temp"
 	sleep 10
 fi
 
@@ -309,7 +309,7 @@ else
 	echo $post_command > ${subjdir}.bedpostX/temp
 	torque_command="qsub -V $queue -l nodes=1:ppn=1:gpus=1,walltime=00:40:00 -N bedpostx_postproc_gpu -o ${subjdir}.bedpostX/logs -e ${subjdir}.bedpostX/logs -W depend=afterokarray:$bedpostid"
 	mergeid=`exec $torque_command ${subjdir}.bedpostX/temp | awk '{print $1}' | awk -F. '{print $1}'`
-        rm ${subjdir}.bedpostX/temp
+        rm "${subjdir}.bedpostX/temp"
 	sleep 10
 fi
 
