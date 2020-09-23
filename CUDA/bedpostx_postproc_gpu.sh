@@ -55,9 +55,9 @@ echo Removing intermediate files
 if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_th1samples` -eq 1 ];then
   if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_ph1samples` -eq 1 ];then
     if [ `${FSLDIR}/bin/imtest ${subjdir}.bedpostX/merged_f1samples` -eq 1 ];then
-      rm -rf ${subjdir}.bedpostX/diff_parts
-      rm -rf ${subjdir}.bedpostX/data*
-      rm -rf ${subjdir}.bedpostX/grad_dev*
+      rm -rf "${subjdir}.bedpostX/diff_parts"
+      rm -rf "${subjdir}.bedpostX/data"*
+      rm -rf "${subjdir}.bedpostX/grad_dev"*
     fi
   fi
 fi

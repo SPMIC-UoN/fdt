@@ -206,7 +206,7 @@ preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/log
 
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
-[ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+[ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
 if [ "x$SGE_ROOT" = "x" ]; then
@@ -220,7 +220,7 @@ do
     if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ] && [ -f ${subjdir}.bedpostX/logs/monitor/$slice ];then
 	echo "slice $slice has already been processed"
     else
-        [ -f ${subjdir}.bedpostX/logs/monitor/$slice ] && rm ${subjdir}.bedpostX/logs/monitor/$slice
+        [ -f ${subjdir}.bedpostX/logs/monitor/$slice ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
 	if [ ${gflag} -eq 1 ]; then
 	    gopts="$opts --gradnonlin=${subjdir}/grad_dev_slice_${slicezp}"
 	else

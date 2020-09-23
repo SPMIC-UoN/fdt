@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$3" == "" ] ; then 
+if [ "$3" == "" ] ; then
  echo "Usage: <original bvecs> <rotated bvecs> <ecclog>"
  echo ""
  echo "<ecclog>	is the output log file from eddy_correct"
@@ -22,7 +22,7 @@ if [ ! -e $ecclog ]; then
 fi
 
 ii=1
-rm -f $o
+rm -f "$o"
 tmpo=${o}$$
 cat ${ecclog} | while read line; do
     echo $ii
@@ -32,14 +32,14 @@ cat ${ecclog} | while read line; do
     read line;
 
     echo $line  > $tmpo
-    read line    
+    read line
     echo $line >> $tmpo
-    read line    
+    read line
     echo $line >> $tmpo
-    read line    
+    read line
     echo $line >> $tmpo
-    read line   
-    
+    read line
+
     m11=`avscale $tmpo | grep Rotation -A 1 | tail -n 1| awk '{print $1}'`
     m12=`avscale $tmpo | grep Rotation -A 1 | tail -n 1| awk '{print $2}'`
     m13=`avscale $tmpo | grep Rotation -A 1 | tail -n 1| awk '{print $3}'`
@@ -63,8 +63,8 @@ cat ${ecclog} | while read line; do
 	cp $o $tmpo
 	(echo $rX;echo $rY;echo $rZ) | paste $tmpo - > $o
     fi
-    
+
     let "ii+=1"
 
 done
-rm -f $tmpo
+rm -f "$tmpo"
