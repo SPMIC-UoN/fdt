@@ -223,8 +223,6 @@ mkdir -p ${subjdir}.bedpostX/logs/monitor
 rm -f "${subjdir}".bedpostX/logs/monitor/*
 mkdir -p ${subjdir}.bedpostX/xfms
 
-#mailto=`whoami`@fmrib.ox.ac.uk
-
 echo Copying files to bedpost directory
 
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpostX
