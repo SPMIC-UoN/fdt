@@ -836,8 +836,10 @@ proc fdt:apply { w dialog } {
 	probtrackx {
 	    global probtrack env
 	    set errorStr ""
-            set FSLPARALLEL 0
-            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
+            set FSLPARALLEL 1
+			if { [catch { exec ${FSLDIR}/bin/fsl_sub --has_queues } errmsg] } {
+				set FSLPARALLEL 0
+			}
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" }
 	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" }
