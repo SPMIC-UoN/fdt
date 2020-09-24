@@ -71,7 +71,7 @@ while [ \$finished -eq 0 ] ; do
     if [ ! \$havedad -gt 0 ]; then
        exit 0
     fi
-    if [ "x$SGE_ROOT" = "x" ]; then
+    if ! fsl_sub --has_queues > /dev/null; then
         havedad=\`ps -e -o pid 2>&1 | grep "$$\\b" | wc -l\`
     fi
     sleep 180;
@@ -129,16 +129,11 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
-if [ -n "$SGE_ROOT" ]; then
-	# Look for an SGE queue
-	if [ -n "$FSLGECUDAQ" -a "$nocuda" -eq 0 ]; then
-		# Test that the queue exists
-		qconf -sq $FSLGECUDAQ 2>&1 >/dev/null
-		if [ $? -eq 0 ]; then
-			# CUDA queue exists
-			if [ -x $0_gpu ]; then
-				exec $0_gpu $myopts
-			fi
+if fsl_sub --has_queues; then
+	# Look for CUDA
+    if fsl_sub --has_coprocessor=cuda > /dev/null; then
+        if [ -x $0_gpu ]; then
+            exec $0_gpu $myopts
 		fi
 	fi
 fi
@@ -209,7 +204,7 @@ nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
-if [ "x$SGE_ROOT" = "x" ]; then
+if ! fsl_sub --has_queues > /dev/null; then
     ${subjdir}.bedpostX/monitor&
 fi
 
@@ -238,18 +233,19 @@ mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}
 
 echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
 
-if [ "x$SGE_ROOT" != "x" ]; then
+if fsl_sub --has_queues > /dev/null; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
     cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
-qdel $mergeid $bedpostid $preprocid
+fsl_sub --delete_job $mergeid
+fsl_sub --delete_job $bedpostid
+fsl_sub --delete_job $preprocid
 EOC
     chmod +x ${subjdir}.bedpostX/cancel
 
     echo
-    echo You will get an email at the end of the post-processing stage.
     echo
 else
     sleep 190

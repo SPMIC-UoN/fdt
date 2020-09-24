@@ -93,7 +93,7 @@ while [ \$finished -eq 0 ] ; do
     if [ ! \$havedad -gt 0 ]; then
        exit 0
     fi
-    if [ "x$SGE_ROOT" = "x" ]; then
+    if ! fsl_sub --has_queues > /dev/null; then
         havedad=\`ps -e -o pid 2>&1| grep "$$\\b" | wc -l\`
     fi
     sleep 50;
@@ -260,7 +260,7 @@ echo Queuing parallel processing stage
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
-if [ "x$SGE_ROOT" = "x" ]; then
+if ! fsl_sub --has_queues > /dev/null; then
     ${subjdir}.bedpostX/monitor&
 fi
 
@@ -313,18 +313,18 @@ fi
 
 echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
 
-if [ "x$SGE_ROOT" != "x" ]; then
+if fsl_sub --has_queues >/dev/null; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
     cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
-qdel $mergeid $bedpostid
+fsl_sub --delete_job $mergeid
+fsl_sub --delete_job $bedpostid
 EOC
     chmod +x ${subjdir}.bedpostX/cancel
 
     echo
-    echo You will get an email at the end of the post-processing stage.
     echo
 else
     sleep 60
