@@ -111,7 +111,7 @@ nocuda=0
 other=""
 
 shift
-while [ ! -z "$1" ]
+while [ -n "$1" ]
 do
   case "$1" in
       -n) nfibres=$2;shift;;

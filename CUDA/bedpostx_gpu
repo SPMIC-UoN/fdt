@@ -139,7 +139,7 @@ other=""
 queue=""
 
 shift
-while [ ! -z "$1" ]
+while [ -n "$1" ]
 do
   case "$1" in
       -QSYS) qsys=$2;shift;;
