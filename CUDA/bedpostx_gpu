@@ -168,7 +168,7 @@ opts="$opts $defopts $other"
 #check that all required files exist
 
 if [ ! -d $subjdir ]; then
-	echo "subject directory $1 not found"
+	echo "subject directory $1 not found" >&2
 	exit 1
 fi
 
@@ -176,7 +176,7 @@ if [ ! -e ${subjdir}/bvecs ]; then
     if [ -e ${subjdir}/bvecs.txt ]; then
 	mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
     else
-	echo "${subjdir}/bvecs not found"
+	echo "${subjdir}/bvecs not found" >&2
 	exit 1
     fi
 fi
@@ -185,31 +185,31 @@ if [ ! -e ${subjdir}/bvals ]; then
     if [ -e ${subjdir}/bvals.txt ]; then
 	mv ${subjdir}/bvals.txt ${subjdir}/bvals
     else
-	echo "${subjdir}/bvals not found"
+	echo "${subjdir}/bvals not found" >&2
 	exit 1
     fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
-	echo "${subjdir}/data not found"
+	echo "${subjdir}/data not found" >&2
 	exit 1
 fi
 
 if [ ${gflag} -eq 1 ]; then
     if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_dev` -eq 0 ]; then
-	echo "${subjdir}/grad_dev not found"
+	echo "${subjdir}/grad_dev not found" >&2
 	exit 1
     fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
-	echo "${subjdir}/nodif_brain_mask not found"
+	echo "${subjdir}/nodif_brain_mask not found" >&2
 	exit 1
 fi
 
 if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
-	echo "${subjdir} has already been processed: ${subjdir}.bedpostX."
-	echo "Delete or rename ${subjdir}.bedpostX before repeating the process."
+	echo "${subjdir} has already been processed: ${subjdir}.bedpostX." >&2
+	echo "Delete or rename ${subjdir}.bedpostX before repeating the process." >&2
 	exit 1
 fi
 
