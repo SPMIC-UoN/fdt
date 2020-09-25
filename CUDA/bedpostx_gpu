@@ -158,7 +158,12 @@ do
 done
 
 if [ $qsys -eq 0 ] && [ -z "$queue" ]; then
-	queue="--coprocessor=cuda"
+    if $("$FSLDIR/bin/fsl_sub" --has_coprocessor='cuda' > /dev/null); then
+        queue="--coprocessor=cuda"
+    else
+        echo "No GPU configured/found" >&2
+        exit 1
+    fi
 fi
 
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
