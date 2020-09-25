@@ -109,6 +109,9 @@ model=2
 gflag=0
 nocuda=0
 other=""
+single_slice_time=1880
+postproc_time=60
+preproc_time=60
 
 shift
 while [ -n "$1" ]
@@ -197,7 +200,7 @@ mkdir -p ${subjdir}.bedpostX/logs/monitor
 mkdir -p ${subjdir}.bedpostX/xfms
 
 echo Queuing preprocessing stages
-preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
+preprocid=`${FSLDIR}/bin/fsl_sub -T $preproc_time -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
 
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
@@ -226,10 +229,10 @@ do
     fi
     slice=$(($slice + 1))
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -T $single_slice_time -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T $postproc_time -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
 echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
 
