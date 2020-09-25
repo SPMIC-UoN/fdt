@@ -129,11 +129,11 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
-if fsl_sub --has_queues; then
+if "${FSLDIR}/bin/fsl_sub" --has_queues; then
 	# Look for CUDA
-    if fsl_sub --has_coprocessor=cuda > /dev/null; then
-        if [ -x $0_gpu ]; then
-            exec $0_gpu $myopts
+    if "${FSLDIR}/bin/fsl_sub" --has_coprocessor=cuda > /dev/null; then
+        if [ -x "$0_gpu" ]; then
+            exec "$0_gpu" $myopts
 		fi
 	fi
 fi
@@ -204,7 +204,7 @@ nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
-if ! fsl_sub --has_queues > /dev/null; then
+if ! ${FSLDIR}/bin/fsl_sub --has_queues > /dev/null; then
     ${subjdir}.bedpostX/monitor&
 fi
 
@@ -233,15 +233,15 @@ mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}
 
 echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
 
-if fsl_sub --has_queues > /dev/null; then
+if "${FSLDIR}/bin/fsl_sub" --has_queues > /dev/null; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
     cat <<EOC > ${subjdir}.bedpostX/cancel
 #!/bin/sh
-fsl_sub --delete_job $mergeid
-fsl_sub --delete_job $bedpostid
-fsl_sub --delete_job $preprocid
+${FSLDIR}/bin/fsl_sub --delete_job $mergeid
+${FSLDIR}/bin/fsl_sub --delete_job $bedpostid
+${FSLDIR}/bin/fsl_sub --delete_job $preprocid
 EOC
     chmod +x ${subjdir}.bedpostX/cancel
 
