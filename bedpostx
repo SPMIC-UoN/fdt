@@ -71,7 +71,7 @@ while [ \$finished -eq 0 ] ; do
     if [ ! \$havedad -gt 0 ]; then
        exit 0
     fi
-    if ! fsl_sub --has_queues > /dev/null; then
+    if ! ${FSLDIR}/bin/fsl_sub --has_queues > /dev/null; then
         havedad=\`ps -e -o pid 2>&1 | grep "$$\\b" | wc -l\`
     fi
     sleep 180;
