@@ -83,9 +83,9 @@ EOM
 make_absolute(){
     dir=$1;
     if [ -d "${dir}" ]; then
-        OLDWD=`pwd`
+        OLDWD=$(pwd)
         cd "${dir}"
-        dir_all=`pwd`
+        dir_all=$(pwd)
         cd "$OLDWD"
     else
         dir_all="${dir}"
@@ -95,9 +95,17 @@ make_absolute(){
 
 [ "$1" = "" ] && Usage
 
-myopts="$@"
-subjdir=`make_absolute $1`
-subjdir=`echo "$subjdir" | sed 's/\/$/$/g'`
+if "${FSLDIR}/bin/fsl_sub" --has_queues; then
+    # Look for CUDA
+    if "${FSLDIR}/bin/fsl_sub" --has_coprocessor=cuda > /dev/null; then
+        if [ -x "$0_gpu" ]; then
+            exec "$0_gpu" "$@"
+        fi
+    fi
+fi
+
+subjdir=$(make_absolute "$1")
+subjdir=$(echo "$subjdir" | sed 's/\/$/$/g')
 
 #parse option arguments
 nfibres=3
@@ -132,14 +140,6 @@ done
 opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
-if "${FSLDIR}/bin/fsl_sub" --has_queues; then
-    # Look for CUDA
-    if "${FSLDIR}/bin/fsl_sub" --has_coprocessor=cuda > /dev/null; then
-        if [ -x "$0_gpu" ]; then
-            exec "$0_gpu" $myopts
-        fi
-    fi
-fi
 
 echo "subjectdir is $subjdir"
 
@@ -151,7 +151,7 @@ if [ ! -d "$subjdir" ]; then
 fi
 
 if [ ! -e "${subjdir}/bvecs" ]; then
-    if [ -e ${subjdir}/bvecs.txt ]; then
+    if [ -e "${subjdir}/bvecs.txt" ]; then
         mv "${subjdir}/bvecs.txt" "${subjdir}/bvecs"
     else
         echo "${subjdir}/bvecs not found" >&2
@@ -168,19 +168,19 @@ if [ ! -e "${subjdir}/bvals" ]; then
     fi
 fi
 
-if [ `"${FSLDIR}/bin/imtest" "${subjdir}/data"` -eq 0 ]; then
+if [ $("${FSLDIR}/bin/imtest" "${subjdir}/data") -eq 0 ]; then
     echo "${subjdir}/data not found" >&2
     exit 1
 fi
 
 if [ ${gflag} -eq 1 ]; then
-    if [ `"${FSLDIR}/bin/imtest" "${subjdir}/grad_dev"` -eq 0 ]; then
+    if [ $("${FSLDIR}/bin/imtest" "${subjdir}/grad_dev") -eq 0 ]; then
         echo "${subjdir}/grad_dev not found" >&2
         exit 1
     fi
 fi
 
-if [ `"${FSLDIR}/bin/imtest" "${subjdir}/nodif_brain_mask"` -eq 0 ]; then
+if [ $("${FSLDIR}/bin/imtest" "${subjdir}/nodif_brain_mask") -eq 0 ]; then
     echo "${subjdir}/nodif_brain_mask not found" >&2
     exit 1
 fi
@@ -200,10 +200,10 @@ mkdir -p "${subjdir}.bedpostX/logs/monitor"
 mkdir -p "${subjdir}.bedpostX/xfms"
 
 echo "Queuing preprocessing stages"
-preprocid=`"${FSLDIR}/bin/fsl_sub" -T $preproc_time -N bpx_preproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_preproc.sh" "${subjdir}" ${gflag}`
+preprocid=$("${FSLDIR}/bin/fsl_sub" -T $preproc_time -N bpx_preproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_preproc.sh" "${subjdir}" ${gflag})
 
 echo "Queuing parallel processing stage"
-nslices=`"${FSLDIR}/bin/fslval" "${subjdir}/data" dim3`
+nslices=$("${FSLDIR}/bin/fslval" "${subjdir}/data" dim3)
 [ -f "${subjdir}.bedpostX/commands.txt" ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
@@ -214,8 +214,8 @@ fi
 slice=0
 while [ $slice -lt $nslices ]
 do
-    slicezp=`"$FSLDIR/bin/zeropad" $slice 4`
-    if [ `"$FSLDIR/bin/imtest" "${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1"` -eq 1 ] && [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ];then
+    slicezp=$("$FSLDIR/bin/zeropad" $slice 4)
+    if [ $("$FSLDIR/bin/imtest" "${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1") -eq 1 ] && [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ]; then
         echo "slice $slice has already been processed"
     else
         [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
@@ -229,10 +229,10 @@ do
     fi
     slice=$(($slice + 1))
 done
-bedpostid=`"${FSLDIR}/bin/fsl_sub" -j $preprocid -T $single_slice_time -l "${subjdir}.bedpostX/logs" -N bedpostx -t "${subjdir}.bedpostX/commands.txt"`
+bedpostid=$("${FSLDIR}/bin/fsl_sub" -j $preprocid -T $single_slice_time -l "${subjdir}.bedpostX/logs" -N bedpostx -t "${subjdir}.bedpostX/commands.txt")
 
 echo Queuing post processing stage
-mergeid=`"${FSLDIR}/bin/fsl_sub" -j $bedpostid -T $postproc_time -N bpx_postproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_postproc.sh" $subjdir`
+mergeid=$("${FSLDIR}/bin/fsl_sub" -j $bedpostid -T $postproc_time -N bpx_postproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_postproc.sh" $subjdir)
 
 echo "$mergeid" > "${subjdir}.bedpostX/logs/postproc_ID"
 
