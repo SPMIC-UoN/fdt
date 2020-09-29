@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #   Copyright (C) 2004,2013 University of Oxford
 #
@@ -133,13 +133,13 @@ do
       -model) model=$2;shift;;
       -g) gflag=1;;
       -c) nocuda=1;;
-      *) other=$other" "$1;;
+      *) other=("$other" "$1");;
   esac
   shift
 done
-opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery --model=$model"
-defopts="--cnonlinear"
-opts="$opts $defopts $other"
+opts=("--nf=$nfibres" "--fudge=$fudge" "--bi=$burnin" "--nj=$njumps" "--se=$sampleevery" "--model=$model")
+defopts=("--cnonlinear")
+opts=("${opts[@]}" "${defopts[@]}" "${other[@]}")
 
 echo "subjectdir is $subjdir"
 
@@ -212,7 +212,7 @@ if ! "${FSLDIR}/bin/fsl_sub" --has_queues > /dev/null; then
 fi
 
 slice=0
-while [ $slice -lt $nslices ]
+while [ $slice -lt "$nslices" ]
 do
     slicezp=$("$FSLDIR/bin/zeropad" $slice 4)
     if [ $("$FSLDIR/bin/imtest" "${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1") -eq 1 ] && [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ]; then
@@ -220,19 +220,19 @@ do
     else
         [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
     if [ ${gflag} -eq 1 ]; then
-        gopts="$opts --gradnonlin=${subjdir}/grad_dev_slice_${slicezp}"
+        gopts=("${opts[@]}" "--gradnonlin=\"${subjdir}/grad_dev_slice_${slicezp}\"")
     else
-        gopts="$opts"
+        gopts=("${opts[@]}")
     fi
-    echo "${FSLDIR}/bin/bedpostx_single_slice.sh ${subjdir} ${slice} $gopts" \
-        >> ${subjdir}.bedpostX/commands.txt
+    echo "\"${FSLDIR}/bin/bedpostx_single_slice.sh\" \"${subjdir}\" ${slice} ${gopts[*]}" \
+        >> "${subjdir}.bedpostX/commands.txt"
     fi
-    slice=$(($slice + 1))
+    slice=$((slice + 1))
 done
-bedpostid=$("${FSLDIR}/bin/fsl_sub" -j $preprocid -T $single_slice_time -l "${subjdir}.bedpostX/logs" -N bedpostx -t "${subjdir}.bedpostX/commands.txt")
+bedpostid=$("${FSLDIR}/bin/fsl_sub" -j "$preprocid" -T $single_slice_time -l "${subjdir}.bedpostX/logs" -N bedpostx -t "${subjdir}.bedpostX/commands.txt")
 
 echo Queuing post processing stage
-mergeid=$("${FSLDIR}/bin/fsl_sub" -j $bedpostid -T $postproc_time -N bpx_postproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_postproc.sh" $subjdir)
+mergeid=$("${FSLDIR}/bin/fsl_sub" -j "$bedpostid" -T $postproc_time -N bpx_postproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_postproc.sh" "$subjdir")
 
 echo "$mergeid" > "${subjdir}.bedpostX/logs/postproc_ID"
 
