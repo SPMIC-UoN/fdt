@@ -97,7 +97,7 @@ make_absolute(){
 
 myopts="$@"
 subjdir=`make_absolute $1`
-subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+subjdir=`echo "$subjdir" | sed 's/\/$/$/g'`
 
 #parse option arguments
 nfibres=3
@@ -141,112 +141,112 @@ if "${FSLDIR}/bin/fsl_sub" --has_queues; then
     fi
 fi
 
-echo subjectdir is $subjdir
+echo "subjectdir is $subjdir"
 
 #check that all required files exist
 
-if [ ! -d $subjdir ]; then
+if [ ! -d "$subjdir" ]; then
     echo "subject directory $1 not found" >&2
     exit 1
 fi
 
-if [ ! -e ${subjdir}/bvecs ]; then
+if [ ! -e "${subjdir}/bvecs" ]; then
     if [ -e ${subjdir}/bvecs.txt ]; then
-        mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
+        mv "${subjdir}/bvecs.txt" "${subjdir}/bvecs"
     else
         echo "${subjdir}/bvecs not found" >&2
         exit 1
     fi
 fi
 
-if [ ! -e ${subjdir}/bvals ]; then
-    if [ -e ${subjdir}/bvals.txt ]; then
-        mv ${subjdir}/bvals.txt ${subjdir}/bvals
+if [ ! -e "${subjdir}/bvals" ]; then
+    if [ -e "${subjdir}/bvals.txt" ]; then
+        mv "${subjdir}/bvals.txt" "${subjdir}/bvals"
     else
         echo "${subjdir}/bvals not found" >&2
         exit 1
     fi
 fi
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+if [ `"${FSLDIR}/bin/imtest" "${subjdir}/data"` -eq 0 ]; then
     echo "${subjdir}/data not found" >&2
     exit 1
 fi
 
 if [ ${gflag} -eq 1 ]; then
-    if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_dev` -eq 0 ]; then
+    if [ `"${FSLDIR}/bin/imtest" "${subjdir}/grad_dev"` -eq 0 ]; then
         echo "${subjdir}/grad_dev not found" >&2
         exit 1
     fi
 fi
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+if [ `"${FSLDIR}/bin/imtest" "${subjdir}/nodif_brain_mask"` -eq 0 ]; then
     echo "${subjdir}/nodif_brain_mask not found" >&2
     exit 1
 fi
 
-if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
+if [ -e "${subjdir}.bedpostX/xfms/eye.mat" ]; then
     echo "${subjdir} has already been processed: ${subjdir}.bedpostX." >&2
     echo "Delete or rename ${subjdir}.bedpostX before repeating the process." >&2
     exit 1
 fi
 
-echo Making bedpostx directory structure
+echo "Making bedpostx directory structure"
 
-mkdir -p ${subjdir}.bedpostX/
-mkdir -p ${subjdir}.bedpostX/diff_slices
-mkdir -p ${subjdir}.bedpostX/logs
-mkdir -p ${subjdir}.bedpostX/logs/monitor
-mkdir -p ${subjdir}.bedpostX/xfms
+mkdir -p "${subjdir}.bedpostX/"
+mkdir -p "${subjdir}.bedpostX/diff_slices"
+mkdir -p "${subjdir}.bedpostX/logs"
+mkdir -p "${subjdir}.bedpostX/logs/monitor"
+mkdir -p "${subjdir}.bedpostX/xfms"
 
-echo Queuing preprocessing stages
-preprocid=`${FSLDIR}/bin/fsl_sub -T $preproc_time -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
+echo "Queuing preprocessing stages"
+preprocid=`"${FSLDIR}/bin/fsl_sub" -T $preproc_time -N bpx_preproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_preproc.sh" "${subjdir}" ${gflag}`
 
-echo Queuing parallel processing stage
-nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
-[ -f ${subjdir}.bedpostX/commands.txt ] && rm "${subjdir}.bedpostX/commands.txt"
+echo "Queuing parallel processing stage"
+nslices=`"${FSLDIR}/bin/fslval" "${subjdir}/data" dim3`
+[ -f "${subjdir}.bedpostX/commands.txt" ] && rm "${subjdir}.bedpostX/commands.txt"
 
 monitor
-if ! ${FSLDIR}/bin/fsl_sub --has_queues > /dev/null; then
-    ${subjdir}.bedpostX/monitor&
+if ! "${FSLDIR}/bin/fsl_sub" --has_queues > /dev/null; then
+    "${subjdir}.bedpostX/monitor" &
 fi
 
 slice=0
 while [ $slice -lt $nslices ]
 do
-    slicezp=`$FSLDIR/bin/zeropad $slice 4`
-    if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ] && [ -f ${subjdir}.bedpostX/logs/monitor/$slice ];then
+    slicezp=`"$FSLDIR/bin/zeropad" $slice 4`
+    if [ `"$FSLDIR/bin/imtest" "${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1"` -eq 1 ] && [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ];then
         echo "slice $slice has already been processed"
     else
-        [ -f ${subjdir}.bedpostX/logs/monitor/$slice ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
+        [ -f "${subjdir}.bedpostX/logs/monitor/$slice" ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
     if [ ${gflag} -eq 1 ]; then
         gopts="$opts --gradnonlin=${subjdir}/grad_dev_slice_${slicezp}"
     else
-        gopts=$opts
+        gopts="$opts"
     fi
     echo "${FSLDIR}/bin/bedpostx_single_slice.sh ${subjdir} ${slice} $gopts" \
         >> ${subjdir}.bedpostX/commands.txt
     fi
     slice=$(($slice + 1))
 done
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -T $single_slice_time -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+bedpostid=`"${FSLDIR}/bin/fsl_sub" -j $preprocid -T $single_slice_time -l "${subjdir}.bedpostX/logs" -N bedpostx -t "${subjdir}.bedpostX/commands.txt"`
 
 echo Queuing post processing stage
-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T $postproc_time -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+mergeid=`"${FSLDIR}/bin/fsl_sub" -j $bedpostid -T $postproc_time -N bpx_postproc -l "${subjdir}.bedpostX/logs" "${FSLDIR}/bin/bedpostx_postproc.sh" $subjdir`
 
-echo $mergeid > ${subjdir}.bedpostX/logs/postproc_ID
+echo "$mergeid" > "${subjdir}.bedpostX/logs/postproc_ID"
 
 if "${FSLDIR}/bin/fsl_sub" --has_queues > /dev/null; then
     echo
-    echo Type ${subjdir}.bedpostX/monitor to show progress.
-    echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
-    cat <<EOC > ${subjdir}.bedpostX/cancel
+    echo "Type ${subjdir}.bedpostX/monitor to show progress."
+    echo "Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks."
+    cat <<EOC > "${subjdir}.bedpostX/cancel"
 #!/bin/sh
 ${FSLDIR}/bin/fsl_sub --delete_job $mergeid
 ${FSLDIR}/bin/fsl_sub --delete_job $bedpostid
 ${FSLDIR}/bin/fsl_sub --delete_job $preprocid
 EOC
-    chmod +x ${subjdir}.bedpostX/cancel
+    chmod +x "${subjdir}.bedpostX/cancel"
 
     echo
     echo
