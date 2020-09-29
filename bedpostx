@@ -66,7 +66,7 @@ while [ \$finished -eq 0 ] ; do
     if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
         echo "All slices processed"
-	exit
+    exit
     fi
     if [ ! \$havedad -gt 0 ]; then
        exit 0
@@ -77,20 +77,20 @@ while [ \$finished -eq 0 ] ; do
     sleep 180;
 done
 EOM
-    chmod +x ${subjdir}.bedpostX/monitor
+    chmod +x "${subjdir}.bedpostX/monitor"
 }
 
 make_absolute(){
     dir=$1;
-    if [ -d ${dir} ]; then
-	OLDWD=`pwd`
-	cd ${dir}
-	dir_all=`pwd`
-	cd $OLDWD
+    if [ -d "${dir}" ]; then
+        OLDWD=`pwd`
+        cd "${dir}"
+        dir_all=`pwd`
+        cd "$OLDWD"
     else
-	dir_all=${dir}
+        dir_all="${dir}"
     fi
-    echo ${dir_all}
+    echo "${dir_all}"
 }
 
 [ "$1" = "" ] && Usage
@@ -133,12 +133,12 @@ opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery -
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
 if "${FSLDIR}/bin/fsl_sub" --has_queues; then
-	# Look for CUDA
+    # Look for CUDA
     if "${FSLDIR}/bin/fsl_sub" --has_coprocessor=cuda > /dev/null; then
         if [ -x "$0_gpu" ]; then
             exec "$0_gpu" $myopts
-		fi
-	fi
+        fi
+    fi
 fi
 
 echo subjectdir is $subjdir
@@ -146,49 +146,49 @@ echo subjectdir is $subjdir
 #check that all required files exist
 
 if [ ! -d $subjdir ]; then
-	echo "subject directory $1 not found" >&2
-	exit 1
+    echo "subject directory $1 not found" >&2
+    exit 1
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
     if [ -e ${subjdir}/bvecs.txt ]; then
-	mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
+        mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
     else
-	echo "${subjdir}/bvecs not found" >&2
-	exit 1
+        echo "${subjdir}/bvecs not found" >&2
+        exit 1
     fi
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
     if [ -e ${subjdir}/bvals.txt ]; then
-	mv ${subjdir}/bvals.txt ${subjdir}/bvals
+        mv ${subjdir}/bvals.txt ${subjdir}/bvals
     else
-	echo "${subjdir}/bvals not found" >&2
-	exit 1
+        echo "${subjdir}/bvals not found" >&2
+        exit 1
     fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
-	echo "${subjdir}/data not found" >&2
-	exit 1
+    echo "${subjdir}/data not found" >&2
+    exit 1
 fi
 
 if [ ${gflag} -eq 1 ]; then
     if [ `${FSLDIR}/bin/imtest ${subjdir}/grad_dev` -eq 0 ]; then
-	echo "${subjdir}/grad_dev not found" >&2
-	exit 1
+        echo "${subjdir}/grad_dev not found" >&2
+        exit 1
     fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
-	echo "${subjdir}/nodif_brain_mask not found" >&2
-	exit 1
+    echo "${subjdir}/nodif_brain_mask not found" >&2
+    exit 1
 fi
 
 if [ -e ${subjdir}.bedpostX/xfms/eye.mat ]; then
-	echo "${subjdir} has already been processed: ${subjdir}.bedpostX." >&2
-	echo "Delete or rename ${subjdir}.bedpostX before repeating the process." >&2
-	exit 1
+    echo "${subjdir} has already been processed: ${subjdir}.bedpostX." >&2
+    echo "Delete or rename ${subjdir}.bedpostX before repeating the process." >&2
+    exit 1
 fi
 
 echo Making bedpostx directory structure
@@ -216,16 +216,16 @@ while [ $slice -lt $nslices ]
 do
     slicezp=`$FSLDIR/bin/zeropad $slice 4`
     if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ] && [ -f ${subjdir}.bedpostX/logs/monitor/$slice ];then
-	echo "slice $slice has already been processed"
+        echo "slice $slice has already been processed"
     else
         [ -f ${subjdir}.bedpostX/logs/monitor/$slice ] && rm "${subjdir}.bedpostX/logs/monitor/$slice"
-	if [ ${gflag} -eq 1 ]; then
-	    gopts="$opts --gradnonlin=${subjdir}/grad_dev_slice_${slicezp}"
-	else
-	    gopts=$opts
-	fi
-	echo "${FSLDIR}/bin/bedpostx_single_slice.sh ${subjdir} ${slice} $gopts" \
-	    >> ${subjdir}.bedpostX/commands.txt
+    if [ ${gflag} -eq 1 ]; then
+        gopts="$opts --gradnonlin=${subjdir}/grad_dev_slice_${slicezp}"
+    else
+        gopts=$opts
+    fi
+    echo "${FSLDIR}/bin/bedpostx_single_slice.sh ${subjdir} ${slice} $gopts" \
+        >> ${subjdir}.bedpostX/commands.txt
     fi
     slice=$(($slice + 1))
 done
