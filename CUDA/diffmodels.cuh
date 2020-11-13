@@ -6,7 +6,7 @@
 
 /*  CCOPYRIGHT  */
 
-#include <device_vector.h>
+#include <thrust/device_vector.h>
 
 void fit_PVM_single(	//INPUT
 			const vector<ColumnVector> 	datam_vec, 

@@ -16,8 +16,8 @@
 #include "samples.h"
 #include "options.h"
 
-#include <host_vector.h>
-#include <device_vector.h> 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h> 
 
 #include <time.h>
 #include <sys/time.h>

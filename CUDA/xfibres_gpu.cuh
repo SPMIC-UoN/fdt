@@ -7,8 +7,8 @@
 /*  CCOPYRIGHT  */
 
 #include "newimage/newimageall.h"
-#include <host_vector.h>
-#include <device_vector.h> 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h> 
 
 #include "fibre_gpu.h"
 #include <curand_kernel.h>
