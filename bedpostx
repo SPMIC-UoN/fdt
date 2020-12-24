@@ -133,7 +133,7 @@ do
       -model) model=$2;shift;;
       -g) gflag=1;;
       -c) nocuda=1;;
-      *) other=("${other[@]}" "$1");;
+      *) other+=("$1");;
   esac
   shift
 done

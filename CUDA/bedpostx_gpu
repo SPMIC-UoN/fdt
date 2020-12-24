@@ -152,7 +152,7 @@ do
       -s) sampleevery=$2;shift;;
       -model) model=$2;shift;;
       -g) gflag=1;;
-      *) other=("${other[@]}" "$1");;
+      *) other+=("$1");;
   esac
   shift
 done
