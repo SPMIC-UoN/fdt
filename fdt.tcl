@@ -889,8 +889,8 @@ proc fdt:apply { w dialog } {
        	    if { $canwrite } {
        		puts "rm -rf $probtrack(output)"
        		exec rm -rf "$probtrack(output)"
-	        puts "mkdir -p "$probtrack(output)""
-		exec mkdir -p $probtrack(output)
+	        puts "mkdir -p $probtrack(output)"
+            exec mkdir -p "$probtrack(output)"
        	    }
 
 	    set filebase $probtrack(output)/fdt
