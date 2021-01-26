@@ -98,5 +98,5 @@ XFIBRES_OBJS = xfibres_gpu.o xfibresoptions.o diffmodels.o \
                Bingham_Watson_approx.o
 
 xfibres_gpu: libfsl-bedpostx_cuda.so ${XFIBRES_OBJS}
-	${CXX} ${CXXFLAGS} -o $@ ${XFIBRES_OBJS} \
-        ${LDFLAGS} -lfsl-bedpostx_cuda ${NVCCLDFLAGS}
+	${NVCC} ${NVCCFLAGS} -o $@ ${XFIBRES_OBJS} \
+        -lfsl-bedpostx_cuda ${NVCCLDFLAGS}
