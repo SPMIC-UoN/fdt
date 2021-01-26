@@ -1,31 +1,49 @@
 # This is the Makefile for the fdt project
 #
-# Some commands provided by fdt are CUDA-capable - these
-# commands can be compiled by setting the "cuda" variable
-# when calling make, i.e.:
+# The FDT project provides some CPU-only libraries and executables,
+# and some GPU/CUDA-enabled libraries and executables.
 #
-#     make gpu=1
+# This Makefile can be used in one of three modes:
+#  - make:             Compile/install only CPU code
+#  - make gpu=1:       Compile/install both CPU and GPU code
+#  - make cpu=0 gpu=1: Compile/install only GPU code
+#  - make cpu=0 gpu=0: Compile/install nothing
+#
+# A CUDA compiler and toolkit must be installed in order to compile
+# the GPU components.
+#
 
 include $(FSLCONFDIR)/default.mk
 
 PROJNAME = fdt
-SCRIPTS  = eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs \
-           select_dwi_vols bedpost bedpostx bedpostx_postproc.sh \
-           bedpostx_preproc.sh bedpostx_single_slice.sh \
-           bedpostx_datacheck
-FSCRIPTS = correct_and_average ocmr_preproc
-XFILES   = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres \
-           probtrackx pvmfit dtigen eddy_combine
-FXFILES  = reord_OM sausages replacevols fdt_matrix_ops indexer \
-           rearrange xfibres_pred
-SOFILES  =
-RUNTCLS  = Fdt
 LIBS     = -lfsl-warpfns -lfsl-basisfield -lfsl-meshclass \
            -lfsl-newimage -lfsl-miscmaths -lfsl-NewNifti \
            -lfsl-utils -lfsl-znz -lfsl-cprob
 CUDALIBS = -lcurand -lcudart -lcuda
+SCRIPTS  =
+FSCRIPTS =
+XFILES   =
+FXFILES  =
+RUNTCLS  =
+SOFILES  =
 
-ifdef cuda
+cpu ?= 1
+gpu ?= 0
+
+ifeq (${cpu}, 1)
+    SCRIPTS  += eddy_correct zeropad maskdyads probtrack fdt_rotate_bvecs \
+                select_dwi_vols bedpost bedpostx bedpostx_postproc.sh \
+                bedpostx_preproc.sh bedpostx_single_slice.sh \
+                bedpostx_datacheck
+    FSCRIPTS += correct_and_average ocmr_preproc
+    XFILES   += dtifit ccops medianfilter make_dyadic_vectors vecreg \
+                xfibres probtrackx pvmfit dtigen eddy_combine
+    FXFILES  += reord_OM sausages replacevols fdt_matrix_ops indexer \
+                rearrange xfibres_pred
+    RUNTCLS  += Fdt
+endif
+
+ifeq ($(gpu), 1)
 	XFILES  += merge_parts_gpu xfibres_gpu CUDA/split_parts_gpu
 	SCRIPTS += CUDA/bedpostx_gpu CUDA/bedpostx_postproc_gpu.sh
     SOFILES += libfsl-bedpostx_cuda.so
@@ -65,9 +83,8 @@ rubix: rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
 	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS}
 
 libfsl-bedpostx_cuda.so:
-	${NVCC} --shared \
+	${NVCC} --shared -o $@ \
 	  ${NVCCFLAGS} -ICUDA -ICUDA/options \
-      -o $@ \
       CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu \
       CUDA/runmcmc.cu CUDA/xfibres_gpu.cu ${NVCCLDFLAGS}
 
