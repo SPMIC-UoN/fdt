@@ -19,7 +19,7 @@ PROJNAME = fdt
 LIBS     = -lfsl-warpfns -lfsl-basisfield -lfsl-meshclass \
            -lfsl-newimage -lfsl-miscmaths -lfsl-NewNifti \
            -lfsl-utils -lfsl-znz -lfsl-cprob
-CUDALIBS = -lcurand -lcudart -lcuda
+CUDALIBS = -lcurand
 SCRIPTS  =
 FSCRIPTS =
 XFILES   =
