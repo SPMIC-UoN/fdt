@@ -1,10 +1,12 @@
 /*  Diffusion model fitting
 
     Timothy Behrens, Saad Jbabdi, Stam Sotiropoulos  - FMRIB Image Analysis Group
- 
+
     Copyright (C) 2005 University of Oxford  */
 
 /*  CCOPYRIGHT  */
+
+#include <memory>
 
 #include "Bingham_Watson_approx.h"
 #include "diffmodels.h"
@@ -84,13 +86,13 @@ ReturnMatrix DTI::calc_fa_grad(const ColumnVector& _intens)const{
   float b  = _l1*_l1+_l2*_l2+_l3*_l3;
 
   float _fa  = std::sqrt(3.0/2.0)*std::sqrt(t/b);
-  
+
 
   float dfadl1 = 3.0/4.0/_fa * ( 6.0/9.0*(2.0*_l1-_l2-_l3)/b - t/b/b*2.0*_l1 );
   float dfadl2 = 3.0/4.0/_fa * ( 6.0/9.0*(2.0*_l2-_l1-_l3)/b - t/b/b*2.0*_l2 );
   float dfadl3 = 3.0/4.0/_fa * ( 6.0/9.0*(2.0*_l3-_l1-_l2)/b - t/b/b*2.0*_l3 );
 
-  
+
 
   // determine dkdx
   ColumnVector dkdx(6);
@@ -126,7 +128,7 @@ float DTI::calc_fa_var()const{
   ColumnVector g(7);
   g.SubMatrix(1,6,1,1) = grd;
   g(7) = 0;
-  
+
   return((g.t()*m_covar*g).AsScalar());
 }
 
@@ -155,7 +157,7 @@ void DTI::angles2rot(const float& th1,const float& th2,const float& th3,Matrix& 
 }
 
 
-// nonlinear tensor fitting 
+// nonlinear tensor fitting
 void DTI::nonlinfit(){
   // initialise with linear fitting
   linfit();
@@ -184,7 +186,7 @@ void DTI::nonlinfit(){
 
 
   // do the fit
-  NonlinParam  lmpar(start.Nrows(),NL_LM); 
+  NonlinParam  lmpar(start.Nrows(),NL_LM);
   lmpar.SetGaussNewtonType(LM_L);
   lmpar.SetStartingEstimate(start);
 
@@ -225,7 +227,7 @@ void DTI::sort(){
   ls[2].first=m_l3;
   ls[2].second=2;
   vs[0]=m_v1;vs[1]=m_v2;vs[2]=m_v3;
-  
+
   std::sort(ls.begin(),ls.end());
 
   m_l1 = ls[2].first;
@@ -234,7 +236,7 @@ void DTI::sort(){
   m_v2 = vs[ ls[1].second ];
   m_l3 = ls[0].first;
   m_v3 = vs[ ls[0].second ];
-  
+
 }
 void DTI::calc_tensor_parameters(){
   Matrix Vd;
@@ -278,9 +280,9 @@ double DTI::cf(const NEWMAT::ColumnVector& p)const{
   }
   ////////////////////////////////////
   for(int i=1;i<=Y.Nrows();i++){
-    err = p(1)*anisoterm(i,ls,rot) - Y(i); 
-    cfv += err*err; 
-  }  
+    err = p(1)*anisoterm(i,ls,rot) - Y(i);
+    cfv += err*err;
+  }
   //OUT(cfv);
   //cout<<"--------"<<endl;
   return(cfv);
@@ -312,7 +314,7 @@ NEWMAT::ReturnMatrix DTI::grad(const NEWMAT::ColumnVector& p)const{
   float sig;
   for(int i=1;i<=Y.Nrows();i++){
     sig = p(1)*anisoterm(i,ls,rot);
-    
+
     J(i,1) = sig/p(1);
 
     x = rotproduct(bvecs.Column(i),rot);
@@ -332,7 +334,7 @@ NEWMAT::ReturnMatrix DTI::grad(const NEWMAT::ColumnVector& p)const{
 
   OUT(diff.t());
   OUT(J.t());
-  
+
   gradv = 2.0*J.t()*diff;
 
   OUT(gradv.t());
@@ -343,14 +345,14 @@ NEWMAT::ReturnMatrix DTI::grad(const NEWMAT::ColumnVector& p)const{
 }
 
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> DTI::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
-  boost::shared_ptr<BFMatrix>   hessm;
+std::shared_ptr<BFMatrix> DTI::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
 
   cout<<"hess"<<endl;
   OUT(p.t());
-  
+
   ////////////////////////////////////
   ColumnVector ls(3);
   Matrix rot(3,3);
@@ -369,7 +371,7 @@ boost::shared_ptr<BFMatrix> DTI::hess(const NEWMAT::ColumnVector& p,boost::share
   float sig;
   for(int i=1;i<=Y.Nrows();i++){
     sig = p(1)*anisoterm(i,ls,rot);
-    
+
     J(i,1) = sig/p(1);
 
     x = rotproduct(bvecs.Column(i),rot);
@@ -384,7 +386,7 @@ boost::shared_ptr<BFMatrix> DTI::hess(const NEWMAT::ColumnVector& p,boost::share
     x = rotproduct(bvecs.Column(i),rot3,rot);
     J(i,7) = -2.0*bvals(1,i)*(ls(1)*x(1)+ls(2)*x(2)+ls(3)*x(3))*sig;
   }
-  
+
 
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
@@ -408,21 +410,21 @@ boost::shared_ptr<BFMatrix> DTI::hess(const NEWMAT::ColumnVector& p,boost::share
 
 ColumnVector DTI::rotproduct(const ColumnVector& x,const Matrix& R)const{
   ColumnVector ret(3);
-  
+
   for(int i=1;i<=3;i++)
     ret(i) = x(1)*x(1)*R(1,i)*R(1,i)+x(2)*x(2)*R(2,i)*R(2,i)+x(3)*x(3)*R(3,i)*R(3,i)
-      +2.0*( x(1)*R(1,i)*(x(2)*R(2,i)+x(3)*R(3,i)) +x(2)*x(3)*R(2,i)*R(3,i) );   
-  
+      +2.0*( x(1)*R(1,i)*(x(2)*R(2,i)+x(3)*R(3,i)) +x(2)*x(3)*R(2,i)*R(3,i) );
+
   return ret;
 }
 ColumnVector DTI::rotproduct(const ColumnVector& x,const Matrix& R1,const Matrix& R2)const{
   ColumnVector ret(3);
-  
+
   for(int i=1;i<=3;i++)
     ret(i) = x(1)*x(1)*R1(1,i)*R2(1,i)+x(2)*x(2)*R1(2,i)*R2(2,i)+x(3)*x(3)*R1(3,i)*R2(3,i)
       +( x(1)*R1(1,i)*(x(2)*R2(2,i)+x(3)*R2(3,i)) +x(2)*x(3)*R1(2,i)*R2(3,i) )
-      +( x(1)*R2(1,i)*(x(2)*R1(2,i)+x(3)*R1(3,i)) +x(2)*x(3)*R2(2,i)*R1(3,i) );   
-  
+      +( x(1)*R2(1,i)*(x(2)*R1(2,i)+x(3)*R1(3,i)) +x(2)*x(3)*R2(2,i)*R1(3,i) );
+
   return ret;
 }
 
@@ -437,7 +439,7 @@ float DTI::anisoterm(const int& pt,const ColumnVector& ls,const Matrix& rot)cons
 
 
 /////////////////////////////////////////////////////////////////////////
-//       PARTIAL VOLUME MODEL - SINGLE SHELL 
+//       PARTIAL VOLUME MODEL - SINGLE SHELL
 // Constrained Optimization for the diffusivity, fractions and their sum<1
 //////////////////////////////////////////////////////////////////////////
 
@@ -463,12 +465,12 @@ void PVM_single_c::fit(){
     start(i+1) = _th;
     start(i+2) = _ph;
   }
-  
+
   // do a better job for initializing the volume fractions
   fit_pvf(start);
 
   // do the fit
-  NonlinParam  lmpar(start.Nrows(),NL_LM); 
+  NonlinParam  lmpar(start.Nrows(),NL_LM);
   lmpar.SetGaussNewtonType(LM_L);
   lmpar.SetStartingEstimate(start);
 
@@ -476,8 +478,8 @@ void PVM_single_c::fit(){
   status = nonlin(lmpar,(*this));
   ColumnVector final_par(nparams);
   final_par = lmpar.Par();
-  
-  if (m_eval_BIC){ 
+
+  if (m_eval_BIC){
     double RSS=cf(final_par); //get the sum of squared residuals
     m_BIC=npts*log(RSS/npts)+log(npts)*nparams; //evaluate BIC
   }
@@ -491,28 +493,28 @@ void PVM_single_c::fit(){
     m_th(k) = final_par(kk+1);
     m_ph(k) = final_par(kk+2);
   }
-  
+
   if (m_return_fanning)
     Fanning_angles_from_Hessian();
-  
+
   if (m_include_f0)
     m_f0=beta2f(final_par(nparams))*partial_fsum(m_f,nfib);
-  
-  sort(); 
+
+  sort();
 }
 
 void PVM_single_c::sort(){
   vector< pair<float,int> > fvals(nfib);
   ColumnVector ftmp(nfib),thtmp(nfib),phtmp(nfib),fantmp;
   vector<ColumnVector> Hess_vec_tmp; vector<Matrix> Hess;
-  ftmp=m_f;thtmp=m_th;phtmp=m_ph; 
-  
+  ftmp=m_f;thtmp=m_th;phtmp=m_ph;
+
   if (m_return_fanning){
       fantmp=m_fanning_angles;
       Hess_vec_tmp=m_invprHes_e1;
       Hess=m_Hessian;
   }
-  
+
   for(int i=1;i<=nfib;i++){
     pair<float,int> p(m_f(i),i);
     fvals[i-1] = p;
@@ -548,7 +550,7 @@ void PVM_single_c::fix_fsum(ColumnVector& fs)const{
   for(int i=1;i<=nfib;i++){
     sumf+=fs(i);
     if(sumf>=1){
-      for(int j=i;j<=nfib;j++) 
+      for(int j=i;j<=nfib;j++)
 	fs(j)=FSMALL;  //make the fraction almost zero
       break;
     }
@@ -556,7 +558,7 @@ void PVM_single_c::fix_fsum(ColumnVector& fs)const{
 }
 
 
-//Find the volume fractions given all the other model 
+//Find the volume fractions given all the other model
 //parameters using Linear Least Squares
 void PVM_single_c::fit_pvf(ColumnVector& x)const{
   ColumnVector fs(nfib);
@@ -588,7 +590,7 @@ void PVM_single_c::fit_pvf(ColumnVector& x)const{
     fs(k)=fabs(fs(k));    //make sure that the initial values for the fractions are positive
 
   fix_fsum(fs);
-  
+
   for(int k=1;k<=nfib;k++){
     float tmpr=fs(k)/partial_fsum(fs,k-1);
     if (tmpr>1.0) tmpr=1; //This can be due to numerical errors
@@ -615,8 +617,8 @@ void PVM_single_c::print()const{
     x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
     if(x(3)<0)x=-x;
     float _th,_ph;cart2sph(x,_th,_ph);
-    cout << "TH" << i << "  :" << _th << endl; 
-    cout << "PH" << i << "  :" << _ph << endl; 
+    cout << "TH" << i << "  :" << _th << endl;
+    cout << "PH" << i << "  :" << _ph << endl;
     cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
   }
   if (m_include_f0)
@@ -637,8 +639,8 @@ void PVM_single_c::print(const ColumnVector& p)const{
   for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
     f(ii) = beta2f(p(i))*partial_fsum(f,ii-1);
     cout << "F" << ii << "   :" << f(ii) << endl;
-    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
-    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
+    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl;
+    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl;
   }
   if (m_include_f0)
     cout << "F0    :" << beta2f(p(nparams))*partial_fsum(f,nfib);
@@ -651,7 +653,7 @@ ReturnMatrix PVM_single_c::get_prediction()const{
   ColumnVector pred(npts);
   ColumnVector p(nparams);
   ColumnVector fs(nfib);
-  
+
   fs=m_f;
   p(1) = m_s0;
   p(2) = d2lambda(m_d);
@@ -700,10 +702,10 @@ NEWMAT::ReturnMatrix PVM_single_c::forwardModel(const NEWMAT::ColumnVector& p)co
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
-  }  
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val);
+  }
   pred.Release();
   return pred;
 }
@@ -739,12 +741,12 @@ double PVM_single_c::cf(const NEWMAT::ColumnVector& p)const{
     }
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
-      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i)); 
+      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i));
     }
     else
-      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i)); 
-    cfv += err*err; 
-  }  
+      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i));
+    cfv += err*err;
+  }
   return(cfv);
 }
 
@@ -759,7 +761,7 @@ NEWMAT::ReturnMatrix PVM_single_c::grad(const NEWMAT::ColumnVector& p)const{
   ColumnVector bs(nfib);
   Matrix x(nfib,3);ColumnVector xx(3); ColumnVector yy(3);
   float sumf=0;
-  
+
   for(int k=1;k<=nfib;k++){
     int kk = 3+3*(k-1);
     bs(k)=p(kk);
@@ -773,12 +775,12 @@ NEWMAT::ReturnMatrix PVM_single_c::grad(const NEWMAT::ColumnVector& p)const{
   ////////////////////////////////////
   Matrix f_deriv;
   //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
-  f_deriv=fractions_deriv(nfib, fs, bs);  
+  f_deriv=fractions_deriv(nfib, fs, bs);
 
   Matrix J(npts,nparams);     //Get the Jacobian of the model equation. The derivatives of the cost function
                               //for parameter j will then be: Grad_j=Sum(2*(F(x_i)-Y_i)J(i,j)), Sum across data points i
   ColumnVector diff(npts);
-  float sig, Iso_term; 
+  float sig, Iso_term;
   ColumnVector Aniso_terms(nfib);
 
   for(int i=1;i<=Y.Nrows();i++){
@@ -796,7 +798,7 @@ NEWMAT::ReturnMatrix PVM_single_c::grad(const NEWMAT::ColumnVector& p)const{
       // other stuff for derivatives
       // lambda (i.e. d)
       J(i,2) += p(1)*fs(k)*anisoterm_lambda(i,p(2),xx);
-      
+
       // beta (i.e. f)
       J(i,kk)=0;
       for (int j=1; j<=nfib; j++){
@@ -830,12 +832,12 @@ NEWMAT::ReturnMatrix PVM_single_c::grad(const NEWMAT::ColumnVector& p)const{
 
 //this uses Gauss-Newton approximation, i.e Hij ~ Sum(Gj*Gk), with G the derivative of the cost function with respect to parameter j
 //and the Sum over all data points.
-boost::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
+std::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
   //cout<<"HESS"<<endl;
   //OUT(p.t());
-  boost::shared_ptr<BFMatrix>   hessm;
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
 
   float _d = lambda2d(p(2));
   ////////////////////////////////////
@@ -857,7 +859,7 @@ boost::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,boo
   f_deriv=fractions_deriv(nfib, fs, bs);
 
   Matrix J(npts,nparams);
-  float sig, Iso_term; 
+  float sig, Iso_term;
   ColumnVector Aniso_terms(nfib);
 
   for(int i=1;i<=Y.Nrows();i++){
@@ -875,7 +877,7 @@ boost::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,boo
       // other stuff for derivatives
       // lambda (i.e. d)
       J(i,2) += p(1)*fs(k)*anisoterm_lambda(i,p(2),xx);
-      
+
       // beta (i.e. f)
       J(i,kk)=0;
       for (int j=1; j<=nfib; j++){
@@ -919,35 +921,35 @@ boost::shared_ptr<BFMatrix> PVM_single_c::hess(const NEWMAT::ColumnVector& p,boo
 
 
 //Once the model is fitted: For each fibre, compute a 3x3 Hessian of the Cost function at the cartesian (x,y,z) coordinates of the orientation,
-//evaluated at the estimated parameters. Return the second eigenvector of the (inverse) Hessian - No need to invert though! 
+//evaluated at the estimated parameters. Return the second eigenvector of the (inverse) Hessian - No need to invert though!
 void PVM_single_c::eval_Hessian_at_peaks(){
   vector<ColumnVector> V;
   ColumnVector temp_vec(3);
   float fiso=1,dot, Saniso,dSaniso_dx,dSaniso_dy,dSaniso_dz;
   ColumnVector S(npts), F(npts);
   Matrix dS_dx(npts,nfib), dS_dy(npts,nfib), dS_dz(npts,nfib);
-  Matrix dS_dxdx(npts,nfib), dS_dydy(npts,nfib), dS_dzdz(npts,nfib), dS_dxdy(npts,nfib),dS_dxdz(npts,nfib),dS_dydz(npts,nfib); 
-  
+  Matrix dS_dxdx(npts,nfib), dS_dydy(npts,nfib), dS_dzdz(npts,nfib), dS_dxdy(npts,nfib),dS_dxdz(npts,nfib),dS_dydz(npts,nfib);
+
   for (int n=1; n<=nfib; n++){
     temp_vec<< cos(m_ph(n))*sin(m_th(n)) << sin(m_ph(n))*sin(m_th(n)) << cos(m_th(n));
-    V.push_back(temp_vec); 
+    V.push_back(temp_vec);
     fiso-=m_f(n);
   }
-  
-  for (int i=1; i<=npts; i++){      
+
+  for (int i=1; i<=npts; i++){
     float bd=bvals(1,i)*m_d;
     S(i)=fiso*exp(-bd);
     for (int n=1; n<=nfib; n++){
       dot=V[n-1](1)*bvecs(1,i)+V[n-1](2)*bvecs(2,i)+V[n-1](3)*bvecs(3,i);
-      
+
       Saniso=exp(-bd*dot*dot);
       S(i)=S(i)+m_f(n)*Saniso;
-  
+
       float dot1=-2*bd*dot*Saniso; float dot2=-2*bd*dot; float dot3=-2*bd*Saniso; float fS0=m_s0*m_f(n);
       //First Derivatives of the signal wrt x,y,z
       dSaniso_dx=dot1*bvecs(1,i);  dSaniso_dy=dot1*bvecs(2,i); dSaniso_dz=dot1*bvecs(3,i);
       dS_dx(i,n)=fS0*dSaniso_dx;   dS_dy(i,n)=fS0*dSaniso_dy;  dS_dz(i,n)=fS0*dSaniso_dz;
-      //Second Derivatives of the signal wrt x,y,z             
+      //Second Derivatives of the signal wrt x,y,z
       dS_dxdx(i,n)=fS0*bvecs(1,i)*(dSaniso_dx*dot2+dot3*bvecs(1,i));  dS_dydy(i,n)=fS0*bvecs(2,i)*(dSaniso_dy*dot2+dot3*bvecs(2,i));
       dS_dzdz(i,n)=fS0*bvecs(3,i)*(dSaniso_dz*dot2+dot3*bvecs(3,i));  dS_dxdy(i,n)=fS0*bvecs(1,i)*(dSaniso_dy*dot2+dot3*bvecs(2,i));
       dS_dxdz(i,n)=fS0*bvecs(1,i)*(dSaniso_dz*dot2+dot3*bvecs(3,i));  dS_dydz(i,n)=fS0*bvecs(2,i)*(dSaniso_dz*dot2+dot3*bvecs(3,i));
@@ -957,7 +959,7 @@ void PVM_single_c::eval_Hessian_at_peaks(){
 
   for (int n=1; n<=nfib; n++){   //For each fibre, compute the Hessian matrix of the cost function at (x,y,z)
     SymmetricMatrix H(3); H=0;
-    for (int i=1; i<=npts; i++){       
+    for (int i=1; i<=npts; i++){
       H(1,1)-=dS_dx(i,n)*dS_dx(i,n)-F(i)*dS_dxdx(i,n);
       H(2,2)-=dS_dy(i,n)*dS_dy(i,n)-F(i)*dS_dydy(i,n);
       H(3,3)-=dS_dz(i,n)*dS_dz(i,n)-F(i)*dS_dzdz(i,n);
@@ -967,20 +969,20 @@ void PVM_single_c::eval_Hessian_at_peaks(){
     }
     H=-2*H;
     m_Hessian.push_back(H); //store the Hessian
-  } 
-}      
+  }
+}
 
 
 
-//For each fibre, get the projection of the inverse Hessian to the fanning plane. 
+//For each fibre, get the projection of the inverse Hessian to the fanning plane.
 //Its first eigenvector will be utilized to get a fanning angle in [0,pi).
 void PVM_single_c::Fanning_angles_from_Hessian(){
   Matrix Rth(3,3), Rph(3,3), R(3,3), H, A(3,3), P(3,3), E;
   DiagonalMatrix L; SymmetricMatrix Q(3);
   ColumnVector e1(3),vfib(3),v2(3),v3(3);
- 
+
   eval_Hessian_at_peaks();  //Compute the Hessian for each fibre orientation
-  
+
   //Then project the inverse Hessian to the fanning plane (perpendicular to the orientation) and obtain its first eigenvector
   for (int n=1; n<=nfib; n++){      //For each fitted fibre
     P << 0 << 0 << 0
@@ -998,17 +1000,17 @@ void PVM_single_c::Fanning_angles_from_Hessian(){
     float mag=sqrt(v2(1)*v2(1)+v2(2)*v2(2)+v2(3)*v2(3));
     v2=v2/mag;
     v3 << vfib(2)*v2(3)-vfib(3)*v2(2) << vfib(3)*v2(1)-vfib(1)*v2(3) << vfib(1)*v2(2)-vfib(2)*v2(1); //Now get the cross product
- 
-    //Define a Projection Matrix to the plane perpendicular to the fibre orientation vfib   
+
+    //Define a Projection Matrix to the plane perpendicular to the fibre orientation vfib
     A.Row(1)<<vfib.t(); A.Row(2)<<v2.t(); A.Row(3)<<v3.t();
     P= P*A;
-    
+
     try{                   //If the Hessian is invertible (might not be in some background voxels)
       Q << P*H.i()*P.t();  //Project the inverse Hessian to this plane
       EigenValues(Q,L,E);  //Eigendecompose the projected inverse Hessian
       e1 = E.Column(3);    //Projected Hessian 1st eigenvector
     }
-    catch(...){            //Otherwise give a random value and proceed        
+    catch(...){            //Otherwise give a random value and proceed
       e1<<1<<0<<0;
     }
     e1 << A.t()*e1;
@@ -1017,8 +1019,8 @@ void PVM_single_c::Fanning_angles_from_Hessian(){
     //if (dot<0) {e1=-e1; dot=-dot; }
     //p=e1-dot*vfib; //Projection of e2 on a plane perpendicular to vfib
     //p=p/sqrt(p(1)*p(1)+p(2)*p(2)+p(3)*p(3));
-    //e1=p; 
-    
+    //e1=p;
+
     Rth<<costh << 0 << -sinth
        <<0     << 1 << 0
        <<sinth << 0 << costh;
@@ -1026,11 +1028,11 @@ void PVM_single_c::Fanning_angles_from_Hessian(){
        <<-sinph<< cosph <<0
        <<0     << 0     <<1;
     R=Rth*Rph;      //Rotation Matrix for vfib to become parallel to z
-    
+
     e1<< R*e1;      //Rotate the fanning plane effectively to xy plane
     m_fanning_angles(n)=atan2(-e1(1),e1(2));  //this gives [-pi,pi] range
     if (m_fanning_angles(n)<0)  m_fanning_angles(n)+=M_PI;  //transform it to [0,pi]
-    //cout<<m_fanning_angles(n)<<endl<<endl;  
+    //cout<<m_fanning_angles(n)<<endl<<endl;
   }
 }
 
@@ -1055,7 +1057,7 @@ void PVM_single::fit(){
   start(1) = dti.get_s0();
   start(2) = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
   //start(2) = dti.get_l1()>0?dti.get_l1():0.002; // empirically found that d~L1
-  start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA 
+  start(3) = dti.get_fa()<1?f2x(dti.get_fa()):f2x(0.95); // first pvf = FA
   start(4) = _th;
   start(5) = _ph;
   float sumf=x2f(start(3));
@@ -1074,9 +1076,9 @@ void PVM_single::fit(){
   }
   if (m_include_f0)
     start(nparams)=f2x(FSMALL);
- 
+
   // do the fit
-  NonlinParam  lmpar(start.Nrows(),NL_LM); 
+  NonlinParam  lmpar(start.Nrows(),NL_LM);
   lmpar.SetGaussNewtonType(LM_L);
   lmpar.SetStartingEstimate(start);
 
@@ -1119,7 +1121,7 @@ void PVM_single::sort(){
 
 void PVM_single::fix_fsum(){
   float sumf=0;
-  if (m_include_f0) 
+  if (m_include_f0)
     sumf=m_f0;
   for(int i=1;i<=nfib;i++){
     sumf+=m_f(i);
@@ -1152,7 +1154,7 @@ NEWMAT::ReturnMatrix PVM_single::forwardModel(const NEWMAT::ColumnVector& p)cons
   pred = 0;
   float val;
   float _d = std::abs(p(2));
-  
+
   ////////////////////////////////////
   ColumnVector fs(nfib);
   Matrix x(nfib,3);
@@ -1174,10 +1176,10 @@ NEWMAT::ReturnMatrix PVM_single::forwardModel(const NEWMAT::ColumnVector& p)cons
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
-  }  
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val);
+  }
   pred.Release();
   //cout<<"----"<<endl;
   return pred;
@@ -1210,12 +1212,12 @@ double PVM_single::cf(const NEWMAT::ColumnVector& p)const{
     }
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
-      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i)); 
+      err = (p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+err) - Y(i));
     }
     else
-      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i)); 
-    cfv += err*err; 
-  }  
+      err = (p(1)*((1-sumf)*isoterm(i,_d)+err) - Y(i));
+    cfv += err*err;
+  }
   //OUT(cfv);
   //cout<<"----"<<endl;
   return(cfv);
@@ -1275,7 +1277,7 @@ NEWMAT::ReturnMatrix PVM_single::grad(const NEWMAT::ColumnVector& p)const{
     diff(i) = sig - Y(i);
     J(i,1) = sig/p(1);
   }
-  
+
   gradv = 2*J.t()*diff;
   gradv.Release();
   return gradv;
@@ -1284,12 +1286,12 @@ NEWMAT::ReturnMatrix PVM_single::grad(const NEWMAT::ColumnVector& p)const{
 }
 
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
+std::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
   //cout<<"HESS"<<endl;
   //OUT(p.t());
-  boost::shared_ptr<BFMatrix>   hessm;
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
 
   float _d = std::abs(p(2));
   ////////////////////////////////////
@@ -1337,7 +1339,7 @@ boost::shared_ptr<BFMatrix> PVM_single::hess(const NEWMAT::ColumnVector& p,boost
     }
     J(i,1) = sig/p(1);
   }
-  
+
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sig = 0.0;
@@ -1387,9 +1389,9 @@ void PVM_multi::fit(){
   }
   if (m_include_f0)
     start(nparams)=f2x(pvm1.get_f0());
-  
+
   // do the fit
-  NonlinParam  lmpar(start.Nrows(),NL_LM); 
+  NonlinParam  lmpar(start.Nrows(),NL_LM);
   lmpar.SetGaussNewtonType(LM_L);
   lmpar.SetStartingEstimate(start);
 
@@ -1432,7 +1434,7 @@ void PVM_multi::sort(){
 
 void PVM_multi::fix_fsum(){
   float sumf=0;
-  if (m_include_f0) 
+  if (m_include_f0)
     sumf=m_f0;
   for(int i=1;i<=nfib;i++){
     if (m_f(i)==0) m_f(i)=FSMALL;
@@ -1489,10 +1491,10 @@ NEWMAT::ReturnMatrix PVM_multi::forwardModel(const NEWMAT::ColumnVector& p)const
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
       pred(i) = std::abs(p(1))*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_a,_b)+val);
-    } 
+    }
     else
-      pred(i) = std::abs(p(1))*((1-sumf)*isoterm(i,_a,_b)+val); 
-  }   
+      pred(i) = std::abs(p(1))*((1-sumf)*isoterm(i,_a,_b)+val);
+  }
   pred.Release();
   return pred;
 }
@@ -1522,15 +1524,15 @@ double PVM_multi::cf(const NEWMAT::ColumnVector& p)const{
     err = 0.0;
     for(int k=1;k<=nfib;k++){
       err += fs(k)*anisoterm(i,_a,_b,x.Row(k).t(),m_Gamma_for_ball_only);
-    } 
+    }
     if (m_include_f0){
       float temp_f0=x2f(p(nparams));
-      err = (std::abs(p(1))*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_a,_b)+err) - Y(i)); 
+      err = (std::abs(p(1))*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_a,_b)+err) - Y(i));
     }
     else
-      err = (std::abs(p(1))*((1-sumf)*isoterm(i,_a,_b)+err) - Y(i)); 
-    cfv += err*err; 
-  }  
+      err = (std::abs(p(1))*((1-sumf)*isoterm(i,_a,_b)+err) - Y(i));
+    cfv += err*err;
+  }
   //OUT(cfv);
   //cout<<"----"<<endl;
   return(cfv);
@@ -1557,7 +1559,7 @@ NEWMAT::ReturnMatrix PVM_multi::grad(const NEWMAT::ColumnVector& p)const{
     x(k,3) = cos(p(kk+1));
   }
   ////////////////////////////////////
-  Matrix J(npts,nparams);   
+  Matrix J(npts,nparams);
   ColumnVector diff(npts);
   float sig;
   for(int i=1;i<=Y.Nrows();i++){
@@ -1596,7 +1598,7 @@ NEWMAT::ReturnMatrix PVM_multi::grad(const NEWMAT::ColumnVector& p)const{
 
     J(i,1) = (p(1)>0?1.0:-1.0)*sig/p(1);
   }
-  
+
   gradv = 2*J.t()*diff;
   //OUT(gradv.t());
   //cout<<"----"<<endl;
@@ -1606,12 +1608,12 @@ NEWMAT::ReturnMatrix PVM_multi::grad(const NEWMAT::ColumnVector& p)const{
 
 
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
+std::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
   //cout<<"HESS"<<endl;
   //OUT(p.t());
-  boost::shared_ptr<BFMatrix>   hessm;
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
 
   float _a = std::abs(p(2));
   float _b = std::abs(p(3));
@@ -1663,10 +1665,10 @@ boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost:
       sig = std::abs(p(1))*((1-sumf)*isoterm(i,_a,_b)+sig);
       J(i,2) += (p(2)>0?1.0:-1.0)*std::abs(p(1))*(1-sumf)*isoterm_a(i,_a,_b);
       J(i,3) += (p(3)>0?1.0:-1.0)*std::abs(p(1))*(1-sumf)*isoterm_b(i,_a,_b);
-    }  
+    }
     J(i,1) = (p(1)>0?1.0:-1.0)*sig/p(1);
   }
-  
+
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sig = 0.0;
@@ -1689,7 +1691,7 @@ boost::shared_ptr<BFMatrix> PVM_multi::hess(const NEWMAT::ColumnVector& p,boost:
 
 
 ///////////////////////////////////////////////////////////////////////////
-// FANNING MODEL - BALL & BINGHAMS 
+// FANNING MODEL - BALL & BINGHAMS
 // Constrained Optimization for the diffusivity, fractions and their sum<1,
 // and the Bingham eigenvalues
 //////////////////////////////////////////////////////////////////////////
@@ -1703,7 +1705,7 @@ void PVM_Ball_Binghams::fit(){
   ColumnVector k1_init, w_init;
   ColumnVector final_par(nparams);
   double minRSS=1e20;
-  if (!m_gridsearch){    //Initialize the fanning eigenvalues using a grid or a set of intermediate values  
+  if (!m_gridsearch){    //Initialize the fanning eigenvalues using a grid or a set of intermediate values
     k1_init.ReSize(1); k1_init<<20;
     w_init.ReSize(1); w_init<<5.0;
   }
@@ -1717,20 +1719,20 @@ void PVM_Ball_Binghams::fit(){
 
       ColumnVector start(nparams);
       ColumnVector fs(nfib); fs=0;
-      //Initialize the non-linear fitter. Transform all initial values to the unconstrained parameter space 
+      //Initialize the non-linear fitter. Transform all initial values to the unconstrained parameter space
       start(1) = pvmbs.get_s0();
       start(2) = d2lambda(pvmbs.get_d());
       for(int n=1,i=3; n<=nfib; n++,i+=nparams_per_fibre){
 	fs(n)=pvmbs.get_f(n);
 	float tmpr=fs(n)/partial_fsum(fs,n-1);
 	if (tmpr>1) tmpr=1; //This can be true due to numerical errors
-	start(i) = f2beta(tmpr); 
+	start(i) = f2beta(tmpr);
 	start(i+1) = pvmbs.get_th(n);
 	start(i+2) = pvmbs.get_ph(n);
 	start(i+3) = pvmbs.get_fanning_angle(n);
 	start(i+4) = k12l1(k1_init(n1));
-	start(i+5) = w2gam(w_init(n2)); 
-      } 
+	start(i+5) = w2gam(w_init(n2));
+      }
       if (m_include_f0){
 	float tmpr=pvmbs.get_f0()/partial_fsum(fs,nfib);
 	if (tmpr>1) tmpr=1; //This can be true due to numerical errors
@@ -1738,17 +1740,17 @@ void PVM_Ball_Binghams::fit(){
       }
 
       // do the fit
-      NonlinParam  lmpar(start.Nrows(),NL_LM); 
+      NonlinParam  lmpar(start.Nrows(),NL_LM);
       lmpar.SetGaussNewtonType(LM_LM);
       lmpar.SetStartingEstimate(start);
-  
+
       //lmpar.LogCF(true);
- 
+
       NonlinOut status;
       status = nonlin(lmpar,(*this));
       ColumnVector tmp_par(nparams);
       tmp_par = lmpar.Par();
-      
+
       //cout<<"Number of Iterations: "<<lmpar.NIter()<<endl;
       //vector<double> Cf=lmpar.CFHistory();
       //for (int n=0; n<(int)Cf.size(); n++)
@@ -1760,8 +1762,8 @@ void PVM_Ball_Binghams::fit(){
 	minRSS=RSS;
       }
     }
- 
-  if (m_eval_BIC){ 
+
+  if (m_eval_BIC){
     m_BIC=npts*log(minRSS/npts)+log(npts)*nparams; //evaluate BIC
     //cout<<"RSS="<<RSS<<". BIC="<<m_BIC<<endl;
   }
@@ -1782,16 +1784,16 @@ void PVM_Ball_Binghams::fit(){
 
   if (m_include_f0)
     m_f0=beta2f(final_par(nparams))*partial_fsum(m_f,nfib);
-  
-  sort(); 
+
+  sort();
 }
 
 
 void PVM_Ball_Binghams::sort(){
   vector< pair<float,int> > fvals(nfib);
   ColumnVector ftmp(nfib),thtmp(nfib),phtmp(nfib),psitmp(nfib),k1tmp(nfib),k2tmp(nfib);
-  ftmp=m_f;thtmp=m_th;phtmp=m_ph; psitmp=m_psi; k1tmp=m_k1; k2tmp=m_k2; 
-  
+  ftmp=m_f;thtmp=m_th;phtmp=m_ph; psitmp=m_psi; k1tmp=m_k1; k2tmp=m_k2;
+
   for(int i=1;i<=nfib;i++){
     pair<float,int> p(m_f(i),i);
     fvals[i-1] = p;
@@ -1833,8 +1835,8 @@ void PVM_Ball_Binghams::print()const{
     fan_vec=get_fanning_vector(i);
     float _th,_ph,_psi;cart2sph(x,_th,_ph); _psi=m_psi(i);
     if(x(3)<0) {x=-x; _psi=M_PI-m_psi(i); }
-    cout << "TH"  << i << " : " << _th*180.0/M_PI << " deg" << endl; 
-    cout << "PH"  << i << " : " << _ph*180.0/M_PI << " deg" << endl; 
+    cout << "TH"  << i << " : " << _th*180.0/M_PI << " deg" << endl;
+    cout << "PH"  << i << " : " << _ph*180.0/M_PI << " deg" << endl;
     cout << "PSI" << i << " : " <<_psi<<endl;
     cout << "DIR" << i << " : " << x(1) << " " << x(2) << " " << x(3) << endl;
     cout << "FAN_DIR" << i << " : " << fan_vec(1) << " " << fan_vec(2) << " " << fan_vec(3) << endl;
@@ -1853,7 +1855,7 @@ void PVM_Ball_Binghams::print()const{
 //i.e. need to untransform them to get d,f's etc
 void PVM_Ball_Binghams::print(const ColumnVector& p)const{
   ColumnVector f(nfib);
-  
+
   cout << "PARAMETER VALUES " << endl;
   cout << "S0   :" << p(1) << endl;
   cout << "D    :" << lambda2d(p(2)) << endl;
@@ -1861,11 +1863,11 @@ void PVM_Ball_Binghams::print(const ColumnVector& p)const{
     f(ii) = beta2f(p(i))*partial_fsum(f,ii-1);
     float k1=l12k1(p(i+4));
     cout << "F" << ii << "   :" << f(ii) << endl;
-    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
-    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
-    cout << "PSI" << ii << "  :"<< p(i+3)*180.0/M_PI << " deg" << endl; 
-    cout << "k1_" << ii << "  :"<< k1 << endl; 
-    cout << "k2_" << ii << "  :"<< k1/gam2w(p(i+4))<< endl; 
+    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl;
+    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl;
+    cout << "PSI" << ii << "  :"<< p(i+3)*180.0/M_PI << " deg" << endl;
+    cout << "k1_" << ii << "  :"<< k1 << endl;
+    cout << "k2_" << ii << "  :"<< k1/gam2w(p(i+4))<< endl;
   }
   if (m_include_f0)
     cout << "F0    :" << beta2f(p(nparams))*partial_fsum(f,nfib);
@@ -1873,12 +1875,12 @@ void PVM_Ball_Binghams::print(const ColumnVector& p)const{
 
 
 
-//Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)  
+//Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
 ReturnMatrix PVM_Ball_Binghams::get_prediction()const{
   ColumnVector pred(npts);
   ColumnVector p(nparams);
   ColumnVector fs(nfib);
-  
+
   fs=m_f;
   p(1) = m_s0;   //Transform parameters to the space where they are uncostrained
   p(2) = d2lambda(m_d);
@@ -1901,11 +1903,11 @@ ReturnMatrix PVM_Ball_Binghams::get_prediction()const{
   pred = forwardModel(p);
   pred.Release();
   return pred;
-} 
+}
 
 
 
-//Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)  
+//Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)
 NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel(const NEWMAT::ColumnVector& p)const{
   ColumnVector pred(npts);
   pred = 0;
@@ -1924,7 +1926,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel(const NEWMAT::ColumnVector&
     sumf += fs(k);
     float cosph, sinph,cospsi,sinpsi,costh,sinth,k1,k2;
     costh=cos(p(kk+1)); sinth=sin(p(kk+1)); cosph=cos(p(kk+2)); sinph=sin(p(kk+2));
-    cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3)); 
+    cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3));
     k1=l12k1(p(kk+4)); k2=k1/gam2w(p(kk+5));
     L(1)=-k1; L(2)=-k2; denom<<L(1)<<L(2)<<0;
     Rth(1,1)=costh; Rth(1,3)=-sinth; Rth(3,1)=sinth; Rth(3,3)=costh;
@@ -1947,9 +1949,9 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel(const NEWMAT::ColumnVector&
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val);
   }
   pred.Release();
   return pred;
@@ -1957,9 +1959,9 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel(const NEWMAT::ColumnVector&
 
 
 //Instead of returning the model predicted signal for each direction
-//returns the individual signal contributions i.e. isotropic, anisotropic1, anisotropic2,etc. 
+//returns the individual signal contributions i.e. isotropic, anisotropic1, anisotropic2,etc.
 //Weighting with the fractions, scaling with S0 and summing those gives the signal.
-//A Matrix npts x (nfib+1) is returned 
+//A Matrix npts x (nfib+1) is returned
 NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel_compartments(const NEWMAT::ColumnVector& p) const{
   Matrix Sig(npts,nfib+1);
 
@@ -1970,7 +1972,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel_compartments(const NEWMAT::
   vector<Matrix> B; vector<ColumnVector> approx_denomB;
   DiagonalMatrix L(3);       SymmetricMatrix Q(3);
   L=0; Rpsi=0; Rth=0; Rph=0; Rth(2,2)=1; Rph(3,3)=1; Rpsi(3,3)=1;
-  
+
   float sumf=0; fs=0;
   for(int k=1;k<=nfib;k++){
     int kk = 3+nparams_per_fibre*(k-1);
@@ -1978,7 +1980,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel_compartments(const NEWMAT::
     sumf += fs(k);
     float cosph, sinph,cospsi,sinpsi,costh,sinth,k1,k2;
     costh=cos(p(kk+1)); sinth=sin(p(kk+1)); cosph=cos(p(kk+2)); sinph=sin(p(kk+2));
-    cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3)); 
+    cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3));
     k1=l12k1(p(kk+4)); k2=k1/gam2w(p(kk+5));
     L(1)=-k1; L(2)=-k2; denom<<L(1)<<L(2)<<0;
     Rth(1,1)=costh; Rth(1,3)=-sinth; Rth(3,1)=sinth; Rth(3,3)=costh;
@@ -1993,20 +1995,20 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::forwardModel_compartments(const NEWMAT::
   ////////////////////////////////////
   for(int i=1;i<=Y.Nrows();i++){
       Sig(i,1) = isoterm(i,_d);
- 
+
     for(int k=1;k<=nfib;k++){
       Q<<B[k-1]-_d*bvecs_dyadic[i-1];
       EigenValues(Q,L);  temp_vec<<L(1)<<L(2)<<L(3);
       Sig(i,k+1)= hyp_SratioB_knowndenom(temp_vec,approx_denomB[k-1]);
     }
-  }  
+  }
 
   Sig.Release();
   return Sig;
 }
 
 
-//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig.
 //Weights them with the fractions, scales with S0 and sums to get the signal.
 NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig) const{
   ColumnVector pred(npts);
@@ -2019,27 +2021,27 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::Col
     fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
     sumf += fs(k);
   }
-  
+
   for(int i=1;i<=Y.Nrows();i++){
     val = 0.0;
     for(int k=1;k<=nfib;k++)
       val += fs(k)*Sig(i,k+1);
-    
+
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*Sig(i,1)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*Sig(i,1)+val); 
+      pred(i) = p(1)*((1-sumf)*Sig(i,1)+val);
   }
-  
+
   pred.Release();
   return pred;
 }
 
 
 
-//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig.
 //Weights them with the fractions, scales with S0 and sums to get the signal.
 //The signal of the fibre compartment with index fib is recalculated.
 NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig,const int& fib) const{
@@ -2052,7 +2054,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::Col
   Matrix Rpsi(3,3), Rth(3,3), Rph(3,3), R(3,3);
   DiagonalMatrix L(3);       SymmetricMatrix Q(3);
   L=0; Rpsi=0; Rth=0; Rph=0; Rth(2,2)=1; Rph(3,3)=1; Rpsi(3,3)=1;
-  
+
   float sumf=0; fs=0;
   for(int k=1;k<=nfib;k++){
     int kk = 3+nparams_per_fibre*(k-1);
@@ -2062,7 +2064,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::Col
   ///////////////////////////////////////
   int kk = 3+nparams_per_fibre*(fib-1);  float cosph, sinph,cospsi,sinpsi,costh,sinth,k1,k2;
   costh=cos(p(kk+1)); sinth=sin(p(kk+1)); cosph=cos(p(kk+2)); sinph=sin(p(kk+2));
-  cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3)); 
+  cospsi=cos(p(kk+3)); sinpsi=sin(p(kk+3));
   k1=l12k1(p(kk+4)); k2=k1/gam2w(p(kk+5));
   L(1)=-k1; L(2)=-k2; denom<<L(1)<<L(2)<<0;
   Rth(1,1)=costh; Rth(1,3)=-sinth; Rth(3,1)=sinth; Rth(3,3)=costh;
@@ -2072,28 +2074,28 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::pred_from_compartments(const NEWMAT::Col
   R<<R.t()*L*R;
   temp_vec=approx_denominatorB(denom);
   denom=temp_vec;
-  
+
   newSig=Sig;  //Get the new Signal for compartment fib
   for(int i=1;i<=Y.Nrows();i++){
     Q<<R-_d*bvecs_dyadic[i-1];
     EigenValues(Q,L);  temp_vec<<L(1)<<L(2)<<L(3);
     newSig(i,fib+1)=hyp_SratioB_knowndenom(temp_vec,denom);
-  }  
+  }
   ///////////////////////////////////////
 
   for(int i=1;i<=Y.Nrows();i++){
     val = 0.0;
     for(int k=1;k<=nfib;k++)
       val += fs(k)*newSig(i,k+1);
-    
+
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*newSig(i,1)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*newSig(i,1)+val); 
+      pred(i) = p(1)*((1-sumf)*newSig(i,1)+val);
   }
-  
+
   pred.Release();
   return pred;
 }
@@ -2111,7 +2113,7 @@ double PVM_Ball_Binghams::cf(const NEWMAT::ColumnVector& p)const{
   for(int i=1;i<=npts;i++){
     err=S(i)-Y(i);    //Residual
     cfv+=err*err;     //Sum of squared residuals
-  }  
+  }
   //cout<<"CF="<<cfv<<endl; OUT(p.t());
   return(cfv);
 }
@@ -2123,26 +2125,26 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
 {
   ColumnVector gradv(nparams);//This is the gradient of the cost function
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
-                              //The derivative of the cost function w.r.t. parameter j 
+                              //The derivative of the cost function w.r.t. parameter j
                               //will then be: Grad_j=Sum(2*(F(x_i)-Y_i)*J(i,j)), with Sum across data points i
   ColumnVector diff(npts);    //Residuals
   ColumnVector p_plus_h, S_trial,S;
 
   //Compute the Jacobian first using finite differences for each element
   double step;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     typical_scale(kk+4)=100;
     typical_scale(kk+5)=1;
   }
-  
+
   S=forwardModel(p);
   diff=S-Y;
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
@@ -2152,30 +2154,30 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
     S_trial=forwardModel(p_plus_h);
     for (int i=1; i<=npts; i++)
       J(i,n)=(S_trial(i)-S(i))/step;
-  } 
-  
+  }
+
   gradv =2*J.t()*diff;
   gradv.Release();
-  return(gradv);    
+  return(gradv);
 }
 
 
 //Slower implementation
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
-  boost::shared_ptr<BFMatrix>   hessm;
+std::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
-  
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
   ColumnVector p_plus_h, S_trial,S;
-  
+
   //Compute the Jacobian first using finite differences for each element
   double step,sig;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     typical_scale(kk+4)=100;
     typical_scale(kk+5)=1;
   }
@@ -2184,7 +2186,7 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& 
 
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
@@ -2194,8 +2196,8 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& 
     S_trial=forwardModel(p_plus_h);
     for (int i=1; i<=npts; i++)
       J(i,n)=(S_trial(i)-S(i))/step;
-  } 
-  
+  }
+
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sig = 0.0;
@@ -2218,7 +2220,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
 {
   ColumnVector gradv(nparams);//This is the gradient of the cost function
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
-                              //The derivative of the cost function w.r.t. parameter j 
+                              //The derivative of the cost function w.r.t. parameter j
                               //will then be: Grad_j=Sum(2*(F(x_i)-Y_i)*J(i,j)), with Sum across data points i
   ColumnVector diff(npts);    //Residuals
   ColumnVector p_plus_h, S_trial,S;
@@ -2227,10 +2229,10 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
 
   //Compute the Jacobian first using finite differences for each element. Derivatives are analytic for S0 and the volume fractions
   double step;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     bs(k)=p(kk);
     fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
     typical_scale(kk+4)=100;
@@ -2239,24 +2241,24 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
 
   //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
   Matrix f_deriv;
-  f_deriv=fractions_deriv(nfib, fs, bs);  
+  f_deriv=fractions_deriv(nfib, fs, bs);
 
   Sig=forwardModel_compartments(p);
   S=pred_from_compartments(p, Sig);
   diff=S-Y;
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
     step = nonzerosign(tiny)*min(max(fabs(step),1.0e-8),0.1);  //check that 1e-8<step<0.1
     p_plus_h(n)=p(n)+step;
-      
+
     if (n<3 || (n==nparams && m_include_f0)){ //for d all compartments will change. Also for f0, if included. Use for those params numerical differentiation
       S_trial=forwardModel(p_plus_h);
       for (int i=1; i<=npts; i++)
-	J(i,n)=(S_trial(i)-S(i))/step; 
+	J(i,n)=(S_trial(i)-S(i))/step;
     }
     else{  //for the other params, update only the signal of the relevant fibre compartment
       int fib_indx=(int)ceil((float)(n-2)/(float)nparams_per_fibre); //index indicating in which fibre compartment parameter n belongs to
@@ -2277,30 +2279,30 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::grad(const ColumnVector& p)const
 	}
       }
     }
-  } 
+  }
   gradv =2*J.t()*diff;
   gradv.Release();
-  return(gradv);    
+  return(gradv);
 }
 
 
 
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
-  boost::shared_ptr<BFMatrix>   hessm;
+std::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
-  
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
   ColumnVector p_plus_h, S_trial,S, fs(nfib), bs(nfib);
   Matrix Sig;
-  
+
   //Compute the Jacobian first using finite differences for each element. Derivatives are analytic for S0 and the volume fractions
   double step,sigt;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     bs(k)=p(kk);
     fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
     typical_scale(kk+4)=100;
@@ -2309,24 +2311,24 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& 
 
   //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
   Matrix f_deriv;
-  f_deriv=fractions_deriv(nfib, fs, bs);  
+  f_deriv=fractions_deriv(nfib, fs, bs);
 
   Sig=forwardModel_compartments(p);
   S=pred_from_compartments(p, Sig);
 
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
     step = nonzerosign(tiny)*min(max(fabs(step),1.0e-8),0.1);  //check that 1e-8<step<0.1
     p_plus_h(n)=p(n)+step;
-      
+
     if (n<3 || (n==nparams && m_include_f0)){ //for d all compartments will change. Also for f0, if included. Use for those params numerical differentiation
       S_trial=forwardModel(p_plus_h);
       for (int i=1; i<=npts; i++)
-	J(i,n)=(S_trial(i)-S(i))/step; 
+	J(i,n)=(S_trial(i)-S(i))/step;
     }
     else{  //for the other params, update only the signal of the relevant fibre compartment
       int fib_indx=(int)ceil((float)(n-2)/(float)nparams_per_fibre); //index indicating in which fibre compartment parameter n belongs to
@@ -2335,7 +2337,7 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& 
 	  J(i,n)=0;
 	  for (int j=1; j<=nfib; j++){
 	    if (f_deriv(j,fib_indx)!=0)
-	      J(i,n) += p(1)*(Sig(i,j+1)-Sig(i,1))*f_deriv(j,fib_indx); 
+	      J(i,n) += p(1)*(Sig(i,j+1)-Sig(i,1))*f_deriv(j,fib_indx);
 	  }
 	}
       }
@@ -2347,8 +2349,8 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Binghams::hess(const NEWMAT::ColumnVector& 
 	}
       }
     }
-  } 
-  
+  }
+
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sigt = 0.0;
@@ -2379,7 +2381,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::fractions_deriv(const int& nfib, const C
   for (int j=1; j<=nfib; j++)
     for (int k=1; k<=nfib; k++){
       if (j==k){
-	fsum=1; 
+	fsum=1;
 	for (int n=1; n<=j-1; n++)
 	  fsum-=fs(n);
 	Deriv(j,k)=sin(2*bs(k))*fsum;
@@ -2388,9 +2390,9 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::fractions_deriv(const int& nfib, const C
 	fsum=0;
 	for (int n=1; n<=j-1; n++)
 	  fsum+=Deriv(n,k);
-	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;  
+	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;
       }
-    } 	   
+    }
   Deriv.Release();
   return Deriv;
 }
@@ -2398,11 +2400,11 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams::fractions_deriv(const int& nfib, const C
 
 
 //Returns a vector that indicates the fanning orientation
-NEWMAT::ReturnMatrix PVM_Ball_Binghams:: get_fanning_vector(const int& i) const{ 
-  ColumnVector fan_vec(3); 
+NEWMAT::ReturnMatrix PVM_Ball_Binghams:: get_fanning_vector(const int& i) const{
+  ColumnVector fan_vec(3);
   float t_th=m_th(i);  float t_ph=m_ph(i);  float t_psi=m_psi(i);
 
-  float costh=cos(t_th); float sinth=sin(t_th); 
+  float costh=cos(t_th); float sinth=sin(t_th);
   float cosph=cos(t_ph); float sinph=sin(t_ph);
   float cospsi=cos(t_psi); float sinpsi=sin(t_psi);
   /*
@@ -2412,7 +2414,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams:: get_fanning_vector(const int& i) const{
   Rph(1,1)=cosph; Rph(1,2)=sinph; Rph(2,1)=-sinph; Rph(2,2)=cosph;
   Rpsi(1,1)=cospsi; Rpsi(1,2)=sinpsi; Rpsi(2,1)=-sinpsi; Rpsi(2,2)=cospsi;
   R=Rpsi*Rth*Rph; */
-  
+
   //fan_vec(1)=R(2,1); fan_vec(2)=R(2,2); fan_vec(3)=R(2,3);
   fan_vec(1)=-sinpsi*costh*cosph-cospsi*sinph; fan_vec(2)=-sinpsi*costh*sinph+cospsi*cosph; fan_vec(3)=sinpsi*sinth;
 
@@ -2424,17 +2426,17 @@ NEWMAT::ReturnMatrix PVM_Ball_Binghams:: get_fanning_vector(const int& i) const{
 
 
 ///////////////////////////////////////////////////////////////////////////
-// FANNING MODEL - BALL & WATSONS 
+// FANNING MODEL - BALL & WATSONS
 // Constrained Optimization for the diffusivity, fractions and their sum<1,
 // and the Bingham eigenvalues
 //////////////////////////////////////////////////////////////////////////
 
 void PVM_Ball_Watsons::fit(){
   // Fit the ball & stick first to initialize some of the parameters
-  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,false,m_include_f0);  
+  PVM_single_c pvmbs(Y,bvecs,bvals,nfib,false,m_include_f0);
   pvmbs.fit();
   //  pvmbs.print();
-  
+
   ColumnVector k_init;
   ColumnVector final_par(nparams);
   double minRSS=1e20;
@@ -2448,19 +2450,19 @@ void PVM_Ball_Watsons::fit(){
   for (int n1=1; n1<=k_init.Nrows(); n1++){
     ColumnVector start(nparams);
     ColumnVector fs(nfib); fs=0;
-    //Initialize the non-linear fitter. Transform all initial values to the uncostrained parameter space 
+    //Initialize the non-linear fitter. Transform all initial values to the uncostrained parameter space
     start(1) = pvmbs.get_s0();
     start(2) = d2lambda(pvmbs.get_d());
     for(int n=1,i=3; n<=nfib; n++,i+=nparams_per_fibre){
       fs(n)=pvmbs.get_f(n);
       float tmpr=fs(n)/partial_fsum(fs,n-1);
       if (tmpr>1) tmpr=1; //This can be true due to numerical errors
-      start(i) = f2beta(tmpr); 
+      start(i) = f2beta(tmpr);
       start(i+1) = pvmbs.get_th(n);
       start(i+2) = pvmbs.get_ph(n);
       start(i+3) = k12l1(k_init(n1));
-    } 
-   
+    }
+
     if (m_include_f0){
       float tmpr=pvmbs.get_f0()/partial_fsum(fs,nfib);
       if (tmpr>1) tmpr=1; //This can be true due to numerical errors
@@ -2468,12 +2470,12 @@ void PVM_Ball_Watsons::fit(){
     }
 
     // do the fit
-    NonlinParam  lmpar(start.Nrows(),NL_LM); 
+    NonlinParam  lmpar(start.Nrows(),NL_LM);
     lmpar.SetGaussNewtonType(LM_LM);
     lmpar.SetStartingEstimate(start);
-  
+
     //lmpar.LogCF(true);
- 
+
     NonlinOut status;
     status = nonlin(lmpar,(*this));
     ColumnVector tmp_par(nparams);
@@ -2491,11 +2493,11 @@ void PVM_Ball_Watsons::fit(){
       minRSS=RSS;
     }
   }
-  
-  if (m_eval_BIC){ 
+
+  if (m_eval_BIC){
     m_BIC=npts*log(minRSS/npts)+log(npts)*nparams; //evaluate BIC
   }
- 
+
   // finalise parameters
   m_s0 = final_par(1);
   m_d  = lambda2d(final_par(2));
@@ -2510,7 +2512,7 @@ void PVM_Ball_Watsons::fit(){
 
   if (m_include_f0)
     m_f0=beta2f(final_par(nparams))*partial_fsum(m_f,nfib);
-  
+
   sort();
 }
 
@@ -2518,8 +2520,8 @@ void PVM_Ball_Watsons::fit(){
 void PVM_Ball_Watsons::sort(){
   vector< pair<float,int> > fvals(nfib);
   ColumnVector ftmp(nfib),thtmp(nfib),phtmp(nfib),ktmp(nfib);
-  ftmp=m_f;thtmp=m_th;phtmp=m_ph; ktmp=m_k; 
-  
+  ftmp=m_f;thtmp=m_th;phtmp=m_ph; ktmp=m_k;
+
   for(int i=1;i<=nfib;i++){
     pair<float,int> p(m_f(i),i);
     fvals[i-1] = p;
@@ -2557,9 +2559,9 @@ void PVM_Ball_Watsons::print()const{
     ColumnVector x(3);
     x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
     float _th,_ph;cart2sph(x,_th,_ph);
-    if(x(3)<0) x=-x; 
-    cout << "TH"  << i << " : " << _th*180.0/M_PI << " deg" << endl; 
-    cout << "PH"  << i << " : " << _ph*180.0/M_PI << " deg" << endl; 
+    if(x(3)<0) x=-x;
+    cout << "TH"  << i << " : " << _th*180.0/M_PI << " deg" << endl;
+    cout << "PH"  << i << " : " << _ph*180.0/M_PI << " deg" << endl;
     cout << "DIR" << i << " : " << x(1) << " " << x(2) << " " << x(3) << endl;
     cout << "K_" << i << " : " <<m_k(i)<<endl;
   }
@@ -2575,7 +2577,7 @@ void PVM_Ball_Watsons::print()const{
 //i.e. need to untransform them to get d,f's etc
 void PVM_Ball_Watsons::print(const ColumnVector& p)const{
   ColumnVector f(nfib);
-  
+
   cout << "PARAMETER VALUES " << endl;
   cout << "S0   :" << p(1) << endl;
   cout << "D    :" << lambda2d(p(2)) << endl;
@@ -2583,9 +2585,9 @@ void PVM_Ball_Watsons::print(const ColumnVector& p)const{
     f(ii) = beta2f(p(i))*partial_fsum(f,ii-1);
     float _k=l12k1(p(i+3));
     cout << "F" << ii << "   :" << f(ii) << endl;
-    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
-    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
-    cout << "K_" << ii << "  :"<< _k << endl; 
+    cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl;
+    cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl;
+    cout << "K_" << ii << "  :"<< _k << endl;
   }
   if (m_include_f0)
     cout << "F0    :" << beta2f(p(nparams))*partial_fsum(f,nfib);
@@ -2593,12 +2595,12 @@ void PVM_Ball_Watsons::print(const ColumnVector& p)const{
 
 
 
-//Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)  
+//Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
 ReturnMatrix PVM_Ball_Watsons::get_prediction()const{
   ColumnVector pred(npts);
   ColumnVector p(nparams);
   ColumnVector fs(nfib);
-  
+
   fs=m_f;
   p(1) = m_s0;   //Transform parameters to the space where they are uncostrained
   p(2) = d2lambda(m_d);
@@ -2619,11 +2621,11 @@ ReturnMatrix PVM_Ball_Watsons::get_prediction()const{
   pred = forwardModel(p);
   pred.Release();
   return pred;
-} 
+}
 
 
 
-//Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)  
+//Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)
 NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel(const NEWMAT::ColumnVector& p)const{
   ColumnVector pred(npts);
   pred = 0;
@@ -2633,7 +2635,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel(const NEWMAT::ColumnVector& 
   ColumnVector fs(nfib), ks(nfib);  ColumnVector temp_vec(3), denom(3);
   Matrix v(nfib,3); vector<ColumnVector> approx_denomW; Matrix A(3,3);
   float sumf=0; fs=0;
-  
+
   for(int n=1;n<=nfib;n++){
     int nn = 3+nparams_per_fibre*(n-1);
     float cosph, sinph,costh,sinth;
@@ -2641,7 +2643,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel(const NEWMAT::ColumnVector& 
     sumf += fs(n);
     costh=cos(p(nn+1)); sinth=sin(p(nn+1)); cosph=cos(p(nn+2)); sinph=sin(p(nn+2));
     v(n,1) = cosph*sinth; v(n,2) = sinph*sinth; v(n,3) = costh;
-    ks(n)=l12k1(p(nn+3)); 
+    ks(n)=l12k1(p(nn+3));
     temp_vec=approx_denominatorW(ks(n));
     approx_denomW.push_back(temp_vec);
   }
@@ -2652,7 +2654,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel(const NEWMAT::ColumnVector& 
     float bd=bvals(1,i)*_d;
     for(int n=1;n<=nfib;n++){
       A=(v.Row(n)).t()*(bvecs.Column(i)).t();
-      float Q=-2*bd*ks(n)*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0)); 
+      float Q=-2*bd*ks(n)*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0));
       Q=sqrt(ks(n)*ks(n)+bd*bd+Q);
       temp_vec<<0.5*(ks(n)-bd+Q)<<0.5*(ks(n)-bd-Q)<<0;
       val+= fs(n)*hyp_SratioW_knowndenom(temp_vec,approx_denomW[n-1]);
@@ -2660,19 +2662,19 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel(const NEWMAT::ColumnVector& 
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*isoterm(i,_d)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val); 
-  }  
+      pred(i) = p(1)*((1-sumf)*isoterm(i,_d)+val);
+  }
   pred.Release();
   return pred;
 }
 
 
 //Instead of returning the model predicted signal for each direction
-//returns the individual signal contributions i.e. isotropic, anisotropic1, anisotropic2,etc. 
+//returns the individual signal contributions i.e. isotropic, anisotropic1, anisotropic2,etc.
 //Weighting with the fractions, scaling with S0 and summing those gives the signal.
-//A Matrix npts x (nfib+1) is returned 
+//A Matrix npts x (nfib+1) is returned
 NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel_compartments(const NEWMAT::ColumnVector& p) const{
   Matrix Sig(npts,nfib+1);
 
@@ -2680,13 +2682,13 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel_compartments(const NEWMAT::C
   ////////////////////////////////////
   ColumnVector ks(nfib);  ColumnVector temp_vec(3), denom(3);
   Matrix v(nfib,3); vector<ColumnVector> approx_denomW; Matrix A(3,3);
-  
+
   for(int n=1;n<=nfib;n++){
     int nn = 3+nparams_per_fibre*(n-1);
     float cosph, sinph,costh,sinth;
     costh=cos(p(nn+1)); sinth=sin(p(nn+1)); cosph=cos(p(nn+2)); sinph=sin(p(nn+2));
     v(n,1) = cosph*sinth; v(n,2) = sinph*sinth; v(n,3) = costh;
-    ks(n)=l12k1(p(nn+3)); 
+    ks(n)=l12k1(p(nn+3));
     temp_vec=approx_denominatorW(ks(n));
     approx_denomW.push_back(temp_vec);
   }
@@ -2694,23 +2696,23 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::forwardModel_compartments(const NEWMAT::C
   ////////////////////////////////////
   for(int i=1;i<=Y.Nrows();i++){
       Sig(i,1) = isoterm(i,_d);
-      
+
       float bd=bvals(1,i)*_d;
       for(int n=1;n<=nfib;n++){
 	A=(v.Row(n)).t()*(bvecs.Column(i)).t();
-	float Q=-2*bd*ks(n)*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0)); 
+	float Q=-2*bd*ks(n)*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0));
 	Q=sqrt(ks(n)*ks(n)+bd*bd+Q);
 	temp_vec<<0.5*(ks(n)-bd+Q)<<0.5*(ks(n)-bd-Q)<<0;
 	Sig(i,n+1)= hyp_SratioW_knowndenom(temp_vec,approx_denomW[n-1]);
-      } 
-  }  
+      }
+  }
 
   Sig.Release();
   return Sig;
 }
 
 
-//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig.
 //Weights them with the fractions, scales with S0 and sums to get the signal.
 NEWMAT::ReturnMatrix PVM_Ball_Watsons::pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig) const{
   ColumnVector pred(npts);
@@ -2723,27 +2725,27 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::pred_from_compartments(const NEWMAT::Colu
     fs(n) = beta2f(p(nn))*partial_fsum(fs,n-1);
     sumf += fs(n);
   }
-  
+
   for(int i=1;i<=Y.Nrows();i++){
     val = 0.0;
     for(int n=1;n<=nfib;n++)
       val += fs(n)*Sig(i,n+1);
-    
+
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*Sig(i,1)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*Sig(i,1)+val); 
+      pred(i) = p(1)*((1-sumf)*Sig(i,1)+val);
   }
-  
+
   pred.Release();
   return pred;
 }
 
 
 
-//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig. 
+//Builds up the model predicted signal for each direction by using precomputed individual compartment signals, stored in Matrix Sig.
 //Weights them with the fractions, scales with S0 and sums to get the signal.
 //The signal of the fibre compartment with index fib is recalculated.
 NEWMAT::ReturnMatrix PVM_Ball_Watsons::pred_from_compartments(const NEWMAT::ColumnVector& p, const NEWMAT::Matrix& Sig,const int& fib) const{
@@ -2753,7 +2755,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::pred_from_compartments(const NEWMAT::Colu
   float _d = lambda2d(p(2));
   ////////////////////////////////////
   ColumnVector fs(nfib);  ColumnVector temp_vec(3), denom(3), v(3); Matrix A(3,3);
-  
+
   float sumf=0; fs=0;
   for(int n=1;n<=nfib;n++){
     int nn = 3+nparams_per_fibre*(n-1);
@@ -2764,34 +2766,34 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::pred_from_compartments(const NEWMAT::Colu
   int nn = 3+nparams_per_fibre*(fib-1);  float cosph, sinph,costh,sinth,_k;
   costh=cos(p(nn+1)); sinth=sin(p(nn+1)); cosph=cos(p(nn+2)); sinph=sin(p(nn+2));
   v(1) = cosph*sinth; v(2) = sinph*sinth; v(3) = costh;
-  _k=l12k1(p(nn+3)); 
+  _k=l12k1(p(nn+3));
   temp_vec=approx_denominatorW(_k);
   denom=temp_vec;
-  
+
   newSig=Sig;  //Get the new Signal for compartment fib
   for(int i=1;i<=Y.Nrows();i++){
     float bd=bvals(1,i)*_d;
     A=v*(bvecs.Column(i)).t();
-    float Q=-2*bd*_k*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0)); 
+    float Q=-2*bd*_k*(pow(A(1,1)+A(2,2)+A(3,3),2.0) - pow(A(2,1)-A(1,2),2.0) - pow(A(1,3)-A(3,1),2.0)-pow(A(2,3)-A(3,2),2.0));
     Q=sqrt(_k*_k+bd*bd+Q);
     temp_vec<<0.5*(_k-bd+Q)<<0.5*(_k-bd-Q)<<0;
     newSig(i,fib+1)= hyp_SratioW_knowndenom(temp_vec,denom);
-  }  
+  }
   ///////////////////////////////////////
 
   for(int i=1;i<=Y.Nrows();i++){
     val = 0.0;
     for(int n=1;n<=nfib;n++)
       val += fs(n)*newSig(i,n+1);
-    
+
     if (m_include_f0){
       float temp_f0=beta2f(p(nparams))*partial_fsum(fs,nfib);
       pred(i) = p(1)*(temp_f0+(1-sumf-temp_f0)*newSig(i,1)+val);
-    } 
+    }
     else
-      pred(i) = p(1)*((1-sumf)*newSig(i,1)+val); 
+      pred(i) = p(1)*((1-sumf)*newSig(i,1)+val);
   }
-  
+
   pred.Release();
   return pred;
 }
@@ -2809,7 +2811,7 @@ double PVM_Ball_Watsons::cf(const NEWMAT::ColumnVector& p)const{
   for(int i=1;i<=npts;i++){
     err=S(i)-Y(i);    //Residual
     cfv+=err*err;     //Sum of squared residuals
-  }  
+  }
   //cout<<"CF="<<cfv<<endl; OUT(p.t());
   return(cfv);
 }
@@ -2819,7 +2821,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::grad(const ColumnVector& p)const
 {
   ColumnVector gradv(nparams);//This is the gradient of the cost function
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
-                              //The derivative of the cost function w.r.t. parameter j 
+                              //The derivative of the cost function w.r.t. parameter j
                               //will then be: Grad_j=Sum(2*(F(x_i)-Y_i)*J(i,j)), with Sum across data points i
   ColumnVector diff(npts);    //Residuals
   ColumnVector p_plus_h, S_trial,S;
@@ -2828,10 +2830,10 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::grad(const ColumnVector& p)const
 
   //Compute the Jacobian first using finite differences for each element. Derivatives are analytic for S0 and the volume fractions
   double step;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     bs(k)=p(kk);
     fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
     typical_scale(kk+3)=100;
@@ -2839,24 +2841,24 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::grad(const ColumnVector& p)const
 
   //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
   Matrix f_deriv;
-  f_deriv=fractions_deriv(nfib, fs, bs);  
+  f_deriv=fractions_deriv(nfib, fs, bs);
 
   Sig=forwardModel_compartments(p);
   S=pred_from_compartments(p, Sig);
   diff=S-Y;
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
     step = nonzerosign(tiny)*min(max(fabs(step),1.0e-8),0.1);  //check that 1e-8<step<0.1
     p_plus_h(n)=p(n)+step;
-      
+
     if (n<3 || (n==nparams && m_include_f0)){ //for d all compartments will change. Also for f0, if included. Use for those params numerical differentiation
       S_trial=forwardModel(p_plus_h);
       for (int i=1; i<=npts; i++)
-	J(i,n)=(S_trial(i)-S(i))/step; 
+	J(i,n)=(S_trial(i)-S(i))/step;
     }
     else{  //for the other params, update only the signal of the relevant fibre compartment
       int fib_indx=(int)ceil((float)(n-2)/(float)nparams_per_fibre); //index indicating in which fibre compartment parameter n belongs to
@@ -2875,30 +2877,30 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::grad(const ColumnVector& p)const
 	  J(i,n)=(S_trial(i)-S(i))/step;
       }
     }
-  } 
+  }
   gradv =2*J.t()*diff;
   gradv.Release();
-  return(gradv);    
+  return(gradv);
 }
 
 
 
 //this uses Gauss-Newton approximation
-boost::shared_ptr<BFMatrix> PVM_Ball_Watsons::hess(const NEWMAT::ColumnVector& p,boost::shared_ptr<BFMatrix> iptr)const{
-  boost::shared_ptr<BFMatrix>   hessm;
+std::shared_ptr<BFMatrix> PVM_Ball_Watsons::hess(const NEWMAT::ColumnVector& p,std::shared_ptr<BFMatrix> iptr)const{
+  std::shared_ptr<BFMatrix>   hessm;
   if (iptr && iptr->Nrows()==(unsigned int)p.Nrows() && iptr->Ncols()==(unsigned int)p.Nrows()) hessm = iptr;
-  else hessm = boost::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
-  
+  else hessm = std::shared_ptr<BFMatrix>(new FullBFMatrix(p.Nrows(),p.Nrows()));
+
   Matrix J(npts,nparams);     //This is the Jacobian matrix of the model equation
   ColumnVector p_plus_h, S_trial,S, fs(nfib), bs(nfib);
   Matrix Sig;
-  
+
   //Compute the Jacobian first using finite differences for each element. Derivatives are analytic for S0 and the volume fractions
   double step,sigt;
-  ColumnVector typical_scale(nparams); 
+  ColumnVector typical_scale(nparams);
   typical_scale=1;
   for (int k=1; k<=nfib; k++){
-    int kk = 3+nparams_per_fibre*(k-1); 
+    int kk = 3+nparams_per_fibre*(k-1);
     bs(k)=p(kk);
     fs(k) = beta2f(p(kk))*partial_fsum(fs,k-1);
     typical_scale(kk+3)=100;
@@ -2906,24 +2908,24 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Watsons::hess(const NEWMAT::ColumnVector& p
 
   //Compute the derivatives with respect to betas, i.e the transformed volume fraction variables
   Matrix f_deriv;
-  f_deriv=fractions_deriv(nfib, fs, bs);  
+  f_deriv=fractions_deriv(nfib, fs, bs);
 
   Sig=forwardModel_compartments(p);
   S=pred_from_compartments(p, Sig);
 
   for (int i=1; i<=npts; i++)
     J(i,1)=S(i)/p(1);  //derivatives with respect to S0 are analytic: S_i/S0
-    
+
   for (int n=2; n<=nparams; n++) {
     p_plus_h = p;
     step = SQRTtiny*nonzerosign(p(n))*max(fabs(p(n))*typical_scale(n),1.0);
     step = nonzerosign(tiny)*min(max(fabs(step),1.0e-8),0.1);  //check that 1e-8<step<0.1
     p_plus_h(n)=p(n)+step;
-      
+
     if (n<3 || (n==nparams && m_include_f0)){ //for d all compartments will change. Also for f0, if included. Use for those params numerical differentiation
       S_trial=forwardModel(p_plus_h);
       for (int i=1; i<=npts; i++)
-	J(i,n)=(S_trial(i)-S(i))/step; 
+	J(i,n)=(S_trial(i)-S(i))/step;
     }
     else{  //for the other params, update only the signal of the relevant fibre compartment
       int fib_indx=(int)ceil((float)(n-2)/(float)nparams_per_fibre); //index indicating in which fibre compartment parameter n belongs to
@@ -2932,7 +2934,7 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Watsons::hess(const NEWMAT::ColumnVector& p
 	  J(i,n)=0;
 	  for (int j=1; j<=nfib; j++){
 	    if (f_deriv(j,fib_indx)!=0)
-	      J(i,n) += p(1)*(Sig(i,j+1)-Sig(i,1))*f_deriv(j,fib_indx); 
+	      J(i,n) += p(1)*(Sig(i,j+1)-Sig(i,1))*f_deriv(j,fib_indx);
 	  }
 	}
       }
@@ -2942,8 +2944,8 @@ boost::shared_ptr<BFMatrix> PVM_Ball_Watsons::hess(const NEWMAT::ColumnVector& p
 	  J(i,n)=(S_trial(i)-S(i))/step;
       }
     }
-  } 
-  
+  }
+
   for (int i=1; i<=p.Nrows(); i++){
     for (int j=i; j<=p.Nrows(); j++){
       sigt = 0.0;
@@ -2974,7 +2976,7 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::fractions_deriv(const int& nfib, const Co
   for (int j=1; j<=nfib; j++)
     for (int k=1; k<=nfib; k++){
       if (j==k){
-	fsum=1; 
+	fsum=1;
 	for (int n=1; n<=j-1; n++)
 	  fsum-=fs(n);
 	Deriv(j,k)=sin(2*bs(k))*fsum;
@@ -2983,9 +2985,9 @@ NEWMAT::ReturnMatrix PVM_Ball_Watsons::fractions_deriv(const int& nfib, const Co
 	fsum=0;
 	for (int n=1; n<=j-1; n++)
 	  fsum+=Deriv(n,k);
-	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;  
+	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;
       }
-    } 	   
+    }
   Deriv.Release();
   return Deriv;
 }
@@ -3036,7 +3038,7 @@ NEWMAT::ReturnMatrix PVM_single_c::fractions_deriv(const int& nfib, const Column
   for (int j=1; j<=nfib; j++)
     for (int k=1; k<=nfib; k++){
       if (j==k){
-	fsum=1; 
+	fsum=1;
 	for (int n=1; n<=j-1; n++)
 	  fsum-=fs(n);
 	Deriv(j,k)=sin(2*bs(k))*fsum;
@@ -3045,9 +3047,9 @@ NEWMAT::ReturnMatrix PVM_single_c::fractions_deriv(const int& nfib, const Column
 	fsum=0;
 	for (int n=1; n<=j-1; n++)
 	  fsum+=Deriv(n,k);
-	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;  
+	Deriv(j,k)=-pow(sin(bs(j)),2.0)*fsum;
       }
-    } 	   
+    }
   Deriv.Release();
   return Deriv;
 }
@@ -3203,4 +3205,3 @@ float PVM_multi::anisoterm_ph(const int& pt,const float& _a,const float& _b,cons
     return(-_a*_b*bvals(1,pt)/(1+bvals(1,pt)*(dp*dp)*_b)*std::exp(-_a*std::log(1+bvals(1,pt)*(dp*dp)*_b))*2*dp*dp1);
   }
 }
-
