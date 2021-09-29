@@ -9,24 +9,19 @@
 #define EXPOSE_TREACHEROUS           // To allow us to use .sampling_mat()
 #endif
 
+#include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
-#include "miscmaths/miscmaths.h"
 
-using namespace NEWIMAGE;
-using namespace NEWMAT;
-using namespace std;
+NEWMAT::ReturnMatrix rodrigues(const float&,NEWMAT::ColumnVector&);
 
+NEWMAT::ReturnMatrix rodrigues(const float&,const float&,NEWMAT::ColumnVector&);
 
-ReturnMatrix rodrigues(const float&,ColumnVector&);
+NEWMAT::ReturnMatrix rodrigues(const NEWMAT::ColumnVector&,const NEWMAT::ColumnVector&);
 
-ReturnMatrix rodrigues(const float&,const float&,ColumnVector&);
+NEWMAT::ReturnMatrix ppd(const NEWMAT::Matrix&,const NEWMAT::ColumnVector&, const NEWMAT::ColumnVector&);
 
-ReturnMatrix rodrigues(const ColumnVector&,const ColumnVector&);
+void vecreg_aff(const NEWIMAGE::volume4D<float>&,NEWIMAGE::volume4D<float>&,const NEWIMAGE::volume<float>&,const NEWMAT::Matrix&,const NEWIMAGE::volume<float>&);
 
-ReturnMatrix ppd(const Matrix&,const ColumnVector&, const ColumnVector&);
+void vecreg_nonlin(const NEWIMAGE::volume4D<float>&,NEWIMAGE::volume4D<float>&,const NEWIMAGE::volume<float>&,NEWIMAGE::volume4D<float>&,const NEWIMAGE::volume<float>&);
 
-void vecreg_aff(const volume4D<float>&,volume4D<float>&,const volume<float>&,const Matrix&,const volume<float>&);
-
-void vecreg_nonlin(const volume4D<float>&,volume4D<float>&,const volume<float>&,volume4D<float>&,const volume<float>&);
-
-void sjgradient(const volume<float>&,volume4D<float>&);
+void sjgradient(const NEWIMAGE::volume<float>&,NEWIMAGE::volume4D<float>&);

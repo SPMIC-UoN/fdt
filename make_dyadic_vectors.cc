@@ -4,11 +4,16 @@
 
 #include <iostream>
 #include <fstream>
-#include "newimage/newimageall.h"
 #include <vector>
-using namespace std;
-using namespace NEWIMAGE;
 
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
+
+using namespace std;
+using namespace NEWMAT;
+using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 int main ( int argc, char **argv ){
   if(argc<4){
@@ -44,7 +49,7 @@ int main ( int argc, char **argv ){
     }
   }
 
-  
+
 
   volume4D<float> dyadic_vecs(ths.xsize(),ths.ysize(),ths.zsize(),3);
   volume<float> disp(ths.xsize(),ths.ysize(),ths.zsize());
@@ -53,7 +58,7 @@ int main ( int argc, char **argv ){
   copybasicproperties(ths[0],disp);
   SymmetricMatrix dyad(3);dyad=0;
   ColumnVector dir(3);
-  
+
   DiagonalMatrix dyad_D; //eigenvalues
   Matrix dyad_V; //eigenvectors
 
@@ -62,8 +67,8 @@ int main ( int argc, char **argv ){
       for(int i=ths.minx();i<=ths.maxx();i++){
 	if(mask(i,j,k)!=0){
 	  dyad=0;
-	  for(int s=ths.mint();s<=ths.maxt();s++){		   
-	  
+	  for(int s=ths.mint();s<=ths.maxt();s++){
+
 	    float th=ths(i,j,k,s);
 	    float ph=phs(i,j,k,s);
 	    dir(1)=sin(th)*cos(ph);
@@ -112,11 +117,11 @@ int main ( int argc, char **argv ){
       for(int j=ths.miny();j<=ths.maxy();j++)
 	for(int i=ths.minx();i<=ths.maxx();i++){
 	  if(mask(i,j,k)==0)continue;
-	  
+
 	  meanDyad<< dyadic_vecs(i,j,k,0) << dyadic_vecs(i,j,k,1) << dyadic_vecs(i,j,k,2);
 	  ColumnVector angles(ths.tsize());
-	  for(int s=0;s<ths.tsize();s++){		   
-	  
+	  for(int s=0;s<ths.tsize();s++){
+
 	    float th=ths(i,j,k,s);
 	    float ph=phs(i,j,k,s);
 	    dir(1)=sin(th)*cos(ph);
@@ -129,20 +134,11 @@ int main ( int argc, char **argv ){
 	  cones(i,j,k) = angles( MISCMATHS::round(angles.Nrows()*acone) );
 
 	}
-  
-    
+
+
     cones.setDisplayMaximumMinimum(1,0);
     save_volume(cones,oname+"_cones"+num2str(acone*100));
   }
 
   return 0;
 }
-
-
-
-
-
-
-
-
-

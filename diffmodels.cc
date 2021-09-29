@@ -6,12 +6,18 @@
 
 /*  CCOPYRIGHT  */
 
+
+#include <vector>
 #include <memory>
+
+#include "armawrap/newmat.h"
 
 #include "Bingham_Watson_approx.h"
 #include "diffmodels.h"
 
-
+using namespace std;
+using namespace NEWMAT;
+using namespace MISCMATHS;
 
 ////////////////////////////////////////////////
 //       DIFFUSION TENSOR MODEL

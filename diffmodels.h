@@ -13,18 +13,15 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
-
 #include <string>
-#include "utils/log.h"
-#include "utils/tracer_plus.h"
-#include "miscmaths/miscmaths.h"
-#include "miscmaths/nonlin.h"
+#include <vector>
 #include "stdlib.h"
 
-
-
-using namespace NEWMAT;
-using namespace MISCMATHS;
+#include "utils/log.h"
+#include "utils/tracer_plus.h"
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
+#include "miscmaths/nonlin.h"
 
 
 #define two_pi 0.636619772
@@ -64,10 +61,10 @@ using namespace MISCMATHS;
 //       DIFFUSION TENSOR MODEL
 ////////////////////////////////////////////////
 
-class DTI : public NonlinCF{
+class DTI : public MISCMATHS::NonlinCF{
 public:
-  DTI(const ColumnVector& iY,
-      const Matrix& ibvecs,const Matrix& ibvals){
+  DTI(const NEWMAT::ColumnVector& iY,
+      const NEWMAT::Matrix& ibvecs,const NEWMAT::Matrix& ibvals){
     Y = iY;
     npts = Y.Nrows();
     m_v1.ReSize(3);
@@ -78,8 +75,8 @@ public:
     form_Amat();
     nparams=7;
   }
-  DTI(const ColumnVector& iY,
-      const Matrix& inAmat):Amat(inAmat){
+  DTI(const NEWMAT::ColumnVector& iY,
+      const NEWMAT::Matrix& inAmat):Amat(inAmat){
     Y = iY;
     npts = Y.Nrows();
     m_v1.ReSize(3);
@@ -93,20 +90,20 @@ public:
   void nonlinfit();
   void calc_tensor_parameters();
   void sort();
-  void set_data(const ColumnVector& data){Y=data;}
+  void set_data(const NEWMAT::ColumnVector& data){Y=data;}
   float get_fa()const{return m_fa;}
   float get_md()const{return m_md;}
   float get_s0()const{return m_s0;}
   float get_mo()const{return m_mo;}
-  ColumnVector get_v1()const{return m_v1;}
-  ColumnVector get_v2()const{return m_v2;}
-  ColumnVector get_v3()const{return m_v3;}
+  NEWMAT::ColumnVector get_v1()const{return m_v1;}
+  NEWMAT::ColumnVector get_v2()const{return m_v2;}
+  NEWMAT::ColumnVector get_v3()const{return m_v3;}
   float get_l1()const{return m_l1;}
   float get_l2()const{return m_l2;}
   float get_l3()const{return m_l3;}
-  ColumnVector get_eigen()const{ColumnVector x(3);x<<m_l1<<m_l2<<m_l3;return x;}
-  ColumnVector get_tensor()const{
-    ColumnVector x(6);
+  NEWMAT::ColumnVector get_eigen()const{NEWMAT::ColumnVector x(3);x<<m_l1<<m_l2<<m_l3;return x;}
+  NEWMAT::ColumnVector get_tensor()const{
+    NEWMAT::ColumnVector x(6);
     x << m_tens(1,1)
       << m_tens(2,1)
       << m_tens(3,1)
@@ -115,39 +112,39 @@ public:
       << m_tens(3,3);
     return x;
   }
-  ColumnVector get_v(const int& i)const{if(i==1)return m_v1;else if(i==2)return m_v2;else return m_v3;}
-  ReturnMatrix get_prediction()const;
-  SymmetricMatrix get_covar()const{return m_covar;}
-  ColumnVector get_data()const{return Y;}
-  Matrix get_Amat()const{return Amat;}
+  NEWMAT::ColumnVector get_v(const int& i)const{if(i==1)return m_v1;else if(i==2)return m_v2;else return m_v3;}
+  NEWMAT::ReturnMatrix get_prediction()const;
+  NEWMAT::SymmetricMatrix get_covar()const{return m_covar;}
+  NEWMAT::ColumnVector get_data()const{return Y;}
+  NEWMAT::Matrix get_Amat()const{return Amat;}
 
   // derivatives of tensor functions w.r.t. tensor parameters
-  ReturnMatrix calc_fa_grad(const ColumnVector& _tens)const;
+  NEWMAT::ReturnMatrix calc_fa_grad(const NEWMAT::ColumnVector& _tens)const;
   float calc_fa_var()const;
-  ColumnVector calc_md_grad(const ColumnVector& _tens)const;
-  ColumnVector calc_mo_grad(const ColumnVector& _tens)const;
+  NEWMAT::ColumnVector calc_md_grad(const NEWMAT::ColumnVector& _tens)const;
+  NEWMAT::ColumnVector calc_mo_grad(const NEWMAT::ColumnVector& _tens)const;
 
   // conversion between rotation matrix and angles
-  void rot2angles(const Matrix& rot,float& th1,float& th2,float& th3)const;
-  void angles2rot(const float& th1,const float& th2,const float& th3,Matrix& rot)const;
+  void rot2angles(const NEWMAT::Matrix& rot,float& th1,float& th2,float& th3)const;
+  void angles2rot(const float& th1,const float& th2,const float& th3,NEWMAT::Matrix& rot)const;
 
   void print()const{
-    cout << "DTI FIT RESULTS " << endl;
-    cout << "S0   :" << m_s0 << endl;
-    cout << "MD   :" << m_md << endl;
-    cout << "FA   :" << m_fa << endl;
-    cout << "MO   :" << m_mo << endl;
-    ColumnVector x(3);
+    std::cout << "DTI FIT RESULTS " << std::endl;
+    std::cout << "S0   :" << m_s0 << std::endl;
+    std::cout << "MD   :" << m_md << std::endl;
+    std::cout << "FA   :" << m_fa << std::endl;
+    std::cout << "MO   :" << m_mo << std::endl;
+    NEWMAT::ColumnVector x(3);
     x=m_v1;
     if(x(3)<0)x=-x;
-    float _th,_ph;cart2sph(x,_th,_ph);
-    cout << "TH   :" << _th*180.0/M_PI << " deg" << endl;
-    cout << "PH   :" << _ph*180.0/M_PI << " deg" << endl;
-    cout << "V1   : " << x(1) << " " << x(2) << " " << x(3) << endl;
+    float _th,_ph;MISCMATHS::cart2sph(x,_th,_ph);
+    std::cout << "TH   :" << _th*180.0/M_PI << " deg" << std::endl;
+    std::cout << "PH   :" << _ph*180.0/M_PI << " deg" << std::endl;
+    std::cout << "V1   : " << x(1) << " " << x(2) << " " << x(3) << std::endl;
   }
   void form_Amat(){
     Amat.ReSize(bvecs.Ncols(),7);
-    Matrix tmpvec(3,1), tmpmat;
+    NEWMAT::Matrix tmpvec(3,1), tmpmat;
     for( int i = 1; i <= bvecs.Ncols(); i++){
       tmpvec << bvecs(1,i) << bvecs(2,i) << bvecs(3,i);
       tmpmat = tmpvec*tmpvec.t()*bvals(1,i);
@@ -161,7 +158,7 @@ public:
     }
     iAmat = pinv(Amat);
   }
-  void vec2tens(const ColumnVector& Vec){
+  void vec2tens(const NEWMAT::ColumnVector& Vec){
     m_tens.ReSize(3);
     m_tens(1,1)=Vec(1);
     m_tens(2,1)=Vec(2);
@@ -170,7 +167,7 @@ public:
     m_tens(3,2)=Vec(5);
     m_tens(3,3)=Vec(6);
   }
-  void vec2tens(const ColumnVector& Vec,SymmetricMatrix& Tens)const{
+  void vec2tens(const NEWMAT::ColumnVector& Vec,NEWMAT::SymmetricMatrix& Tens)const{
     Tens.ReSize(3);
     Tens(1,1)=Vec(1);
     Tens(2,1)=Vec(2);
@@ -179,33 +176,33 @@ public:
     Tens(3,2)=Vec(5);
     Tens(3,3)=Vec(6);
   }
-  void tens2vec(const SymmetricMatrix& Tens,ColumnVector& Vec)const{
+  void tens2vec(const NEWMAT::SymmetricMatrix& Tens,NEWMAT::ColumnVector& Vec)const{
     Vec.ReSize(6);
     Vec<<Tens(1,1)<<Tens(2,1)<<Tens(3,1)<<Tens(2,2)<<Tens(3,2)<<Tens(3,3);
   }
 
   // nonlinear fitting routines
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p)const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
 
-  ColumnVector rotproduct(const ColumnVector& x,const Matrix& R)const;
-  ColumnVector rotproduct(const ColumnVector& x,const Matrix& R1,const Matrix& R2)const;
-  float anisoterm(const int& pt,const ColumnVector& ls,const Matrix& xx)const;
+  NEWMAT::ColumnVector rotproduct(const NEWMAT::ColumnVector& x,const NEWMAT::Matrix& R)const;
+  NEWMAT::ColumnVector rotproduct(const NEWMAT::ColumnVector& x,const NEWMAT::Matrix& R1,const NEWMAT::Matrix& R2)const;
+  float anisoterm(const int& pt,const NEWMAT::ColumnVector& ls,const NEWMAT::Matrix& xx)const;
 
 private:
-  Matrix bvecs;
-  Matrix bvals;
-  ColumnVector Y;
-  Matrix Amat,iAmat;
+  NEWMAT::Matrix bvecs;
+  NEWMAT::Matrix bvals;
+  NEWMAT::ColumnVector Y;
+  NEWMAT::Matrix Amat,iAmat;
   int npts,nparams;
-  ColumnVector m_v1,m_v2,m_v3;
+  NEWMAT::ColumnVector m_v1,m_v2,m_v3;
   float m_l1,m_l2,m_l3;
   float m_fa,m_s0,m_md,m_mo;
   float m_sse;
-  SymmetricMatrix m_tens;
-  SymmetricMatrix m_covar;
+  NEWMAT::SymmetricMatrix m_tens;
+  NEWMAT::SymmetricMatrix m_covar;
 };
 
 
@@ -216,14 +213,14 @@ private:
 // Generic class
 class PVM {
 public:
-  PVM(const ColumnVector& iY,
-      const Matrix& ibvecs, const Matrix& ibvals,
+  PVM(const NEWMAT::ColumnVector& iY,
+      const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
       const int& nfibres):Y(iY),bvecs(ibvecs),bvals(ibvals){
 
     npts    = Y.Nrows();
     nfib    = nfibres;
 
-    cart2sph(ibvecs,alpha,beta);
+    MISCMATHS::cart2sph(ibvecs,alpha,beta);
 
     cosalpha.ReSize(npts);
     sinalpha.ReSize(npts);
@@ -239,18 +236,18 @@ public:
   virtual void fit()  = 0;
   virtual void sort() = 0;
   virtual void print()const = 0;
-  virtual void print(const ColumnVector& p)const = 0;
+  virtual void print(const NEWMAT::ColumnVector& p)const = 0;
 
-  virtual ReturnMatrix get_prediction()const = 0;
+  virtual NEWMAT::ReturnMatrix get_prediction()const = 0;
 
 protected:
-  const ColumnVector& Y;
-  const Matrix& bvecs;
-  const Matrix& bvals;
-  ColumnVector alpha;
-  ColumnVector sinalpha;
-  ColumnVector cosalpha;
-  ColumnVector beta;
+  const NEWMAT::ColumnVector& Y;
+  const NEWMAT::Matrix& bvecs;
+  const NEWMAT::Matrix& bvals;
+  NEWMAT::ColumnVector alpha;
+  NEWMAT::ColumnVector sinalpha;
+  NEWMAT::ColumnVector cosalpha;
+  NEWMAT::ColumnVector beta;
 
   int npts;
   int nfib;
@@ -260,10 +257,10 @@ protected:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Model 1 : mono-exponential (for single shell). Constrained optimization for the diffusivity, fractions and their sum<1
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PVM_single_c : public PVM, public NonlinCF {
+class PVM_single_c : public PVM, public MISCMATHS::NonlinCF {
 public:
-   PVM_single_c(const ColumnVector& iY,
-	     const Matrix& ibvecs, const Matrix& ibvals,
+   PVM_single_c(const NEWMAT::ColumnVector& iY,
+	     const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
 		const int& nfibres, bool m_BIC=false, bool incl_f0=false, bool m_fan_angle=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0),m_eval_BIC(m_BIC),m_return_fanning(m_fan_angle){
 
     if (m_include_f0)
@@ -281,7 +278,7 @@ public:
 
   // routines from NonlinCF
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p)const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
 
@@ -289,29 +286,29 @@ public:
   // other routines
   void fit();
   void sort();                                         //Sort compartments according to their volume fraction
-  void fit_pvf(ColumnVector& x)const;                  //Estimate the volume fractions given all the other parameters using Linear Least Squares. Used to better initialize the Nonlinear fitter
-  void fix_fsum(ColumnVector& fs) const;
-  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  void fit_pvf(NEWMAT::ColumnVector& x)const;                  //Estimate the volume fractions given all the other parameters using Linear Least Squares. Used to better initialize the Nonlinear fitter
+  void fix_fsum(NEWMAT::ColumnVector& fs) const;
+  float partial_fsum(NEWMAT::ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
   void print()const;                                   //Print the final estimates (after having them transformed)
-  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the untransformed parameter values
-  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values (true,non-transformed space)
+  void print(const NEWMAT::ColumnVector& p)const;              //Print the estimates using a vector with the untransformed parameter values
+  NEWMAT::ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values (true,non-transformed space)
 
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
-  ColumnVector get_f()const{return m_f;}
-  ColumnVector get_th()const{return m_th;}
-  ColumnVector get_ph()const{return m_ph;}
+  NEWMAT::ColumnVector get_f()const{return m_f;}
+  NEWMAT::ColumnVector get_th()const{return m_th;}
+  NEWMAT::ColumnVector get_ph()const{return m_ph;}
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
   float get_BIC() const{return m_BIC;}
-  ColumnVector get_fanning_angles() const{return m_fanning_angles;}
+  NEWMAT::ColumnVector get_fanning_angles() const{return m_fanning_angles;}
   float get_fanning_angle(const int& i) const{return m_fanning_angles(i);}
-  vector<ColumnVector> get_invHes_e1() const{return m_invprHes_e1;}
-  ColumnVector get_invHes_e1(const int& i) const{return m_invprHes_e1[i-1];}
-  vector<Matrix> get_Hessian() const{return m_Hessian;}
-  Matrix get_Hessian(const int& i) const{return m_Hessian[i-1];}
+  std::vector<NEWMAT::ColumnVector> get_invHes_e1() const{return m_invprHes_e1;}
+  NEWMAT::ColumnVector get_invHes_e1(const int& i) const{return m_invprHes_e1[i-1];}
+  std::vector<NEWMAT::Matrix> get_Hessian() const{return m_Hessian;}
+  NEWMAT::Matrix get_Hessian(const int& i) const{return m_Hessian[i-1];}
 
 
   //Functions used to obtain a prediction of the fanning angle (if any), associated with each fibre compartment
@@ -323,30 +320,30 @@ public:
   // useful functions for calculating signal and its derivatives
   // functions
   float isoterm(const int& pt,const float& _d)const;
-  float anisoterm(const int& pt,const float& _d,const ColumnVector& x)const;
+  float anisoterm(const int& pt,const float& _d,const NEWMAT::ColumnVector& x)const;
   // 1st order derivatives
   float isoterm_lambda(const int& pt,const float& lambda)const;
-  float anisoterm_lambda(const int& pt,const float& lambda,const ColumnVector& x)const;
-  float anisoterm_th(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_ph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+  float anisoterm_lambda(const int& pt,const float& lambda,const NEWMAT::ColumnVector& x)const;
+  float anisoterm_th(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_ph(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  NEWMAT::ReturnMatrix fractions_deriv(const int& nfib, const NEWMAT::ColumnVector& fs, const NEWMAT::ColumnVector& bs) const;
 
 private:
   int   nparams;
   float m_s0;
   float m_d;
   float m_f0;
-  ColumnVector m_f;
-  ColumnVector m_th;
-  ColumnVector m_ph;
+  NEWMAT::ColumnVector m_f;
+  NEWMAT::ColumnVector m_th;
+  NEWMAT::ColumnVector m_ph;
   const bool m_include_f0;       //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
   const bool m_eval_BIC;         //Indicate whether the Bayesian Information Criterion for the fitted model is computed
   const bool m_return_fanning;   //Indicate whether fanning angles predictions are made. For each fitted fibre compartment i, use the second eigenvector of the inverse Hessian
                                  //evaluated at this fibre orientation to predict fanning angle for i.
   float m_BIC;                   //Bayesian Information Criterion for the fitted model
-  ColumnVector m_fanning_angles; //Use the second eigenvector of the inverse Hessian evaluated at each fibre orientation i to predict fanning angle for fibre compartment i.
-  vector<Matrix> m_Hessian;      //Vector that keeps the Hessian matrix for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
-  vector<ColumnVector> m_invprHes_e1;  //Vector that keeps the first eigenvector of the projected inverse Hessian for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
+  NEWMAT::ColumnVector m_fanning_angles; //Use the second eigenvector of the inverse Hessian evaluated at each fibre orientation i to predict fanning angle for fibre compartment i.
+  std::vector<NEWMAT::Matrix> m_Hessian;      //Vector that keeps the Hessian matrix for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
+  std::vector<NEWMAT::ColumnVector> m_invprHes_e1;  //Vector that keeps the first eigenvector of the projected inverse Hessian for each fibre orientation w.r.t. the Cartesian coordinates x,y,z, evaluated at the estimated orientation
 };
 
 
@@ -355,10 +352,10 @@ private:
 //       Old Model 1 with no constraints for the sum of fractions
 //////////////////////////////////////////////////////////////////////////
 // Model 1 : mono-exponential (for single shell)
-class PVM_single : public PVM, public NonlinCF {
+class PVM_single : public PVM, public MISCMATHS::NonlinCF {
 public:
-  PVM_single(const ColumnVector& iY,
-	     const Matrix& ibvecs, const Matrix& ibvals,
+  PVM_single(const NEWMAT::ColumnVector& iY,
+	     const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
 	     const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres), m_include_f0(incl_f0){
 
     if (m_include_f0)
@@ -374,7 +371,7 @@ public:
 
   // routines from NonlinCF
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p)const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
 
@@ -383,83 +380,83 @@ public:
   void sort();
   void fix_fsum();
   void print()const{
-    cout << "PVM (Single) FIT RESULTS " << endl;
-    cout << "S0   :" << m_s0 << endl;
-    cout << "D    :" << m_d << endl;
+    std::cout << "PVM (Single) FIT RESULTS " << std::endl;
+    std::cout << "S0   :" << m_s0 << std::endl;
+    std::cout << "D    :" << m_d << std::endl;
     for(int i=1;i<=nfib;i++){
-      cout << "F" << i << "   :" << m_f(i) << endl;
-      ColumnVector x(3);
+      std::cout << "F" << i << "   :" << m_f(i) << std::endl;
+      NEWMAT::ColumnVector x(3);
       x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
       if(x(3)<0)x=-x;
-      float _th,_ph;cart2sph(x,_th,_ph);
-      cout << "TH" << i << "  :" << _th*180.0/M_PI << " deg" << endl;
-      cout << "PH" << i << "  :" << _ph*180.0/M_PI << " deg" << endl;
-      cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
+      float _th,_ph;MISCMATHS::cart2sph(x,_th,_ph);
+      std::cout << "TH" << i << "  :" << _th*180.0/M_PI << " deg" << std::endl;
+      std::cout << "PH" << i << "  :" << _ph*180.0/M_PI << " deg" << std::endl;
+      std::cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << std::endl;
     }
   }
 
-  void print(const ColumnVector& p)const{
-    cout << "PARAMETER VALUES " << endl;
-    cout << "S0   :" << p(1) << endl;
-    cout << "D    :" << p(2) << endl;
+  void print(const NEWMAT::ColumnVector& p)const{
+    std::cout << "PARAMETER VALUES " << std::endl;
+    std::cout << "S0   :" << p(1) << std::endl;
+    std::cout << "D    :" << p(2) << std::endl;
     for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
-      cout << "F" << ii << "   :" << x2f(p(i)) << endl;
-      cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl;
-      cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl;
+      std::cout << "F" << ii << "   :" << x2f(p(i)) << std::endl;
+      std::cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << std::endl;
+      std::cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << std::endl;
     }
     if (m_include_f0)
-      cout << "f0    :" << x2f(p(nparams)) << endl;
+      std::cout << "f0    :" << x2f(p(nparams)) << std::endl;
   }
 
   // getters
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
-  ColumnVector get_f()const{return m_f;}
-  ColumnVector get_th()const{return m_th;}
-  ColumnVector get_ph()const{return m_ph;}
+  NEWMAT::ColumnVector get_f()const{return m_f;}
+  NEWMAT::ColumnVector get_th()const{return m_th;}
+  NEWMAT::ColumnVector get_ph()const{return m_ph;}
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
-  ReturnMatrix get_prediction()const;
+  NEWMAT::ReturnMatrix get_prediction()const;
 
   // setters
   void set_s0(const float& s0){m_s0=s0;}
   void set_f0(const float& f0){m_f0=f0;}
   void set_d(const float& d){m_d=d;}
-  void set_f(const ColumnVector& f){m_f=f;}
-  void set_th_ph(const Matrix& dyads){
+  void set_f(const NEWMAT::ColumnVector& f){m_f=f;}
+  void set_th_ph(const NEWMAT::Matrix& dyads){
     MISCMATHS::cart2sph(dyads,m_th,m_ph);
   }
 
   // useful functions for calculating signal and its derivatives
   // functions
   float isoterm(const int& pt,const float& _d)const;
-  float anisoterm(const int& pt,const float& _d,const ColumnVector& x)const;
+  float anisoterm(const int& pt,const float& _d,const NEWMAT::ColumnVector& x)const;
   float bvecs_fibre_dp(const int& pt,const float& _th,const float& _ph)const;
-  float bvecs_fibre_dp(const int& pt,const ColumnVector& x)const;
+  float bvecs_fibre_dp(const int& pt,const NEWMAT::ColumnVector& x)const;
   // 1st order derivatives
   float isoterm_d(const int& pt,const float& _d)const;
-  float anisoterm_d(const int& pt,const float& _d,const ColumnVector& x)const;
-  float anisoterm_th(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_ph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_d(const int& pt,const float& _d,const NEWMAT::ColumnVector& x)const;
+  float anisoterm_th(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_ph(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
   // 2nd order derivatives
   float isoterm_dd(const int& pt,const float& _d)const;
-  float anisoterm_dd(const int& pt,const float& _d,const ColumnVector& x)const;
-  float anisoterm_dth(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_dph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_thth(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_phph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
-  float anisoterm_thph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_dd(const int& pt,const float& _d,const NEWMAT::ColumnVector& x)const;
+  float anisoterm_dth(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_dph(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_thth(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_phph(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_thph(const int& pt,const float& _d,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph)const;
 
 private:
   int   nparams;
   float m_s0;
   float m_d;
   float m_f0;
-  ColumnVector m_f;
-  ColumnVector m_th;
-  ColumnVector m_ph;
+  NEWMAT::ColumnVector m_f;
+  NEWMAT::ColumnVector m_th;
+  NEWMAT::ColumnVector m_ph;
   const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
 
@@ -470,10 +467,10 @@ private:
 ////////////////////////////////////////////////
 
 // Model 2 : non-mono-exponential (for multiple shells)
-class PVM_multi : public PVM, public NonlinCF {
+class PVM_multi : public PVM, public MISCMATHS::NonlinCF {
 public:
-  PVM_multi(const ColumnVector& iY,
-	    const Matrix& ibvecs, const Matrix& ibvals,
+  PVM_multi(const NEWMAT::ColumnVector& iY,
+	    const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
 	    const int& nfibres, int Gamma_for_ball_only=0, float R=0.13, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_Gamma_for_ball_only(Gamma_for_ball_only),m_R(R),m_include_f0(incl_f0){
 
     if (m_include_f0)
@@ -490,7 +487,7 @@ public:
 
   // routines from NonlinCF
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p)const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
 
@@ -499,41 +496,41 @@ public:
   void sort();
   void fix_fsum();
   void print()const{
-    cout << "PVM (MULTI) FIT RESULTS " << endl;
-    cout << "S0    :" << m_s0 << endl;
-    cout << "D     :" << m_d << endl;
-    cout << "D_STD :" << m_d_std << endl;
+    std::cout << "PVM (MULTI) FIT RESULTS " << std::endl;
+    std::cout << "S0    :" << m_s0 << std::endl;
+    std::cout << "D     :" << m_d << std::endl;
+    std::cout << "D_STD :" << m_d_std << std::endl;
     for(int i=1;i<=nfib;i++){
-      cout << "F" << i << "    :" << m_f(i) << endl;
-      ColumnVector x(3);
+      std::cout << "F" << i << "    :" << m_f(i) << std::endl;
+      NEWMAT::ColumnVector x(3);
       x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
       if(x(3)<0)x=-x;
-      cout << "TH" << i << "   :" << m_th(i) << endl;
-      cout << "PH" << i << "   :" << m_ph(i) << endl;
-      cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
+      std::cout << "TH" << i << "   :" << m_th(i) << std::endl;
+      std::cout << "PH" << i << "   :" << m_ph(i) << std::endl;
+      std::cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << std::endl;
     }
   }
-  void print(const ColumnVector& p)const{
-    cout << "PARAMETER VALUES " << endl;
-    cout << "S0    :" << p(1) << endl;
-    cout << "D     :" << p(2) << endl;
-    cout << "D_STD :" << p(3) << endl;
+  void print(const NEWMAT::ColumnVector& p)const{
+    std::cout << "PARAMETER VALUES " << std::endl;
+    std::cout << "S0    :" << p(1) << std::endl;
+    std::cout << "D     :" << p(2) << std::endl;
+    std::cout << "D_STD :" << p(3) << std::endl;
     for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
-      cout << "F" << ii << "    :" << x2f(p(i)) << endl;
-      cout << "TH" << ii << "   :" << p(i+1) << endl;
-      cout << "PH" << ii << "   :" << p(i+2) << endl;
+      std::cout << "F" << ii << "    :" << x2f(p(i)) << std::endl;
+      std::cout << "TH" << ii << "   :" << p(i+1) << std::endl;
+      std::cout << "PH" << ii << "   :" << p(i+2) << std::endl;
     }
     if (m_include_f0)
-      cout << "f0    :" << x2f(p(nparams)) << endl;
+      std::cout << "f0    :" << x2f(p(nparams)) << std::endl;
   }
 
   float get_s0()const{return m_s0;}
   float get_d()const{return m_d;}
   float get_f0()const{return m_f0;}
   float get_d_std()const{return m_d_std;}
-  ColumnVector get_f()const{return m_f;}
-  ColumnVector get_th()const{return m_th;}
-  ColumnVector get_ph()const{return m_ph;}
+  NEWMAT::ColumnVector get_f()const{return m_f;}
+  NEWMAT::ColumnVector get_th()const{return m_th;}
+  NEWMAT::ColumnVector get_ph()const{return m_ph;}
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
@@ -543,24 +540,24 @@ public:
   void set_f0(const float& f0){m_f0=f0;}
   void set_d(const float& d){m_d=d;}
   void set_d_std(const float& d_std){m_d_std=d_std;}
-  void set_f(const ColumnVector& f){m_f=f;}
-  void set_th_ph(const Matrix& dyads){
+  void set_f(const NEWMAT::ColumnVector& f){m_f=f;}
+  void set_th_ph(const NEWMAT::Matrix& dyads){
     MISCMATHS::cart2sph(dyads,m_th,m_ph);
   }
 
-  ReturnMatrix get_prediction()const;
+  NEWMAT::ReturnMatrix get_prediction()const;
 
   // useful functions for calculating signal and its derivatives
   // functions
   float isoterm(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm(const int& pt,const float& _a,const float& _b,const ColumnVector& x, const int)const;
+  float anisoterm(const int& pt,const float& _a,const float& _b,const NEWMAT::ColumnVector& x, const int)const;
   // 1st order derivatives
   float isoterm_a(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm_a(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int)const;
+  float anisoterm_a(const int& pt,const float& _a,const float& _b,const NEWMAT::ColumnVector& x,const int)const;
   float isoterm_b(const int& pt,const float& _a,const float& _b)const;
-  float anisoterm_b(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const int)const;
-  float anisoterm_th(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int)const;
-  float anisoterm_ph(const int& pt,const float& _a,const float& _b,const ColumnVector& x,const float& _th,const float& _ph,const int)const;
+  float anisoterm_b(const int& pt,const float& _a,const float& _b,const NEWMAT::ColumnVector& x,const int)const;
+  float anisoterm_th(const int& pt,const float& _a,const float& _b,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph,const int)const;
+  float anisoterm_ph(const int& pt,const float& _a,const float& _b,const NEWMAT::ColumnVector& x,const float& _th,const float& _ph,const int)const;
 
 private:
   int   nparams;
@@ -568,9 +565,9 @@ private:
   float m_d;
   float m_d_std;
   float m_f0;
-  ColumnVector m_f;
-  ColumnVector m_th;
-  ColumnVector m_ph;
+  NEWMAT::ColumnVector m_f;
+  NEWMAT::ColumnVector m_th;
+  NEWMAT::ColumnVector m_ph;
   const int m_Gamma_for_ball_only; //Model2 Twists: 0 (default), 1 sets off the Gamma distr of diff. for the fibres, 2 as in (1) but also use fixed tensor kernels for fibres
   const float m_R;                 //If m_Gamma_for_ball_only=2, then m_R defines the anisotropy of the tensor kernels. This is kept constant, used to initialise xfibres model=3.
   float m_invR;                    //If m_Gamma_for_ball_only=2, 1/(2*m_R+1) is precomputed as used a lot in calculations
@@ -584,10 +581,10 @@ private:
 // Ball & Binghams Fanning Model : Pseudo-Constrained optimization for the diffusivity, fractions and their sum<1, the eigenvalues
 //of the Bingham Matrices. Use Levenberg-Marquardt to fit and get the gradient numerically
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PVM_Ball_Binghams : public PVM, public NonlinCF {
+class PVM_Ball_Binghams : public PVM, public MISCMATHS::NonlinCF {
 public:
-   PVM_Ball_Binghams(const ColumnVector& iY,
-	     const Matrix& ibvecs, const Matrix& ibvals,
+   PVM_Ball_Binghams(const NEWMAT::ColumnVector& iY,
+	     const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
 		     const int& nfibres, bool eval_BIC=false, bool incl_f0=false, bool grid_search=false):PVM(iY,ibvecs,ibvals,nfibres),m_eval_BIC(eval_BIC),m_include_f0(incl_f0), m_gridsearch(grid_search){
 
     nparams_per_fibre=6;
@@ -597,8 +594,8 @@ public:
     else
       nparams = nfib*nparams_per_fibre + 2;
 
-    Matrix temp; ColumnVector gvec(3);
-    //For each DW direction contains the dyadic product Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T
+    NEWMAT::Matrix temp; NEWMAT::ColumnVector gvec(3);
+    //For each DW direction contains the dyadic product NEWMAT::Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T
     for(int i=1;i<=npts;i++){
       gvec<< ibvecs(1,i) << ibvecs(2,i) << ibvecs(3,i);
       temp<< gvec*gvec.t();
@@ -619,7 +616,7 @@ public:
 
   // routines from NonlinCF
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p) const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const; //Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)
   //Instead of returning the model predicted signal for each direction returns the individual signal contributions weighted by their fractions
@@ -639,25 +636,25 @@ public:
   // other routines
   void fit();
   void sort();                                         //Sort compartments according to their volume fraction
-  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  float partial_fsum(NEWMAT::ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
   void print()const;                                   //Print the final estimates (after having them untransformed)
-  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
-  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
+  void print(const NEWMAT::ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
+  NEWMAT::ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
 
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
-  ColumnVector get_f()const{return m_f;}
-  ColumnVector get_th()const{return m_th;}
-  ColumnVector get_ph()const{return m_ph;}
-  ColumnVector get_psi()const{return m_psi;}
-  ColumnVector get_k1()const{return m_k1;}
-  ColumnVector get_k2()const{return m_k2;}
+  NEWMAT::ColumnVector get_f()const{return m_f;}
+  NEWMAT::ColumnVector get_th()const{return m_th;}
+  NEWMAT::ColumnVector get_ph()const{return m_ph;}
+  NEWMAT::ColumnVector get_psi()const{return m_psi;}
+  NEWMAT::ColumnVector get_k1()const{return m_k1;}
+  NEWMAT::ColumnVector get_k2()const{return m_k2;}
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
   float get_psi(const int& i)const{return m_psi(i);}
-  ReturnMatrix get_fanning_vector(const int& i) const;  //Returns a vector that indicates the fanning orientation
+  NEWMAT::ReturnMatrix get_fanning_vector(const int& i) const;  //Returns a vector that indicates the fanning orientation
   float get_k1(const int& i)const{return m_k1(i);}
   float get_k2(const int& i)const{return m_k2(i);}
   float get_BIC() const{return m_BIC;}
@@ -666,21 +663,21 @@ public:
 
   // useful functions for calculating signal and its derivatives
   float isoterm(const int& pt,const float& _d)const;
-  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+  NEWMAT::ReturnMatrix fractions_deriv(const int& nfib, const NEWMAT::ColumnVector& fs, const NEWMAT::ColumnVector& bs) const;
 
 private:
-  vector<Matrix> bvecs_dyadic;   //For each DW direction contains the dyadic product Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T
+  std::vector<NEWMAT::Matrix> bvecs_dyadic;   //For each DW direction contains the dyadic product Matrix scaled by the b value: bvals(i)*bvecs(i)*bvecs(i)^T
   int nparams_per_fibre;
   int   nparams;
   float m_s0;
   float m_d;
   float m_f0;
-  ColumnVector m_f;
-  ColumnVector m_th;
-  ColumnVector m_ph;
-  ColumnVector m_psi;
-  ColumnVector m_k1;
-  ColumnVector m_k2;
+  NEWMAT::ColumnVector m_f;
+  NEWMAT::ColumnVector m_th;
+  NEWMAT::ColumnVector m_ph;
+  NEWMAT::ColumnVector m_psi;
+  NEWMAT::ColumnVector m_k1;
+  NEWMAT::ColumnVector m_k2;
 
   float m_BIC;                   //Bayesian Information Criterion for the fitted model
 
@@ -696,10 +693,10 @@ private:
 // Ball & Watsons Fanning Model : Pseudo-Constrained optimization for the diffusivity, fractions and their sum<1, the spread of the
 //Watson distribution. Use Levenberg-Marquardt to fit and get the gradient numerically
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class PVM_Ball_Watsons : public PVM, public NonlinCF {
+class PVM_Ball_Watsons : public PVM, public MISCMATHS::NonlinCF {
 public:
-   PVM_Ball_Watsons(const ColumnVector& iY,
-	     const Matrix& ibvecs, const Matrix& ibvals,
+   PVM_Ball_Watsons(const NEWMAT::ColumnVector& iY,
+	     const NEWMAT::Matrix& ibvecs, const NEWMAT::Matrix& ibvals,
 		    const int& nfibres, bool eval_BIC=false, bool incl_f0=false, bool grid_search=false):PVM(iY,ibvecs,ibvals,nfibres),m_eval_BIC(eval_BIC),m_include_f0(incl_f0), m_gridsearch(grid_search){
 
     nparams_per_fibre=4;
@@ -720,7 +717,7 @@ public:
 
   // routines from NonlinCF
   NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p) const;
-  std::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<BFMatrix> iptr)const;
+  std::shared_ptr<MISCMATHS::BFMatrix> hess(const NEWMAT::ColumnVector&p,std::shared_ptr<MISCMATHS::BFMatrix> iptr)const;
   double cf(const NEWMAT::ColumnVector& p)const;
   NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const; //Applies the forward model and gets a model predicted signal using the parameter values in p (transformed parameter space)
   //Instead of returning the model predicted signal for each direction returns the individual signal contributions weighted by their fractions
@@ -740,18 +737,18 @@ public:
   // other routines
   void fit();
   void sort();                                         //Sort compartments according to their volume fraction
-  float partial_fsum(ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
+  float partial_fsum(NEWMAT::ColumnVector& fs, int ii) const;  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib). Used for transforming beta to f and vice versa
   void print()const;                                   //Print the final estimates (after having them untransformed)
-  void print(const ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
-  ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
+  void print(const NEWMAT::ColumnVector& p)const;              //Print the estimates using a vector with the transformed parameter values (i.e. need to untransform to get d,fs etc)
+  NEWMAT::ReturnMatrix get_prediction()const;                  //Applies the forward model and gets the model predicted signal using the estimated parameter values  (true,non-transformed space)
 
   float get_s0()const{return m_s0;}
   float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
-  ColumnVector get_f()const{return m_f;}
-  ColumnVector get_th()const{return m_th;}
-  ColumnVector get_ph()const{return m_ph;}
-  ColumnVector get_k()const{return m_k;}
+  NEWMAT::ColumnVector get_f()const{return m_f;}
+  NEWMAT::ColumnVector get_th()const{return m_th;}
+  NEWMAT::ColumnVector get_ph()const{return m_ph;}
+  NEWMAT::ColumnVector get_k()const{return m_k;}
   float get_f(const int& i)const{return m_f(i);}
   float get_th(const int& i)const{return m_th(i);}
   float get_ph(const int& i)const{return m_ph(i);}
@@ -760,7 +757,7 @@ public:
 
   // useful functions for calculating signal and its derivatives
   float isoterm(const int& pt,const float& _d)const;
-  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+  NEWMAT::ReturnMatrix fractions_deriv(const int& nfib, const NEWMAT::ColumnVector& fs, const NEWMAT::ColumnVector& bs) const;
 
 private:
   int nparams_per_fibre;
@@ -768,10 +765,10 @@ private:
   float m_s0;
   float m_d;
   float m_f0;
-  ColumnVector m_f;
-  ColumnVector m_th;
-  ColumnVector m_ph;
-  ColumnVector m_k;
+  NEWMAT::ColumnVector m_f;
+  NEWMAT::ColumnVector m_th;
+  NEWMAT::ColumnVector m_ph;
+  NEWMAT::ColumnVector m_k;
 
   float m_BIC;                   //Bayesian Information Criterion for the fitted model
 

@@ -17,8 +17,6 @@
 #include "utils/options.h"
 #include "utils/log.h"
 #include "utils/tracer_plus.h"
-//#include "newmatall.h"
-using namespace Utilities;
 
 namespace Xfibres {
 
@@ -26,126 +24,126 @@ class xfibresOptions {
  public:
   static xfibresOptions& getInstance();
   ~xfibresOptions() { delete gopt; }
-  
-  Option<bool> verbose;
-  Option<bool> help;
-  Option<string> logdir;
-  Option<bool> forcedir;
-  Option<string> datafile;
-  Option<string> maskfile;
-  Option<string> bvecsfile;
-  Option<string> bvalsfile;
-  Option<int> nfibres;
-  Option<int> modelnum;
-  Option<float> fudge;
-  Option<int> njumps;
-  Option<int> nburn;
-  Option<int> nburn_noard;
-  Option<int> sampleevery;
-  Option<int> updateproposalevery;
-  Option<int> seed;
-  Option<bool> no_ard;
-  Option<bool> all_ard;
-  Option<bool> localinit;
-  Option<bool> nonlin;
-  Option<bool> cnonlin;
-  Option<bool> rician;
-  Option<bool> f0;
-  Option<bool> ardf0;
-  Option<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
-  Option<float> R_prior_std;
-  FmribOption<float> R_prior_fudge; //if used (set to a positive number), an ARD for R is used for the high diffusivity regions with the requested fudge factor
-  FmribOption<string> grad_file;
+
+  Utilities::Option<bool> verbose;
+  Utilities::Option<bool> help;
+  Utilities::Option<std::string> logdir;
+  Utilities::Option<bool> forcedir;
+  Utilities::Option<std::string> datafile;
+  Utilities::Option<std::string> maskfile;
+  Utilities::Option<std::string> bvecsfile;
+  Utilities::Option<std::string> bvalsfile;
+  Utilities::Option<int> nfibres;
+  Utilities::Option<int> modelnum;
+  Utilities::Option<float> fudge;
+  Utilities::Option<int> njumps;
+  Utilities::Option<int> nburn;
+  Utilities::Option<int> nburn_noard;
+  Utilities::Option<int> sampleevery;
+  Utilities::Option<int> updateproposalevery;
+  Utilities::Option<int> seed;
+  Utilities::Option<bool> no_ard;
+  Utilities::Option<bool> all_ard;
+  Utilities::Option<bool> localinit;
+  Utilities::Option<bool> nonlin;
+  Utilities::Option<bool> cnonlin;
+  Utilities::Option<bool> rician;
+  Utilities::Option<bool> f0;
+  Utilities::Option<bool> ardf0;
+  Utilities::Option<float> R_prior_mean;  //setting the prior for model's 3 ratio of perp. to parallel diffusivity
+  Utilities::Option<float> R_prior_std;
+  Utilities::FmribOption<float> R_prior_fudge; //if used (set to a positive number), an ARD for R is used for the high diffusivity regions with the requested fudge factor
+  Utilities::FmribOption<std::string> grad_file;
 
 
-  void parse_command_line(int argc, char** argv,  Log& logger);
-  
+  void parse_command_line(int argc, char** argv,  Utilities::Log& logger);
+
  private:
-  xfibresOptions();  
+  xfibresOptions();
   const xfibresOptions& operator=(xfibresOptions&);
   xfibresOptions(xfibresOptions&);
 
-  OptionParser options; 
-      
+  Utilities::OptionParser options;
+
   static xfibresOptions* gopt;
-  
+
 };
 
  inline xfibresOptions& xfibresOptions::getInstance(){
    if(gopt == NULL)
      gopt = new xfibresOptions();
-   
+
    return *gopt;
  }
 
  inline xfibresOptions::xfibresOptions() :
-   verbose(string("-V,--verbose"), false, 
-	   string("switch on diagnostic messages"), 
-	   false, no_argument),
-   help(string("-h,--help"), false,
-	string("display this message"),
-	false, no_argument),
-   logdir(string("--ld,--logdir"), string("logdir"),
-	  string("log directory (default is logdir)"),
-	  false, requires_argument),
-   forcedir(string("--forcedir"),false,string("Use the actual directory name given - i.e. don't add + to make a new directory"),false,no_argument),
-   datafile(string("-k,--data,--datafile"), string("data"),
-	    string("data file"),
-	    true, requires_argument),  
-   maskfile(string("-m,--mask, --maskfile"), string("nodif_brain_mask"),
-	    string("mask file"),
-	    true, requires_argument),
-   bvecsfile(string("-r,--bvecs"), string("bvecs"),
-	     string("b vectors file"),
-	     true, requires_argument),  
-   bvalsfile(string("-b,--bvals"), string("bvals"),
-	     string("b values file"),
-	     true, requires_argument), 
-   nfibres(string("--nf,--nfibres"),1,
-	   string("Maximum number of fibres to fit in each voxel (default 1)"),
-	   false,requires_argument),
-   modelnum(string("--model"),1,
-	    string("Which model to use. 1=deconv. with sticks (default). 2=deconv. with sticks and a range of diffusivities. 3=deconv. with zeppelins"),
-	    false,requires_argument),
-   fudge(string("--fudge"),1,
-	 string("ARD fudge factor"),
-	 false,requires_argument),
-   njumps(string("--nj,--njumps"),1250,
-	  string("Num of jumps to be made by MCMC (default is 1250)"),
-	  false,requires_argument),
-   nburn(string("--bi,--burnin"),1000,
-	 string("Total num of jumps at start of MCMC to be discarded (default is 1000)"),
-	 false,requires_argument),
-   nburn_noard(string("--bn,--burnin_noard"),0,
-	       string("num of burnin jumps before the ard is imposed (default is 0)"),
-	       false,requires_argument),
-   sampleevery(string("--se,--sampleevery"),25,
-	       string("Num of jumps for each sample (MCMC) (default is 25)"),
-	       false,requires_argument),
-   updateproposalevery(string("--upe,--updateproposalevery"),40,
-		       string("Num of jumps for each update to the proposal density std (MCMC) (default is 40)"),
-		       false,requires_argument),
-   seed(string("--seed"),8665904,string("seed for pseudo random number generator"),
-	false,requires_argument),
-   no_ard(string("--noard"),false,string("Turn ARD off on all fibres"),
-	  false,no_argument),
-   all_ard(string("--allard"),false,string("Turn ARD on on all fibres"),
-	   false,no_argument),
-   localinit(string("--nospat"),false,string("Initialise with tensor, not spatially"),
-	     false,no_argument),
-   nonlin(string("--nonlinear"),false,string("Initialise with nonlinear fitting"),
-	  false,no_argument),
-   cnonlin(string("--cnonlinear"),false,string("Initialise with constrained nonlinear fitting"),
-	  false,no_argument),
-   rician(string("--rician"),false,string("Use Rician noise modelling"),false,no_argument),
-   f0(string("--f0"),false,string("Add to the model an unattenuated signal compartment"),false,no_argument),
-   ardf0(string("--ardf0"),false,string("Use ard on f0"),false,no_argument),
-   R_prior_mean(string("--Rmean"),0.13,string("Set the prior mean for R of model 3 (default:0.13- Must be<0.5)"),false, requires_argument),
-   R_prior_std(string("--Rstd"),0.03,string("Set the prior standard deviation for R of model 3 (default:0.03)"),false, requires_argument),
-   R_prior_fudge(string("--Rfudge"),0,string("If set(>0), an ARD prior is used for R with the requested fudge factor"),false, requires_argument),
-   grad_file(string("--gradnonlin"), string("gradnonlin"),
-	     string("Gradient Nonlinearity Tensor file"),
-	     false, requires_argument),  
+   verbose(std::string("-V,--verbose"), false,
+	   std::string("switch on diagnostic messages"),
+	   false, Utilities::no_argument),
+   help(std::string("-h,--help"), false,
+	std::string("display this message"),
+	false, Utilities::no_argument),
+   logdir(std::string("--ld,--logdir"), std::string("logdir"),
+	  std::string("log directory (default is logdir)"),
+	  false, Utilities::requires_argument),
+   forcedir(std::string("--forcedir"),false,std::string("Use the actual directory name given - i.e. don't add + to make a new directory"),false,Utilities::no_argument),
+   datafile(std::string("-k,--data,--datafile"), std::string("data"),
+	    std::string("data file"),
+	    true, Utilities::requires_argument),
+   maskfile(std::string("-m,--mask, --maskfile"), std::string("nodif_brain_mask"),
+	    std::string("mask file"),
+	    true, Utilities::requires_argument),
+   bvecsfile(std::string("-r,--bvecs"), std::string("bvecs"),
+	     std::string("b vectors file"),
+	     true, Utilities::requires_argument),
+   bvalsfile(std::string("-b,--bvals"), std::string("bvals"),
+	     std::string("b values file"),
+	     true, Utilities::requires_argument),
+   nfibres(std::string("--nf,--nfibres"),1,
+	   std::string("Maximum number of fibres to fit in each voxel (default 1)"),
+	   false,Utilities::requires_argument),
+   modelnum(std::string("--model"),1,
+	    std::string("Which model to use. 1=deconv. with sticks (default). 2=deconv. with sticks and a range of diffusivities. 3=deconv. with zeppelins"),
+	    false,Utilities::requires_argument),
+   fudge(std::string("--fudge"),1,
+	 std::string("ARD fudge factor"),
+	 false,Utilities::requires_argument),
+   njumps(std::string("--nj,--njumps"),1250,
+	  std::string("Num of jumps to be made by MCMC (default is 1250)"),
+	  false,Utilities::requires_argument),
+   nburn(std::string("--bi,--burnin"),1000,
+	 std::string("Total num of jumps at start of MCMC to be discarded (default is 1000)"),
+	 false,Utilities::requires_argument),
+   nburn_noard(std::string("--bn,--burnin_noard"),0,
+	       std::string("num of burnin jumps before the ard is imposed (default is 0)"),
+	       false,Utilities::requires_argument),
+   sampleevery(std::string("--se,--sampleevery"),25,
+	       std::string("Num of jumps for each sample (MCMC) (default is 25)"),
+	       false,Utilities::requires_argument),
+   updateproposalevery(std::string("--upe,--updateproposalevery"),40,
+		       std::string("Num of jumps for each update to the proposal density std (MCMC) (default is 40)"),
+		       false,Utilities::requires_argument),
+   seed(std::string("--seed"),8665904,std::string("seed for pseudo random number generator"),
+	false,Utilities::requires_argument),
+   no_ard(std::string("--noard"),false,std::string("Turn ARD off on all fibres"),
+	  false,Utilities::no_argument),
+   all_ard(std::string("--allard"),false,std::string("Turn ARD on on all fibres"),
+	   false,Utilities::no_argument),
+   localinit(std::string("--nospat"),false,std::string("Initialise with tensor, not spatially"),
+	     false,Utilities::no_argument),
+   nonlin(std::string("--nonlinear"),false,std::string("Initialise with nonlinear fitting"),
+	  false,Utilities::no_argument),
+   cnonlin(std::string("--cnonlinear"),false,std::string("Initialise with constrained nonlinear fitting"),
+	  false,Utilities::no_argument),
+   rician(std::string("--rician"),false,std::string("Use Rician noise modelling"),false,Utilities::no_argument),
+   f0(std::string("--f0"),false,std::string("Add to the model an unattenuated signal compartment"),false,Utilities::no_argument),
+   ardf0(std::string("--ardf0"),false,std::string("Use ard on f0"),false,Utilities::no_argument),
+   R_prior_mean(std::string("--Rmean"),0.13,std::string("Set the prior mean for R of model 3 (default:0.13- Must be<0.5)"),false, Utilities::requires_argument),
+   R_prior_std(std::string("--Rstd"),0.03,std::string("Set the prior standard deviation for R of model 3 (default:0.03)"),false, Utilities::requires_argument),
+   R_prior_fudge(std::string("--Rfudge"),0,std::string("If set(>0), an ARD prior is used for R with the requested fudge factor"),false, Utilities::requires_argument),
+   grad_file(std::string("--gradnonlin"), std::string("gradnonlin"),
+	     std::string("Gradient Nonlinearity Tensor file"),
+	     false, Utilities::requires_argument),
    options("xfibres","xfibres --help (for list of options)\n")
      {
        try {
@@ -179,20 +177,15 @@ class xfibresOptions {
        options.add(R_prior_fudge);
        options.add(grad_file);
      }
-     catch(X_OptionError& e) {
+     catch(Utilities::X_OptionError& e) {
        options.usage();
-       cerr << endl << e.what() << endl;
-     } 
+       std::cerr << std::endl << e.what() << std::endl;
+     }
      catch(std::exception &e) {
-       cerr << e.what() << endl;
-     }    
-     
+       std::cerr << e.what() << std::endl;
+     }
+
    }
 }
 
 #endif
-
-
-
-
-

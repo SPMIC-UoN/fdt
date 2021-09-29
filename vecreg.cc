@@ -6,12 +6,28 @@
 
 /*  CCOPYRIGHT */
 
-#include "vecreg.h"
+#include <string>
+#include <iostream>
+
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS           // To allow us to use .sampling_mat()
+#endif
+
 #include "utils/options.h"
+#include "newimage/newimageall.h"
+#include "miscmaths/miscmaths.h"
 #include "warpfns/fnirt_file_reader.h"
 #include "warpfns/warpfns.h"
 
+#include "vecreg.h"
+
+
+using namespace std;
 using namespace Utilities;
+using namespace NEWMAT;
+using namespace MISCMATHS;
+using namespace NEWIMAGE;
+
 
 string title="vecreg \nVector Affine/NonLinear Tranformation with Orientation Preservation";
 string examples="vecreg -i <input4D> -o <output4D> -r <refvol> -t <transform>";

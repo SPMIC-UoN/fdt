@@ -4,12 +4,14 @@
 
 #include <iostream>
 #include <cmath>
-#include "miscmaths/miscmaths.h"
+#include "NewNifti/NewNifti.h"
 #include "armawrap/newmat.h"
-#include "dtifitOptions.h"
+#include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
+#include "dtifitOptions.h"
 
 using namespace std;
+using namespace NiftiIO;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 using namespace DTIFIT;

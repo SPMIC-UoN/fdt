@@ -17,19 +17,20 @@
 #include "utils/log.h"
 #include "utils/tracer_plus.h"
 
+using namespace std;
 using namespace Utilities;
 
 namespace Xfibres {
-  
+
   xfibresOptions* xfibresOptions::gopt = NULL;
-  
+
 void xfibresOptions::parse_command_line(int argc, char** argv, Log& logger)
 {
   Tracer_Plus("XfibresOptions::parse_command_line");
 
   // do once to establish log directory name
   for(int a = options.parse_command_line(argc, argv); a < argc; a++);
-    
+
   if(help.value() || ! options.check_compulsory_arguments())
     {
       options.usage();
@@ -45,12 +46,12 @@ void xfibresOptions::parse_command_line(int argc, char** argv, Log& logger)
 	logger.makeDir(logdir.value());
 
       cout << "Log directory is: " << logger.getDir() << endl;
-      
+
       // do again so that options are logged
       for(int a = 0; a < argc; a++)
 	logger.str() << argv[a] << " ";
       logger.str() << endl << "---------------------------------------------" << endl << endl;
-      
-    }      
+
+    }
 }
 }
