@@ -6,17 +6,26 @@
 
 /*  CCOPYRIGHT  */
 
-#include "CUDA/xfibres_gpu.h"
-#include "xfibresoptions.h"
-#include "armawrap/newmat.h"
-#include "newimage/newimageall.h"
-
 #include <time.h>
 #include <sys/time.h>
-#include "CUDA/init_gpu.h"
-#include "CUDA/options/options.h"
 #include <sys/stat.h>
 
+#include "utils/log.h"
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
+
+#include "CUDA/xfibres_gpu.h"
+#include "xfibresoptions.h"
+
+#include "CUDA/init_gpu.h"
+#include "CUDA/options/options.h"
+
+
+using namespace std;
+using namespace Utilities;
+using namespace NEWMAT;
+using namespace MISCMATHS;
 using namespace Xfibres;
 
 //////////////////////////////////////////////////////////

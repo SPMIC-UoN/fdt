@@ -6,7 +6,12 @@
 
 /*  CCOPYRIGHT  */
 
+#include <vector>
+#include <time.h>
+#include <sys/time.h>
+
 #include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 #include "diffmodels.h"
 
@@ -16,9 +21,10 @@
 #include "fit_gpu_kernels.h"
 #include "sync_check.h"
 
-#include <time.h>
-#include <sys/time.h>
 #include "init_gpu.h"
+
+using namespace std;
+using namespace NEWMAT;
 
 //////////////////////////////////////////////////////
 //   FIT ON GPU
@@ -67,7 +73,7 @@ void fit_PVM_single(	//INPUT
 
   		// set starting parameters for nonlinear fitting
   		float _th,_ph;
-  		cart2sph(dti.get_v1(),_th,_ph);
+  		MISCMATHS::cart2sph(dti.get_v1(),_th,_ph);
 
   		params_host[vox*nparams] = dti.get_s0();
 		params_host[vox*nparams+1] = dti.get_md()>0?dti.get_md()*2:0.001; // empirically found that d~2*MD
@@ -85,7 +91,7 @@ void fit_PVM_single(	//INPUT
 		      		tmpsumf = sumf + x2f(params_host[vox*nparams+i]);
 		    	}while(tmpsumf>=1);
 		    	sumf += x2f(params_host[vox*nparams+i]);
-		    	cart2sph(dti.get_v(ii),_th,_ph);
+		    	MISCMATHS::cart2sph(dti.get_v(ii),_th,_ph);
 		    	params_host[vox*nparams+i+1] = _th;
 		    	params_host[vox*nparams+i+2] = _ph;
 	  	}
@@ -159,7 +165,7 @@ void fit_PVM_single_c(	//INPUT
 
   		// set starting parameters for nonlinear fitting
   		float _th,_ph;
-  		cart2sph(dti.get_v1(),_th,_ph);
+  		MISCMATHS::cart2sph(dti.get_v1(),_th,_ph);
 
   		ColumnVector start(nparams);
   		//Initialize the non-linear fitter. Use the DTI estimates for most parameters, apart from the volume fractions
@@ -169,7 +175,7 @@ void fit_PVM_single_c(	//INPUT
   		start(4) = _th;
   		start(5) = _ph;
   		for(int ii=2,i=6;ii<=nfib;ii++,i+=3){
-    			cart2sph(dti.get_v(ii),_th,_ph);
+    			MISCMATHS::cart2sph(dti.get_v(ii),_th,_ph);
     			start(i+1) = _th;
     			start(i+2) = _ph;
   		}
@@ -335,7 +341,7 @@ void calculate_tau(	//INPUT
 	for(int vox=0;vox<nvox;vox++){
 		for(int i=0;i<ndirections;i++) res(i+1)= residuals_host[vox*ndirections+i];
 
-		float variance=var(res).AsScalar();
+		float variance=MISCMATHS::var(res).AsScalar();
 		tau[vox]=1.0/variance;
 	}
 

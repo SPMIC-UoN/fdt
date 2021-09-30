@@ -6,6 +6,14 @@
 
 /*  CCOPYRIGHT  */
 
+#include <time.h>
+#include <sys/time.h>
+#include <fstream>
+#include <vector>
+
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
 #include "armawrap/newmat.h"
 #include "newimage/newimageall.h"
 #include "xfibresoptions.h"
@@ -16,15 +24,13 @@
 #include "samples.h"
 #include "options.h"
 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-
-#include <time.h>
-#include <sys/time.h>
 #include "init_gpu.h"
-#include <fstream>
 
+
+using namespace std;
+using namespace NEWMAT;
 using namespace Xfibres;
+
 
 void xfibres_gpu(	//INPUT
 			const Matrix			datam,

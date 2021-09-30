@@ -6,13 +6,23 @@
 
 /*  CCOPYRIGHT  */
 
-#include "xfibresoptions.h"
-#include "armawrap/newmat.h"
-#include "newimage/newimageall.h"
 #include <sys/stat.h>
+#include <string>
+#include <iostream>
 
+#include "utils/log.h"
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
+
+#include "xfibresoptions.h"
+
+using namespace std;
+using namespace Utilities;
+using namespace NEWMAT;
+using namespace MISCMATHS;
+using namespace NEWIMAGE;
 using namespace Xfibres;
-
 
 void join_Parts(NEWIMAGE::volume<float> mask, string name_in, string name_out, string subjdir, int nvox, int nsamples, int nParts, float max, float min){
 		int size_parts = nvox/nParts;

@@ -5,7 +5,9 @@
 
 #include "ptx_meshmask.h"
 #include "streamlines.h"
+
 using namespace std;
+using namespace NEWMAT;
 using namespace NEWIMAGE;
 using namespace TRACT;
 using namespace Utilities;
@@ -15,7 +17,7 @@ using namespace mesh;
 
 
 void meshmask()
-{ 
+{
   probtrackxOptions& opts =probtrackxOptions::getInstance();
 
   // load seed mesh
@@ -35,7 +37,7 @@ void meshmask()
   seeds=0;
 
 
-  
+
   Matrix mm_to_vox(4,4);
   if(opts.meshspace.value()=="freesurfer"){
     mm_to_vox << -1 << 0 << 0 <<  (int)seeds.xsize()/2
@@ -74,12 +76,12 @@ void meshmask()
   int numseeds=0;
   for(vector<Mpoint*>::iterator i = mseeds._points.begin();i!=mseeds._points.end();i++){
     if((*i)->get_value() > 0 || opts.meshspace.value()=="first"){
-    
-      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z << 1.0; 
+
+      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z << 1.0;
       xyz_vox = mm_to_vox*fs_coord_mm;
 
 
-      
+
       float x=xyz_vox(1);float y=xyz_vox(2);float z=xyz_vox(3);
       Pt newPt(x,y,z);
       (*i)->_update_coord = newPt;
@@ -89,7 +91,7 @@ void meshmask()
     }
   }
 
-  
+
   ////////////////////////////////
   //  Log& logger = LogSingleton::getInstance();
   Streamliner stline(seeds);
@@ -100,34 +102,34 @@ void meshmask()
 
   for(vector<Mpoint*>::iterator i = mseeds._points.begin();i!=mseeds._points.end();i++){
     if((*i)->get_value() > 0 || opts.meshspace.value()=="first"){
-    
-      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z << 1.0; 
+
+      fs_coord_mm<<(*i)->get_coord().X<<(*i)->get_coord().Y<<(*i)->get_coord().Z << 1.0;
       //      xyz_vox = seeds.qform_mat().i()*fs_coord_mm
             xyz_vox = mm_to_vox*fs_coord_mm;
 	    //xyz_vox = fs_coord_mm;
-      
+
 
       float x=xyz_vox(1);float y=xyz_vox(2);float z=xyz_vox(3);
       Pt newPt(x,y,z);
       (*i)->_update_coord = newPt;
 
 		//      seeds(MISCMATHS::round(x),MISCMATHS::round(y),MISCMATHS::round(z)) = 1;
-    
+
       cout <<"run"<<endl;
       dir << (*i)->local_normal().X << (*i)->local_normal().Y << (*i)->local_normal().Z;
- 
+
       if(opts.meshspace.value()=="first")
 	dir*=-1.0;
 
-     keeptotal += seedmanager.run(x,y,z,true,-1,dir); 
-	
+     keeptotal += seedmanager.run(x,y,z,true,-1,dir);
+
     }
   }
   mseeds.update();
   //  mseeds.save("test.vtk",3);
 
   //return;
-  
+
   //   for(int z=0;z<seeds.zsize();z++){
   //     cout <<"sl "<<z<<endl;
   //     for(int y=0;y<seeds.ysize();y++){
@@ -135,16 +137,14 @@ void meshmask()
   // 	if(seeds(x,y,z)>0){
   // 	  cout <<"run"<<endl;
   // 	  dir << (*i)->local_normal().X << (*i)->local_normal().Y << (*i)->local_normal().Z;
-  // 	  keeptotal += seedmanager.run(x,y,z,true,-1,dir); 
+  // 	  keeptotal += seedmanager.run(x,y,z,true,-1,dir);
   // 	}
   //       }
   //     }
   //   }
-  
-  counter.save_total(keeptotal);  
+
+  counter.save_total(keeptotal);
   counter.save();
-  
+
   cout<<"finished"<<endl;
 }
-
-

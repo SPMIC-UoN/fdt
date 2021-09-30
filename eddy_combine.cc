@@ -1,15 +1,20 @@
-//     eddy_combine.cc : In case JAC resampling is used in the eddy output, then no pairs of phase encoding directions are combined. 
+//     eddy_combine.cc : In case JAC resampling is used in the eddy output, then no pairs of phase encoding directions are combined.
 //                       This is performed by this tool that combines (by taking the average of) pairs of phase encoding directions.
 //                       Input text files provide the information needed to find out which volumes to combine.
-//                       Pos_SeriesVol and Neg_SeriesVol are text files produced by DiffPreprocPipeline.sh    
+//                       Pos_SeriesVol and Neg_SeriesVol are text files produced by DiffPreprocPipeline.sh
 //     Stamatios Sotiropoulos, FMRIB Analysis Group, 2012
 
 #ifndef EXPOSE_TREACHEROUS
 #define EXPOSE_TREACHEROUS
 #endif
 
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 
+using namespace std;
+using namespace NEWMAT;
+using namespace MISCMATHS;
 using namespace NEWIMAGE;
 
 void print_usage(const string& progname) {
@@ -20,32 +25,32 @@ void print_usage(const string& progname) {
 }
 
 
-//Copy a single volume from one 4D image to another 
+//Copy a single volume from one 4D image to another
 void CopyVolume(const volume4D<float>& In,volume4D<float>& Out, const int InVolume, const int OutVolume){
   for(int k=0;k<In.zsize();k++)
-    for(int j=0;j<In.ysize();j++)	    
+    for(int j=0;j<In.ysize();j++)
       for(int i=0;i<In.xsize();i++)
 	Out.value(i,j,k,OutVolume)=In.value(i,j,k,InVolume);
-} 
+}
 
 //Copy the mean of two volumes volume from one 4D image to another
 void CopyMeanVolume(const volume4D<float>& In1,const volume4D<float>& In2, volume4D<float>& Out, const int InVolume1, const int InVolume2,const int OutVolume){
   for(int k=0;k<In1.zsize();k++)
-    for(int j=0;j<In1.ysize();j++)	    
+    for(int j=0;j<In1.ysize();j++)
       for(int i=0;i<In1.xsize();i++)
 	Out.value(i,j,k,OutVolume)=0.5*(In1.value(i,j,k,InVolume1)+In2.value(i,j,k,InVolume2));
-} 
+}
 
 
 int main(int argc,char *argv[])
 {
   try {
     string progname=argv[0];
-    if (argc !=11){ 
+    if (argc !=11){
 	print_usage(progname);
-	return 1; 
+	return 1;
     }
-    //Read Input 
+    //Read Input
     volume4D<float> PosData, NegData;
     Matrix PosVols, NegVols, Posbvals, Posbvecs, Negbvals, Negbvecs;
 
@@ -60,7 +65,7 @@ int main(int argc,char *argv[])
     string oname=string(argv[9]);
     int flag=atoi(argv[10]);
 
-    //Initialise Output    
+    //Initialise Output
     int tsize=0;  int xsize(PosData.xsize());  int ysize(PosData.ysize());  int zsize(PosData.zsize());
     if (flag==0)
       tsize=Posbvals.Ncols()+Negbvals.Ncols()-PosVols.Column(1).Sum(); //number of total input volumes minus the matched volumes
@@ -87,7 +92,7 @@ int main(int argc,char *argv[])
 	  Output_bvecs.Column(OutVolIndex+1)=Posbvecs.Column(PosVolIndex+1);
 	  OutVolIndex++;
 	}
-	PosVolIndex++; 	
+	PosVolIndex++;
       }
       for (int offset=0; offset<(NegVols(l,2)-NegVols(l,1)); offset++){ //Handle non-corresponding Neg volumes
 	if (flag==0){ //Include in the Output if requested
@@ -96,7 +101,7 @@ int main(int argc,char *argv[])
 	  Output_bvecs.Column(OutVolIndex+1)=Negbvecs.Column(NegVolIndex+1);
 	  OutVolIndex++;
 	}
-	NegVolIndex++; 	
+	NegVolIndex++;
       }
     }
 
@@ -110,12 +115,10 @@ int main(int argc,char *argv[])
     onameData=oname+"/dataCombinedFlag.txt";
     write_ascii_matrix(CombinedVols,onameData);
   }
-  
+
   } catch(std::exception &e) {
     cerr << e.what() << endl;
   }  catch(Exception &e) {
     exit(EXIT_FAILURE);
-  } 
+  }
 }
-
-

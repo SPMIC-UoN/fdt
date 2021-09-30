@@ -6,11 +6,18 @@
 
 /*  CCOPYRIGHT  */
 
-#include "newimage/newimageall.h"
+
 #include <string>
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
 #include <sys/stat.h>
+
+#include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
+
+using namespace std;
+using namespace NEWMAT;
+using namespace MISCMATHS;
 
 void save_part(Matrix data, string name, int idpart){
 
@@ -48,7 +55,7 @@ int main(int argc, char *argv[]){
     		exit (EXIT_FAILURE);
 	}
 
-	std::string data_str = argv[1];	
+	std::string data_str = argv[1];
 	std::string mask_str = argv[2];
 
 	Matrix bvals,bvecs;
@@ -66,9 +73,9 @@ int main(int argc, char *argv[]){
 			bvecs(1,i)=bvecs(1,i)/tmpsum;
 			bvecs(2,i)=bvecs(2,i)/tmpsum;
 			bvecs(3,i)=bvecs(3,i)/tmpsum;
-      		}  
+      		}
     	}
-	
+
 	std::string grad_str = argv[5];
 
 	istringstream ss_gflag(argv[6]);
@@ -98,7 +105,7 @@ int main(int argc, char *argv[]){
     	read_volume4D(data,data_str);
     	read_volume(mask,mask_str);
 	Matrix datam;
-    	datam=data.matrix(mask); 
+    	datam=data.matrix(mask);
 
 	int ndirections=bvals.Ncols();
     	if(bvecs.Ncols()!=ndirections || datam.Nrows()!=ndirections){
@@ -110,8 +117,8 @@ int main(int argc, char *argv[]){
 		cerr << "The number of voxels and gradient directions must be greater than 0" << endl;
     		exit (EXIT_FAILURE);
 	}
-	
-	NEWIMAGE::volume4D<float> grad; 
+
+	NEWIMAGE::volume4D<float> grad;
 	Matrix gradm;
 	int dirs_grad=0;
 	if(gflag){
@@ -119,7 +126,7 @@ int main(int argc, char *argv[]){
       		gradm=grad.matrix(mask);
 		dirs_grad = gradm.Nrows();
 	}
-	
+
 	int size_part=nvoxels/nparts;
 
 	Matrix data_part;

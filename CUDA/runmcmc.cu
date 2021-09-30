@@ -6,16 +6,19 @@
 
 /*  CCOPYRIGHT  */
 
-#include "xfibresoptions.h"
-#include <curand.h>
-#include "runmcmc_kernels.cu"
-#include "sync_check.h"
-
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 
 #include <time.h>
 #include <sys/time.h>
+#include <string>
+#include <fstream>
+#include <curand.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+
+#include "xfibresoptions.h"
+#include "runmcmc_kernels.cu"
+#include "sync_check.h"
+
 #include "init_gpu.h"
 
 using namespace Xfibres;
@@ -32,7 +35,7 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<double>& 			alpha_gpu,
 				thrust::device_vector<double>& 			beta_gpu,
 				const int 					ndirections,
-				string 						output_file,
+				std::string 						output_file,
 				double 						seed,
 				//OUTPUT
 				thrust::device_vector<FibreGPU>& 		fibres_gpu,
@@ -42,7 +45,7 @@ void init_Fibres_Multifibres(	//INPUT
 				thrust::device_vector<curandState>&		randStates_gpu)
 {
 	std::ofstream myfile;
-	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile.open (output_file.data(), std::ios::out | std::ios::app );
    	myfile << "----- MCMC ALGORITHM PART INITIALITATION ON GPU ----- " << "\n";
 
    	struct timeval t1,t2;
@@ -111,7 +114,7 @@ void runmcmc_burnin(	//INPUT
 			thrust::device_vector<double>& 			alpha_gpu,
 			thrust::device_vector<double>& 			beta_gpu,
 			const int 					ndirections,
-			string 						output_file,
+			std::string 						output_file,
 			//INPUT-OUTPUT
 			thrust::device_vector<FibreGPU>& 		fibres_gpu,
 			thrust::device_vector<MultifibreGPU>& 		multifibres_gpu,
@@ -122,7 +125,7 @@ void runmcmc_burnin(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
 	std::ofstream myfile;
-	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile.open (output_file.data(), std::ios::out | std::ios::app );
    	myfile << "--------- MCMC ALGORITHM PART BURNIN ON GPU --------- " << "\n";
 
    	struct timeval t_tot1,t_tot2;
@@ -214,7 +217,7 @@ void runmcmc_record(	//INPUT
 			thrust::device_vector<double>&			isosignals_gpu,
 			const int 					ndirections,
 			thrust::device_vector<curandState>&		randStates_gpu,
-			string 						output_file,
+			std::string 						output_file,
 			//OUTPUT
 			thrust::device_vector<float>&			rf0_gpu,
 			thrust::device_vector<float>&			rtau_gpu,
@@ -229,7 +232,7 @@ void runmcmc_record(	//INPUT
 	xfibresOptions& opts = xfibresOptions::getInstance();
 
 	std::ofstream myfile;
-	myfile.open (output_file.data(), ios::out | ios::app );
+	myfile.open (output_file.data(), std::ios::out | std::ios::app );
    	myfile << "--------- MCMC ALGORITHM PART RECORD ON GPU --------- " << "\n";
 
    	struct timeval t_tot1,t_tot2;

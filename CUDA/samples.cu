@@ -6,11 +6,19 @@
 
 /*  CCOPYRIGHT  */
 
+#include <vector>
+
+#include "utils/log.h"
 #include "armawrap/newmat.h"
+#include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 #include "xfibresoptions.h"
 #include "samples.h"
 
+using namespace std;
+using namespace Utilities;
+using namespace NEWMAT;
+//using namespace MISCMATHS;
 using namespace Xfibres;
 
 ////////////////////////////////////////////
@@ -236,7 +244,7 @@ void save_part(RowVector data, string name, int idpart){
 
 	string file_name;
 
-	file_name = logger.appendDir(name+"_"+num2str(idpart));
+	file_name = logger.appendDir(name+"_"+MISCMATHS::num2str(idpart));
 	ofstream out;
 	out.open(file_name.data(), ios::out | ios::binary);
 	out.write((char*)&data(1),nvox*sizeof(Real));
@@ -252,7 +260,7 @@ void save_part(Matrix data, string name, int idpart){
 
 	string file_name;
 
-	file_name = logger.appendDir(name+"_"+num2str(idpart));
+	file_name = logger.appendDir(name+"_"+MISCMATHS::num2str(idpart));
 	ofstream out;
 	out.open(file_name.data(), ios::out | ios::binary);
 	out.write((char*)&data(1,1),nvox*nsamples*sizeof(Real));
@@ -298,7 +306,7 @@ void Samples::save(int idpart){
     	//
     	vector<Matrix> sumf;
     	for(int f=0;f<opts.nfibres.value();f++){
-      		Matrix tmp=sum(m_fsamples[f],1);
+      		Matrix tmp=MISCMATHS::sum(m_fsamples[f],1);
       		sumf.push_back(tmp);
     	}
     	for(int vox=1;vox<=m_dsamples.Ncols();vox++){
@@ -333,14 +341,14 @@ void Samples::save(int idpart){
       		//      element_mod_n(thsamples_out[f],M_PI);
       		//      element_mod_n(phsamples_out[f],2*M_PI);
 
-		save_part(thsamples_out[f],"th"+num2str(f+1)+"samples",idpart);
+		save_part(thsamples_out[f],"th"+MISCMATHS::num2str(f+1)+"samples",idpart);
 
-		save_part(phsamples_out[f],"ph"+num2str(f+1)+"samples",idpart);
+		save_part(phsamples_out[f],"ph"+MISCMATHS::num2str(f+1)+"samples",idpart);
 
-		save_part(fsamples_out[f],"f"+num2str(f+1)+"samples",idpart);
+		save_part(fsamples_out[f],"f"+MISCMATHS::num2str(f+1)+"samples",idpart);
 
-		//save_part(mean_fsamples_out[f],"mean_f"+num2str(f+1)+"samples",idpart);
-		//save_part(dyadic_vectors_out[f],"dyads"+num2str(f+1),idpart);
+		//save_part(mean_fsamples_out[f],"mean_f"+MISCMATHS::num2str(f+1)+"samples",idpart);
+		//save_part(dyadic_vectors_out[f],"dyads"+MISCMATHS::num2str(f+1),idpart);
 
 
     	}

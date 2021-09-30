@@ -11,49 +11,47 @@
 #include "xfibresoptions.h"
 
 
-using namespace Xfibres;
-
 ////////////////////////////////////////////
 //       MCMC SAMPLE STORAGE
 ////////////////////////////////////////////
 
 class Samples{
-  	xfibresOptions& opts;
-  	Matrix m_dsamples;
-  	Matrix m_d_stdsamples;
-	Matrix m_Rsamples;
-  	Matrix m_S0samples;
-  	Matrix m_f0samples;
+    Xfibres::xfibresOptions& opts;
+  	NEWMAT::Matrix m_dsamples;
+  	NEWMAT::Matrix m_d_stdsamples;
+	NEWMAT::Matrix m_Rsamples;
+  	NEWMAT::Matrix m_S0samples;
+  	NEWMAT::Matrix m_f0samples;
 
 	//   // storing signal
-	//   Matrix m_mean_sig;
-	//   Matrix m_std_sig;
-	//   Matrix m_sig2;
+	//   NEWMAT::Matrix m_mean_sig;
+	//   NEWMAT::Matrix m_std_sig;
+	//   NEWMAT::Matrix m_sig2;
 
-  	vector<Matrix> m_thsamples;
-  	vector<Matrix> m_phsamples;
-  	vector<Matrix> m_fsamples;
-  	vector<Matrix> m_lamsamples;
+  	std::vector<NEWMAT::Matrix> m_thsamples;
+  	std::vector<NEWMAT::Matrix> m_phsamples;
+  	std::vector<NEWMAT::Matrix> m_fsamples;
+  	std::vector<NEWMAT::Matrix> m_lamsamples;
 
   	//for storing means
-  	RowVector m_mean_dsamples;
-  	RowVector m_mean_d_stdsamples;
-	RowVector m_mean_Rsamples;
-  	RowVector m_mean_S0samples;
-  	RowVector m_mean_f0samples;
-  	RowVector m_mean_tausamples;
-  	vector<Matrix> m_dyadic_vectors;
-  	vector<RowVector> m_mean_fsamples;
-  	vector<RowVector> m_mean_lamsamples;
+  	NEWMAT::RowVector m_mean_dsamples;
+  	NEWMAT::RowVector m_mean_d_stdsamples;
+	NEWMAT::RowVector m_mean_Rsamples;
+  	NEWMAT::RowVector m_mean_S0samples;
+  	NEWMAT::RowVector m_mean_f0samples;
+  	NEWMAT::RowVector m_mean_tausamples;
+  	std::vector<NEWMAT::Matrix> m_dyadic_vectors;
+  	std::vector<NEWMAT::RowVector> m_mean_fsamples;
+  	std::vector<NEWMAT::RowVector> m_mean_lamsamples;
 
   	//float m_sum_d;  changed GPU version
   	//float m_sum_d_std;  changed GPU version
   	//float m_sum_S0;  changed GPU version
   	//float m_sum_f0;  changed GPU version
   	//float m_sum_tau;  changed GPU version
-  	//vector<SymmetricMatrix> m_dyad;  changed GPU version
-  	//vector<float> m_sum_f;  changed GPU version
-  	//vector<float> m_sum_lam;  changed GPU version
+  	//std::vector<SymmetricMatrix> m_dyad;  changed GPU version
+  	//std::vector<float> m_sum_f;  changed GPU version
+  	//std::vector<float> m_sum_lam;  changed GPU version
   	//ColumnVector m_vec;  changed GPU version
 
   	/////////////// GPU version /////////////////////
@@ -64,10 +62,10 @@ class Samples{
   	float *m_sum_f0;
   	float *m_sum_tau;
 
-  	vector<SymmetricMatrix> *m_dyad;
-  	vector<float>  *m_sum_f;
-  	vector<float> *m_sum_lam;
-  	ColumnVector *m_vec;
+    std::vector<NEWMAT::SymmetricMatrix> *m_dyad;
+  	std::vector<float>  *m_sum_f;
+  	std::vector<float> *m_sum_lam;
+  	NEWMAT::ColumnVector *m_vec;
   	////////////////////////////////////////////////
 
   	int m_nsamps;
